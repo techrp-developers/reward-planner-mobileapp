@@ -1,0 +1,276 @@
+import React from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+const FolderSafe = require('../../assete/service/FolderService.png');
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+interface FeatureItem {
+  title: string;
+  useCheck?: boolean;
+  Icon?: React.FC<any>;
+}
+
+
+interface StatItem {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  features: FeatureItem[];      // Block 1
+  middleTitle: string;          // Block 2
+  middlePoints: string[];       // Block 2
+  stats?: StatItem[];           // NEW Block (Stats)
+  showSafetyCard?: boolean;     // Block 3 toggle
+  safetyTitle?: string;
+  safetyText?: string;
+}
+
+const ServiceFeaturesBullet: React.FC<Props> = ({
+  features,
+  middleTitle,
+  middlePoints,
+  stats,
+  showSafetyCard = true,
+  safetyTitle = '100% Data Safety',
+  safetyText = 'Your personal information is protected and used only for your service request.',
+}) => {
+  return (
+    <View>
+
+      {/* ====== BLOCK 1 : ICON FEATURE LIST ====== */}
+      <View style={styles.card}>
+        {features.map((item, index) => (
+          <View
+            key={index}
+            style={[
+              styles.featureRow,
+              index === features.length - 1 && styles.featureRowLast,
+            ]}
+          >
+            <View style={styles.iconCircle}>
+              {item.useCheck ? (
+                <MaterialIcons name="check" size={16} color="#7C3AED" />
+              ) : (
+                item.Icon && <item.Icon width={18} height={18} />
+              )}
+            </View>
+
+
+            <Text style={styles.featureText}>{item.title}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* ====== BLOCK 2 : GRADIENT TITLE + BULLETS ====== */}
+      <View style={styles.card}>
+        <MaskedView
+          maskElement={
+            <Text style={[styles.header, styles.transparentBg]}>
+              {middleTitle}
+            </Text>
+          }
+        >
+          <LinearGradient colors={['#8665FF', '#5B47A3']}>
+            <Text style={[styles.header, styles.hidden]}>
+              {middleTitle}
+            </Text>
+          </LinearGradient>
+        </MaskedView>
+
+        <View style={styles.middlePointsWrap}>
+          {middlePoints.map((item, index) => (
+            <View key={index} style={styles.row}>
+              <View style={styles.dot} />
+              <Text style={styles.text}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* ====== BLOCK 2.5 : STATS BLOCK (NEW) ====== */}
+      {stats && (
+        <LinearGradient
+          colors={['#F1EFFF', '#ECEBFF']}
+          style={styles.statsCard}
+        >
+          {stats.map((item, index) => (
+            <View key={index} style={styles.statItem}>
+              <Text style={styles.statValue}>{item.value}</Text>
+              <Text style={styles.statLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </LinearGradient>
+      )}
+
+      {/* ====== BLOCK 3 : DATA SAFETY (OPTIONAL) ====== */}
+      {showSafetyCard && (
+        <LinearGradient
+          colors={['#F3F3F3', '#E9FFE3']}
+          style={styles.safetyCard}
+        >
+          <View style={styles.flexOne}>
+            <Text style={styles.safetyTitle}>{safetyTitle}</Text>
+            <Text style={styles.safetyText}>
+              {safetyText}
+            </Text>
+          </View>
+
+          <View style={styles.iconWrap}>
+            <Image
+              source={FolderSafe}
+              style={styles.safetyIcon}
+              resizeMode="contain"
+            />
+          </View>
+        </LinearGradient>
+      )}
+
+      
+
+    </View>
+  );
+};
+
+export default ServiceFeaturesBullet;
+
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F1F1',
+  },
+
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  featureRowLast: {
+    marginBottom: 0,
+  },
+
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+
+  featureText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#8665FF',
+    marginRight: 10,
+  },
+
+  text: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  header: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+
+  hidden: {
+    opacity: 0,
+  },
+  transparentBg: {
+    backgroundColor: 'transparent',
+  },
+  middlePointsWrap: {
+    marginTop: 12,
+  },
+  flexOne: {
+    flex: 1,
+  },
+
+  safetyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 16,
+  },
+
+  safetyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1B5E20', // solid green like screenshot
+  },
+
+  safetyText: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+
+  iconWrap: {
+    width: 72,
+    height: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  safetyIcon: {
+    width: 48,
+    height: 48,
+  },
+  statsCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 16,
+  },
+
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#6D5BFF',
+  },
+
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
+});

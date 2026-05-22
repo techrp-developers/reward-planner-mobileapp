@@ -1,0 +1,69 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import RecommendedServices from '../component/order/RecommendedServices';
+import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+function OrderSuccessful() {
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Success Card Component */}
+      <View style={styles.sectionMargin}>
+        <RechargeSuccessCard />
+      </View>
+
+      {/* 24/7 Help & Support Section */}
+      <TouchableOpacity style={styles.helpContainer} activeOpacity={0.7}>
+        <View style={styles.helpContent}>
+          <MaterialIcons name="headset-mic" size={20} color="#5B47A3" />
+          <Text style={styles.helpText}>24/7 Help & Support</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+      </TouchableOpacity>
+
+      {/* Recommended Services Component */}
+      <View style={styles.sectionMargin}>
+        <RecommendedServices />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F2F3FF', // Specific background color
+  },
+  sectionMargin: {
+    marginVertical: 10,
+  },
+  helpContainer: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    // Subtle shadow
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  helpContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  helpText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 12,
+  },
+});
+
+export default OrderSuccessful;

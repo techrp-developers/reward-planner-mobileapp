@@ -1,0 +1,267 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import SelectableServiceCard from '../government/SelectableServiceCard';
+import { getServiceImageUrl } from '../../utils/serviceImage';
+const ImageHeader = require('../../assete/service/pancard.png');
+
+type VariantItem = {
+    id: string;
+    title: string;
+    price: string;
+    oldPrice: string;
+    subtitle?: string;
+    rawVariant?: any;
+};
+
+const DEFAULT_VARIANTS: VariantItem[] = [
+    { id: '1', title: 'New PAN Card', price: '₹175', oldPrice: '₹350' },
+    { id: '2', title: 'PAN Card Correction', price: '₹175', oldPrice: '₹350' },
+    { id: '3', title: 'PAN Card Reprint', price: '₹175', oldPrice: '₹350' },
+];
+
+type ServiceCartProps = {
+    headerImageUrl?: string;
+    mainTitle?: string;
+    subText?: string;
+    rating?: number;
+    variants?: VariantItem[];
+    onVariantChange?: (variant: VariantItem) => void;
+    showVariantSelector?: boolean;
+    primaryButtonText?: string;
+    onPrimaryPress?: () => void;
+    onAddToCart?: () => void;
+};
+
+export default function ServiceCart({
+    headerImageUrl,
+    mainTitle,
+    subText,
+    rating = 4.3,
+    variants,
+    onVariantChange,
+    showVariantSelector = true,
+    primaryButtonText: primaryButtonTextProp,
+    onPrimaryPress,
+    onAddToCart,
+}: ServiceCartProps) {
+    const services = useMemo(() => {
+        if (Array.isArray(variants)) {
+            return variants;
+        }
+        return DEFAULT_VARIANTS;
+    }, [variants]);
+
+    const [selectedId, setSelectedId] = useState(services[0]?.id || '');
+
+    useEffect(() => {
+        if (services.length === 0 && selectedId !== '') {
+            setSelectedId('');
+            return;
+        }
+        if (services.length > 0 && !services.some((item) => item.id === selectedId)) {
+            setSelectedId(services[0].id);
+        }
+    }, [services, selectedId]);
+
+    const selectedService = services.find(
+        item => item.id === selectedId
+    ) || services[0];
+
+    useEffect(() => {
+        if (selectedService && onVariantChange) {
+            onVariantChange(selectedService);
+        }
+    }, [selectedService, onVariantChange]);
+
+    const headerImageSource = headerImageUrl
+        ? { uri: getServiceImageUrl(headerImageUrl, 'large') }
+        : ImageHeader;
+
+    const parsedRating = Number(rating);
+    const numericRating = Number.isFinite(parsedRating) && parsedRating > 0 ? parsedRating : 4.3;
+
+    const primaryButtonText = primaryButtonTextProp ?? (() => {
+        const rawPrice = selectedService?.price;
+        if (!rawPrice) return 'Get Started';
+
+        // Extract digits to handle values like "₹0", "0", or " 0 " consistently.
+        const numericPart = Number(String(rawPrice).replace(/[^0-9.]/g, ''));
+        if (!Number.isFinite(numericPart) || numericPart <= 0) return 'Get Started';
+
+        return `${rawPrice} + Get Start`;
+    })();
+
+    return (
+        <ScrollView style={styles.mainContainer}>
+            {/* 1. Main Image Section with Discount Badge */}
+            <View style={styles.imageContainer}>
+                <Image
+                    source={headerImageSource}
+                    style={styles.mainImg}
+                    resizeMode="cover"
+                />
+
+                <LinearGradient
+                    colors={['#FDF4A3', '#FEDB7C']}
+                    start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                    style={styles.discountBadge}
+                >
+                    <Text style={styles.discountText}>Upto 48% Off</Text>
+                </LinearGradient>
+
+                <TouchableOpacity style={styles.shareButton}>
+                    <MaterialCommunityIcons name="share-variant-outline" size={24} color="#374151" />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.contentPadding}>
+                {/* 2. Horizontal Service Selector */}
+                {showVariantSelector && services.length > 1 && (
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.container}
+                    >
+                        {services.map(item => (
+                            <SelectableServiceCard
+                                key={item.id}
+                                {...item}
+                                selected={item.id === selectedId}
+                                onPress={() => setSelectedId(item.id)}
+                            />
+                        ))}
+                    </ScrollView>
+                )}
+
+                {/* 3. Description Section */}
+                <View style={styles.descriptionHeader}>
+                    <Text style={styles.mainTitle}>
+                        {mainTitle || selectedService?.title}
+                    </Text>
+
+                    <View style={styles.ratingRow}>
+                        <Text style={styles.ratingText}>{numericRating.toFixed(1)}</Text>
+                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
+                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
+                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
+                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
+                        <MaterialCommunityIcons name="star-half-full" size={16} color="#FBBF24" />
+                    </View>
+                </View>
+
+                <Text style={styles.subText}>
+                    {selectedService?.subtitle || subText || 'Complete assistance from application to delivery for your document needs.'}
+                </Text>
+
+                {/* 4. Renewal Offer Banner */}
+                <LinearGradient
+                    colors={['#FEEEAC', '#FDD174']}
+                    style={styles.offerBanner}
+                    start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                >
+                    <MaterialCommunityIcons name="gift" size={24} color="#B45309" />
+                    <View style={styles.offerTextCol}>
+                        <Text style={styles.offerTitle}>Upto 48% Off on renewal</Text>
+                        <Text style={styles.offerSub}>Offer valid today</Text>
+                    </View>
+                    <View style={styles.offerBadge}>
+                        <Text style={styles.offerBadgeText}>Offer valid today</Text>
+                    </View>
+                </LinearGradient>
+
+                {/* 5. Action Buttons */}
+                <TouchableOpacity activeOpacity={0.9} onPress={onPrimaryPress}>
+                    <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.primaryButton}>
+                        <Text style={styles.buttonText}>{primaryButtonText}</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.outlineButtonBorder} onPress={onAddToCart} activeOpacity={0.9}>
+                    <View style={styles.outlineButtonInner}>
+                        <Text style={styles.outlineButtonText}>Add To Cart</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
+        </ScrollView>
+    );
+};
+const styles = StyleSheet.create({
+    container: {
+        // paddingHorizontal: 16,
+        gap: 12,
+    },
+    mainContainer: { flex: 1, backgroundColor: '#FFF' },
+    imageContainer: {
+        height: 300,
+        position: 'relative'
+    },
+    mainImg: { width: '100%', height: '100%' },
+    discountBadge: {
+        position: 'absolute', top: 16, left: 16,
+        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+    },
+    discountText: { fontWeight: 'bold', color: '#374151', fontSize: 12 },
+    shareButton: {
+        position: 'absolute', bottom: 20, right: 20,
+        backgroundColor: '#FFF', width: 40, height: 40, borderRadius: 20,
+        justifyContent: 'center', alignItems: 'center', elevation: 5,
+    },
+    contentPadding: { padding: 16 },
+    serviceList: { marginBottom: 20,
+     },
+    borderGradient: { padding: 2, borderRadius: 12, marginRight: 12 },
+    serviceCard: {
+        backgroundColor: '#FFF', padding: 12, borderRadius: 10, width: 140,
+    },
+    selectedBg: { backgroundColor: '#FEF4FF' },
+    serviceTitle: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
+    priceRow: { flexDirection: 'row', alignItems: 'center' },
+    currentPrice: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginRight: 6 },
+    oldPrice: { fontSize: 12, color: '#9CA3AF', textDecorationLine: 'line-through' },
+    descriptionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, marginTop: 16 },
+    mainTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+    ratingRow: { flexDirection: 'row', alignItems: 'center' },
+    subText: { color: '#6B7280', lineHeight: 20, marginBottom: 24 },
+    offerBanner: {
+        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 24,
+    },
+    offerTextCol: { marginLeft: 12, flex: 1 },
+    offerTitle: { fontWeight: 'bold', color: '#92400E' },
+    offerSub: { fontSize: 12, color: '#B45309' },
+    primaryButton: {
+        height: 54, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+    },
+    buttonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+    outlineButtonBorder: {
+        height: 54, borderRadius: 12, padding: 1.5,
+        backgroundColor: '#8665FF', // Fallback for the border gradient logic
+    },
+    outlineButtonInner: {
+        flex: 1, backgroundColor: '#FFF', borderRadius: 11, justifyContent: 'center', alignItems: 'center',
+    },
+    outlineButtonText: { color: '#8665FF', fontSize: 16, fontWeight: 'bold' },
+    offerBadge: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#FCD34D',
+    },
+
+    offerBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#92400E',
+    },
+
+    ratingText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+        marginRight: 4,
+    },
+
+});

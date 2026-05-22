@@ -1,0 +1,126 @@
+import React from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import LinearGradient from 'react-native-linear-gradient'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+
+type Props = {
+  total: number;
+  count: number;
+  loading?: boolean;
+  onPlaceOrder?: () => void | Promise<void>;
+  wrapperPaddingBottom?: number;
+};
+
+export default function OrderProcedbutton({
+  total,
+  count,
+  loading = false,
+  onPlaceOrder,
+  wrapperPaddingBottom = 80,
+}: Props) {
+  const safeTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
+
+  return (
+    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}> 
+      <View style={styles.freeBanner}>
+        <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+        <Text style={styles.freeText}>Yay! You got FREE Delivery</Text>
+      </View>
+
+      <View style={styles.bottomBar}>
+        <View>
+          <Text style={styles.price}>₹{safeTotal}</Text>
+          <Text style={styles.items}>{count} items selected</Text>
+        </View>
+
+        <TouchableOpacity activeOpacity={0.85} onPress={onPlaceOrder} disabled={loading}>
+          <LinearGradient colors={['#8665FF', '#5B47A3']} style={[styles.button, loading ? styles.disabledButton : null]}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Place Order</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+
+
+const styles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: '#F4F5FF',
+    padding: 16,
+    borderRadius: 18,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  addressLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  addressTitle: {
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  addressSub: {
+    fontSize: 12,
+    color: '#777',
+    marginTop: 2,
+  },
+  changeText: {
+    color: '#7C3AED',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  freeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  freeText: {
+    marginLeft: 6,
+    color: '#15803D',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  items: {
+    fontSize: 12,
+    color: '#777',
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+  },
+  disabledButton: {
+    opacity: 0.8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+    marginRight: 6,
+  },
+})
