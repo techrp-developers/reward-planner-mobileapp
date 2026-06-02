@@ -1,5 +1,3 @@
-
-
 import React, { useCallback, useMemo } from "react";
 import {
   View,
@@ -11,9 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import StepsCounterCard from "./StepsCounterCard";
 import HealthStatusCard from "./HealthStatusCard";
-
-
-
+import { rs } from "../../../utils/responsive";
 
 // ── Query key ──────────────────────────────────────────────────────────────
 const HOME_CHART_QUERY_KEY = ["home", "dashboard-cards"] as const;
@@ -58,32 +54,23 @@ export default function Home_Chart() {
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
 
-  // ── Layout ──
   const layout = useMemo(() => {
-    const horizontalPadding = width >= 768 ? 20 : 16;
-    const gap = 12;
-    const maxContentWidth = 540;
+    const horizontalPadding = rs(width >= 768 ? 20 : 16);
+    const gap = rs(12);
+    const maxContentWidth = rs(540);
     const contentWidth = Math.min(width - horizontalPadding * 2, maxContentWidth);
     const cardWidth = Math.floor((contentWidth - gap) / 2);
     return { cardWidth, containerPadding: horizontalPadding, contentWidth, gap };
   }, [width]);
 
-  // ── Step progress query ──
   const stepQuery = useQuery<StepProgress>({
     queryKey: HOME_CHART_QUERY_KEY,
-    queryFn: async () => {
-      // Replace with your real API call:
-      // return normalizeStepProgress(await fetchUserInfo());
-
-      // ── Mock data for development ──
-      return {
-        steps: 4820,
-        goal_steps: 7000,
-        progress_percent: 68.86,
-        steps_today_delta: 320,
-      };
-    },
-    // refetchInterval: () => (isAuthenticated() ? 5000 : false),
+    queryFn: async () => ({
+      steps: 4820,
+      goal_steps: 7000,
+      progress_percent: 68.86,
+      steps_today_delta: 320,
+    }),
     refetchInterval: 5000,
     staleTime: 10000,
     refetchOnWindowFocus: true,
@@ -96,14 +83,12 @@ export default function Home_Chart() {
     steps_today_delta: 0,
   };
 
-  // ── Invalidate on focus ──
   useFocusEffect(
     useCallback(() => {
       queryClient.invalidateQueries({ queryKey: HOME_CHART_QUERY_KEY });
     }, [queryClient])
   );
 
-  // ── Navigation handlers ──
   const goToRewards = useCallback(() => {
     const parent = navigation.getParent?.();
     parent?.navigate("RewardStack", { moduleName: "Step Counter" });
@@ -113,11 +98,9 @@ export default function Home_Chart() {
     navigation.navigate?.("HealthStack");
   }, [navigation]);
 
-  // ── Render ──
   return (
     <View style={[styles.container, { paddingHorizontal: layout.containerPadding }]}>
       <View style={[styles.row, { maxWidth: layout.contentWidth, gap: layout.gap }]}>
-        {/* LEFT: Steps Counter */}
         <StepsCounterCard
           steps={stepData.steps}
           goalSteps={stepData.goal_steps}
@@ -127,8 +110,6 @@ export default function Home_Chart() {
           loading={stepQuery.isLoading}
           cardWidth={layout.cardWidth}
         />
-
-        {/* RIGHT: Health Status */}
         <HealthStatusCard
           status="active"
           onNavigate={goToHealth}
@@ -139,10 +120,9 @@ export default function Home_Chart() {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 14,
+    paddingVertical: rs(14),
     backgroundColor: "transparent",
   },
   row: {

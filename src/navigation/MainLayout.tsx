@@ -1,13 +1,12 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import {  useNavigation, useNavigationState } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Navbar from "../navbar/Navbar";
 import BottomTabs from "../modules/ecommerce/navigation/BottomTabs";
 import { TAB_BAR_HEIGHT } from "../modules/ecommerce/navigation/BottomTabs";
-import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 
 export type ModuleStackParamList = {
@@ -45,25 +44,30 @@ const shouldShowNavbar = (routeChain: string[]): boolean => {
   const moduleRoute = routeChain.find((routeName) =>
     ["ProductModule", "ServicesModule", "PaymentsModule", "DineOutModule"].includes(routeName)
   );
-  const leafRoute = routeChain[routeChain.length - 1];
 
   if (!moduleRoute) {
     return routeChain[0] === "Home";
   }
+
+  const leafRoute = routeChain[routeChain.length - 1];
 
   if (moduleRoute === "ProductModule") {
     return ["ProductModule", "HomeTab", "Home", "Explore"].includes(leafRoute);
   }
 
   if (moduleRoute === "ServicesModule") {
-    return ["ServicesModule", "Home"].includes(leafRoute);
+    return ["ServicesModule", "Home", "ServiceSearch"].includes(leafRoute);
   }
 
   if (moduleRoute === "PaymentsModule") {
-    return ["PaymentsModule", "Home"].includes(leafRoute);
+    return ["PaymentsModule", "Home", "Search"].includes(leafRoute);
   }
 
-  return moduleRoute === "DineOutModule";
+  if (moduleRoute === "DineOutModule") {
+    return ["DineOutModule"].includes(leafRoute);
+  }
+
+  return false;
 };
 
 const getActiveMode = (routeChain: string[]): AppMode => {
@@ -99,62 +103,38 @@ function MainLayout() {
   const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
     (tab: "Home" | "Search" | "Explore" | "Cart" | "Profile") => {
-
-      // ✅ GLOBAL CART NAVIGATION (works for all modes)
       if (tab === "Cart") {
-        handleNavigateWithPrefetch({
-          navigate: () => navigation.navigate("CartScreen"),
-        });
+        navigation.navigate("Cart");
         return;
       }
 
       if (tab === "Profile") {
-        handleNavigateWithPrefetch({
-          navigate: () => {
-            if (activeMode === "Services") {
-              navigation.navigate("ServicesModule", { screen: "Profile" });
-              return;
-            }
-
-            navigation.navigate("Profile");
-          },
-        });
+        if (activeMode === "Services") {
+          navigation.navigate("ServicesModule", { screen: "Profile" });
+        } else {
+          navigation.navigate("Profile");
+        }
         return;
       }
 
       if (activeMode === "Payments") {
-        if (tab === "Home") {
-          handleNavigateWithPrefetch({
-            navigate: () => navigation.navigate("PaymentsModule", { screen: "Home" }),
-          });
-          return;
-        }
-        if (tab === "Search") {
-          handleNavigateWithPrefetch({
-            navigate: () => navigation.navigate("PaymentsModule", { screen: "Search" }),
-          });
-          return;
-        }
+        if (tab === "Home") navigation.navigate("PaymentsModule", { screen: "Home" });
+        if (tab === "Search") navigation.navigate("PaymentsModule", { screen: "Search" });
+        return;
       }
 
       if (activeMode === "Services") {
-        if (tab === "Home") {
-          handleNavigateWithPrefetch({
-            navigate: () => navigation.navigate("ServicesModule", { screen: "Home" }),
-          });
-          return;
-        }
-        if (tab === "Search") {
-          handleNavigateWithPrefetch({
-            navigate: () => navigation.navigate("ServicesModule", { screen: "ServiceSearch" }),
-          });
-          return;
-        }
+        if (tab === "Home") navigation.navigate("ServicesModule", { screen: "Home" });
+        if (tab === "Search") navigation.navigate("ServicesModule", { screen: "ServiceSearch" });
+        return;
       }
     },
     [activeMode, navigation]
   );
 
+  const handleCenterPress = React.useCallback(() => {
+    navigation.navigate("Dashboard");
+  }, [navigation]);
 
 
   return (
@@ -198,6 +178,7 @@ function MainLayout() {
           activeMode={activeMode}
           cartCount={totalQuantity}
           onTabPress={handleBottomTabPress}
+          onCenterPress={handleCenterPress}
         />) : null}
     </View>
   );

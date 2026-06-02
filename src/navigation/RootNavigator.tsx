@@ -8,6 +8,7 @@ import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
 import ServiceHomeStack from "../modules/services/navigation/ServiceHomeStack";
 import RewardHomeStack from "../modules/step_counter/navigation/RewardHomeStack";
 import BBPSHomeStack from "../modules/bbps/navigation/BBPSHomeStack";
+import Dashbord from "../modules/dashboard/dashboard/dashbord";
 
 import MainLayout from "./MainLayout";
 import SplashScreen from "../modules/ecommerce/auth/screens/SplashScreen";
@@ -19,7 +20,6 @@ import OTPScreen from "../modules/ecommerce/components/auth/OTPScreen";
 import SetNewPassword from "../modules/ecommerce/components/auth/SetNewPassword";
 import AccountActivationSuccess from "../modules/ecommerce/components/auth/AccountActivationSuccess";
 import VerifyEmailScreen from "../modules/ecommerce/auth/screens/VerifyEmailScreen";
-// import Dashbord from "../modules/dashboard/dashboard/dashbord";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  Dashboard: undefined;
   Home: undefined;
   Checkout: undefined;
   ProductDetails: { productId: number | string };
@@ -48,7 +49,7 @@ export type AppStackParamList = {
   StepCount: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
-
+  ExploreModule: undefined;
 };
 
 export type RootStackParamList = {
@@ -93,6 +94,7 @@ function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={defaultScreenOptions}>
 
+      <AppStack.Screen name="Dashboard" component={Dashbord} />
       <AppStack.Screen name="Home" component={MainLayout} />
 
       <AppStack.Screen
@@ -156,6 +158,13 @@ function AppNavigator() {
         name="OrderConfirmedScreen"
         getComponent={() =>
           require("../modules/ecommerce/screens/OrderConfirmedScreen").default
+        }
+      />
+
+      <AppStack.Screen
+        name="ExploreModule"
+        getComponent={() =>
+          require("../modules/dashboard/explore/ExploreModule").default
         }
       />
 

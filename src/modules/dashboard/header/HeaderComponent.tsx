@@ -39,14 +39,14 @@ import Logo from '../../../assets/menu/logo.png';
 
 // Fallback if safe-area-context somehow returns 0
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
-const IOS_FALLBACK_TOP    = 50; // covers even the Dynamic Island (59 pt safe)
+const IOS_FALLBACK_TOP = 50; // covers even the Dynamic Island (59 pt safe)
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface HeaderProps {
-  userName?:            string;
-  companyLogoUri?:      string;
+  userName?: string;
+  companyLogoUri?: string;
   onNotificationPress?: () => void;
-  onAIToggle?:          (value: boolean) => void;
+  onAIToggle?: (value: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -59,8 +59,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const [aiEnabled, setAiEnabled] = useState<boolean>(false);
 
   // ── Safe-area top inset ──────────────────────────────────────────────────
-  const insets    = useSafeAreaInsets();
-  const safeTop   = insets.top > 0
+  const insets = useSafeAreaInsets();
+  const safeTop = insets.top > 0
     ? insets.top
     : Platform.OS === 'android' ? ANDROID_STATUS_BAR : IOS_FALLBACK_TOP;
 
@@ -126,7 +126,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       {/* ── AI Assistant Toggle Row ── */}
       <View style={styles.aiRow}>
 
-        {/* Sparkle + label */}
         <View style={styles.aiLabelRow}>
           <Text style={styles.sparkleIcon}>✦</Text>
           <Text style={styles.aiLabelText}>RP AI Assistant</Text>
@@ -189,8 +188,8 @@ const styles = StyleSheet.create({
 
   // Logo pill
   logoPill: {
-    // backgroundColor: '#FFFFFF',
-    // borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minWidth: 110,

@@ -18,9 +18,24 @@ type CustomTabBarProps = {
 };
 
 function CustomTabBar({ navigation, cartCount, isAuthenticated }: CustomTabBarProps) {
-  const goTo = (screen: string) => {
-    navigation.navigate("HomeTab", { screen });
-  };
+  const goTo = React.useCallback(
+    (screen: string) => {
+      navigation.navigate("HomeTab", { screen });
+    },
+    [navigation]
+  );
+
+  const handleCenterPress = React.useCallback(() => {
+    const moduleStackNav = navigation.getParent?.();
+    const appNav = moduleStackNav?.getParent?.();
+
+    if (appNav?.navigate) {
+      appNav.navigate("Dashboard");
+      return;
+    }
+
+    navigation.navigate("HomeTab", { screen: "Home" });
+  }, [navigation]);
 
   return (
     <BottomTabs
@@ -52,6 +67,7 @@ function CustomTabBar({ navigation, cartCount, isAuthenticated }: CustomTabBarPr
             break;
         }
       }}
+      onCenterPress={handleCenterPress}
     />
   );
 }

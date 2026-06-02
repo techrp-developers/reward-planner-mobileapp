@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ProfileIcon from "../../../assets/menu/profile.svg";
 import HomeIcon from "../../../assets/menu/Home.svg";
 import CenterIcon from "../../../assets/menu/Menu_Home.svg";
+import dashbord_menu from "../../../assets/menu/dashbord_home.png";
 import CartIcon from "../../../assets/menu/Cart.svg";
 import ExploreIcon from "../../../assets/menu/Explore.svg";
 import SearchIcon from "../../../assets/menu/Search.svg";
@@ -13,77 +14,161 @@ export const TAB_BAR_HEIGHT = 68;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-type TabKey =
-  | "Home"
-  | "Explore"
-  | "Cart"
-  | "Profile"
-  | "Search";
+export type TabKey = "Home" | "Explore" | "Cart" | "Profile" | "Search";
 
 type Props = {
   activeMode?: AppMode;
   onTabPress?: (tab: TabKey) => void;
   cartCount?: number;
+  isDashboard?: boolean;
+  activeTabKey?: TabKey;
+  // Navigation for the center button is delegated to the parent so BottomTabs
+  // works correctly in both the MainLayout context (Dashboard) and the
+  // MainTabs/HomeStack context, which have different navigation scopes.
+  onCenterPress?: () => void;
 };
+
+type TabConfig = {
+  key: TabKey;
+  label: string;
+  Icon: React.ComponentType<{ width: number; height: number; color?: string }>;
+};
+
+type TabItemProps = {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  Icon: React.ComponentType<{ width: number; height: number; color?: string }>;
+  badgeCount?: number;
+};
+
+// Defined outside render — stable reference, no allocation per press.
+const HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 } as const;
+const NOOP = () => {};
+
+const TabItem = React.memo(({ label, active, onPress, Icon, badgeCount }: TabItemProps) => {
+  const iconColor = active ? "#111827" : "#8B8B8B";
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={styles.item}
+      hitSlop={HIT_SLOP}
+    >
+      <View>
+        <Icon width={24} height={24} color={iconColor} />
+        {(badgeCount ?? 0) > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badgeCount}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+});
+
+TabItem.displayName = "TabItem";
+
+const CenterButton = React.memo(function CenterButton({
+  isDashboard,
+  onPress,
+}: {
+  isDashboard: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.fabWrap}
+      hitSlop={HIT_SLOP}
+    >
+      <View style={styles.diamond}>
+        {isDashboard ? (
+          <Image source={dashbord_menu} style={{ width: 90, height: 90 }} resizeMode="contain" />
+        ) : (
+          <CenterIcon width={90} height={90} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+CenterButton.displayName = "CenterButton";
 
 function BottomTabs({
   activeMode = "Product",
   onTabPress,
   cartCount = 0,
+  isDashboard = false,
+  activeTabKey,
+  onCenterPress,
 }: Props) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 8);
 
+  // Ref guards the early-return check so handlePress never needs activeTab as a dep.
+  // Without this, every tab press invalidates handlePress → pressHandlers → all TabItem memos.
+  const activeTabRef = useRef<TabKey>("Home");
   const [activeTab, setActiveTab] = useState<TabKey>("Home");
 
-  // ✅ SINGLE HANDLER (optimized)
   const handlePress = useCallback(
     (tab: TabKey) => {
-      if (tab === activeTab) return;
+      if (tab === activeTabRef.current) return;
+      activeTabRef.current = tab;
       setActiveTab(tab);
       onTabPress?.(tab);
     },
-    [activeTab, onTabPress]
+    [onTabPress], // no activeTab dep — ref handles the guard
   );
 
   const isProductMode = activeMode === "Product";
 
-  // ✅ TAB CONFIG (clean + scalable)
-  const tabs = useMemo(() => {
-    return [
-      {
-        key: "Home",
-        label: "Home",
-        Icon: HomeIcon,
-      },
+  // cartCount intentionally excluded — injected at render time per tab.key so
+  // a badge update only re-renders the Cart TabItem, not the full tabs array.
+  const tabs = useMemo<TabConfig[]>(
+    () => [
+      { key: "Home", label: "Home", Icon: HomeIcon },
       {
         key: isProductMode ? "Explore" : "Search",
         label: isProductMode ? "Explore" : "Search",
         Icon: isProductMode ? ExploreIcon : SearchIcon,
       },
-      {
-        key: "Cart",
-        label: "Cart",
-        Icon: CartIcon,
-        badge: cartCount,
-      },
-      {
-        key: "Profile",
-        label: "Profile",
-        Icon: ProfileIcon,
-      },
-    ];
-  }, [isProductMode, cartCount]);
+      { key: "Cart", label: "Cart", Icon: CartIcon },
+      { key: "Profile", label: "Profile", Icon: ProfileIcon },
+    ],
+    [isProductMode],
+  );
+
+  // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,
+  // not on every tab press. Passing these as onPress keeps TabItem React.memo effective.
+  const pressHandlers = useMemo<Record<TabKey, () => void>>(
+    () => ({
+      Home: () => handlePress("Home"),
+      Explore: () => handlePress("Explore"),
+      Search: () => handlePress("Search"),
+      Cart: () => handlePress("Cart"),
+      Profile: () => handlePress("Profile"),
+    }),
+    [handlePress],
+  );
+
+  // Keep local active tab state in sync with navigation-driven activeTabKey from parent.
+  React.useEffect(() => {
+    if (activeTabKey && activeTabKey !== activeTabRef.current) {
+      activeTabRef.current = activeTabKey;
+      setActiveTab(activeTabKey);
+    }
+  }, [activeTabKey]);
 
   return (
     <View style={styles.wrap}>
       <View
         style={[
           styles.bar,
-          {
-            height: TAB_BAR_HEIGHT + bottomInset,
-            paddingBottom: bottomInset,
-          },
+          { height: TAB_BAR_HEIGHT + bottomInset, paddingBottom: bottomInset },
         ]}
       >
         {/* LEFT SIDE */}
@@ -92,7 +177,7 @@ function BottomTabs({
             key={tab.key}
             label={tab.label}
             active={activeTab === tab.key}
-            onPress={() => handlePress(tab.key as TabKey)}
+            onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
           />
         ))}
@@ -105,53 +190,23 @@ function BottomTabs({
             key={tab.key}
             label={tab.label}
             active={activeTab === tab.key}
-            onPress={() => handlePress(tab.key as TabKey)}
+            onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
-            badgeCount={tab.badge}
+            badgeCount={tab.key === "Cart" ? cartCount : undefined}
           />
         ))}
 
-        {/* CENTER BUTTON */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => handlePress("Home")}
-          style={styles.fabWrap}
-        >
-          <View style={styles.diamond}>
-            <CenterIcon width={90} height={90} />
-          </View>
-        </TouchableOpacity>
+        {/* CENTER BUTTON — onCenterPress is supplied by the parent so this
+            component stays navigation-agnostic and works in both MainLayout
+            and MainTabs (HomeStack) contexts without needing useNavigation. */}
+        <CenterButton
+          isDashboard={Boolean(isDashboard)}
+          onPress={onCenterPress ?? NOOP}
+        />
       </View>
     </View>
   );
 }
-
-// ✅ PURE COMPONENT (NO RE-RENDER UNLESS PROPS CHANGE)
-const TabItem = React.memo(
-  ({ label, active, onPress, Icon, badgeCount }: any) => {
-    const iconColor = active ? "#111827" : "#8B8B8B";
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onPress}
-        style={styles.item}
-      >
-        <View>
-          <Icon width={24} height={24} color={iconColor} />
-          {badgeCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{badgeCount}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.label, active && styles.labelActive]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  }
-);
 
 export default React.memo(BottomTabs);
 
