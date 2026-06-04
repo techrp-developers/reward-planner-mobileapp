@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Easing,
   Platform,
   Dimensions,
+  type ViewStyle,
+  type TextStyle,
 } from "react-native";
 import Svg, {
   Path,
@@ -18,6 +20,7 @@ import Svg, {
   Rect,
 } from "react-native-svg";
 import { rs, fs } from "../../../utils/responsive";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type HealthStatus = "active" | "resting" | "warning" | "critical";
@@ -40,15 +43,15 @@ const ECG_PATH =
   "L136,40 L140,22 L144,52 L148,40 L170,40 " +
   "L178,40 L180,40";
 
-// ── Status config ──────────────────────────────────────────────────────────
+// ── Status config — bg is light bg, bgDark is dark-mode tint ─────────────
 const STATUS_CONFIG: Record<
   HealthStatus,
-  { color: string; bg: string; label: string; desc: string; badge: string }
+  { color: string; bg: string; bgDark: string; label: string; desc: string; badge: string }
 > = {
-  active:   { color: "#10B981", bg: "#ECFDF5", label: "Active",   desc: "All vitals are stable",        badge: "All systems normal"  },
-  resting:  { color: "#10B981", bg: "#ECFDF5", label: "Resting",  desc: "Heart rate is normal",         badge: "All systems normal"  },
-  warning:  { color: "#F59E0B", bg: "#FFFBEB", label: "Warning",  desc: "Elevated heart rate detected",  badge: "Monitor closely"     },
-  critical: { color: "#EF4444", bg: "#FEF2F2", label: "Critical", desc: "Seek medical attention",       badge: "Alert: check vitals" },
+  active:   { color: "#10B981", bg: "#ECFDF5", bgDark: "rgba(16,185,129,0.15)", label: "Active",   desc: "All vitals are stable",        badge: "All systems normal"  },
+  resting:  { color: "#10B981", bg: "#ECFDF5", bgDark: "rgba(16,185,129,0.15)", label: "Resting",  desc: "Heart rate is normal",         badge: "All systems normal"  },
+  warning:  { color: "#F59E0B", bg: "#FFFBEB", bgDark: "rgba(245,158,11,0.15)", label: "Warning",  desc: "Elevated heart rate detected",  badge: "Monitor closely"     },
+  critical: { color: "#EF4444", bg: "#FEF2F2", bgDark: "rgba(239,68,68,0.15)", label: "Critical", desc: "Seek medical attention",       badge: "Alert: check vitals" },
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -61,12 +64,14 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
   onNavigate,
   cardWidth,
 }) => {
+  const { isDark, theme } = useAppTheme();
+
   const screenWidth = Dimensions.get("window").width;
   const cWidth = cardWidth ?? (screenWidth - rs(32)) / 2;
 
   const cfg = STATUS_CONFIG[status];
   const color = cfg.color;
-  const bgColor = cfg.bg;
+  const bgColor = isDark ? cfg.bgDark : cfg.bg;
   const label = statusLabel ?? cfg.label;
   const description = statusDescription ?? cfg.desc;
   const badge = badgeLabel ?? cfg.badge;
@@ -98,7 +103,7 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
     return () => anim.stop();
   }, [mountAnim]);
 
-  // ECG canvas — width fills card, height scales with screen
+  // ECG canvas
   const ecgW = cWidth - rs(28);
   const ecgH = rs(46);
   const scaleX = ecgW / 180;
@@ -108,6 +113,14 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
   const dotY = 40 * scaleY;
   const dotR = rs(4.5);
   const pulseSize = rs(18);
+
+  const t = useMemo(() => ({
+    card:       { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : "#059669" } as ViewStyle,
+    title:      { color: theme.text } as TextStyle,
+    subtitle:   { color: theme.secondaryText } as TextStyle,
+    menuDots:   { color: theme.secondaryText } as TextStyle,
+    statusDesc: { color: theme.secondaryText } as TextStyle,
+  }), [isDark, theme]);
 
   return (
     <Animated.View
@@ -121,18 +134,18 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
         },
       ]}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, t.card]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={[styles.iconBubble, { backgroundColor: bgColor }]}>
             <Text style={styles.iconEmoji}>💚</Text>
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Health Status</Text>
-            <Text style={styles.subtitle}>Latest Update</Text>
+            <Text style={[styles.title, t.title]}>Health Status</Text>
+            <Text style={[styles.subtitle, t.subtitle]}>Latest Update</Text>
           </View>
           <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Text style={styles.menuDots}>⋮</Text>
+            <Text style={[styles.menuDots, t.menuDots]}>⋮</Text>
           </TouchableOpacity>
         </View>
 
@@ -179,7 +192,7 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
         <View style={styles.statusRow}>
           <View style={styles.statusLeft}>
             <Text style={[styles.statusLabel, { color }]}>{label}</Text>
-            <Text style={styles.statusDesc}>{description}</Text>
+            <Text style={[styles.statusDesc, t.statusDesc]}>{description}</Text>
             <View style={[styles.badge, { backgroundColor: bgColor }]}>
               <Text style={[styles.badgeCheck, { color }]}>✓</Text>
               <Text style={[styles.badgeText, { color }]}>{badge}</Text>
@@ -214,10 +227,9 @@ const styles = StyleSheet.create({
 
   card: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    // backgroundColor & shadowColor via t.card
     borderRadius: rs(22),
     padding: rs(12),
-    shadowColor: "#059669",
     shadowOffset: { width: 0, height: rs(6) },
     shadowOpacity: Platform.OS === "ios" ? 0.14 : 0.22,
     shadowRadius: rs(16),
@@ -226,7 +238,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(16, 185, 129, 0.12)",
   },
 
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,14 +250,14 @@ const styles = StyleSheet.create({
     borderRadius: rs(10),
     alignItems: "center",
     justifyContent: "center",
+    // backgroundColor via bgColor inline
   },
   iconEmoji: { fontSize: fs(17) },
   headerText: { flex: 1 },
-  title: { fontSize: fs(13), fontWeight: "700", color: "#1A1A2E", letterSpacing: -0.2 },
-  subtitle: { fontSize: fs(10), color: "#9CA3AF", marginTop: 1 },
-  menuDots: { fontSize: fs(20), color: "#9CA3AF", paddingLeft: rs(4) },
+  title:    { fontSize: fs(13), fontWeight: "700", letterSpacing: -0.2 },  // color via t.title
+  subtitle: { fontSize: fs(10), marginTop: 1 },                            // color via t.subtitle
+  menuDots: { fontSize: fs(20), paddingLeft: rs(4) },                      // color via t.menuDots
 
-  // ECG
   ecgWrapper: {
     marginBottom: rs(8),
     overflow: "visible",
@@ -257,7 +268,6 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
 
-  // Status
   statusRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -274,8 +284,8 @@ const styles = StyleSheet.create({
   },
   statusDesc: {
     fontSize: fs(11),
-    color: "#6B7280",
     marginTop: 1,
+    // color via t.statusDesc
   },
   badge: {
     flexDirection: "row",
@@ -286,9 +296,10 @@ const styles = StyleSheet.create({
     paddingVertical: rs(4),
     marginTop: rs(6),
     gap: rs(4),
+    // backgroundColor via bgColor inline
   },
   badgeCheck: { fontSize: fs(11), fontWeight: "700" },
-  badgeText: { fontSize: fs(10), fontWeight: "600" },
+  badgeText:  { fontSize: fs(10), fontWeight: "600" },
 
   arrowButton: {
     width: rs(36),
@@ -296,6 +307,7 @@ const styles = StyleSheet.create({
     borderRadius: rs(18),
     alignItems: "center",
     justifyContent: "center",
+    // backgroundColor via bgColor inline
   },
   arrowText: { fontSize: fs(18), fontWeight: "700" },
 });

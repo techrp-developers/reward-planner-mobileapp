@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, FlatList, StyleSheet, Animated, InteractionManager } from 'react-native';
-import Home_Chart from '../components/home/home_chart';
+// import Home_Chart from '../components/home/home_chart';
 import CategoriesSection from '../components/home/categories_section';
 import FeaturesProduct from '../components/home/featuresProduct';
 import ProductCategory from '../components/home/productcate';
@@ -76,7 +76,7 @@ const SECTION_PLACEHOLDER_HEIGHT: Record<SectionKey, number> = {
 };
 
 const MemoHomeBanner = React.memo(HomeBanner);
-const MemoHomeChart = React.memo(Home_Chart);
+// const MemoHomeChart = React.memo(Home_Chart);
 const MemoCategoriesSection = React.memo(CategoriesSection);
 const MemoBestSeller = React.memo(BestSeller);
 const MemoTopRated = React.memo(TopRated);
@@ -114,8 +114,8 @@ const SectionContent = React.memo(({ sectionKey }: { sectionKey: SectionKey }) =
   switch (sectionKey) {
     case 'banner':
       return <MemoHomeBanner />;
-    case 'homeChart':
-      return <MemoHomeChart />;
+    // case 'homeChart':
+    //   return <MemoHomeChart />;
     case 'categories':
       return <MemoCategoriesSection />;
     case 'bestSeller':

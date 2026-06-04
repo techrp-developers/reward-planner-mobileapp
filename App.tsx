@@ -7,7 +7,7 @@ import { CartProvider } from './src/modules/ecommerce/context/CartContext';
 import { NavigationContainer, LinkingOptions, NavigatorScreenParams } from "@react-navigation/native";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/query/queryClient';
-
+import { AppThemeProvider } from "./src/theme/ThemeContext";
 type AuthModalStackParamList = {
   Login: undefined;
   AccountActivate: undefined;
@@ -45,16 +45,18 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AlertProvider>
-          <AuthProvider>
-            <CartProvider>
-              <NavigationContainer linking={linking}>
-                <AlertContainer />
-                <RootNavigator />
-              </NavigationContainer>
-            </CartProvider>
-          </AuthProvider>
-        </AlertProvider>
+        <AppThemeProvider>         {/* ✅ your custom theme */}
+          <AlertProvider>
+            <AuthProvider>
+              <CartProvider>
+                <NavigationContainer linking={linking}>
+                  <AlertContainer />
+                  <RootNavigator />
+                </NavigationContainer>
+              </CartProvider>
+            </AuthProvider>
+          </AlertProvider>
+        </AppThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

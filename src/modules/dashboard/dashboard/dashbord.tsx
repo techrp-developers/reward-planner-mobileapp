@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import HeaderComponent from '../header/HeaderComponent';
+import { useAuth } from '../../ecommerce/auth/context/AuthContext';
+import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
+import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
 import ModuleBanner from '../explore/ModuleBanner';
 import { rs, fs } from '../../../utils/responsive';
@@ -18,11 +22,40 @@ import RewardsOverview from '../reward/Rewardsoverview';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
 import { useCart } from '../../ecommerce/context/CartContext';
 import type { TabKey } from '../../ecommerce/navigation/BottomTabs';
+import { useAppTheme } from '../../../theme/ThemeContext';
 
 function Dashbord() {
+  const { isDark, theme } = useAppTheme();
   const iconSize = rs(26);
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
+  const { isAuthenticated, user } = useAuth();
+
+  const [headerUserName, setHeaderUserName]   = useState<string>(user?.name ?? 'User');
+  const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
+  const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
+
+  const loadHeaderInfo = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers.Authorization) return;
+      const res = await axios.get<{ success: boolean; data: any }>(
+        'https://rewardplanners.com/api/crm/v1/auth/user-info',
+        { headers },
+      );
+      if (res.data?.success) {
+        const d = res.data.data;
+        if (d.name)             setHeaderUserName(d.name);
+        if (d.userImage)        setHeaderUserImage(d.userImage);
+        if (d.company?.logo)    setHeaderCompanyLogo(d.company.logo);
+      }
+    } catch {}
+  }, [isAuthenticated]);
+
+  useEffect(() => { loadHeaderInfo(); }, [loadHeaderInfo]);
+
+  useFocusEffect(useCallback(() => { loadHeaderInfo(); }, [loadHeaderInfo]));
 
   const handleTabPress = useCallback(
     (tab: TabKey) => {
@@ -46,9 +79,21 @@ function Dashbord() {
     navigation.navigate('Dashboard');
   }, [navigation]);
 
+  const quoteBannerGradient: string[] = ['#7928CA', '#9C3BE0', '#B84EFF'];
+
+  const t = useMemo(() => StyleSheet.create({
+    root:          { backgroundColor: theme.background },
+    iconContainer: { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF' },
+    card:          { shadowColor: isDark ? '#000000' : '#7928CA' },
+  }), [isDark, theme.background]);
+
   return (
-    <View style={styles.root}>
-      <HeaderComponent />
+    <View style={[styles.root, t.root]}>
+      <HeaderComponent
+        userName={headerUserName}
+        userImageUri={headerUserImage ?? undefined}
+        companyLogoUri={headerCompanyLogo ?? undefined}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -59,19 +104,19 @@ function Dashbord() {
         {/* Motivational Quote Banner */}
         <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(14) }]}>
           <LinearGradient
-            colors={['#7928CA', '#9C3BE0', '#B84EFF']}
+            colors={quoteBannerGradient}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
-            style={styles.card}
+            style={[styles.card, t.card]}
           >
             <View style={styles.glowTop} />
             <View style={styles.glowBottom} />
 
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, t.iconContainer]}>
               <MaterialCommunityIcons
                 name="lightbulb-on-outline"
                 size={iconSize}
-                color="#9B3DD8"
+                color={isDark ? '#FFFFFF' : '#9B3DD8'}
               />
             </View>
 
@@ -103,7 +148,7 @@ export default Dashbord;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F7F5FF',
+    // backgroundColor via t.root
   },
 
   scroll: {
@@ -125,7 +170,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#7928CA',
+    // shadowColor via t.card
     shadowOffset: { width: 0, height: rs(8) },
     shadowOpacity: Platform.OS === 'ios' ? 0.38 : 0.45,
     shadowRadius: rs(20),
@@ -156,7 +201,7 @@ const styles = StyleSheet.create({
     width: rs(58),
     height: rs(58),
     borderRadius: rs(18),
-    backgroundColor: '#FFFFFF',
+    // backgroundColor via t.iconContainer
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: rs(16),

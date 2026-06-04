@@ -6,53 +6,21 @@ import Banner from '../constant/Banner';
 import PriceTypeToggle from '../pack/home_pack/PriceTypeToggle';
 import PackFooterCTA from '../pack/home_pack/PackFooterCTA';
 import PackItemCard from '../pack/home_pack/PackItemCard';
-// const PackBanner = require('../../assete/service/PackBanner.png');
 import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../navigation/type';
 import { getServiceByCategory } from '../../api/ServiceAPI';
-import { getServiceImageUrl } from '../../utils/serviceImage';
 import { addBundleToCart, getBundleDetail, getBuyNowBundlePreview, type BundleEnquiryField } from '../../api/BundleAPI';
 import { useQueryClient } from '@tanstack/react-query';
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
-import Rent from '../../assete/ServiceData/Itr.png';
-import MSEB from '../../assete/ServiceData/Rectangle 4099.png';
-import Job from '../../assete/home/job_joining_pack.png';
 import PackBanner from '../../assete/service/PackBanner.png';
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
 type PackRouteProp = RouteProp<HomeStackParamList, 'PackScreen'>;
 
 
-const packItems = [
-  {
-    id: '1',
-    serviceId: 0,
-    variantId: 0,
-    bundleItemId: 0,
-    title: 'Rent Agreement Registration',
-    desc: 'We handle everything from drafting and collecting documents.',
-    oldPrice: 1000,
-    price: 700,
-    bundlePrice: 700,
-    individualPrice: 1000,
-    image: Rent
-  },
-  {
-    id: '2',
-    serviceId: 0,
-    variantId: 0,
-    bundleItemId: 0,
-    title: 'MSEB Name Change',
-    desc: 'We handle everything from drafting and collecting documents.',
-    oldPrice: 1500,
-    price: 1200,
-    bundlePrice: 1200,
-    individualPrice: 1500,
-    image: MSEB
-  },
-];
+
 
 
 const footerStats = [
@@ -125,11 +93,7 @@ const parseTrustStat = (raw: string): StatItem => {
   };
 };
 
-const getFallbackItemImage = (index: number) => {
-  if (index === 0) return Rent;
-  if (index === 1) return MSEB;
-  return Job;
-};
+
 
 
 function PackScreen() {
@@ -201,9 +165,7 @@ function PackScreen() {
             price: bundlePrice,
             bundlePrice,
             individualPrice,
-            image: item.image_url
-              ? { uri: item.image_url }
-              : getFallbackItemImage(index),
+            image: item.image_url ? { uri: item.image_url } : PackBanner,
           };
         });
 
@@ -279,7 +241,7 @@ function PackScreen() {
           price: Number(variant?.price || 0),
           bundlePrice: Number(variant?.price || 0),
           individualPrice: Number(variant?.mrp || variant?.price || 0),
-          image: serviceImage ? { uri: getServiceImageUrl(serviceImage, 'medium') } : getFallbackItemImage(index),
+          image: serviceImage ? { uri: serviceImage } : PackBanner,
         }));
 
         if (isMounted) {
@@ -287,7 +249,7 @@ function PackScreen() {
           const discounted = items.reduce((s, i) => s + i.price, 0);
 
           setDynamicTitle(route?.params?.title || response?.service?.name || 'Bundle Services');
-          setDynamicBannerUrl(serviceImage ? getServiceImageUrl(serviceImage, 'medium') : null);
+          setDynamicBannerUrl(serviceImage || null);
           setDynamicItems(items);
           setSelectedItemIds(
             items
@@ -329,7 +291,7 @@ function PackScreen() {
     };
   }, [categoryId, resolvedBundleId, route?.params?.title]);
 
-  const items = dynamicItems.length > 0 ? dynamicItems : packItems;
+  const items = dynamicItems;
   useEffect(() => {
     if (priceType === 'bundle') {
       setSelectedItemIds(items.map(item => item.id));

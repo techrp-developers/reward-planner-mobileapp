@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
+  type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { rs, fs } from '../../../utils/responsive';
+import { useAppTheme } from '../../../theme/ThemeContext';
 
 type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 
@@ -36,28 +39,26 @@ const categoriesData: CategoryItem[] = [
   { image: Categories7, tab: 'DineOut' },
 ];
 
-// Maps a TopTab label to the ModuleStack screen name and its moduleName param.
-// Keep in sync with ModuleStackParamList in MainLayout.
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
-  Product: { screen: 'ProductModule', moduleName: 'Product' },
+  Product:  { screen: 'ProductModule',  moduleName: 'Product'  },
   Services: { screen: 'ServicesModule', moduleName: 'Services' },
   Payments: { screen: 'PaymentsModule', moduleName: 'Payments' },
-  DineOut: { screen: 'DineOutModule', moduleName: 'DineOut' },
+  DineOut:  { screen: 'DineOutModule',  moduleName: 'DineOut'  },
 };
 
 export default function ServicesModule() {
+  const { isDark, theme } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
 
-  // 3 visible + partial 4th card to hint horizontal scrollability.
-  const CARD_WIDTH = (width - rs(52)) / 3.3;
+  const CARD_WIDTH  = (width - rs(52)) / 3.3;
   const CARD_HEIGHT = CARD_WIDTH * 1.08;
 
-  // Navigate from Dashboard (AppStack screen) into MainLayout's nested ModuleStack.
-  // Direct navigate('ServicesModule') fails here because ModuleStack is not yet
-  // mounted when Dashboard is the active screen — React Navigation can't find it.
-  // The nested-params form navigate('Home', { screen }) tells AppStack to go to
-  // MainLayout and then navigate within its child ModuleStack, which mounts it first.
+  const t = useMemo(() => ({
+    wrapper:     { backgroundColor: theme.background } as ViewStyle,
+    headerTitle: { color: isDark ? '#FFFFFF' : '#1A1A2E' } as TextStyle,
+  }), [isDark, theme.background]);
+
   const handleCategoryPress = useCallback(
     (tab: TopTab) => {
       const target = TAB_TO_MODULE[tab];
@@ -80,9 +81,9 @@ export default function ServicesModule() {
   }, [navigation]);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, t.wrapper]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Explore Services</Text>
+        <Text style={[styles.headerTitle, t.headerTitle]}>Explore Services</Text>
         <TouchableOpacity
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={handleViewAll}
@@ -117,7 +118,7 @@ export default function ServicesModule() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: '#F5F6FA',
+    // backgroundColor via t.wrapper
     paddingTop: rs(16),
     paddingBottom: rs(16),
   },
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: fs(18),
     fontWeight: '700',
-    color: '#1A1A2E',
+    // color via t.headerTitle
     letterSpacing: 0.2,
   },
   viewAll: {

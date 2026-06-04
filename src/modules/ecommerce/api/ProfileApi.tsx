@@ -237,3 +237,17 @@ export const deleteMultipleTodosApi = async (
     throw error;
   }
 };
+
+export const updateProfile = async (formData: FormData) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/v1/auth/profile`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return response.data;
+};

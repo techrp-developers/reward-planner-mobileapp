@@ -260,7 +260,7 @@ export const deleteCustomer = async () => {
 
     const res = await axios.delete(
       `${API_BASE_URL}/v1/auth/delete-customer`,
-      
+
       { headers }
     );
 
@@ -269,6 +269,21 @@ export const deleteCustomer = async () => {
     console.error('Delete customer API failed', error);
     throw error;
   }
+};
+
+export const updateProfile = async (formData: FormData) => {
+  const headers = await getAuthHeaders();
+  const res = await axios.put(
+    `${API_BASE_URL}/v1/auth/profile`,
+    formData,
+    {
+      headers: {
+        ...headers,
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return res.data;
 };
 
 export type ActivateAccountPayload = {

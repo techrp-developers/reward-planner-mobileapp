@@ -4,7 +4,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SelectableServiceCard from '../government/SelectableServiceCard';
 import { getServiceImageUrl } from '../../utils/serviceImage';
-const ImageHeader = require('../../assete/service/pancard.png');
 
 type VariantItem = {
     id: string;
@@ -15,11 +14,7 @@ type VariantItem = {
     rawVariant?: any;
 };
 
-const DEFAULT_VARIANTS: VariantItem[] = [
-    { id: '1', title: 'New PAN Card', price: '₹175', oldPrice: '₹350' },
-    { id: '2', title: 'PAN Card Correction', price: '₹175', oldPrice: '₹350' },
-    { id: '3', title: 'PAN Card Reprint', price: '₹175', oldPrice: '₹350' },
-];
+
 
 type ServiceCartProps = {
     headerImageUrl?: string;

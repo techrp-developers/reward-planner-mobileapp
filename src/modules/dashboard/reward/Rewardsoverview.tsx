@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  type ViewStyle,
+  type TextStyle,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -15,6 +17,7 @@ import {
 } from "../../ecommerce/api/WalleteAPI";
 import LinearGradient from 'react-native-linear-gradient';
 import RewardIcon from '../../../assets/product/rewards.svg';
+import { useAppTheme } from '../../../theme/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +32,6 @@ interface RewardsState {
   error: string | null;
 }
 
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatINR = (amount: number): string =>
@@ -40,20 +42,25 @@ const formatPts = (pts: number): string =>
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const StatColumn: React.FC<{ label: string; value: string }> = ({
-  label,
-  value,
-}) => (
-  <View style={styles.statColumn}>
-    <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>{value}</Text>
-  </View>
-);
+const StatColumn: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const { theme } = useAppTheme();
+  const t = useMemo(() => ({
+    statLabel: { color: theme.secondaryText } as TextStyle,
+    statValue: { color: theme.text } as TextStyle,
+  }), [theme]);
 
+  return (
+    <View style={styles.statColumn}>
+      <Text style={[styles.statLabel, t.statLabel]}>{label}</Text>
+      <Text style={[styles.statValue, t.statValue]}>{value}</Text>
+    </View>
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const RewardsOverview: React.FC = () => {
+  const { isDark, theme } = useAppTheme();
   const navigation = useNavigation();
   const [state, setState] = useState<RewardsState>({
     balance: 0,
@@ -65,7 +72,6 @@ const RewardsOverview: React.FC = () => {
     loading: true,
     error: null,
   });
-
 
   useEffect(() => {
     const load = async () => {
@@ -79,14 +85,13 @@ const RewardsOverview: React.FC = () => {
         ]);
 
         const credits = creditRes.success ? creditRes.data : [];
-        const debits = debitRes.success ? debitRes.data : [];
+        const debits  = debitRes.success  ? debitRes.data  : [];
 
-        const totalSpent = credits.reduce((sum, tx) => sum + tx.coins, 0);
+        const totalSpent    = credits.reduce((sum, tx) => sum + tx.coins, 0);
         const totalRedeemed = debits.reduce((sum, tx) => sum + tx.coins, 0);
 
         const allTx = [...credits, ...debits].sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
         setState({
@@ -107,17 +112,26 @@ const RewardsOverview: React.FC = () => {
         }));
       }
     };
-
     load();
   }, []);
 
+  const t = useMemo(() => ({
+    screen:        { backgroundColor: theme.background } as ViewStyle,
+    centered:      { backgroundColor: theme.background } as ViewStyle,
+    loadingText:   { color: theme.secondaryText } as TextStyle,
+    card:          { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : PURPLE } as ViewStyle,
+    cardTitle:     { color: theme.text } as TextStyle,
+    statsRow:      { borderBottomColor: theme.border } as ViewStyle,
+    statDivider:   { backgroundColor: theme.border } as ViewStyle,
+    savingsBanner: { backgroundColor: isDark ? theme.card : "#F3F1FF" } as ViewStyle,
+  }), [isDark, theme]);
 
   // ── Loading ──
   if (state.loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, t.centered]}>
         <ActivityIndicator size="large" color="#8665FF" />
-        <Text style={styles.loadingText}>Loading rewards…</Text>
+        <Text style={[styles.loadingText, t.loadingText]}>Loading rewards…</Text>
       </View>
     );
   }
@@ -133,42 +147,35 @@ const RewardsOverview: React.FC = () => {
 
   return (
     <ScrollView
-      style={styles.screen}
+      style={[styles.screen, t.screen]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
       {/* ══ OVERVIEW CARD ══ */}
-      <View style={styles.card}>
+      <View style={[styles.card, t.card]}>
         {/* Trophy emoji – top-right */}
         <View style={styles.rewardIconContainer}>
           <RewardIcon width={50} height={50} />
         </View>
 
         {/* Title */}
-        <Text style={styles.cardTitle}>Your Rewards Overview</Text>
+        <Text style={[styles.cardTitle, t.cardTitle]}>Your Rewards Overview</Text>
 
         {/* Stats row */}
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, t.statsRow]}>
           <StatColumn label="Rewards Earned" value={formatPts(state.balance)} />
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, t.statDivider]} />
           <StatColumn label="Total Spent" value={formatINR(state.totalSpent)} />
-          <View style={styles.statDivider} />
-          <StatColumn
-            label="Total Redeemed"
-            value={formatINR(state.totalRedeemed)}
-          />
+          <View style={[styles.statDivider, t.statDivider]} />
+          <StatColumn label="Total Redeemed" value={formatINR(state.totalRedeemed)} />
         </View>
 
-        {/* Expiry notice - REMOVED */}
-
         {/* Savings banner */}
-        <View style={styles.savingsBanner}>
+        <View style={[styles.savingsBanner, t.savingsBanner]}>
           <Text style={styles.savingsArrow}>↗</Text>
           <Text style={styles.savingsText}>
             {"You saved "}
-            <Text style={styles.savingsAmount}>
-              {formatINR(state.totalSpent)}
-            </Text>
+            <Text style={styles.savingsAmount}>{formatINR(state.totalSpent)}</Text>
             {" this month"}
           </Text>
         </View>
@@ -184,27 +191,13 @@ const RewardsOverview: React.FC = () => {
             <TouchableOpacity
               style={styles.primaryBtnInner}
               activeOpacity={0.85}
-              onPress={() => {
-                navigation.navigate("WalletHistory" as never);
-              }}
+              onPress={() => { navigation.navigate("WalletHistory" as never); }}
             >
               <Text style={styles.primaryBtnText}>View Rewards</Text>
             </TouchableOpacity>
           </LinearGradient>
-
-          {/* <TouchableOpacity
-            style={styles.ghostBtn}
-            activeOpacity={0.7}
-            onPress={() => {
-              navigation.navigate("WalletHistory" as never);
-            }}
-          >
-            <Text style={styles.ghostBtnText}>Use Points</Text>
-          </TouchableOpacity> */}
         </View>
       </View>
-
-      
     </ScrollView>
   );
 };
@@ -213,14 +206,13 @@ export default RewardsOverview;
 
 // ─── StyleSheet ───────────────────────────────────────────────────────────────
 
-const PURPLE = "#8665FF";
+const PURPLE      = "#8665FF";
 const PURPLE_DARK = "#5B47A3";
 
 const styles = StyleSheet.create({
-  // ─ Screen ─
   screen: {
     flex: 1,
-    backgroundColor: "#F6F4FF",
+    // backgroundColor via t.screen
   },
   scrollContent: {
     padding: 16,
@@ -228,17 +220,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // ─ Loading / Error ─
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    backgroundColor: "#F6F4FF",
+    // backgroundColor via t.centered
   },
   loadingText: {
     fontSize: 14,
-    color: "#8A86A0",
+    // color via t.loadingText
   },
   errorBox: {
     margin: 16,
@@ -253,24 +244,16 @@ const styles = StyleSheet.create({
     color: "#C0392B",
   },
 
-  // ─ Overview card ─
   card: {
-    backgroundColor: "#FFFFFF",
+    // backgroundColor & shadowColor via t.card
     borderRadius: 20,
     padding: 20,
-    shadowColor: PURPLE,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
     position: "relative",
     overflow: "hidden",
-  },
-  trophy: {
-    position: "absolute",
-    top: 12,
-    right: 14,
-    fontSize: 42,
   },
   rewardIconContainer: {
     position: "absolute",
@@ -282,18 +265,17 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1A1033",
+    // color via t.cardTitle
     marginBottom: 18,
     paddingRight: 56,
   },
 
-  // ─ Stats ─
   statsRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     paddingBottom: 16,
     borderBottomWidth: 1.5,
-    borderBottomColor: "#F0EDFF",
+    // borderBottomColor via t.statsRow
     marginBottom: 14,
   },
   statColumn: {
@@ -302,24 +284,23 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: "#8A86A0",
     fontWeight: "500",
     marginBottom: 4,
+    // color via StatColumn t.statLabel
   },
   statValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1A1033",
     letterSpacing: -0.3,
+    // color via StatColumn t.statValue
   },
   statDivider: {
     width: 1,
     alignSelf: "stretch",
-    backgroundColor: "#EDE9FF",
+    // backgroundColor via t.statDivider
     marginHorizontal: 4,
   },
 
-  // ─ Expiry banner ─ (REMOVED/UNUSED)
   expiryBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,11 +318,10 @@ const styles = StyleSheet.create({
   expiryText: { fontSize: 13, color: "#8B5E0A", flex: 1 },
   expiryBold: { fontWeight: "700" },
 
-  // ─ Savings banner ─
   savingsBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F1FF",
+    // backgroundColor via t.savingsBanner
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -363,7 +343,6 @@ const styles = StyleSheet.create({
     color: "#3D2E8A",
   },
 
-  // ─ Buttons ─
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -398,5 +377,10 @@ const styles = StyleSheet.create({
     color: PURPLE,
     textDecorationLine: "underline",
   },
-
+  trophy: {
+    position: "absolute",
+    top: 12,
+    right: 14,
+    fontSize: 42,
+  },
 });

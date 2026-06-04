@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   Image,
   useWindowDimensions,
+  type ViewStyle,
 } from 'react-native';
 import { rs } from '../../../utils/responsive';
+import { useAppTheme } from '../../../theme/ThemeContext';
 
 const Banner1  = require('../../../assets/sampleImages/Category_banner(1).png');
 const Banner2  = require('../../../assets/sampleImages/Category_banner(2).png');
@@ -25,13 +27,18 @@ const bannerSources = [
 ];
 
 export default function ModuleBanner() {
+  const { isDark } = useAppTheme();
   const { width } = useWindowDimensions();
   const scrollRef  = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
   const indexRef   = useRef(0);
 
-  // Banner height scales with screen width (38 % of width)
   const bannerHeight = Math.round(width * 0.38);
+
+  const t = useMemo(() => ({
+    dot:       { backgroundColor: isDark ? '#374151' : '#D0D5E2' } as ViewStyle,
+    activeDot: { backgroundColor: '#4A6CF7' } as ViewStyle,
+  }), [isDark]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -71,7 +78,7 @@ export default function ModuleBanner() {
 
       <View style={styles.dots}>
         {bannerSources.map((_, i) => (
-          <View key={i} style={[styles.dot, i === index && styles.activeDot]} />
+          <View key={i} style={[styles.dot, t.dot, i === index && styles.activeDot, i === index && t.activeDot]} />
         ))}
       </View>
     </View>
@@ -101,13 +108,13 @@ const styles = StyleSheet.create({
     width: rs(6),
     height: rs(6),
     borderRadius: rs(3),
-    backgroundColor: '#D0D5E2',
+    // backgroundColor via t.dot
   },
 
   activeDot: {
     width: rs(18),
     height: rs(6),
     borderRadius: rs(4),
-    backgroundColor: '#4A6CF7',
+    // backgroundColor via t.activeDot
   },
 });

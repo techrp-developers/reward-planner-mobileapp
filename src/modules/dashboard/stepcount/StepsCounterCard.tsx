@@ -8,10 +8,13 @@ import {
     Dimensions,
     Animated,
     Easing,
+    type ViewStyle,
+    type TextStyle,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 import { rs, fs } from "../../../utils/responsive";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface StepsCounterCardProps {
@@ -47,6 +50,8 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     loading = false,
     cardWidth,
 }) => {
+    const { isDark, theme } = useAppTheme();
+
     const screenWidth = Dimensions.get("window").width;
     const cWidth = cardWidth ?? (screenWidth - rs(32)) / 2;
 
@@ -78,6 +83,23 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
         return () => anim.stop();
     }, [mountAnim]);
 
+    const ringTrackColor   = isDark ? "#374151"               : "#F0E6FF";
+    const bubbleBg         = isDark ? "rgba(240,66,159,0.15)" : "#FFF0F7";
+    const goalBadgeBg      = isDark ? "rgba(240,66,159,0.15)" : "#FEE2F0";
+
+    const t = useMemo(() => ({
+        card:       { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : "#9B3DD8" } as ViewStyle,
+        title:      { color: theme.text } as TextStyle,
+        subtitle:   { color: theme.secondaryText } as TextStyle,
+        stepsValue: { color: theme.text } as TextStyle,
+        goalLabel:  { color: theme.secondaryText } as TextStyle,
+        stepsUpSub: { color: theme.secondaryText } as TextStyle,
+        barsLabel:  { color: theme.secondaryText } as TextStyle,
+        iconBubble: { backgroundColor: bubbleBg } as ViewStyle,
+        arrowBubble:{ backgroundColor: bubbleBg } as ViewStyle,
+        goalBadge:  { backgroundColor: goalBadgeBg } as ViewStyle,
+    }), [isDark, theme, bubbleBg, goalBadgeBg]);
+
     return (
         <Animated.View
             style={[
@@ -91,15 +113,15 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
             ]}
         >
             <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.92 : 1} style={styles.touchableInner}>
-                <View style={styles.card}>
+                <View style={[styles.card, t.card]}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <View style={styles.iconBubble}>
+                        <View style={[styles.iconBubble, t.iconBubble]}>
                             <Text style={styles.iconEmoji}>👣</Text>
                         </View>
                         <View style={styles.headerText}>
-                            <Text style={styles.title} numberOfLines={1}>Steps Counter</Text>
-                            <Text style={styles.subtitle}>Today's Progress</Text>
+                            <Text style={[styles.title, t.title]} numberOfLines={1}>Steps Counter</Text>
+                            <Text style={[styles.subtitle, t.subtitle]}>Today's Progress</Text>
                         </View>
                         <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                             <Text style={styles.menuDots}>⋮</Text>
@@ -116,7 +138,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                                         <Stop offset="100%" stopColor="#7C3AED" />
                                     </SvgGradient>
                                 </Defs>
-                                <Circle cx={center} cy={center} r={radius} stroke="#F0E6FF" strokeWidth={strokeWidth} fill="none" />
+                                <Circle cx={center} cy={center} r={radius} stroke={ringTrackColor} strokeWidth={strokeWidth} fill="none" />
                                 <Circle
                                     cx={center} cy={center} r={radius}
                                     stroke="url(#progressGrad)"
@@ -129,10 +151,10 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                                 />
                             </Svg>
                             <View style={styles.ringCenter}>
-                                <Text style={[styles.stepsValue, { fontSize: ringSize * 0.18 }]}>
+                                <Text style={[styles.stepsValue, t.stepsValue, { fontSize: ringSize * 0.18 }]}>
                                     {steps.toLocaleString("en-IN")}
                                 </Text>
-                                <Text style={styles.goalLabel}>/ {goalSteps.toLocaleString("en-IN")}</Text>
+                                <Text style={[styles.goalLabel, t.goalLabel]}>/ {goalSteps.toLocaleString("en-IN")}</Text>
                                 <Text style={styles.stepsWord}>Steps</Text>
                             </View>
                         </View>
@@ -140,15 +162,15 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                         {/* Right stats */}
                         <View style={styles.statsColumn}>
                             <View style={styles.stepsUpRow}>
-                                <View style={styles.arrowBubble}>
+                                <View style={[styles.arrowBubble, t.arrowBubble]}>
                                     <Text style={styles.arrowText}>↑</Text>
                                 </View>
                                 <View>
                                     <Text style={styles.stepsUpValue}>+{stepsToday}</Text>
-                                    <Text style={styles.stepsUpSub}>steps today</Text>
+                                    <Text style={[styles.stepsUpSub, t.stepsUpSub]}>steps today</Text>
                                 </View>
                             </View>
-                            <View style={styles.goalBadge}>
+                            <View style={[styles.goalBadge, t.goalBadge]}>
                                 <Text style={styles.goalBadgeText}>{goalPercent}% of goal</Text>
                             </View>
                         </View>
@@ -166,7 +188,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                             />
                         ))}
                     </View>
-                    <Text style={styles.barsLabel}>Daily Activity</Text>
+                    <Text style={[styles.barsLabel, t.barsLabel]}>Daily Activity</Text>
                 </View>
             </TouchableOpacity>
         </Animated.View>
@@ -182,10 +204,9 @@ const styles = StyleSheet.create({
 
     card: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        // backgroundColor & shadowColor via t.card
         borderRadius: rs(22),
         padding: rs(12),
-        shadowColor: "#9B3DD8",
         shadowOffset: { width: 0, height: rs(6) },
         shadowOpacity: Platform.OS === "ios" ? 0.2 : 0.28,
         shadowRadius: rs(16),
@@ -194,7 +215,6 @@ const styles = StyleSheet.create({
         borderColor: "rgba(200, 180, 255, 0.2)",
     },
 
-    // Header
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -205,7 +225,7 @@ const styles = StyleSheet.create({
         width: rs(34),
         height: rs(34),
         borderRadius: rs(10),
-        backgroundColor: "#FFF0F7",
+        // backgroundColor via t.iconBubble
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
@@ -216,20 +236,18 @@ const styles = StyleSheet.create({
     title: {
         fontSize: fs(13),
         fontWeight: "700",
-        color: "#1A1A2E",
+        // color via t.title
         letterSpacing: -0.2,
     },
-    subtitle: { fontSize: fs(10), color: "#9CA3AF", marginTop: 1 },
+    subtitle: { fontSize: fs(10), marginTop: 1 },  // color via t.subtitle
     menuDots: { fontSize: fs(20), color: "#C4B5FD", paddingLeft: rs(4) },
 
-    // Body
     body: {
         flexDirection: "row",
         alignItems: "center",
         gap: rs(8),
     },
 
-    // Ring
     ringWrapper: {
         alignItems: "center",
         justifyContent: "center",
@@ -242,14 +260,13 @@ const styles = StyleSheet.create({
     },
     stepsValue: {
         fontWeight: "800",
-        color: "#1A1A2E",
+        // color via t.stepsValue
         includeFontPadding: false,
         letterSpacing: -0.5,
     },
-    goalLabel: { fontSize: fs(10), color: "#9CA3AF", marginTop: 1 },
+    goalLabel: { fontSize: fs(10), marginTop: 1 },   // color via t.goalLabel
     stepsWord: { fontSize: fs(10), color: "#A855F7", fontWeight: "600", marginTop: 1 },
 
-    // Stats column
     statsColumn: {
         flex: 1,
         alignItems: "flex-start",
@@ -264,16 +281,16 @@ const styles = StyleSheet.create({
         width: rs(20),
         height: rs(20),
         borderRadius: rs(10),
-        backgroundColor: "#FFF0F7",
+        // backgroundColor via t.arrowBubble
         alignItems: "center",
         justifyContent: "center",
     },
-    arrowText: { fontSize: fs(12), color: "#F0429F", fontWeight: "700" },
+    arrowText:    { fontSize: fs(12), color: "#F0429F", fontWeight: "700" },
     stepsUpValue: { fontSize: fs(12), fontWeight: "700", color: "#F0429F" },
-    stepsUpSub: { fontSize: fs(9), color: "#9CA3AF" },
+    stepsUpSub:   { fontSize: fs(9) },  // color via t.stepsUpSub
 
     goalBadge: {
-        backgroundColor: "#FEE2F0",
+        // backgroundColor via t.goalBadge
         borderRadius: rs(20),
         paddingHorizontal: rs(8),
         paddingVertical: rs(3),
@@ -282,7 +299,6 @@ const styles = StyleSheet.create({
     },
     goalBadgeText: { fontSize: fs(10), fontWeight: "700", color: "#E0348A" },
 
-    // Sparkline bars
     barsWrapper: {
         flexDirection: "row",
         alignItems: "flex-end",
@@ -300,7 +316,7 @@ const styles = StyleSheet.create({
     barsLabel: {
         textAlign: "center",
         fontSize: fs(10),
-        color: "#9CA3AF",
         fontWeight: "600",
+        // color via t.barsLabel
     },
 });

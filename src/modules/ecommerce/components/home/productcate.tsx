@@ -33,7 +33,7 @@ type CategoryProductsPage = {
 };
 
 const PAGE_LIMIT = 10;
-const GRID_COLUMNS = 3;
+const GRID_COLUMNS = 2;
 
 // Memoized category item component
 type CategoryItemProps = {
@@ -316,14 +316,14 @@ const styles = StyleSheet.create({
 
   catLabel: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
-    fontWeight: "600",
+    fontWeight: "500",
   },
 
   catLabelActive: {
     color: "#111827",
-    fontWeight: "800",
+    fontWeight: "700",
   },
 
   underline: {
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
 
   emptyText: {
     color: "#888",
-    fontSize: 16,
+    fontSize: 13,
   },
   categorySkeletonRow: {
     flexDirection: "row",
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   productSkeletonCard: {
-    width: "31%",
+    width: "48%",
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 6,

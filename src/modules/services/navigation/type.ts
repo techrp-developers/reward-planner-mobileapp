@@ -91,22 +91,46 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
-type ServiceItem = {
+export type ServiceItem = {
   service_id: number;
   variant_id: number;
   name: string;
-  description: string;
-  enquiry: number;
+  title?: string;
+  description?: string;
+  enquiry?: boolean | number;
+  rating?: number;
+  total_orders?: number;
   price: number;
-  image: string | null;
+  mrp?: number;
+  discount_percent?: number;
+  coins?: number;
+  service_image?: string | null;
+  variant_image?: string | null;
+  image?: string | null; // For backward compatibility
+};
+
+export type BannerItem = {
+  banner_id: number;
+  title: string;
+  image_url: string;
+  redirect_type: 'service' | 'url' | 'category' | 'bundle';
+  redirect_id?: number | null;
+  redirect_url?: string | null;
+};
+
+export type SectionItem = ServiceItem | BannerItem;
+
+export type ServiceSection = {
+  section_id: number;
+  title: string;
+  section_key: string;
+  layout_type: 'horizontal' | 'vertical' | 'grid' | 'carousel';
+  section_type: 'services' | 'bundles' | 'promotions' | 'banners';
+  items: SectionItem[];
 };
 
 export type ServiceHomeResponse = {
   success: boolean;
-  data: {
-    quick_services: ServiceItem[];
-    popular: ServiceItem[];
-    recommended: ServiceItem[];
-    value_added: ServiceItem[];
-  };
+  data?: ServiceSection[];
+  message?: string;
 };

@@ -1,25 +1,5 @@
-/**
- * HeaderComponent.tsx
- *
- * FIX: "Hello, Devashish" was hidden behind the camera notch / Dynamic Island.
- *
- * Root cause: <SafeAreaView flex:0> with the gradient inside it meant the
- * gradient started BELOW the safe area — but on many devices the content
- * still rendered too high because SafeAreaView top inset only applies on iOS
- * and not consistently across Android OEMs.
- *
- * Solution:
- *  1. Remove <SafeAreaView> as the outer wrapper entirely.
- *  2. Use useSafeAreaInsets() from react-native-safe-area-context to read
- *     the exact top inset for the current device (notch / Dynamic Island /
- *     punch-hole / plain status bar).
- *  3. Apply that inset + a small extra breathing room as paddingTop on the
- *     LinearGradient — the gradient now covers the full status bar area
- *     giving the beautiful full-bleed purple look while pushing content
- *     safely below the camera.
- */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,21 +9,22 @@ import {
   StatusBar,
   Platform,
   TouchableOpacity,
+  type ImageStyle,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// Local logo asset — adjust path to match your project
+import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../../../theme/ThemeContext';
 import Logo from '../../../assets/menu/logo.png';
 
-// Fallback if safe-area-context somehow returns 0
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
-const IOS_FALLBACK_TOP = 50; // covers even the Dynamic Island (59 pt safe)
+const IOS_FALLBACK_TOP = 50;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface HeaderProps {
   userName?: string;
+  userImageUri?: string;
   companyLogoUri?: string;
   onNotificationPress?: () => void;
   onAIToggle?: (value: boolean) => void;
@@ -51,89 +32,111 @@ interface HeaderProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const HeaderComponent: React.FC<HeaderProps> = ({
-  userName = 'Devashish',
+  userName = 'User',
+  userImageUri,
   companyLogoUri,
   onNotificationPress,
   onAIToggle,
 }) => {
+  const { isDark, theme, toggleTheme } = useAppTheme();
   const [aiEnabled, setAiEnabled] = useState<boolean>(false);
+  const navigation = useNavigation<any>();
 
-  // ── Safe-area top inset ──────────────────────────────────────────────────
   const insets = useSafeAreaInsets();
   const safeTop = insets.top > 0
     ? insets.top
     : Platform.OS === 'android' ? ANDROID_STATUS_BAR : IOS_FALLBACK_TOP;
-
-  // 8 pt extra so content breathes nicely below the camera area
   const topPadding = safeTop + 8;
+
+  const gradientColors: string[] = isDark
+    ? ['#1A1A2E', '#2D2D44']
+    : ['#C8B9FF', '#F0EDFF'];
+
+  const t = useMemo(() => StyleSheet.create({
+    gradient:    { paddingTop: topPadding },
+    helloText:   { color: isDark ? '#FFFFFF' : '#1A1A2E' },
+    nameText:    { color: isDark ? '#FFFFFF' : '#1A1A2E' },
+    logoPill:    { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF' },
+    aiRow:       { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF', shadowColor: isDark ? '#000000' : '#9B8FCC' },
+    aiLabelText: { color: isDark ? '#FFFFFF' : '#1A1A2E' },
+    offLabel:    { color: theme.secondaryText },
+    avatarRing:  { borderColor: isDark ? '#7C5CFC' : '#7C5CFC', backgroundColor: isDark ? '#2D1F6E' : '#E9E4FF' },
+  }), [isDark, theme.secondaryText, topPadding]);
 
   const handleToggle = (value: boolean) => {
     setAiEnabled(value);
+    toggleTheme();
     onAIToggle?.(value);
   };
 
   return (
-    // The gradient now starts from y=0 (behind the status bar / notch).
-    // paddingTop pushes all content below the camera cutout.
     <LinearGradient
-      colors={['#C8B9FF', '#F0EDFF']}
+      colors={gradientColors}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
-      style={[styles.gradient, { paddingTop: topPadding }]}
+      style={[styles.gradient, t.gradient]}
     >
-      {/* ── Top Row: Greeting | Logo + Bell ── */}
+      {/* ── Top Row ── */}
       <View style={styles.topRow}>
 
-        {/* Left — "Hello, \n Devashish" */}
-        <View>
-          <Text style={styles.helloText}>Hello,</Text>
-          <Text style={styles.nameText}>{userName}</Text>
-        </View>
-
-        {/* Right — logo pill + bell */}
-        <View style={styles.rightBlock}>
-
-          {/* Company logo pill */}
-          <View style={styles.logoPill}>
-            {companyLogoUri ? (
+        {/* Profile avatar — tapping navigates to Profile screen */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.8}
+          style={styles.avatarBtn}
+        >
+          <View style={[styles.avatarRing, t.avatarRing]}>
+            {userImageUri ? (
               <Image
-                source={typeof companyLogoUri === 'string' ? { uri: companyLogoUri } : companyLogoUri}
-                style={styles.logoImage}
-                resizeMode="contain"
+                source={{ uri: userImageUri }}
+                style={styles.avatarImg}
+                resizeMode="cover"
               />
             ) : (
-              /* Local PNG asset */
-              <Image source={Logo} style={styles.logoImage} resizeMode="contain" />
+              <MaterialCommunityIcons
+                name="account-circle"
+                size={30}
+                color="#7C5CFC"
+              />
             )}
           </View>
+        </TouchableOpacity>
 
-          {/* Notification bell */}
-          <TouchableOpacity
-            style={styles.bellWrapper}
-            onPress={onNotificationPress}
-            activeOpacity={0.75}
-            accessibilityLabel="Notifications"
-          >
-            <MaterialCommunityIcons name="bell" size={18} color="#1A1A2E" />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>1</Text>
-            </View>
-          </TouchableOpacity>
-
+        {/* Greeting text */}
+        <View style={styles.greetWrap}>
+          <Text style={[styles.helloText, t.helloText]}>Hello,</Text>
+          <Text style={[styles.nameText, t.nameText]} numberOfLines={1}>
+            {userName}
+          </Text>
         </View>
+
+        {/* Company logo pill */}
+        <View style={[styles.logoPill, t.logoPill]}>
+          {companyLogoUri ? (
+            <Image
+              source={{ uri: companyLogoUri }}
+              style={styles.logoImage as ImageStyle}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={Logo}
+              style={styles.logoImage as ImageStyle}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+
       </View>
 
       {/* ── AI Assistant Toggle Row ── */}
-      <View style={styles.aiRow}>
-
+      <View style={[styles.aiRow, t.aiRow]}>
         <View style={styles.aiLabelRow}>
           <Text style={styles.sparkleIcon}>✦</Text>
-          <Text style={styles.aiLabelText}>RP AI Assistant</Text>
+          <Text style={[styles.aiLabelText, t.aiLabelText]}>RP AI Assistant</Text>
         </View>
-
-        {/* OFF/ON + Switch */}
         <View style={styles.toggleWrapper}>
-          {!aiEnabled && <Text style={styles.offLabel}>OFF</Text>}
+          {!aiEnabled && <Text style={[styles.offLabel, t.offLabel]}>OFF</Text>}
           <Switch
             value={aiEnabled}
             onValueChange={handleToggle}
@@ -144,7 +147,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           />
           {aiEnabled && <Text style={styles.onLabel}>ON</Text>}
         </View>
-
       </View>
     </LinearGradient>
   );
@@ -152,87 +154,64 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-
   gradient: {
-    // paddingTop applied dynamically (topPadding)
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
 
-  // ── Top row ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 16,
+    gap: 12,
   },
 
+  // ── Profile avatar ──
+  avatarBtn: {
+    flexShrink: 0,
+  },
+  avatarRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // ── Greeting ──
+  greetWrap: {
+    flex: 1,
+  },
   helloText: {
-    fontSize: 22,
+    fontSize: 13,
     fontWeight: '400',
-    color: '#1A1A2E',
-    lineHeight: 28,
+    lineHeight: 18,
   },
   nameText: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A2E',
-    lineHeight: 28,
+    lineHeight: 22,
   },
 
-  rightBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-
-  // Logo pill
+  // ── Logo pill ──
   logoPill: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minWidth: 110,
+    minWidth: 100,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   logoImage: {
-    width: 100,
-    height: 36,
-  },
-
-  // Bell
-  bellWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9B8FCC',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  badge: {
-    position: 'absolute',
-    top: 3,
-    right: 3,
-    backgroundColor: '#FF3B30',
-    borderRadius: 8,
-    minWidth: 15,
-    height: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  badgeText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    lineHeight: 11,
+    width: 90,
+    height: 32,
   },
 
   // ── AI Toggle ──
@@ -240,19 +219,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 13,
     borderWidth: 1,
     borderColor: 'rgba(124, 92, 252, 0.10)',
-    shadowColor: '#9B8FCC',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.14,
     shadowRadius: 10,
     elevation: 4,
   },
-
   aiLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -265,10 +241,8 @@ const styles = StyleSheet.create({
   aiLabelText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1A1A2E',
     letterSpacing: -0.1,
   },
-
   toggleWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -277,7 +251,6 @@ const styles = StyleSheet.create({
   offLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#A0A0B8',
     letterSpacing: 0.5,
   },
   onLabel: {
