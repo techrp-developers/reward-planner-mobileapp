@@ -50,6 +50,8 @@ export type AppStackParamList = {
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
   ExploreModule: undefined;
+  AIAssistant: undefined;
+  TodoList: undefined;
 };
 
 export type RootStackParamList = {
@@ -165,6 +167,20 @@ function AppNavigator() {
         name="ExploreModule"
         getComponent={() =>
           require("../modules/dashboard/explore/ExploreModule").default
+        }
+      />
+
+      <AppStack.Screen
+        name="AIAssistant"
+        getComponent={() =>
+          require("../modules/dashboard/aiassist/AIAssistantScreen").default
+        }
+      />
+
+      <AppStack.Screen
+        name="TodoList"
+        getComponent={() =>
+          require("../modules/ecommerce/profile/TodoList").default
         }
       />
 

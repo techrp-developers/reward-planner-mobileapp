@@ -19,19 +19,20 @@ import ModuleBanner from '../explore/ModuleBanner';
 import { rs, fs } from '../../../utils/responsive';
 import ServicesModule from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
-import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
+// import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
 import { useCart } from '../../ecommerce/context/CartContext';
 import type { TabKey } from '../../ecommerce/navigation/BottomTabs';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
 
 function Dashbord() {
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
   const iconSize = rs(26);
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
 
-  const [headerUserName, setHeaderUserName]   = useState<string>(user?.name ?? 'User');
+  const [headerUserName, setHeaderUserName] = useState<string>(user?.name ?? 'User');
   const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
 
@@ -46,11 +47,11 @@ function Dashbord() {
       );
       if (res.data?.success) {
         const d = res.data.data;
-        if (d.name)             setHeaderUserName(d.name);
-        if (d.userImage)        setHeaderUserImage(d.userImage);
-        if (d.company?.logo)    setHeaderCompanyLogo(d.company.logo);
+        if (d.name) setHeaderUserName(d.name);
+        if (d.userImage) setHeaderUserImage(d.userImage);
+        if (d.company?.logo) setHeaderCompanyLogo(d.company.logo);
       }
-    } catch {}
+    } catch { }
   }, [isAuthenticated]);
 
   useEffect(() => { loadHeaderInfo(); }, [loadHeaderInfo]);
@@ -81,14 +82,22 @@ function Dashbord() {
 
   const quoteBannerGradient: string[] = ['#7928CA', '#9C3BE0', '#B84EFF'];
 
+  const rootGradient = isDark
+    ? ['#0E0E1C', '#1A1A2E']
+    : ['#F0EDFF', '#FFFFFF'];
+
   const t = useMemo(() => StyleSheet.create({
-    root:          { backgroundColor: theme.background },
     iconContainer: { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF' },
     card:          { shadowColor: isDark ? '#000000' : '#7928CA' },
-  }), [isDark, theme.background]);
+  }), [isDark]);
 
   return (
-    <View style={[styles.root, t.root]}>
+    <LinearGradient
+      colors={rootGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.root}
+    >
       <HeaderComponent
         userName={headerUserName}
         userImageUri={headerUserImage ?? undefined}
@@ -139,7 +148,8 @@ function Dashbord() {
         onTabPress={handleTabPress}
         onCenterPress={handleCenterPress}
       />
-    </View>
+      {/* <FloatingBottomBar/> */}
+    </LinearGradient>
   );
 }
 

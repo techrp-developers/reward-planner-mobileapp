@@ -180,24 +180,23 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
           )}
         </View>
 
-        <View style={styles.pointsButtonWrapper}>
-          <LinearGradient
-            colors={['#714DF3', '#4D34A6']}
-            style={styles.gradientContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-           {!!displayData.rpPrice && (
-  <View style={styles.rpBadge}>
-    <Text style={styles.rpLabel}>RP</Text>
-
-    <Text style={styles.rewardPriceText}>
-      {displayData.rpPrice}
-    </Text>
-  </View>
-)}
-          </LinearGradient>
-        </View>
+        {!!displayData.rpPrice && (
+          <View style={styles.pointsButtonWrapper}>
+            <LinearGradient
+              colors={['#714DF3', '#4D34A6']}
+              style={styles.gradientContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <View style={styles.rpBadge}>
+                <Text style={styles.rpLabel}>RP</Text>
+                <Text style={styles.rewardPriceText} numberOfLines={1} adjustsFontSizeToFit>
+                  {displayData.rpPrice}
+                </Text>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -462,7 +461,10 @@ const styles = StyleSheet.create({
   },
   gradientContainer: {
     borderRadius: 8,
-    paddingVertical: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rewardRow: {
     flexDirection: "row",
@@ -475,16 +477,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   rpBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
- 
-},
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 1,
+  },
 
-rpLabel: {
-  color: "#FFE082",
-  fontSize: 10,
-  fontWeight: "900",
-  marginRight: 4,
-},
+  rpLabel: {
+    color: "#FFE082",
+    fontSize: 10,
+    fontWeight: "900",
+    marginRight: 4,
+  },
 });

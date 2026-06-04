@@ -118,6 +118,7 @@ export type PrivacyPolicyResponse = {
 };
 
 // GET PRIVACY POLICY
+
 export const fetchPrivacyPolicy =
   async (): Promise<PrivacyPolicyResponse> => {
     const response =
