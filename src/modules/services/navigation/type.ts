@@ -5,6 +5,18 @@ import type { BundleEnquiryField } from '../api/BundleAPI';
 export type HomeStackParamList = {
   Home: undefined;
   ServiceSearch: undefined;
+  MutualFundCalculators: undefined;
+  CommonQuestions: undefined;
+  FAQListing: { categoryId: string; categoryTitle: string };
+  SIPCalculator: undefined;
+  GoalSIPCalculator: undefined;
+  SmartGoalCalculator: undefined;
+  InflationCalculator: undefined;
+  CostOfDelayCalculator: undefined;
+  LumpsumCalculator: undefined;
+  RetirementCalculator: undefined;
+  StepUpSIPCalculator: undefined;
+  SWPCalculator: undefined;
   ServiceDescription: {
     serviceId: number;
     categoryId?: number;
@@ -55,7 +67,10 @@ export type HomeStackParamList = {
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
-
+  CommonQuestionsScreen: undefined;
+  ArticleDetails: { articleId: number; sectionId: number };
+  MFInvestorsDetail: { categoryId: number };
+  MFSectionArticles: { sectionId: number; sectionTitle: string };
   AddressSelect: { fromCart?: boolean } | undefined;
 
   ServiceCheckoutScreen: {
@@ -63,8 +78,7 @@ export type HomeStackParamList = {
     service_id?: number;
     variant_id?: number;
     bundle_id?: number; // ✅ ADD THIS
-      previewData?: any; // 👈 TEMP (recommended)
-
+    previewData?: any; // 👈 TEMP (recommended)
   };
 };
 

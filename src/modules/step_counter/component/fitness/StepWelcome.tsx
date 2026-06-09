@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,191 +8,202 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
-import {
-  BORDER_RADIUS,
-  COLORS,
-  RESPONSIVE,
-  SPACING,
-  TYPOGRAPHY,
-  fitnessCardStyle,
-} from "../../utils/theme";
-
-import StepCountBg from "../../assets/StepCount/Step_Count.svg";
+import { BORDER_RADIUS, RESPONSIVE, SPACING } from "../../utils/theme";
 import RunningIcon from "../../assets/StepCount/running 1.svg";
 import { fetchProfileStepStatus } from "../../api/ProfileAPI";
 
-type StepWelcomeNavProp = NativeStackNavigationProp<FitnessStackParamList, "StepWelcome">;
+type Nav = NativeStackNavigationProp<FitnessStackParamList, "StepWelcome">;
+
+// ─── Violet Dusk palette ──────────────────────────────────────────────────────
+
+const VD = {
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteGhost:  "rgba(255,255,255,0.10)",
+};
+
+const BG = ["#1A1040", "#3D2080", "#6B3FA0"];
+
+// ─── Feature row ─────────────────────────────────────────────────────────────
+
+const Feature = ({ icon, text }: { icon: string; text: string }) => (
+  <View style={ss.feature}>
+    <View style={ss.featureIcon}>
+      <MaterialCommunityIcons name={icon} size={18} color={VD.accent} />
+    </View>
+    <Text style={ss.featureText}>{text}</Text>
+  </View>
+);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const StepWelcome = () => {
-  const navigation = useNavigation<StepWelcomeNavProp>();
-  const [checkingStatus, setCheckingStatus] = useState(true);
+  const navigation      = useNavigation<Nav>();
+  const [checking, setChecking] = useState(true);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
   const handleNext = useCallback(() => navigation.navigate("StepsTrackerScreen"), [navigation]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const checkProfileStatus = async () => {
+    let mounted = true;
+    const check = async () => {
       try {
         const res = await fetchProfileStepStatus();
-
-        if (!isMounted) return;
-
-        if (res.success && res.is_completed) {
-          navigation.replace("StepsTrackerScreen");
-          return;
-        }
-      } catch (error) {
-        console.warn("Step profile status check failed:", error);
+        if (!mounted) return;
+        if (res.success && res.is_completed) navigation.replace("Dashboard");
+      } catch {
+        // status check failed — show the welcome screen anyway
       } finally {
-        if (isMounted) {
-          setCheckingStatus(false);
-        }
+        if (mounted) setChecking(false);
       }
     };
-
-    checkProfileStatus();
-
-    return () => {
-      isMounted = false;
-    };
+    check();
+    return () => { mounted = false; };
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+    <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <StepCountBg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.centerWrapper} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={COLORS.gradientWelcome} style={styles.popupCard}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={handleBack}
-            activeOpacity={0.78}
-          >
-            <MaterialCommunityIcons
-              name="chevron-left"
-              size={RESPONSIVE.iconMedium}
-              color={COLORS.textMedium}
-            />
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+        <ScrollView
+          contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back */}
+          <TouchableOpacity style={ss.backBtn} onPress={handleBack} activeOpacity={0.78}>
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
           </TouchableOpacity>
 
-          <View style={styles.iconContainer}>
-            <RunningIcon width={110} height={110} />
+          {/* Hero illustration */}
+          <View style={ss.heroBox}>
+            <View style={ss.heroGlow} />
+            <RunningIcon width={130} height={130} />
           </View>
 
-          <Text style={styles.eyebrow}>RP Move</Text>
-          <Text style={styles.title}>Welcome to RP Move</Text>
-
-          <Text style={styles.description}>
+          {/* Copy */}
+          <Text style={ss.eyebrow}>RP Move</Text>
+          <Text style={ss.title}>Welcome to{"\n"}RP Move</Text>
+          <Text style={ss.subtitle}>
             Every step you take brings you closer to better health and more coins.
           </Text>
 
-          <Text style={styles.tagline}>Walk. Earn. Redeem.</Text>
+          {/* Features */}
+          <View style={ss.featureList}>
+            <Feature icon="shoe-print"        text="Tracks your daily steps automatically" />
+            <Feature icon="coin-outline"       text="Earn coins for hitting your step goal" />
+            <Feature icon="chart-line-variant" text="See your weekly progress at a glance" />
+            <Feature icon="fire"               text="Maintain streaks for bonus rewards" />
+          </View>
 
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleNext}
-            disabled={checkingStatus}
-            style={styles.buttonWrapper}
-          >
+          <Text style={ss.tagline}>Walk. Earn. Redeem.</Text>
+
+          {/* CTA */}
+          <TouchableOpacity activeOpacity={0.9} onPress={handleNext} disabled={checking} style={ss.ctaWrap}>
             <LinearGradient
-              colors={checkingStatus ? ["#C7C7D1", "#AFAFBB"] : COLORS.gradientPurple}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.button}
+              colors={checking ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#9B6FFF", "#C4A8FF"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={ss.cta}
             >
-              {checkingStatus ? (
-                <ActivityIndicator color={COLORS.textWhite} />
+              {checking ? (
+                <ActivityIndicator color={VD.accent} />
               ) : (
-                <Text style={styles.buttonText}>Let's Get Moving</Text>
+                <>
+                  <Text style={ss.ctaText}>Let's Get Moving</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={18} color="#1A1040" />
+                </>
               )}
             </LinearGradient>
           </TouchableOpacity>
-        </LinearGradient>
-      </ScrollView>
+
+          <View style={ss.bottomPad} />
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
 
 export default React.memo(StepWelcome);
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
-  },
-  centerWrapper: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: RESPONSIVE.horizontalPadding,
-    paddingVertical: SPACING.xxl,
-  },
-  popupCard: {
-    ...fitnessCardStyle,
-    alignItems: "center",
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const ss = StyleSheet.create({
+  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  gradient: { flex: 1 },
+  scroll:   { alignItems: "center", paddingTop: SPACING.xl },
+
   backBtn: {
-    position: "absolute",
-    top: SPACING.md,
-    left: SPACING.md,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignSelf: "flex-start",
+    width: 40, height: 40,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "rgba(134,101,255,0.09)",
+    backgroundColor: VD.whiteGhost,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: SPACING.lg,
   },
-  iconContainer: {
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.md,
+
+  heroBox: {
+    alignItems: "center", justifyContent: "center",
+    marginBottom: SPACING.xl, position: "relative",
   },
+  heroGlow: {
+    position: "absolute",
+    width: 180, height: 180, borderRadius: 90,
+    backgroundColor: "rgba(196,168,255,0.15)",
+  },
+
   eyebrow: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
-    textTransform: "uppercase",
-    marginBottom: SPACING.xs,
+    fontSize: 11, fontWeight: "700", letterSpacing: 1.2,
+    textTransform: "uppercase", color: VD.accent, marginBottom: 8,
   },
   title: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.textDark,
-    textAlign: "center",
-    marginBottom: SPACING.sm,
+    fontSize: 32, fontWeight: "900", color: VD.white,
+    letterSpacing: -0.8, lineHeight: 38,
+    textAlign: "center", marginBottom: SPACING.md,
   },
-  description: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMedium,
-    textAlign: "center",
-    marginBottom: SPACING.md,
+  subtitle: {
+    fontSize: 15, color: VD.whiteMid, lineHeight: 22,
+    textAlign: "center", marginBottom: SPACING.xl,
   },
-  tagline: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primaryIndigo,
-    textAlign: "center",
-    marginBottom: SPACING.xl,
-  },
-  buttonWrapper: {
+
+  featureList: {
     width: "100%",
-  },
-  button: {
-    height: RESPONSIVE.buttonHeight,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
-    alignItems: "center",
-    justifyContent: "center",
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, marginBottom: SPACING.xl, gap: SPACING.sm,
   },
-  buttonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+  feature: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
+  featureIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: VD.accentFaint,
+    alignItems: "center", justifyContent: "center",
   },
+  featureText: { flex: 1, fontSize: 13, color: VD.whiteMid, fontWeight: "500" },
+
+  tagline: {
+    fontSize: 16, fontWeight: "800", color: VD.accent,
+    letterSpacing: 0.5, textAlign: "center", marginBottom: SPACING.xl,
+  },
+
+  ctaWrap: { width: "100%" },
+  cta: {
+    height: 54, borderRadius: BORDER_RADIUS.large,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+  },
+  ctaText: { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+
+  bottomPad: { height: SPACING.xxl },
 });

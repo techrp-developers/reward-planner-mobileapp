@@ -33,6 +33,7 @@ export type FitnessStreakResponse = {
   longest_streak: number;
 };
 
+
 // Calendar progress
 export type CalendarDayStatus = "completed" | "missed" | "partial";
 
@@ -179,11 +180,37 @@ export const syncStepsToServer = async (
   }
 };
 
+// ─── Shared normalizer ───────────────────────────────────────────────────────
+// The server may return either a flat payload  { steps, distance_km, ... }
+// or a wrapped payload { success, data: { steps, distance_km, ... } }.
+// This picks whichever level has the actual data object.
+function unwrap(raw: any): any {
+  if (raw == null) return {};
+  // If the server wrapped with { success, data: { ... } }, unwrap one level.
+  if (raw.data != null && typeof raw.data === "object" && !Array.isArray(raw.data)) {
+    return raw.data;
+  }
+  return raw;
+}
+
+// Safely coerce any value (string, number, null, undefined) to a finite number.
+function n(val: unknown, fallback = 0): number {
+  const v = Number(val);
+  return Number.isFinite(v) ? v : fallback;
+}
+
 // 1️⃣ Dashboard Overview
 export const fetchDashboard = async (): Promise<ApiResponse<DashboardResponse>> => {
   try {
     const res = await api.get("/v1/dashboard/");
-    return { success: true, data: res.data };
+    const d   = unwrap(res.data);
+    return {
+      success: true,
+      data: {
+        today_steps: n(d.today_steps),
+        goal_steps:  n(d.goal_steps),
+      },
+    };
   } catch (error: any) {
     return {
       success: false,
@@ -198,9 +225,21 @@ export const fetchDashboard = async (): Promise<ApiResponse<DashboardResponse>> 
 export const fetchTodaySummary = async (): Promise<ApiResponse<TodaySummaryResponse>> => {
   try {
     const res = await api.get("/v1/dashboard/today-summary");
-    return { success: true, data: res.data };
+    const d   = unwrap(res.data);
+    console.log("[API] today-summary raw:", JSON.stringify(d));
+    return {
+      success: true,
+      data: {
+        steps:            n(d.steps),
+        goal_steps:       n(d.goal_steps),
+        progress_percent: n(d.progress_percent),
+        distance_km:      n(d.distance_km),
+        calories:         n(d.calories),
+        active_minutes:   n(d.active_minutes),
+      },
+    };
   } catch (error: any) {
-    console.error("Error fetching today summary:", error);
+    console.error("[API] today-summary error:", error?.response?.data || error?.message);
     return {
       success: false,
       message: error?.response?.data?.message || "Failed to fetch today summary",
@@ -211,8 +250,16 @@ export const fetchTodaySummary = async (): Promise<ApiResponse<TodaySummaryRespo
 // 3️⃣ Weekly Progress
 export const fetchWeeklyProgress = async (): Promise<ApiResponse<WeeklyProgressItem[]>> => {
   try {
-    const res = await api.get("/v1/dashboard/weekly-progress");
-    return { success: true, data: res.data };
+    const res  = await api.get("/v1/dashboard/weekly-progress");
+    const raw  = res.data?.data ?? res.data ?? [];
+    const items: any[] = Array.isArray(raw) ? raw : [];
+    return {
+      success: true,
+      data: items.map(item => ({
+        date:  String(item.date  || ""),
+        steps: n(item.steps),
+      })),
+    };
   } catch (error: any) {
     return {
       success: false,
@@ -225,7 +272,14 @@ export const fetchWeeklyProgress = async (): Promise<ApiResponse<WeeklyProgressI
 export const fetchFitnessStreak = async (): Promise<ApiResponse<FitnessStreakResponse>> => {
   try {
     const res = await api.get("/v1/dashboard/fitness-streak");
-    return { success: true, data: res.data };
+    const d   = unwrap(res.data);
+    return {
+      success: true,
+      data: {
+        current_streak: n(d.current_streak),
+        longest_streak: n(d.longest_streak),
+      },
+    };
   } catch (error: any) {
     return {
       success: false,

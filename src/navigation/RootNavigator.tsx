@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { useAuth } from "../modules/ecommerce/auth/context/AuthContext";
@@ -8,7 +8,8 @@ import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
 import ServiceHomeStack from "../modules/services/navigation/ServiceHomeStack";
 import RewardHomeStack from "../modules/step_counter/navigation/RewardHomeStack";
 import BBPSHomeStack from "../modules/bbps/navigation/BBPSHomeStack";
-import Dashbord from "../modules/dashboard/dashboard/dashbord";
+import Dashbord from "../modules/dashboard/dashboard/Dashbord";
+import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
 
 import MainLayout from "./MainLayout";
 import SplashScreen from "../modules/ecommerce/auth/screens/SplashScreen";
@@ -94,6 +95,7 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
+    <StepTrackerProvider>
     <AppStack.Navigator screenOptions={defaultScreenOptions}>
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
@@ -185,6 +187,7 @@ function AppNavigator() {
       />
 
     </AppStack.Navigator>
+    </StepTrackerProvider>
   );
 }
 

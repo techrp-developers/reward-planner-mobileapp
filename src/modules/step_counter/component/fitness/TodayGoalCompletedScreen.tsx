@@ -13,9 +13,28 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
+import type { PlanOverview, OverallSummary } from "../../api/Stepsapi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Props = NativeStackScreenProps<FitnessStackParamList, "TodayGoalCompletedScreen">;
+
+// Navigation-stack mode: data comes from route.params
+type NavProps = NativeStackScreenProps<FitnessStackParamList, "TodayGoalCompletedScreen">;
+
+// Overlay mode: Dashboard renders this directly as an absolute overlay
+type OverlayProps = {
+  planOverview:   PlanOverview;
+  overallSummary: OverallSummary;
+  currentStreak:  number;
+  reward:         number;
+  onContinue:     () => void;
+  onBack:         () => void;
+};
+
+type Props = NavProps | OverlayProps;
+
+function isOverlay(p: Props): p is OverlayProps {
+  return !("route" in p);
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const { width: W } = Dimensions.get("window");
@@ -179,8 +198,16 @@ const GradientBar: React.FC<{ progress: number }> = ({ progress }) => {
 };
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-const TodayGoalCompletedScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { planOverview, overallSummary, currentStreak, reward } = route.params;
+const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
+  const overlay = isOverlay(props);
+
+  const planOverview   = overlay ? props.planOverview   : props.route.params.planOverview;
+  const overallSummary = overlay ? props.overallSummary : props.route.params.overallSummary;
+  const currentStreak  = overlay ? props.currentStreak  : props.route.params.currentStreak;
+  const reward         = overlay ? props.reward         : props.route.params.reward;
+
+  const handleBack     = overlay ? props.onBack     : () => props.navigation.goBack();
+  const handleContinue = overlay ? props.onContinue : () => props.navigation.replace("Dashboard");
 
   const heroScaleRef = useRef(new Animated.Value(0.8));
   const heroScale    = heroScaleRef.current;
@@ -238,7 +265,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = ({ route, navigation }) => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           style={styles.backBtn}
           activeOpacity={0.7}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -309,7 +336,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = ({ route, navigation }) => {
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.continueBtn}
-          onPress={() => navigation.replace("Dashboard")}
+          onPress={handleContinue}
           activeOpacity={0.87}
         >
           <Text style={styles.continueTxt}>Continue</Text>
@@ -321,9 +348,25 @@ const TodayGoalCompletedScreen: React.FC<Props> = ({ route, navigation }) => {
 
 export default TodayGoalCompletedScreen;
 
+// ─── Violet Dusk palette (mirrors Dashboard.tsx) ─────────────────────────────
+const VD = {
+  bg0:         "#1A1040",
+  bg1:         "#3D2080",
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  accentDim:   "rgba(196,168,255,0.25)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  success:     "#4ADE80",
+  warning:     "#FBBF24",
+};
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#EDEEF8" },
+  root: { flex: 1, backgroundColor: VD.bg0 },
 
   header: {
     flexDirection: "row",
@@ -331,109 +374,101 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 58 : 28,
     paddingBottom: 10,
     paddingHorizontal: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: VD.cardBorder,
   },
   backBtn:      { width: 36, alignItems: "flex-start", justifyContent: "center" },
-  backArrow:    { fontSize: 34, color: "#3C3F6E", lineHeight: 38, fontWeight: "300" },
+  backArrow:    { fontSize: 34, color: VD.accent, lineHeight: 38, fontWeight: "300" },
   headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle:  { fontSize: 16, fontWeight: "800", color: "#1A1D3A", letterSpacing: -0.2 },
-  headerSub:    { fontSize: 11.5, fontWeight: "700", color: "#6C6FE0", marginTop: 2, letterSpacing: 0.2 },
+  headerTitle:  { fontSize: 16, fontWeight: "800", color: VD.white, letterSpacing: -0.2 },
+  headerSub:    { fontSize: 11.5, fontWeight: "700", color: VD.accent, marginTop: 2, letterSpacing: 0.2 },
   headerSpacer: { width: 36 },
 
-  scroll:         { paddingHorizontal: 14, paddingTop: 6 },
+  scroll:         { paddingHorizontal: 14, paddingTop: 10 },
   scrollBottomPad:{ height: 16 },
 
   illustrationBox: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: VD.cardBg,
     borderRadius: 22,
     alignItems: "center",
     paddingTop: 16,
     paddingBottom: 18,
     marginBottom: 12,
     overflow: "hidden",
-    shadowColor: "#8B8FC8",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   goalScene:    { alignItems: "center", marginBottom: 12 },
-  signBoard:    { backgroundColor: "#6C6FE0", paddingHorizontal: 20, paddingVertical: 6, borderRadius: 6 },
-  signBoardText:{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 3 },
+  signBoard:    { backgroundColor: VD.accent, paddingHorizontal: 20, paddingVertical: 6, borderRadius: 6 },
+  signBoardText:{ color: VD.bg0, fontSize: 13, fontWeight: "900", letterSpacing: 3 },
   postsRow:     { flexDirection: "row", justifyContent: "center", alignItems: "flex-start", marginBottom: 4 },
-  signPost:     { width: 4, height: 22, backgroundColor: "#9198D4", borderRadius: 2 },
+  signPost:     { width: 4, height: 22, backgroundColor: VD.accentDim, borderRadius: 2 },
   signPostGap:  { width: 40 },
 
   figure:        { alignItems: "center" },
   figureArmsRow: { flexDirection: "row", alignItems: "flex-end", gap: 5, marginBottom: 1 },
-  figureArmUp:   { width: 3, height: 15, backgroundColor: "#3C3F6E", borderRadius: 2, marginBottom: 3 },
+  figureArmUp:   { width: 3, height: 15, backgroundColor: VD.whiteMid, borderRadius: 2, marginBottom: 3 },
   figureArmLeft: { transform: [{ rotate: "-38deg" }] },
   figureArmRight:{ transform: [{ rotate: "38deg" }] },
-  figureHead:    { width: 14, height: 14, borderRadius: 7, backgroundColor: "#3C3F6E" },
-  figureBody:    { width: 3, height: 20, backgroundColor: "#3C3F6E", borderRadius: 2 },
+  figureHead:    { width: 14, height: 14, borderRadius: 7, backgroundColor: VD.white },
+  figureBody:    { width: 3, height: 20, backgroundColor: VD.whiteMid, borderRadius: 2 },
   figureLegsRow: { flexDirection: "row", gap: 5, marginTop: 1 },
-  figureLeg:     { width: 3, height: 18, backgroundColor: "#3C3F6E", borderRadius: 2 },
+  figureLeg:     { width: 3, height: 18, backgroundColor: VD.whiteMid, borderRadius: 2 },
   figureLegLeft: { transform: [{ rotate: "-12deg" }] },
   figureLegRight:{ transform: [{ rotate: "12deg" }] },
 
-  illustrationCaption: { fontSize: 13, color: "#7B80B0", textAlign: "center", lineHeight: 20 },
-  illustrationBold:    { fontWeight: "700", color: "#3C3F6E" },
+  illustrationCaption: { fontSize: 13, color: VD.whiteLow, textAlign: "center", lineHeight: 20 },
+  illustrationBold:    { fontWeight: "700", color: VD.accent },
 
   sectionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: VD.cardBg,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
-    shadowColor: "#8B8FC8",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: VD.cardBorder,
   },
-  sectionCardHighlighted: { borderColor: "#6C6FE0", borderWidth: 1.5 },
-  sectionTitle: { fontSize: 14.5, fontWeight: "800", color: "#1A1D3A", marginBottom: 8 },
+  sectionCardHighlighted: { borderColor: VD.accent, borderWidth: 1.5 },
+  sectionTitle: { fontSize: 14.5, fontWeight: "800", color: VD.white, marginBottom: 8 },
 
   infoRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 9 },
-  rowDivider:{ borderBottomWidth: 1, borderBottomColor: "#F0F1FA" },
-  infoLabel: { fontSize: 13.5, color: "#6B6F9A", fontWeight: "500" },
-  infoValue: { fontSize: 13.5, fontWeight: "700" },
+  rowDivider:{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: VD.cardBorder },
+  infoLabel: { fontSize: 13.5, color: VD.whiteLow, fontWeight: "500" },
+  infoValue: { fontSize: 13.5, fontWeight: "700", color: VD.white },
 
   summaryRow:      { flexDirection: "row", alignItems: "center", paddingVertical: 9 },
   summaryIcon:     { fontSize: 17, width: 26, textAlign: "center", marginRight: 8 },
-  summaryLabel:    { flex: 1, fontSize: 13.5, color: "#6B6F9A", fontWeight: "500" },
-  summaryValue:    { fontSize: 13.5, fontWeight: "700", color: "#5B5FBD" },
+  summaryLabel:    { flex: 1, fontSize: 13.5, color: VD.whiteLow, fontWeight: "500" },
+  summaryValue:    { fontSize: 13.5, fontWeight: "700", color: VD.accent },
   gradBarContainer:{ marginTop: 12 },
 
-  gradBarTrack: { height: 8, backgroundColor: "#EEF0FA", borderRadius: 6, overflow: "hidden" },
-  gradBarFill:  { height: "100%", borderRadius: 6, backgroundColor: "#B040F0" },
+  gradBarTrack: { height: 8, backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 6, overflow: "hidden" },
+  gradBarFill:  { height: "100%", borderRadius: 6, backgroundColor: VD.accent },
 
   streakRow:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   streakLightning:{ fontSize: 15 },
-  streakSub:      { fontSize: 12, color: "#9195BB", fontWeight: "500", marginTop: 2 },
-  streakDays:     { fontSize: 14.5, fontWeight: "800", color: "#E84B8A" },
+  streakSub:      { fontSize: 12, color: VD.whiteLow, fontWeight: "500", marginTop: 2 },
+  streakDays:     { fontSize: 14.5, fontWeight: "800", color: VD.success },
 
   rewardRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rewardLabel: { fontSize: 13.5, color: "#6B6F9A", fontWeight: "600" },
-  rewardValue: { fontSize: 15, fontWeight: "900", color: "#C07A00" },
+  rewardLabel: { fontSize: 13.5, color: VD.whiteLow, fontWeight: "600" },
+  rewardValue: { fontSize: 15, fontWeight: "900", color: VD.warning },
 
   footer: {
     paddingHorizontal: 18,
     paddingBottom: Platform.OS === "ios" ? 38 : 22,
     paddingTop: 10,
-    backgroundColor: "#EDEEF8",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: VD.cardBorder,
   },
   continueBtn: {
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: "center",
-    backgroundColor: "#6C6FE0",
-    shadowColor: "#5B5FBD",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    backgroundColor: VD.accent,
   },
-  continueTxt: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.2 },
+  continueTxt: { fontSize: 16, fontWeight: "800", color: VD.bg0, letterSpacing: 0.2 },
 });

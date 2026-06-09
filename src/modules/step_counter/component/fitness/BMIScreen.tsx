@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,24 +9,18 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
-import {
-  BORDER_RADIUS,
-  COLORS,
-  RESPONSIVE,
-  SHADOWS,
-  SPACING,
-  TYPOGRAPHY,
-} from "../../utils/theme";
+import { BORDER_RADIUS, RESPONSIVE, SPACING } from "../../utils/theme";
 
 import BMIBanner from "../../assets/StepCount/BMIpage.svg";
-import StepIcon from "../../assets/StepCount/step_icon.svg";
-import ClockIcon from "../../assets/StepCount/clock_icon.svg";
+import StepIcon   from "../../assets/StepCount/step_icon.svg";
+import ClockIcon  from "../../assets/StepCount/clock_icon.svg";
 import RewardIcon from "../../../../assets/product/rewards.svg";
 import {
   fetchProfilePlan,
@@ -35,579 +28,441 @@ import {
   type WeeklyPlanItem,
 } from "../../api/ProfileAPI";
 
-type BMIScreenNavProp = NativeStackNavigationProp<FitnessStackParamList, "BMICart">;
+type Nav = NativeStackNavigationProp<FitnessStackParamList, "BMICart">;
+
+// ─── Violet Dusk palette ──────────────────────────────────────────────────────
+
+const VD = {
+  bg:          ["#1A1040", "#3D2080", "#6B3FA0"],
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  accentDim:   "rgba(196,168,255,0.25)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteGhost:  "rgba(255,255,255,0.10)",
+  success:     "#4ADE80",
+  warning:     "#FBBF24",
+  error:       "#F87171",
+};
+
+// ─── BMI bar constants ────────────────────────────────────────────────────────
 
 const BMI_MIN = 12;
 const BMI_MAX = 40;
 const INDICATOR_WIDTH = 5;
 
 const BMI_SEGMENTS = [
-  { label: "Under", min: 12, max: 18.5, color: "#FCD34D" },
-  { label: "Normal", min: 18.5, max: 25, color: "#22C55E" },
-  { label: "Over", min: 25, max: 30, color: "#F97316" },
-  { label: "Obese", min: 30, max: 40, color: "#EF4444" },
+  { label: "Under",  min: 12,   max: 18.5, color: "#FCD34D" },
+  { label: "Normal", min: 18.5, max: 25,   color: "#22C55E" },
+  { label: "Over",   min: 25,   max: 30,   color: "#F97316" },
+  { label: "Obese",  min: 30,   max: 40,   color: "#EF4444" },
 ];
 
-const clamp = (value: number, min: number, max: number) => (
-  Math.min(Math.max(value, min), max)
-);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const formatNumber = (value: number) => (
-  Number.isFinite(value) ? value.toLocaleString("en-IN") : "0"
-);
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+const fmt   = (v: number) => (Number.isFinite(v) ? v.toLocaleString("en-IN") : "0");
 
-const formatMinutes = (minutes: number) => {
-  if (minutes === 60) return "1 hour";
-  if (minutes > 60 && minutes % 60 === 0) return `${minutes / 60} hours`;
-  return `${minutes} min`;
+const fmtMinutes = (m: number) => {
+  if (m === 60) return "1 hour";
+  if (m > 60 && m % 60 === 0) return `${m / 60} hours`;
+  return `${m} min`;
 };
 
-const toTitleCase = (value: string) => (
-  value
-    .replace(/[_-]/g, " ")
-    .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-);
+const toTitle = (v: string) =>
+  v.replace(/[_-]/g, " ")
+   .replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
 const getBmiSegment = (bmi: number, category?: string) => {
   if (Number.isFinite(bmi)) {
     if (bmi < 18.5) return BMI_SEGMENTS[0];
-    if (bmi < 25) return BMI_SEGMENTS[1];
-    if (bmi < 30) return BMI_SEGMENTS[2];
+    if (bmi < 25)   return BMI_SEGMENTS[1];
+    if (bmi < 30)   return BMI_SEGMENTS[2];
     return BMI_SEGMENTS[3];
   }
-
-  const normalized = category?.toLowerCase() || "";
-  return BMI_SEGMENTS.find((segment) => normalized.includes(segment.label.toLowerCase())) || BMI_SEGMENTS[1];
+  const n = category?.toLowerCase() || "";
+  return BMI_SEGMENTS.find(s => n.includes(s.label.toLowerCase())) || BMI_SEGMENTS[1];
 };
 
-const BMIScreen: React.FC = () => {
-  const navigation = useNavigation<BMIScreenNavProp>();
-  const { width, height } = useWindowDimensions();
-  const indicatorAnim = useRef(new Animated.Value(0)).current;
-
-  const [profilePlan, setProfilePlan] = useState<ProfilePlanResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [barWidth, setBarWidth] = useState(0);
-
-  const contentWidth = width;
-  const bannerHeight = Math.min(Math.max(height * 0.34, 260), 360);
-  const isTablet = width >= 768;
-  const contentPadding = isTablet ? 34 : 20;
-
-  const loadProfilePlan = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage("");
-
-    const res = await fetchProfilePlan();
-
-    if (res.success && res.data) {
-      setProfilePlan(res.data);
-    } else {
-      setErrorMessage(res.message || "Failed to fetch profile plan");
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadProfilePlan();
-  }, [loadProfilePlan]);
-
-  const bmiDetails = useMemo(() => {
-    const bmiValue = Number(profilePlan?.bmi ?? 0);
-    const activeSegment = getBmiSegment(bmiValue, profilePlan?.category);
-    const category = profilePlan?.category ? toTitleCase(profilePlan.category) : activeSegment.label;
-    const steps = profilePlan?.recommended_steps ?? 0;
-    const minutes = profilePlan?.recommended_minutes ?? 0;
-    const weeklyPlan = profilePlan?.weekly_plan ?? [];
-
-    return {
-      bmiValue,
-      bmiLabel: Number.isFinite(bmiValue) && bmiValue > 0 ? bmiValue.toFixed(2) : "--",
-      category,
-      categoryColor: activeSegment.color,
-      goal: profilePlan?.goal || "Your Goal",
-      steps,
-      minutes,
-      weeklyPlan,
-    };
-  }, [profilePlan]);
-
-  const indicatorTarget = useMemo(() => {
-    if (!barWidth || !Number.isFinite(bmiDetails.bmiValue)) return 0;
-
-    const usableWidth = Math.max(barWidth - INDICATOR_WIDTH, 0);
-    const progress = (clamp(bmiDetails.bmiValue, BMI_MIN, BMI_MAX) - BMI_MIN) / (BMI_MAX - BMI_MIN);
-
-    return usableWidth * progress;
-  }, [barWidth, bmiDetails.bmiValue]);
-
-  useEffect(() => {
-    Animated.spring(indicatorAnim, {
-      toValue: indicatorTarget,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 80,
-    }).start();
-  }, [indicatorAnim, indicatorTarget]);
-
-  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
-  const handleMakeGoal = useCallback(() => navigation.navigate("StepGoal"), [navigation]);
-
-  return (
-    <SafeAreaView style={styles.fullScreen}>
-      <View style={styles.screenGradient}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={[styles.hero, { width: contentWidth, height: bannerHeight }]}>
-            <BMIBanner width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={handleBack}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={28} color={COLORS.textDark} />
-            </TouchableOpacity>
-
-            <View style={styles.tagsRow}>
-              <MetricTag Icon={StepIcon} label={`${formatNumber(bmiDetails.steps)} Steps`} />
-              <MetricTag Icon={ClockIcon} label={formatMinutes(bmiDetails.minutes)} />
-            </View>
-          </View>
-
-          <View style={[styles.contentCard, { width: contentWidth, padding: contentPadding }]}>
-            {loading ? (
-              <LoadingState />
-            ) : errorMessage ? (
-              <ErrorState message={errorMessage} onRetry={loadProfilePlan} />
-            ) : (
-              <>
-            <Text style={styles.bmiTitle}>
-              Your BMI is{" "}
-              <Text style={[styles.bmiValue, { color: bmiDetails.categoryColor }]}>
-                {bmiDetails.bmiLabel}
-              </Text>
-            </Text>
-
-            <View
-              style={styles.bmiBar}
-              onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
-            >
-              {BMI_SEGMENTS.map((segment, index) => (
-                <View
-                  key={segment.label}
-                  style={[
-                    styles.segment,
-                    {
-                      backgroundColor: segment.color,
-                      flex: segment.max - segment.min,
-                      marginLeft: index === 0 ? 0 : 3,
-                    },
-                  ]}
-                />
-              ))}
-              <Animated.View
-                style={[
-                  styles.indicator,
-                  {
-                    transform: [{ translateX: indicatorAnim }],
-                  },
-                ]}
-              />
-            </View>
-
-            <View style={styles.bmiLabelRow}>
-              {BMI_SEGMENTS.map((segment) => (
-                <Text key={segment.label} style={[styles.bmiLbl, { flex: segment.max - segment.min }]}>
-                  {segment.label}
-                </Text>
-              ))}
-            </View>
-
-            <Text style={[styles.bmiCategory, { color: bmiDetails.categoryColor }]}>
-              {bmiDetails.category}
-            </Text>
-            <Text style={styles.guidance}>
-              We have put together a plan that gently guides you toward your goal at a pace that feels doable.
-            </Text>
-
-            <View style={styles.divider} />
-
-            <Text style={styles.goalTitle}>
-              Goal: <Text style={styles.goalValue}>{bmiDetails.goal}</Text>
-            </Text>
-
-            <View style={styles.weekCard}>
-              <LinearGradient colors={COLORS.gradientPink} style={styles.weekHeader}>
-                <Text style={styles.weekHeading}>Weekly Breakdown</Text>
-              </LinearGradient>
-
-              <View style={styles.weekGrid}>
-                {bmiDetails.weeklyPlan.length > 0 ? (
-                  bmiDetails.weeklyPlan.map((item) => (
-                    <WeeklyPlanCard key={`${item.week}-${item.steps}`} item={item} />
-                  ))
-                ) : (
-                  <Text style={styles.emptyWeekText}>Your weekly plan will appear here soon.</Text>
-                )}
-              </View>
-
-              <LinearGradient colors={["#E5F6E3", "#F7FFF4"]} style={styles.lossBox}>
-                <Text style={styles.lossTxt}>
-                  Build toward <Text style={styles.lossBold}>{formatNumber(bmiDetails.steps)} daily steps</Text> with a weekly plan tailored to your BMI.
-                </Text>
-              </LinearGradient>
-            </View>
-
-            <LinearGradient colors={COLORS.gradientPurple} style={styles.rewardCard}>
-              <RewardIcon width={42} height={42} />
-              <Text style={styles.rewardText}>
-                Stay consistent and earn coins every week
-              </Text>
-            </LinearGradient>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.goalButtonWrap}
-              onPress={handleMakeGoal}
-            >
-              <LinearGradient colors={COLORS.gradientPurple} style={styles.goalButton}>
-                <Text style={styles.goalButtonText}>Make This My Goal</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
-  );
-};
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 const MetricTag = React.memo(({ Icon, label }: { Icon: any; label: string }) => (
-  <LinearGradient colors={["#FFFFFF", "#F7F0FF"]} style={styles.tag}>
-    <Icon width={18} height={18} />
-    <Text style={styles.tagText}>{label}</Text>
-  </LinearGradient>
+  <View style={ss.tag}>
+    <Icon width={16} height={16} />
+    <Text style={ss.tagText}>{label}</Text>
+  </View>
 ));
 
 const WeeklyPlanCard = React.memo(({ item }: { item: WeeklyPlanItem }) => (
-  <View style={styles.weekBox}>
-    <Text style={styles.weekName}>Week {item.week}</Text>
-    <Text style={styles.weekSteps}>{formatNumber(item.steps)} Steps</Text>
+  <View style={ss.weekBox}>
+    <Text style={ss.weekBoxTitle}>Week {item.week}</Text>
+    <Text style={ss.weekBoxSteps}>{fmt(item.steps)}</Text>
+    <Text style={ss.weekBoxLabel}>steps / day</Text>
   </View>
 ));
 
 const LoadingState = React.memo(() => (
-  <View style={styles.stateBox}>
-    <ActivityIndicator color={COLORS.primaryIndigo} size="large" />
-    <Text style={styles.stateTitle}>Building your BMI plan</Text>
-    <Text style={styles.stateText}>Fetching your latest profile recommendations.</Text>
+  <View style={ss.stateBox}>
+    <ActivityIndicator color={VD.accent} size="large" />
+    <Text style={ss.stateTitle}>Building your BMI plan</Text>
+    <Text style={ss.stateText}>Fetching your profile recommendations…</Text>
   </View>
 ));
 
 const ErrorState = React.memo(({ message, onRetry }: { message: string; onRetry: () => void }) => (
-  <View style={styles.stateBox}>
-    <View style={styles.errorIcon}>
-      <MaterialCommunityIcons name="alert-circle-outline" size={28} color="#EF4444" />
+  <View style={ss.stateBox}>
+    <View style={ss.errorIcon}>
+      <MaterialCommunityIcons name="alert-circle-outline" size={28} color={VD.error} />
     </View>
-    <Text style={styles.stateTitle}>Plan unavailable</Text>
-    <Text style={styles.stateText}>{message}</Text>
-    <TouchableOpacity activeOpacity={0.9} onPress={onRetry} style={styles.retryButton}>
-      <Text style={styles.retryText}>Retry</Text>
+    <Text style={ss.stateTitle}>Plan unavailable</Text>
+    <Text style={ss.stateText}>{message}</Text>
+    <TouchableOpacity activeOpacity={0.9} onPress={onRetry} style={ss.retryBtn}>
+      <Text style={ss.retryText}>Retry</Text>
     </TouchableOpacity>
   </View>
 ));
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
+const BMIScreen: React.FC = () => {
+  const navigation    = useNavigation<Nav>();
+  const { width, height } = useWindowDimensions();
+  const indicatorAnim = useRef(new Animated.Value(0)).current;
+
+  const [profilePlan,   setProfilePlan]   = useState<ProfilePlanResponse | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [errorMessage,  setErrorMessage]  = useState("");
+  const [barWidth,      setBarWidth]      = useState(0);
+
+  const bannerHeight   = Math.min(Math.max(height * 0.32, 220), 320);
+  const contentPadding = width >= 768 ? 34 : 20;
+
+  const load = useCallback(async () => {
+    setLoading(true); setErrorMessage("");
+    const res = await fetchProfilePlan();
+    if (res.success && res.data) setProfilePlan(res.data);
+    else setErrorMessage(res.message || "Failed to fetch profile plan");
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const bmi = useMemo(() => {
+    const value  = Number(profilePlan?.bmi ?? 0);
+    const seg    = getBmiSegment(value, profilePlan?.category);
+    return {
+      value,
+      label:    Number.isFinite(value) && value > 0 ? value.toFixed(2) : "--",
+      category: profilePlan?.category ? toTitle(profilePlan.category) : seg.label,
+      color:    seg.color,
+      goal:     profilePlan?.goal || "Your Goal",
+      steps:    profilePlan?.recommended_steps ?? 0,
+      minutes:  profilePlan?.recommended_minutes ?? 0,
+      plan:     profilePlan?.weekly_plan ?? [],
+    };
+  }, [profilePlan]);
+
+  const indicatorTarget = useMemo(() => {
+    if (!barWidth || !Number.isFinite(bmi.value)) return 0;
+    const usable   = Math.max(barWidth - INDICATOR_WIDTH, 0);
+    const progress = (clamp(bmi.value, BMI_MIN, BMI_MAX) - BMI_MIN) / (BMI_MAX - BMI_MIN);
+    return usable * progress;
+  }, [barWidth, bmi.value]);
+
+  useEffect(() => {
+    Animated.spring(indicatorAnim, {
+      toValue: indicatorTarget, friction: 8, tension: 80, useNativeDriver: true,
+    }).start();
+  }, [indicatorAnim, indicatorTarget]);
+
+  return (
+    <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
+      <LinearGradient colors={VD.bg} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
+
+          {/* ── Hero banner ───────────────────────────────────────── */}
+          <View style={[ss.hero, { width, height: bannerHeight }]}>
+            <BMIBanner width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+
+            {/* Subtle dark overlay so text remains legible */}
+            <View style={ss.heroOverlay} />
+
+            {/* Back button */}
+            <TouchableOpacity style={ss.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+              <MaterialCommunityIcons name="chevron-left" size={24} color={VD.white} />
+            </TouchableOpacity>
+
+            {/* Step & time tags */}
+            <View style={ss.tagsRow}>
+              <MetricTag Icon={StepIcon}  label={`${fmt(bmi.steps)} Steps`} />
+              <MetricTag Icon={ClockIcon} label={fmtMinutes(bmi.minutes)} />
+            </View>
+          </View>
+
+          {/* ── Content card ──────────────────────────────────────── */}
+          <View style={[ss.card, { padding: contentPadding }]}>
+
+            {loading ? <LoadingState /> : errorMessage ? <ErrorState message={errorMessage} onRetry={load} /> : (
+              <>
+                {/* BMI value */}
+                <Text style={ss.bmiTitle}>
+                  Your BMI is{" "}
+                  <Text style={[ss.bmiValue, { color: bmi.color }]}>{bmi.label}</Text>
+                </Text>
+
+                {/* BMI bar */}
+                <View
+                  style={ss.bmiBar}
+                  onLayout={e => setBarWidth(e.nativeEvent.layout.width)}
+                >
+                  {BMI_SEGMENTS.map((seg, i) => (
+                    <View
+                      key={seg.label}
+                      style={[ss.segment, { backgroundColor: seg.color, flex: seg.max - seg.min, marginLeft: i === 0 ? 0 : 3 }]}
+                    />
+                  ))}
+                  <Animated.View style={[ss.indicator, { transform: [{ translateX: indicatorAnim }] }]} />
+                </View>
+
+                {/* BMI labels */}
+                <View style={ss.bmiLabelRow}>
+                  {BMI_SEGMENTS.map(seg => (
+                    <Text key={seg.label} style={[ss.bmiLbl, { flex: seg.max - seg.min }]}>{seg.label}</Text>
+                  ))}
+                </View>
+
+                {/* Category */}
+                <Text style={[ss.bmiCategory, { color: bmi.color }]}>{bmi.category}</Text>
+                <Text style={ss.guidance}>
+                  We have put together a plan that gently guides you toward your goal at a pace that feels doable.
+                </Text>
+
+                <View style={ss.divider} />
+
+                <Text style={ss.goalLabel}>
+                  Goal: <Text style={ss.goalValue}>{bmi.goal}</Text>
+                </Text>
+
+                {/* Weekly plan card */}
+                <View style={ss.weekCard}>
+                  <LinearGradient colors={["#7C3AED", "#C4A8FF"]} style={ss.weekHeader}>
+                    <Text style={ss.weekHeading}>Weekly Breakdown</Text>
+                  </LinearGradient>
+
+                  <View style={ss.weekGrid}>
+                    {bmi.plan.length > 0 ? (
+                      bmi.plan.map(item => (
+                        <WeeklyPlanCard key={`${item.week}-${item.steps}`} item={item} />
+                      ))
+                    ) : (
+                      <Text style={ss.weekEmpty}>Your weekly plan will appear here soon.</Text>
+                    )}
+                  </View>
+
+                  <View style={ss.lossBox}>
+                    <MaterialCommunityIcons name="trending-up" size={16} color={VD.success} />
+                    <Text style={ss.lossTxt}>
+                      Build toward{" "}
+                      <Text style={ss.lossBold}>{fmt(bmi.steps)} daily steps</Text>{" "}
+                      with a weekly plan tailored to your BMI.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Reward card */}
+                <View style={ss.rewardCard}>
+                  <View style={ss.rewardIconWrap}>
+                    <RewardIcon width={36} height={36} />
+                  </View>
+                  <View style={ss.rewardText}>
+                    <Text style={ss.rewardTitle}>Coins for consistency</Text>
+                    <Text style={ss.rewardSub}>Stay consistent and earn coins every week</Text>
+                  </View>
+                </View>
+
+                {/* CTA */}
+                <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("StepGoal")} style={ss.ctaWrap}>
+                  <LinearGradient colors={["#9B6FFF", "#C4A8FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ss.cta}>
+                    <Text style={ss.ctaText}>Make This My Goal</Text>
+                    <MaterialCommunityIcons name="arrow-right" size={18} color="#1A1040" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
+  );
+};
+
 export default React.memo(BMIScreen);
 
-const styles = StyleSheet.create({
-  fullScreen: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  screenGradient: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollContent: {
-    alignItems: "center",
-    paddingHorizontal: 0,
-    paddingBottom: 28,
-    backgroundColor: "#FFFFFF",
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const ss = StyleSheet.create({
+  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  gradient: { flex: 1 },
+  scroll:   { alignItems: "center", paddingBottom: 32 },
+
+  // Hero
   hero: {
-    marginTop: 0,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
     overflow: "hidden",
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    backgroundColor: "#F3F4F6",
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(20,10,50,0.35)",
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   backBtn: {
-    position: "absolute",
-    left: 18,
-    top: 44,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.54)",
+    position: "absolute", left: 18, top: 16,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.20)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.30)",
+    alignItems: "center", justifyContent: "center",
   },
   tagsRow: {
-    position: "absolute",
-    left: 16,
-    bottom: 12,
-    flexDirection: "row",
-    gap: 8,
+    position: "absolute", left: 16, bottom: 14,
+    flexDirection: "row", gap: 8,
   },
   tag: {
-    minHeight: 34,
-    minWidth: 86,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(166,84,205,0.42)",
-    overflow: "hidden",
-    ...SHADOWS.small,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.30)",
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, gap: 6,
   },
-  tagText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "600",
-    color: COLORS.textDark,
-    marginLeft: 6,
-  },
-  contentCard: {
-    backgroundColor: "#FFFFFF",
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderWidth: 0,
-  },
-  bmiTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "600",
-    color: COLORS.textDark,
-    textAlign: "left",
-  },
-  bmiValue: {
-    color: COLORS.warning,
-    fontWeight: "800",
-  },
-  bmiBar: {
-    flexDirection: "row",
+  tagText: { fontSize: 12, fontWeight: "600", color: VD.white },
+
+  // Content card
+  card: {
     width: "100%",
-    height: 4,
-    borderRadius: BORDER_RADIUS.pill,
-    overflow: "visible",
-    marginTop: 18,
-    marginBottom: 8,
+    backgroundColor: VD.cardBg,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
   },
-  segment: {
-    flex: 1,
-    borderRadius: BORDER_RADIUS.pill,
+
+  // BMI display
+  bmiTitle: {
+    fontSize: 16, fontWeight: "600", color: VD.whiteMid,
+    marginTop: SPACING.sm,
   },
+  bmiValue:   { fontWeight: "900", fontSize: 18 },
+  bmiBar: {
+    flexDirection: "row", width: "100%", height: 6,
+    borderRadius: BORDER_RADIUS.pill, overflow: "visible",
+    marginTop: 16, marginBottom: 6,
+  },
+  segment:  { borderRadius: BORDER_RADIUS.pill },
   indicator: {
-    position: "absolute",
-    left: 0,
-    top: -8,
-    width: 5,
-    height: 22,
-    borderRadius: BORDER_RADIUS.pill,
-    borderWidth: 0,
-    borderColor: "#111827",
-    backgroundColor: "#111827",
-    ...SHADOWS.small,
+    position: "absolute", left: 0, top: -7,
+    width: 5, height: 20, borderRadius: BORDER_RADIUS.pill,
+    backgroundColor: VD.white,
   },
-  bmiLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  bmiLabelRow: { flexDirection: "row" },
   bmiLbl: {
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: "500",
-    color: "#111827",
-    flex: 1,
+    fontSize: 10, fontWeight: "500", color: VD.whiteLow,
     textAlign: "center",
   },
   bmiCategory: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: "800",
-    marginTop: 18,
-    textAlign: "left",
+    fontSize: 20, fontWeight: "800", marginTop: 16, letterSpacing: -0.3,
   },
   guidance: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "500",
-    color: COLORS.textMedium,
-    marginTop: 6,
-    textAlign: "left",
+    fontSize: 13, color: VD.whiteLow, lineHeight: 18, marginTop: 6,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#DADDE5",
-    marginVertical: 20,
-  },
-  goalTitle: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: "700",
-    color: COLORS.textDark,
-    textAlign: "left",
-  },
-  goalValue: {
-    color: COLORS.textDark,
-  },
+  divider:   { height: StyleSheet.hairlineWidth, backgroundColor: VD.cardBorder, marginVertical: 20 },
+  goalLabel: { fontSize: 15, fontWeight: "700", color: VD.whiteMid },
+  goalValue: { color: VD.accent },
+
+  // Weekly plan card
   weekCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 0,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#FCE1F0",
+    marginTop: SPACING.lg,
+    backgroundColor: VD.cardBg,
+    borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: VD.cardBorder,
     overflow: "hidden",
   },
-  weekHeader: {
-    borderRadius: 0,
-    paddingVertical: 14,
-    marginBottom: 14,
-  },
-  weekHeading: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "700",
-    textAlign: "left",
-    color: COLORS.surface,
-    paddingHorizontal: 18,
-  },
+  weekHeader:  { paddingVertical: 12, paddingHorizontal: 16 },
+  weekHeading: { fontSize: 14, fontWeight: "700", color: VD.white },
   weekGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row", flexWrap: "wrap",
     justifyContent: "space-between",
-    rowGap: SPACING.sm,
-    paddingHorizontal: 14,
+    rowGap: SPACING.sm, padding: 14,
   },
   weekBox: {
-    width: "48%",
-    minHeight: 78,
-    alignItems: "center",
-    justifyContent: "center",
+    width: "48%", minHeight: 78,
+    alignItems: "center", justifyContent: "center",
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "#FAF7FF",
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1, borderColor: VD.cardBorder,
     padding: SPACING.sm,
-    borderWidth: 1,
-    borderColor: "rgba(134,101,255,0.12)",
   },
-  weekName: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
-  },
-  weekSteps: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
-    marginTop: 2,
-  },
-  emptyWeekText: {
-    ...TYPOGRAPHY.body,
-    width: "100%",
-    color: COLORS.textMuted,
-    textAlign: "center",
-    paddingVertical: SPACING.lg,
+  weekBoxTitle: { fontSize: 11, fontWeight: "700", color: VD.accent, letterSpacing: 0.5 },
+  weekBoxSteps: { fontSize: 20, fontWeight: "900", color: VD.white, letterSpacing: -0.5, marginTop: 4 },
+  weekBoxLabel: { fontSize: 10, color: VD.whiteLow, fontWeight: "500" },
+  weekEmpty: {
+    fontSize: 13, color: VD.whiteLow, textAlign: "center",
+    paddingVertical: SPACING.lg, width: "100%",
   },
   lossBox: {
-    margin: 14,
-    borderRadius: 10,
-    padding: SPACING.md,
+    flexDirection: "row", alignItems: "flex-start",
+    gap: 8, margin: 14, padding: SPACING.md,
+    backgroundColor: "rgba(74,222,128,0.08)",
+    borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: "rgba(74,222,128,0.20)",
   },
-  lossTxt: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMedium,
-    textAlign: "center",
-  },
-  lossBold: {
-    color: COLORS.success,
-    fontWeight: "800",
-  },
+  lossTxt:  { flex: 1, fontSize: 12, color: VD.whiteLow, lineHeight: 18 },
+  lossBold: { color: VD.success, fontWeight: "800" },
+
+  // Reward card
   rewardCard: {
     marginTop: SPACING.lg,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: VD.accentFaint,
     borderRadius: BORDER_RADIUS.large,
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, gap: SPACING.md,
   },
-  rewardText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
-    marginLeft: SPACING.md,
-    flex: 1,
+  rewardIconWrap: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: "rgba(251,191,36,0.15)",
+    alignItems: "center", justifyContent: "center",
   },
-  goalButtonWrap: {
-    marginTop: SPACING.lg,
-  },
-  goalButton: {
+  rewardText:  { flex: 1 },
+  rewardTitle: { fontSize: 14, fontWeight: "700", color: VD.white },
+  rewardSub:   { fontSize: 12, color: VD.whiteLow, marginTop: 2 },
+
+  // CTA
+  ctaWrap: { marginTop: SPACING.lg },
+  cta: {
     height: RESPONSIVE.buttonHeight,
     borderRadius: BORDER_RADIUS.large,
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center", justifyContent: "center", gap: 8,
   },
-  goalButtonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
-  },
+  ctaText: { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+
+  // States
   stateBox: {
-    minHeight: 320,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: SPACING.xxl,
+    minHeight: 300,
+    alignItems: "center", justifyContent: "center",
+    paddingVertical: SPACING.xxl, gap: SPACING.sm,
   },
-  stateTitle: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.textDark,
-    textAlign: "center",
-    marginTop: SPACING.md,
-  },
-  stateText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
-    textAlign: "center",
-    marginTop: SPACING.xs,
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    minHeight: 44,
-    paddingHorizontal: SPACING.xl,
+  stateTitle: { fontSize: 18, fontWeight: "800", color: VD.white, textAlign: "center" },
+  stateText:  { fontSize: 13, color: VD.whiteLow, textAlign: "center", lineHeight: 20 },
+  retryBtn: {
+    marginTop: SPACING.md, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primaryIndigo,
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1, borderColor: VD.cardBorder,
   },
-  retryText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
-  },
+  retryText: { fontSize: 14, fontWeight: "700", color: VD.accent },
   errorIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: BORDER_RADIUS.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FEF2F2",
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: "rgba(248,113,113,0.15)",
+    alignItems: "center", justifyContent: "center",
   },
 });
