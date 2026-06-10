@@ -11,7 +11,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import HeaderComponent from '../header/HeaderComponent';
-import { useAuth } from '../../ecommerce/auth/context/AuthContext';
+import { useAuth } from '../../common/auth/context/AuthContext';
 import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
@@ -24,6 +24,22 @@ import { useCart } from '../../ecommerce/context/CartContext';
 import type { TabKey } from '../../ecommerce/navigation/BottomTabs';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
+import BirthdayCarousel from '../birthday/BirthdayCarousel';
+import type { BirthdayEmployee } from '../birthday/types';
+
+// ── Birthday API ──────────────────────────────────────────────────────────────
+// Update the path below to match your actual HRMS endpoint.
+async function fetchTodayBirthdays(authHeaders: Record<string, string>): Promise<BirthdayEmployee[]> {
+  try {
+    const res = await axios.get<{ success: boolean; data: BirthdayEmployee[] }>(
+      'https://rewardplanners.com/api/crm/v1/hrms/birthdays/today',
+      { headers: authHeaders },
+    );
+    return res.data?.success && Array.isArray(res.data.data) ? res.data.data : [];
+  } catch {
+    return [];
+  }
+}
 
 function Dashbord() {
   const { isDark } = useAppTheme();
@@ -35,22 +51,33 @@ function Dashbord() {
   const [headerUserName, setHeaderUserName] = useState<string>(user?.name ?? 'User');
   const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
+  const hasBirthdays = birthdays.length > 0;
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) return;
-      const res = await axios.get<{ success: boolean; data: any }>(
-        'https://rewardplanners.com/api/crm/v1/auth/user-info',
-        { headers },
-      );
-      if (res.data?.success) {
-        const d = res.data.data;
-        if (d.name) setHeaderUserName(d.name);
-        if (d.userImage) setHeaderUserImage(d.userImage);
+
+      // Fetch user info and today's birthdays in parallel — same auth headers
+      const [userRes, todayBirthdays] = await Promise.all([
+        axios.get<{ success: boolean; data: any }>(
+          'https://rewardplanners.com/api/crm/v1/auth/user-info',
+          { headers },
+        ),
+        fetchTodayBirthdays(headers),
+      ]);
+
+      if (userRes.data?.success) {
+        const d = userRes.data.data;
+        if (d.name)          setHeaderUserName(d.name);
+        if (d.userImage)     setHeaderUserImage(d.userImage);
         if (d.company?.logo) setHeaderCompanyLogo(d.company.logo);
       }
+
+      setBirthdays(todayBirthdays);
     } catch { }
   }, [isAuthenticated]);
 
@@ -88,7 +115,7 @@ function Dashbord() {
 
   const t = useMemo(() => StyleSheet.create({
     iconContainer: { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF' },
-    card:          { shadowColor: isDark ? '#000000' : '#7928CA' },
+    card: { shadowColor: isDark ? '#000000' : '#7928CA' },
   }), [isDark]);
 
   return (
@@ -102,39 +129,45 @@ function Dashbord() {
         userName={headerUserName}
         userImageUri={headerUserImage ?? undefined}
         companyLogoUri={headerCompanyLogo ?? undefined}
+        onSearchActiveChange={setIsSearchOpen}
       />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isSearchOpen}
         bounces
       >
         {/* Motivational Quote Banner */}
-        <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(14) }]}>
-          <LinearGradient
-            colors={quoteBannerGradient}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[styles.card, t.card]}
-          >
-            <View style={styles.glowTop} />
-            <View style={styles.glowBottom} />
+        {hasBirthdays ? (
+          <BirthdayCarousel birthdays={birthdays} />
+        ) : (
+          <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(14) }]}>
+            <LinearGradient
+              colors={quoteBannerGradient}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[styles.card, t.card]}
+            >
+              <View style={styles.glowTop} />
+              <View style={styles.glowBottom} />
 
-            <View style={[styles.iconContainer, t.iconContainer]}>
-              <MaterialCommunityIcons
-                name="lightbulb-on-outline"
-                size={iconSize}
-                color={isDark ? '#FFFFFF' : '#9B3DD8'}
-              />
-            </View>
+              <View style={[styles.iconContainer, t.iconContainer]}>
+                <MaterialCommunityIcons
+                  name="lightbulb-on-outline"
+                  size={iconSize}
+                  color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                />
+              </View>
 
-            <Text style={styles.quote}>
-              "Success is the sum of small efforts,{'\n'}repeated day in and day out."
-            </Text>
-          </LinearGradient>
-        </View>
-
+              <Text style={styles.quote}>
+                "Success is the sum of small efforts,{'\n'}repeated day in and day out."
+              </Text>
+            </LinearGradient>
+            
+          </View>
+        )}
         <Home_Chart />
         <ServicesModule />
         <ModuleBanner />

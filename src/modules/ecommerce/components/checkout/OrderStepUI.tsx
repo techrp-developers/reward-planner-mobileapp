@@ -13,11 +13,11 @@ import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import RazorpayCheckout from "react-native-razorpay";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
-import CouponsSection from "../../constants/coupan/CouponsSection";
+// import CouponsSection from "../../constants/coupan/CouponsSection";
 import BillDetailsCard from "../../constants/itemcart/BillDetailsCard";
 import ProductGrid from "../home/productgrid";
 
-import PaymentOptionsUI from "./PaymentOptionsUI";
+// import PaymentOptionsUI from "./PaymentOptionsUI";
 import OrderProcedbutton from "./OrderProcedbutton";
 import CheckoutItemCart from "./CheckoutItemCart";
 import { addToCart, deleteAllCartItems, fetchCartItems, updateCartQty } from "../../api/CartApi";
@@ -32,7 +32,7 @@ import type { RouteProp } from "@react-navigation/native";
 
 import { useRoute } from "@react-navigation/native";
 import EmptyCart from "../cart/EmptyCart";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../../common/auth/context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useAlert } from "../alerts/useAlert";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
@@ -40,6 +40,7 @@ import {
   addressesQueryKey,
   checkoutPreviewQueryKey,
 } from "../../navigation/navigationPerformance";
+import RecommendedProducts from "../Promotion/RecommendedProducts";
 
 type RouteT = RouteProp<HomeStackParamList, "OrderStepUI">;
 type StepStatus = "done" | "current" | "upcoming";
@@ -53,20 +54,20 @@ type CheckoutSummary = {
   };
 };
 
-const COUPONS = [
-  {
-    id: 1,
-    code: "RPSLAY200",
-    title: "Add ₹248 more to avail this offer",
-    subtitle: "Get Flat ₹200 off",
-  },
-  {
-    id: 2,
-    code: "RPCC200",
-    title: "Buy for ₹7777 to avail",
-    subtitle: "BOB Credit Card Offer",
-  },
-];
+// const COUPONS = [
+//   {
+//     id: 1,
+//     code: "RPSLAY200",
+//     title: "Add ₹248 more to avail this offer",
+//     subtitle: "Get Flat ₹200 off",
+//   },
+//   {
+//     id: 2,
+//     code: "RPCC200",
+//     title: "Buy for ₹7777 to avail",
+//     subtitle: "BOB Credit Card Offer",
+//   },
+// ];
 
 const PURPLE_1 = "#8665FF";
 const PURPLE_2 = "#5B47A3";
@@ -111,12 +112,26 @@ const safeToNumber = (value: any, defaultValue = 0): number => {
   return Number.isFinite(num) ? num : defaultValue;
 };
 
+const isPaymentVerified = (res: any) => {
+  const status = String(res?.status ?? res?.payment_status ?? "").toLowerCase();
+  return (
+    res?.success === true ||
+    res?.verified === true ||
+    status === "paid" ||
+    status === "captured" ||
+    status === "success" ||
+    status === "verified"
+  );
+};
+
 export default function OrderStepUI() {
   const { isAuthenticated, logout, user } = useAuth();
   const { removeItem: removeFromCart } = useCart();
   const alert = useAlert();
+  const alertRef = useRef(alert);
+  alertRef.current = alert;
   const [items, setItems] = useState<any[]>([]);
-  const [showAllCoupons, setShowAllCoupons] = useState(false);
+  // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [useRewards, setUseRewards] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [hasCheckoutStarted, setHasCheckoutStarted] = useState(false);
@@ -233,6 +248,11 @@ export default function OrderStepUI() {
     [normalizeCheckoutItem]
   );
 
+  const selectAddress = useCallback((res: any) => {
+    const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+    return list.find((a: any) => a?.is_default) || list[0] || null;
+  }, []);
+
   const checkoutQueryKey = useMemo(
     () =>
       checkoutPreviewQueryKey({
@@ -255,10 +275,7 @@ export default function OrderStepUI() {
     enabled: isAuthenticated,
     staleTime: TEN_MINUTES,
     gcTime: THIRTY_MINUTES,
-    select: (res: any) => {
-      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-      return list.find((a: any) => a?.is_default) || list[0] || null;
-    },
+    select: selectAddress,
   });
 
   const {
@@ -299,10 +316,10 @@ export default function OrderStepUI() {
   }, [checkoutError, handleUnauthorized]);
 
   useEffect(() => {
-    if (isCheckoutFetching || checkoutData || checkoutError) {
+    if (!hasCheckoutStarted && (isCheckoutFetching || checkoutData || checkoutError)) {
       setHasCheckoutStarted(true);
     }
-  }, [isCheckoutFetching, checkoutData, checkoutError]);
+  }, [hasCheckoutStarted, isCheckoutFetching, checkoutData, checkoutError]);
 
   useEffect(() => {
     const status = Number((addressError as any)?.response?.status);
@@ -314,17 +331,37 @@ export default function OrderStepUI() {
   useEffect(() => {
     if (checkoutData) {
       setItems(Array.isArray(checkoutData.items) ? checkoutData.items : []);
-      setCartSummary(checkoutData.summary ?? emptyCheckoutSummary());
+      setCartSummary(prev => {
+        const s = checkoutData.summary;
+        if (!s) return prev;
+        if (
+          prev.productTotal === s.productTotal &&
+          prev.shippingTotal === s.shippingTotal &&
+          prev.payableAmount === s.payableAmount &&
+          prev.reward.redeemCoins === s.reward.redeemCoins &&
+          prev.reward.earnCoins === s.reward.earnCoins
+        ) return prev;
+        return s;
+      });
       return;
     }
-
-    setItems([]);
-    setCartSummary(emptyCheckoutSummary());
+    setItems(prev => (prev.length === 0 ? prev : []));
+    setCartSummary(prev =>
+      prev.productTotal === 0 &&
+      prev.shippingTotal === 0 &&
+      prev.payableAmount === 0 &&
+      prev.reward.redeemCoins === 0 &&
+      prev.reward.earnCoins === 0
+        ? prev
+        : emptyCheckoutSummary()
+    );
   }, [checkoutData]);
 
   const checkoutPayableAmount = useMemo(() => {
     return getCheckoutPayableAmount(cartSummary, useRewards);
   }, [cartSummary, useRewards]);
+
+  const relatedProductId = mode === "buy_now" ? product_id : undefined;
 
   const checkoutItemCount = useMemo(() => {
     return items.reduce((sum, item) => sum + Math.max(1, Number(item?.quantity || 1)), 0);
@@ -375,18 +412,6 @@ export default function OrderStepUI() {
     },
     [navigation]
   );
-
-  const isPaymentVerified = (res: any) => {
-    const status = String(res?.status ?? res?.payment_status ?? "").toLowerCase();
-    return (
-      res?.success === true ||
-      res?.verified === true ||
-      status === "paid" ||
-      status === "captured" ||
-      status === "success" ||
-      status === "verified"
-    );
-  };
 
   const handlePlaceOrder = async () => {
     let createdCartOrder = false;
@@ -675,11 +700,10 @@ export default function OrderStepUI() {
   useEffect(() => {
     if (!isAuthenticated) {
       setItems([]);
-      alert.info("Login Required", "Please login to continue checkout.");
+      alertRef.current.info("Login Required", "Please login to continue checkout.");
       navigation.goBack();
-      return;
     }
-  }, [alert, isAuthenticated, navigation]);
+  }, [isAuthenticated, navigation]);
 
   const increaseQty = async (item: any) => {
     const newQty = item.quantity + 1;
@@ -766,8 +790,12 @@ export default function OrderStepUI() {
     );
   }
 
-  if (items.length === 0) {
-    return (
+if (
+  items.length === 0 &&
+  hasCheckoutStarted &&
+  !isCheckoutFetching &&
+  !isAddressFetching
+) {    return (
       <View style={styles.container}>
         <ProductHeadColor
           title={mode === "buy_now" ? "Buy Now Checkout" : "Cart"}
@@ -866,7 +894,7 @@ export default function OrderStepUI() {
           ))}
 
           {/* Coupons */}
-          <View style={styles.wrapper}>
+          {/* <View style={styles.wrapper}>
             <View style={styles.headerRow}>
               <Text style={styles.headerText}>Coupons and Offers</Text>
               <TouchableOpacity onPress={() => setShowAllCoupons((p) => !p)}>
@@ -875,7 +903,7 @@ export default function OrderStepUI() {
             </View>
 
             <CouponsSection coupons={showAllCoupons ? COUPONS : COUPONS.slice(0, 1)} />
-          </View>
+          </View> */}
 
           <BillDetailsCard
             cartTotal={cartSummary.productTotal}
@@ -887,9 +915,18 @@ export default function OrderStepUI() {
             onUseRewardsChange={setUseRewards}
           />
 
-          <PaymentOptionsUI />
+          {/* <PaymentOptionsUI /> */}
         </View>
-        <ProductGrid useFlatList={false} />
+                <RecommendedProducts />
+                <View style={styles.relatedSection}>
+                          <Text style={styles.relatedTitle}>Related Products</Text>
+                          <ProductGrid
+                            key={`related-${relatedProductId}`}
+                            useFlatList={false}
+                            relatedProductId={relatedProductId}
+                            take={8}
+                          />
+                        </View>
       </ScrollView>
       <OrderProcedbutton
         total={checkoutPayableAmount}
@@ -1034,4 +1071,14 @@ const styles = StyleSheet.create({
 
   viewAllText: { fontSize: 14, fontWeight: "700", color: "#3585FF" },
   scrollPadding: { paddingHorizontal: 16, },
+  relatedSection: {
+    marginTop: 10,
+  },
+  relatedTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111",
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
 });

@@ -3,7 +3,7 @@
 // TYPES
 // ==============================
 
-import api from "../../../modules/ecommerce/auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 // Dashboard overview
 export type DashboardResponse = {

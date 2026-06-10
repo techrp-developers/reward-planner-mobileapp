@@ -11,8 +11,8 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
-import { setAuthToken as setLegacyAuthToken } from "../../api/AuthAPI";
-import { fetchTermsStatus } from "../../api/TermsConditionAPI";
+import { setAuthToken as setLegacyAuthToken } from "../../../ecommerce/api/AuthAPI";
+import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";

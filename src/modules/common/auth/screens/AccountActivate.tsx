@@ -15,9 +15,9 @@ import Logo from "../../../../assets/homepage/login_logo.svg";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { AuthStackParamList } from "./navigation/types";
-import { activateAccount } from "../../api/AuthAPI";
-import { useAlert } from "../alerts";
+import { AuthStackParamList } from "../../../ecommerce/components/auth/navigation/types";
+import { activateAccount } from "../../../ecommerce/api/AuthAPI";
+import { useAlert } from "../../../ecommerce/components/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type LoginAccountNavigationProp = NativeStackNavigationProp<

@@ -27,7 +27,7 @@ export const createPaymentOrder = async (
   orderId: number,
   amount: number
 ) => {
-  const endpoint = `${API_BASE_URL}/payment/create-order`;
+  const endpoint = `${API_BASE_URL}/v1/payment/create-order`;
   const amountNum = Number(amount ?? 0);
   const paiseAmount = Math.round(amountNum * 100);
 
@@ -67,7 +67,7 @@ export const verifyPayment = async (payload: {
   razorpay_signature: string;
   orderId: number;
 }) => {
-  const endpoint = `${API_BASE_URL}/payment/verify-payment`;
+  const endpoint = `${API_BASE_URL}/v1/payment/verify-payment`;
 
   const payloads = [
     {
@@ -109,7 +109,7 @@ export const verifyPayment = async (payload: {
 
 export const checkPaymentStatus = async (orderId: number) => {
   const endpoints = [
-    `${API_BASE_URL}/payment/payment-status/${orderId}`,
+    `${API_BASE_URL}/v1/payment/payment-status/${orderId}`,
     `${API_BASE_URL}/v1/payment/payment-status/${orderId}`,
     `${API_BASE_URL}/v1/orders/payment-status/${orderId}`,
   ];

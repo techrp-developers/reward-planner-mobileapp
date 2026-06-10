@@ -6,7 +6,7 @@ import {
 import HomeStack from "./HomeStack";
 import type { MainTabParamList } from "./types";
 import BottomTabs from "./BottomTabs";
-import { useAuth } from "../auth/context/AuthContext";
+import { useAuth } from "../../common/auth/context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();

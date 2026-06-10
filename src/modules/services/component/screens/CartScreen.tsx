@@ -20,7 +20,7 @@ import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCa
 import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import CheckoutSummary from '../../../ecommerce/components/ItemCardAddress/CheckoutSummary';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
-import { useAuth } from '../../../ecommerce/auth/context/AuthContext';
+import { useAuth } from '../../../common/auth/context/AuthContext';
 import { addressesQueryKey } from '../../../ecommerce/navigation/navigationPerformance';
 import { HomeStackParamList } from '../../navigation/type';
 import { SERVICE_CART_QUERY_KEY } from '../../constant/queryKeys';

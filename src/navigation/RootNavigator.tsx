@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { useAuth } from "../modules/ecommerce/auth/context/AuthContext";
+import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { checkAppVersion } from "../modules/common/versionupdate/checkAppVersion";
 import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
 
@@ -12,15 +12,15 @@ import Dashbord from "../modules/dashboard/dashboard/Dashbord";
 import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
 
 import MainLayout from "./MainLayout";
-import SplashScreen from "../modules/ecommerce/auth/screens/SplashScreen";
-import TermsGateScreen from "../modules/ecommerce/auth/screens/TermsGateScreen";
-import LoginScreen from "../modules/ecommerce/auth/screens/LoginScreen";
-import BiometricLockScreen from "../modules/ecommerce/auth/screens/BiometricLockScreen";
-import AccountActivate from "../modules/ecommerce/components/auth/AccountActivate";
-import OTPScreen from "../modules/ecommerce/components/auth/OTPScreen";
-import SetNewPassword from "../modules/ecommerce/components/auth/SetNewPassword";
-import AccountActivationSuccess from "../modules/ecommerce/components/auth/AccountActivationSuccess";
-import VerifyEmailScreen from "../modules/ecommerce/auth/screens/VerifyEmailScreen";
+import SplashScreen from "../modules/common/auth/screens/SplashScreen";
+import TermsGateScreen from "../modules/common/auth/screens/TermsGateScreen";
+import LoginScreen from "../modules/common/auth/screens/LoginScreen";
+import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScreen";
+import AccountActivate from "../modules/common/auth/screens/AccountActivate";
+import OTPScreen from "../modules/common/auth/screens/OTPScreen";
+import SetNewPassword from "../modules/common/auth/screens/SetNewPassword";
+import AccountActivationSuccess from "../modules/common/auth/screens/AccountActivationSuccess";
+import VerifyEmailScreen from "../modules/common/auth/screens/VerifyEmailScreen";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

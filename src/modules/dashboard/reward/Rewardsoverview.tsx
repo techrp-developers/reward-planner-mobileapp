@@ -104,11 +104,11 @@ const RewardsOverview: React.FC = () => {
           loading: false,
           error: null,
         });
-      } catch (err: any) {
+      } catch (e) {
         setState((s) => ({
           ...s,
           loading: false,
-          error: err?.message ?? "Something went wrong",
+          error: e instanceof Error ? e.message : "Something went wrong",
         }));
       }
     };

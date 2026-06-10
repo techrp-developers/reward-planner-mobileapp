@@ -6,7 +6,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { fetchAllAddress } from "../../api/AddressApi";
 import type { HomeStackParamList } from "../../navigation/types";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../../common/auth/context/AuthContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 

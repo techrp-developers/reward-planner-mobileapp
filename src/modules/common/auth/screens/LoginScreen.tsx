@@ -15,8 +15,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
-import { useAlert } from "../../components/alerts";
-import { RewardModal } from "../../components/RewardModal";
+import { useAlert } from "../../../ecommerce/components/alerts";
+import { RewardModal } from "../../reward/RewardModal";
 import Logo from "../../../../assets/homepage/login_logo.svg";
 
 type AuthModalStackParamList = {

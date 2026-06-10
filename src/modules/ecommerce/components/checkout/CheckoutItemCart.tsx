@@ -1,219 +1,255 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { getProductImageUrl } from "../../api/ProductApi";
-// Assuming you have your image utility
-// import { getProductImageUrl } from "../../api/ProductApi"; 
 
 type Props = {
-    item: any;
-    onIncrease: () => void;
-    onDecrease: () => void;
-    onRemove: () => void;
-    onPress?: () => void;
+  item: any;
+  onIncrease: () => void;
+  onDecrease: () => void;
+  onRemove: () => void;
+  onPress?: () => void;
 };
 
-const toNumber = (v: any) => Number(String(v).replace(/[^\d.]/g, "")) || 0;
+// API fields: price = sale price, mrp = original price
+const toNum = (v: any) => Number(String(v ?? "0").replace(/[^\d.]/g, "")) || 0;
 
 const getDeliveryDate = () => {
-    const today = new Date();
-    const deliveryDate = new Date(today);
-    deliveryDate.setDate(deliveryDate.getDate() + 5);
-    
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    const dayName = days[deliveryDate.getDay()];
-    const date = deliveryDate.getDate();
-    const monthName = months[deliveryDate.getMonth()];
-    
-    return `Delivery by ${dayName}, ${date} ${monthName}`;
+  const d = new Date();
+  d.setDate(d.getDate() + 5);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `Delivery by ${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
 };
 
-export default function CheckoutItemCart({ item, onIncrease, onDecrease, onRemove, onPress }: Props) {
-    const deliveryText = useMemo(() => getDeliveryDate(), []);
-    const price = toNumber(item.final_item_total || item.item_total || item.sale_price || item.price);
-    const productTitle =
-        item?.product_name ||
-        item?.title ||
-        item?.name ||
-        item?.product?.name ||
-        item?.product?.title ||
-        "Product";
+export default function CheckoutItemCart({
+  item,
+  onIncrease,
+  onDecrease,
+  onRemove,
+  onPress,
+}: Props) {
+  const deliveryText = useMemo(() => getDeliveryDate(), []);
 
-    const productSubtitle =
-        item?.variant_name ||
-        item?.variant?.name ||
-        item?.category_name ||
-        "";
+  // price = discounted sale price, mrp = original price
+  const salePrice = toNum(item.price || item.sale_price);
+  const mrp = toNum(item.mrp);
+  const discountPct =
+    mrp > salePrice && mrp > 0
+      ? Math.round(((mrp - salePrice) / mrp) * 100)
+      : 0;
 
-    return (
-        <View style={styles.card}>
-            <View style={styles.topRow}>
-                {/* Left column: Image + Quantity */}
-                <TouchableOpacity style={styles.leftCol} activeOpacity={0.85} onPress={onPress}>
-                    <Image source={{ uri: getProductImageUrl(item.image) }} style={styles.image} />
-                    <View style={styles.qtyRow}>
-                        <TouchableOpacity onPress={onDecrease} style={styles.qtyBtn}>
-                            <Text style={styles.qtySymbol}>−</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.qtyValue}>{item.quantity || 1}</Text>
-                        <TouchableOpacity onPress={onIncrease} style={styles.qtyBtn}>
-                            <Text style={styles.qtySymbol}>+</Text>
-                        </TouchableOpacity>
-                    </View>
-                </TouchableOpacity>
+  const productTitle =
+    item?.product_name ||
+    item?.title ||
+    item?.name ||
+    item?.product?.name ||
+    item?.product?.title ||
+    "Product";
 
-                {/* Middle content */}
-                <TouchableOpacity style={styles.info} activeOpacity={0.85} onPress={onPress}>
-                    <Text style={styles.title} numberOfLines={1}>{productTitle}</Text>
-                    {!!productSubtitle && <Text style={styles.subTitle}>{productSubtitle}</Text>}
+  const productSubtitle =
+    item?.variant_name ||
+    item?.variant?.name ||
+    item?.category_name ||
+    "";
 
-                    <View style={styles.deliveryRow}>
-                        <MaterialIcons name="local-shipping" size={16} color="#9CA3AF" />
-                        <Text style={styles.delivery}>{deliveryText}</Text>
-                    </View>
+  return (
+    <View style={styles.card}>
+      <View style={styles.topRow}>
 
-                    <Text style={styles.return}>7 Days Returnable</Text>
-
-                    <View style={styles.priceRow}>
-                        <Text style={styles.price}>₹{price.toLocaleString()}</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {/* Close Button */}
-                <TouchableOpacity onPress={onRemove} style={styles.closeBtn}>
-                    <MaterialIcons name="close" size={24} color="#374151" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Offer row */}
-            <TouchableOpacity style={styles.offerContainer}>
-                <View style={styles.offerRow}>
-                    <View style={styles.offerLeft}>
-                        <MaterialIcons name="brightness-7" size={20} color="#F59E0B" />
-                        <Text style={styles.offerText}>1 Offer Available</Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" size={24} color="#4B5563" />
-                </View>
+        {/* Left: image + qty stepper */}
+        <TouchableOpacity style={styles.leftCol} activeOpacity={0.85} onPress={onPress}>
+          <View style={styles.imageWrapper}>
+            <Image
+              source={{ uri: getProductImageUrl(item.image) }}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.qtyPill}>
+            <TouchableOpacity onPress={onDecrease} style={styles.qtyBtn}>
+              <Text style={styles.qtySymbol}>−</Text>
             </TouchableOpacity>
-        </View>
-    );
+            <Text style={styles.qtyValue}>{item.quantity || 1}</Text>
+            <TouchableOpacity onPress={onIncrease} style={styles.qtyBtn}>
+              <Text style={styles.qtySymbol}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+        {/* Right: product info */}
+        <TouchableOpacity style={styles.info} activeOpacity={0.85} onPress={onPress}>
+          <Text style={styles.title} numberOfLines={2}>{productTitle}</Text>
+          {!!productSubtitle && (
+            <Text style={styles.subTitle} numberOfLines={1}>{productSubtitle}</Text>
+          )}
+
+          {/* Price — sale price + strikethrough MRP + discount badge */}
+          <View style={styles.priceRow}>
+            <Text style={styles.salePrice}>₹{salePrice.toLocaleString("en-IN")}</Text>
+            {discountPct > 0 && (
+              <>
+                <Text style={styles.mrpText}>₹{mrp.toLocaleString("en-IN")}</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>{discountPct}% off</Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          <View style={styles.deliveryRow}>
+            <MaterialCommunityIcons name="truck-delivery-outline" size={14} color="#16A34A" />
+            <Text style={styles.delivery}>{deliveryText}</Text>
+          </View>
+
+          <Text style={styles.returnText}>7 Days Returnable</Text>
+        </TouchableOpacity>
+
+        {/* Close button */}
+        <TouchableOpacity
+          onPress={onRemove}
+          style={styles.closeBtn}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <MaterialCommunityIcons name="close" size={14} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        marginHorizontal: 10,
-        marginVertical: 6,
-        borderWidth: 1,
-        borderColor: "#F3F4F6",
-        // Shadow for iOS/Android
-        elevation: 1,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-    },
-    topRow: {
-        flexDirection: "row",
-        position: 'relative',
-    },
-    leftCol: {
-        alignItems: "center",
-        marginRight: 12,
-    },
-    image: {
-        width: 80,
-        height: 80,
-        resizeMode: "contain",
-        marginBottom: 12,
-    },
-    qtyRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: '#fff',
-        paddingTop: 10,
-        paddingHorizontal: 8,
-    },
-    qtyBtn: {
-        width: 28,
-        height: 28,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderRadius: 6,
-        justifyContent: "center",
-        alignItems: "center",
-        
-    },
-    qtySymbol: { fontSize: 18, color: "#4B5563" },
-    qtyValue: { width: 30, textAlign: "center", fontWeight: "500", fontSize: 14 },
-
-    info: {
-        flex: 1,
-        paddingTop: 2,
-    },
-    title: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#1F2937",
-    },
-    subTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#4B5563",
-        marginBottom: 4,
-    },
-    deliveryRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 6,
-        gap: 6,
-    },
-    delivery: { fontSize: 13, color: "#6B7280" },
-    return: {
-        fontSize: 13,
-        color: "#3B82F6",
-        marginTop: 6,
-        fontWeight: '500'
-    },
-    priceRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 12,
-    },
-    price: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#111827",
-        marginRight: 8,
-    },
-    closeBtn: {
-        padding: 2,
-    },
-    offerContainer: {
-        marginTop: 12,
-        marginLeft: 92, // Aligns with the info section
-    },
-    offerRow: {
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        backgroundColor: "#FFF7ED",
-        borderRadius: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: 'space-between',
-    },
-    offerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    offerText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: "#4B5563",
-    },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 14,
+    marginHorizontal: 0,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: "#F0F0F5",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  leftCol: {
+    alignItems: "center",
+    marginRight: 12,
+  },
+  imageWrapper: {
+    width: 86,
+    height: 86,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  image: {
+    width: 76,
+    height: 76,
+  },
+  qtyPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+  },
+  qtyBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
+  },
+  qtySymbol: { fontSize: 17, color: "#374151", fontWeight: "600" },
+  qtyValue: {
+    width: 28,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  info: {
+    flex: 1,
+    paddingRight: 24,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  subTitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  salePrice: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  mrpText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+  },
+  discountBadge: {
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  discountText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#16A34A",
+  },
+  deliveryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 4,
+  },
+  delivery: {
+    fontSize: 12,
+    color: "#16A34A",
+    fontWeight: "500",
+  },
+  returnText: {
+    fontSize: 12,
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  closeBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
 });

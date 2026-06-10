@@ -1,6 +1,6 @@
 // SupportApi.tsx
 
-import api from "../auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 export type SupportCategory = {
   category_id: number;

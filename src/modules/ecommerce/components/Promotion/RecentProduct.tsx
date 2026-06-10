@@ -13,7 +13,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getProductImageUrl } from "../../api/ProductApi";
 import ProductCard from "../../constants/product_cart/ProductCard";
 import HorizontalProductList from "../common/HorizontalProductList";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../../common/auth/context/AuthContext";
 import type { HomeStackParamList } from "../../navigation/types";
 import LinearGradient from "react-native-linear-gradient";
 import { getRecentProducts } from "../../api/PromotionalApi";

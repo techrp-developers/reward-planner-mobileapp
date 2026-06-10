@@ -12,10 +12,10 @@ import type { HomeStackParamList } from '../navigation/types';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { fetchUserInfo, getStoredUserName, deleteCustomer } from '../api/AuthAPI';
 import { getProductImageUrl } from '../api/ProductApi';
-import { useAuth } from '../auth/context/AuthContext';
+import { useAuth } from '../../common/auth/context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LinearGradient from 'react-native-linear-gradient';
-import { LogoutConfirmationModal } from '../components/LogoutConfirmationModal';
+import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirmationModal';
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RootNav = NativeStackNavigationProp<RootStackParamList>;
 

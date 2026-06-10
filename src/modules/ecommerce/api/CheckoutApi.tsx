@@ -1,5 +1,5 @@
 // src/api/CheckoutApi.ts
-import api from "../auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 /* ================= TYPES ================= */
 

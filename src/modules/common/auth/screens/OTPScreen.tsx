@@ -11,8 +11,8 @@ import LinearGradient from "react-native-linear-gradient";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Logo from "../../../../assets/homepage/login_logo.svg";
-import { activateAccount, verifyActivationOtp } from "../../api/AuthAPI";
-import { useAlert } from "../alerts";
+import { activateAccount, verifyActivationOtp } from "../../../ecommerce/api/AuthAPI";
+import { useAlert } from "../../../ecommerce/components/alerts";
 
 type AuthModalStackParamList = {
   Login: undefined;

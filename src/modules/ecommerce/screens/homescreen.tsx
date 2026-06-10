@@ -20,7 +20,7 @@ import { prefetchMostViewSection } from '../components/Promotion/MostView';
 import { prefetchNewArrivalsSection } from '../components/Promotion/NewArrivals';
 import { prefetchRecommendedSection } from '../components/Promotion/RecommendedProducts';
 import { prefetchRecentProductSection } from '../components/Promotion/RecentProduct';
-import { useAuth } from '../auth/context/AuthContext';
+import { useAuth } from '../../common/auth/context/AuthContext';
 
 type SectionKey =
   | 'banner'

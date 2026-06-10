@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View, Image } from "react-native";
 import logo from "../../../../assets/menu/logo.png";
-import { fetchAllCategories } from "../../api/ProductApi";
+import { fetchAllCategories } from "../../../ecommerce/api/ProductApi";
 import {
   fetchBestSellers,
   fetchMostViewedProducts,
   fetchTopRatedProducts,
-} from "../../api/PromotionalApi";
+} from "../../../ecommerce/api/PromotionalApi";
 
 // Minimum time the splash stays visible (ms).
 // Keeps the animation from feeling like a flicker on fast networks.

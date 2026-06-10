@@ -54,7 +54,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
     borderRadius: Math.round(usedCardWidth * 0.06),
     imageWrapHeight: Math.round(Math.min(Math.max(usedCardWidth * 1.02, 104), 132)),
     cardMinHeight: Math.round(Math.min(Math.max(usedCardWidth * 2.18, 238), 286)),
-    fontSizeLabel: Math.max(11, Math.round(usedCardWidth * 0.098)),
+    fontSizeLabel: Math.max(11, Math.round(usedCardWidth * 0.07)),
     fontSizeReview: Math.max(9, Math.round(usedCardWidth * 0.066)),
     fontSizePrice: Math.max(12, Math.round(usedCardWidth * 0.096)),
     fontSizeOriginal: Math.max(9, Math.round(usedCardWidth * 0.065)),
@@ -333,9 +333,9 @@ const styles = StyleSheet.create({
   },
   productTitle: {
     color: "#374151",
-    fontWeight: "600",
-    lineHeight: 16,
-    minHeight: 32, // ensures two lines visible
+    fontWeight: "400",
+    lineHeight: 17,
+    minHeight: 34,
   },
   ratingRow: {
     flexDirection: "row",

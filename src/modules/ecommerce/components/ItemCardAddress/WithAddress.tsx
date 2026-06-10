@@ -4,8 +4,8 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Text,
-  TouchableOpacity,
+  // Text,
+  // TouchableOpacity,
   FlatList,
 } from 'react-native'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -17,13 +17,13 @@ import type { HomeStackParamList } from '../../navigation/types'
 import ProductHeadColor from '../../constants/heading/Poduct_Head_Color'
 import CartItemCard from '../../constants/itemcart/CartItemCard'
 import BillDetailsCard from '../../constants/itemcart/BillDetailsCard'
-import CouponsSection from '../../constants/coupan/CouponsSection'
+// import CouponsSection from '../../constants/coupan/CouponsSection'
 import CheckoutSummary from './CheckoutSummary'
 import { deleteCartItem, fetchCartItems, fetchCartSummary, updateCartQty } from '../../api/CartApi'
 import { getProductImageUrl } from '../../api/ProductApi'
 import { fetchAllAddress } from '../../api/AddressApi'
 import EmptyCart from '../cart/EmptyCart'
-import { useAuth } from '../../auth/context/AuthContext'
+import { useAuth } from '../../../common/auth/context/AuthContext'
 import RecommendedProducts from '../Promotion/RecommendedProducts'
 import RecentProduct from '../Promotion/RecentProduct'
 import SkeletonBox from '../../../services/component/constant/SkeletonBox'
@@ -37,10 +37,10 @@ import {
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
-const COUPONS = [
-  { id: 1, code: 'RPSLAY200', title: 'Add ₹248 more to avail this offer', subtitle: 'Get Flat ₹200 off' },
-  { id: 2, code: 'RPCC200', title: 'Buy for ₹7777 to avail', subtitle: 'BOB Credit Card Offer' },
-]
+// const COUPONS = [
+//   { id: 1, code: 'RPSLAY200', title: 'Add ₹248 more to avail this offer', subtitle: 'Get Flat ₹200 off' },
+//   { id: 2, code: 'RPCC200', title: 'Buy for ₹7777 to avail', subtitle: 'BOB Credit Card Offer' },
+// ]
 
 const TEN_MINUTES = 10 * 60 * 1000
 const THIRTY_MINUTES = 30 * 60 * 1000
@@ -104,7 +104,7 @@ export default function WithAddress() {
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current
-  const [showAllCoupons, setShowAllCoupons] = useState(false)
+  // const [showAllCoupons, setShowAllCoupons] = useState(false)
   const [useRewards, setUseRewards] = useState(true)
 
   const goToCheckout = useCallback((params?: HomeStackParamList['OrderStepUI']) => {
@@ -338,7 +338,7 @@ export default function WithAddress() {
   const footer = useMemo(() => {
     return (
       <>
-        <View style={styles.wrapper}>
+        {/* <View style={styles.wrapper}>
           <View style={styles.headerRow}>
             <Text style={styles.headerText}>Coupons and Offers</Text>
             <TouchableOpacity onPress={() => setShowAllCoupons(p => !p)}>
@@ -346,7 +346,7 @@ export default function WithAddress() {
             </TouchableOpacity>
           </View>
           <CouponsSection coupons={showAllCoupons ? COUPONS : COUPONS.slice(0, 1)} />
-        </View>
+        </View> */}
 
         <BillDetailsCard
           cartTotal={cartSummary.cartTotal}
@@ -368,7 +368,7 @@ export default function WithAddress() {
     cartSummary.finalPayable,
     cartSummary.totalRedeemed,
     cartSummary.totalRewardEarn,
-    showAllCoupons,
+    // showAllCoupons,
     useRewards,
   ])
 

@@ -14,7 +14,7 @@ import Logo from "../../../../assets/homepage/login_logo.svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { AuthStackParamList } from "./navigation/types";
+import { AuthStackParamList } from "../../../ecommerce/components/auth/navigation/types";
 
 type ForgotPasswordNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,

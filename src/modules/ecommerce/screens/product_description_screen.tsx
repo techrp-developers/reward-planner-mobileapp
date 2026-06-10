@@ -19,7 +19,7 @@ import AddToCartSheet from "../components/cart/AddToCartSheet";
 import CustomerReviewsView from "../components/product/product_section/CustomerReviewsView";
 import ProductGrid from "../components/home/productgrid";
 import { setWishlistState } from "../api/WishlistApi";
-import { useAuth } from "../auth/context/AuthContext";
+import { useAuth } from "../../common/auth/context/AuthContext";
 import { useAlert } from "../components/alerts";
 import { useCart } from "../context/CartContext";
 import {

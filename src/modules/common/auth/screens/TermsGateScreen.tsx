@@ -16,8 +16,8 @@ import {
   fetchTermsList,
   updateTermsAcceptance,
   type TermItem,
-} from "../../api/TermsConditionAPI";
-import { useAlert } from "../../components/alerts";
+} from "../../../ecommerce/api/TermsConditionAPI";
+import { useAlert } from "../../../ecommerce/components/alerts";
 import { useAuth } from "../context/AuthContext";
 
 // ─────────────────────────────────────────────────────────────

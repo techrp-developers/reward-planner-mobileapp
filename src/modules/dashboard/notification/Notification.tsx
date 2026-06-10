@@ -11,8 +11,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import OrderHeading from "../../constants/heading/OrderHeading";
-import { HomeStackParamList } from "../../navigation/types";
+import OrderHeading from "../../ecommerce/constants/heading/OrderHeading";
+import { HomeStackParamList } from "../../ecommerce/navigation/types";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 

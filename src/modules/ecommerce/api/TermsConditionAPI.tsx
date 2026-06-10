@@ -1,6 +1,6 @@
 import api, {
   API_BASE_URL,
-} from "../auth/api/axios";
+} from "../../common/auth/api/axios";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES

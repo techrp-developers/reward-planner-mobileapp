@@ -1,15 +1,13 @@
 import { useCallback, useMemo } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import StepsCounterCard from "./StepsCounterCard";
 import HealthStatusCard from "./HealthStatusCard";
-import { rs, fs } from "../../../utils/responsive";
+import { rs} from "../../../utils/responsive";
 import { useStepTracker, StepDataState } from "../../step_counter/component/StepCode/useStepTracker";
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -23,40 +21,40 @@ type BannerProps = {
   onGrantPermission: () => void;
 };
 
-function StepStatusBanner({ state, onConnectSource, onRefresh, onGrantPermission }: BannerProps) {
+function StepStatusBanner({ state }: BannerProps) {
   if (state === 'ok' || state === 'loading') return null;
 
-  if (state === 'no_permission') {
-    return (
-      <TouchableOpacity style={[bannerStyles.banner, bannerStyles.red]} onPress={onGrantPermission} activeOpacity={0.8}>
-        <Text style={bannerStyles.icon}>🔒</Text>
-        <Text style={[bannerStyles.text, bannerStyles.textRed]}>
-          Steps permission not granted — tap to fix
-        </Text>
-      </TouchableOpacity>
-    );
-  }
+  // if (state === 'no_permission') {
+  //   return (
+  //     <TouchableOpacity style={[bannerStyles.banner, bannerStyles.red]} onPress={onGrantPermission} activeOpacity={0.8}>
+  //       <Text style={bannerStyles.icon}>🔒</Text>
+  //       <Text style={[bannerStyles.text, bannerStyles.textRed]}>
+  //         Steps permission not granted — tap to fix
+  //       </Text>
+  //     </TouchableOpacity>
+  //   );
+  // }
 
-  if (state === 'no_source') {
-    return (
-      <TouchableOpacity style={[bannerStyles.banner, bannerStyles.amber]} onPress={onConnectSource} activeOpacity={0.8}>
-        <Text style={bannerStyles.icon}>🔗</Text>
-        <Text style={[bannerStyles.text, bannerStyles.textAmber]}>
-          No fitness app connected — tap to open Health Connect
-        </Text>
-      </TouchableOpacity>
-    );
-  }
+  // if (state === 'no_source') {
+  //   return (
+  //     <TouchableOpacity style={[bannerStyles.banner, bannerStyles.amber]} onPress={onConnectSource} activeOpacity={0.8}>
+  //       <Text style={bannerStyles.icon}>🔗</Text>
+  //       <Text style={[bannerStyles.text, bannerStyles.textAmber]}>
+  //         No fitness app connected — tap to open Health Connect
+  //       </Text>
+  //     </TouchableOpacity>
+  //   );
+  // }
 
   // no_steps_today
-  return (
-    <TouchableOpacity style={[bannerStyles.banner, bannerStyles.grey]} onPress={onRefresh} activeOpacity={0.8}>
-      <Text style={bannerStyles.icon}>🔄</Text>
-      <Text style={[bannerStyles.text, bannerStyles.textGrey]}>
-        No steps recorded today — make sure your fitness app is syncing
-      </Text>
-    </TouchableOpacity>
-  );
+  // return (
+  //   <TouchableOpacity style={[bannerStyles.banner, bannerStyles.grey]} onPress={onRefresh} activeOpacity={0.8}>
+  //     <Text style={bannerStyles.icon}>🔄</Text>
+  //     <Text style={[bannerStyles.text, bannerStyles.textGrey]}>
+  //       No steps recorded today — make sure your fitness app is syncing
+  //     </Text>
+  //   </TouchableOpacity>
+  // );
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -136,22 +134,22 @@ const styles = StyleSheet.create({
   },
 });
 
-const bannerStyles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: rs(10),
-    paddingHorizontal: rs(12),
-    paddingVertical: rs(8),
-    marginTop: rs(8),
-    gap: rs(8),
-  },
-  red:       { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
-  amber:     { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
-  grey:      { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
-  icon:      { fontSize: fs(14) },
-  text:      { flex: 1, fontSize: fs(11), fontWeight: '500', lineHeight: rs(16) },
-  textRed:   { color: '#991B1B' },
-  textAmber: { color: '#92400E' },
-  textGrey:  { color: '#374151' },
-});
+// const bannerStyles = StyleSheet.create({
+//   banner: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     borderRadius: rs(10),
+//     paddingHorizontal: rs(12),
+//     paddingVertical: rs(8),
+//     marginTop: rs(8),
+//     gap: rs(8),
+//   },
+//   red:       { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
+//   amber:     { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
+//   grey:      { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
+//   icon:      { fontSize: fs(14) },
+//   text:      { flex: 1, fontSize: fs(11), fontWeight: '500', lineHeight: rs(16) },
+//   textRed:   { color: '#991B1B' },
+//   textAmber: { color: '#92400E' },
+//   textGrey:  { color: '#374151' },
+// });

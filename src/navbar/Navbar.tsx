@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchUserInfo, getStoredUserName } from "../modules/ecommerce/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
-import { useAuth } from "../modules/ecommerce/auth/context/AuthContext";
+import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import ProductTop from "./assete/Product_BG.jpg";

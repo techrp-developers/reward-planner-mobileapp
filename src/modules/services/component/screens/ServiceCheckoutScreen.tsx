@@ -22,7 +22,7 @@ import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowPreview, getCheckoutPreview, placeBuyNowOrder, placeCartOrder, removeServiceCartItem, addServiceToCart, clearServiceCart } from '../../api/CartAPI';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
-import { useAuth } from '../../../ecommerce/auth/context/AuthContext';
+import { useAuth } from '../../../common/auth/context/AuthContext';
 import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
 import { addressesQueryKey } from '../../../ecommerce/navigation/navigationPerformance';
 import { HomeStackParamList } from '../../navigation/type';

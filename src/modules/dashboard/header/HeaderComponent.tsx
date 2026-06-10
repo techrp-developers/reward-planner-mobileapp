@@ -27,12 +27,13 @@ const IOS_FALLBACK_TOP   = 50;
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface HeaderProps {
-  userName?:           string;
-  userImageUri?:       string;
-  companyLogoUri?:     string;
-  onNotificationPress?: () => void;
-  onAIToggle?:         (value: boolean) => void;
-  onSearchSubmit?:     (query: string) => void;
+  userName?:              string;
+  userImageUri?:          string;
+  companyLogoUri?:        string;
+  onNotificationPress?:   () => void;
+  onAIToggle?:            (value: boolean) => void;
+  onSearchSubmit?:        (query: string) => void;
+  onSearchActiveChange?:  (active: boolean) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   companyLogoUri,
   onNotificationPress,
   onSearchSubmit,
+  onSearchActiveChange,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -100,15 +102,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
   const openSearch = useCallback(() => {
     setSearchActive(true);
+    onSearchActiveChange?.(true);
     Animated.parallel([
       Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
     ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide]);
+  }, [dateFade, searchFade, searchSlide, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
     inputRef.current?.blur();
+    onSearchActiveChange?.(false);
     Animated.parallel([
       Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
@@ -118,7 +122,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchFade, searchSlide, reset]);
+  }, [dateFade, searchFade, searchSlide, reset, onSearchActiveChange]);
 
   const handleQueryChange = useCallback((text: string) => {
     setSearchQuery(text);
@@ -287,7 +291,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       {showDropdown && headerHeight > 0 && (
         <View
           style={[styles.dropdownWrap, { top: headerHeight }]}
-          pointerEvents="box-none"
         >
           <SearchDropdown
             query={searchQuery}
