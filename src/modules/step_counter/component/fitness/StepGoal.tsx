@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -10,384 +9,278 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
-import {
-  BORDER_RADIUS,
-  COLORS,
-  RESPONSIVE,
-  SPACING,
-  SHADOWS,
-  TYPOGRAPHY,
-  fitnessCardStyle,
-} from "../../utils/theme";
-
-import StepCountBg from "../../assets/StepCount/Step_Count.svg";
+import { BORDER_RADIUS, RESPONSIVE, SPACING } from "../../utils/theme";
 import StepIcon from "../../assets/StepCount/step_icon.svg";
 import CoinIcon from "../../../../assets/product/rewards.svg";
-import {
-  fetchProfilePlan,
-  selectUserGoal,
-  type ProfilePlanResponse,
-} from "../../api/ProfileAPI";
+import { fetchProfilePlan, selectUserGoal, type ProfilePlanResponse } from "../../api/ProfileAPI";
 import { useInvalidateFitnessQueries } from "../../api/useFitnessQueries";
 
-type StepGoalNavProp = NativeStackNavigationProp<FitnessStackParamList, "StepGoal">;
+type Nav = NativeStackNavigationProp<FitnessStackParamList, "StepGoal">;
 
-type GoalOption = {
-  id: number;
-  dailySteps: number;
-  label: string;
-  coins: number;
+// ─── Violet Dusk palette ──────────────────────────────────────────────────────
+
+const VD = {
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteGhost:  "rgba(255,255,255,0.10)",
+  warning:     "#FBBF24",
 };
 
-const formatNumber = (value: number) => (
-  Number.isFinite(value) ? value.toLocaleString("en-IN") : "0"
-);
+const BG = ["#1A1040", "#3D2080", "#6B3FA0"];
 
-const getRewardCoins = (steps: number, index: number) => {
-  if (steps >= 10000) return 40;
-  if (steps >= 7500) return 30;
-  if (steps >= 5000) return 20;
-  return 10 + index * 5;
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+type GoalOption = { id: number; dailySteps: number; label: string; coins: number };
+
+const fmt   = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-IN") : "0");
+const rewardCoins = (steps: number, i: number) =>
+  steps >= 10000 ? 40 : steps >= 7500 ? 30 : steps >= 5000 ? 20 : 10 + i * 5;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const StepGoal: React.FC = () => {
-  const navigation = useNavigation<StepGoalNavProp>();
+  const navigation              = useNavigation<Nav>();
   const invalidateFitnessQueries = useInvalidateFitnessQueries();
   const [profilePlan, setProfilePlan] = useState<ProfilePlanResponse | null>(null);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [loadingPlan, setLoadingPlan] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [selected,    setSelected]    = useState<number | null>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [error,       setError]       = useState("");
 
   const goals = useMemo<GoalOption[]>(() => {
-    const weeklyPlan = profilePlan?.weekly_plan || [];
-
-    if (weeklyPlan.length > 0) {
-      return weeklyPlan.map((item, index) => ({
-        id: item.week,
-        dailySteps: item.steps,
-        label: `${formatNumber(item.steps)} Steps`,
-        coins: getRewardCoins(item.steps, index),
-      }));
-    }
-
-    if (profilePlan?.recommended_steps) {
-      return [{
-        id: 1,
-        dailySteps: profilePlan.recommended_steps,
-        label: `${formatNumber(profilePlan.recommended_steps)} Steps`,
-        coins: getRewardCoins(profilePlan.recommended_steps, 0),
-      }];
-    }
-
+    const plan = profilePlan?.weekly_plan || [];
+    if (plan.length > 0)
+      return plan.map((item, i) => ({ id: item.week, dailySteps: item.steps, label: `${fmt(item.steps)} Steps`, coins: rewardCoins(item.steps, i) }));
+    if (profilePlan?.recommended_steps)
+      return [{ id: 1, dailySteps: profilePlan.recommended_steps, label: `${fmt(profilePlan.recommended_steps)} Steps`, coins: rewardCoins(profilePlan.recommended_steps, 0) }];
     return [];
   }, [profilePlan]);
 
-  const selectedGoal = useMemo(
-    () => goals.find((goal) => goal.id === selected),
-    [goals, selected]
-  );
+  const selectedGoal = useMemo(() => goals.find(g => g.id === selected), [goals, selected]);
 
   const loadPlan = useCallback(async () => {
-    setLoadingPlan(true);
-    setErrorMessage("");
-
+    setLoading(true); setError("");
     const res = await fetchProfilePlan();
-
     if (res.success && res.data) {
       setProfilePlan(res.data);
-      const firstGoal = res.data.weekly_plan?.[0];
-      setSelected(firstGoal?.week ?? (res.data.recommended_steps ? 1 : null));
+      const first = res.data.weekly_plan?.[0];
+      setSelected(first?.week ?? (res.data.recommended_steps ? 1 : null));
     } else {
-      setErrorMessage(res.message || "Failed to load goals");
+      setError(res.message || "Failed to load goals");
     }
-
-    setLoadingPlan(false);
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadPlan();
-  }, [loadPlan]);
+  useEffect(() => { loadPlan(); }, [loadPlan]);
 
-  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
   const handleSetGoal = useCallback(async () => {
-    if (!selectedGoal) {
-      Alert.alert("Select goal", "Please select your daily step goal.");
-      return;
-    }
-
+    if (!selectedGoal) { Alert.alert("Select goal", "Please select your daily step goal."); return; }
     try {
       setSubmitting(true);
-
-      const res = await selectUserGoal({
-        daily_steps: selectedGoal.dailySteps,
-      });
-
-      if (!res.success) {
-        Alert.alert("Goal update failed", res.message);
-        return;
-      }
-
+      const res = await selectUserGoal({ daily_steps: selectedGoal.dailySteps });
+      if (!res.success) { Alert.alert("Goal update failed", res.message); return; }
       invalidateFitnessQueries();
-      navigation.navigate("StepsTrackerScreen");
+      navigation.navigate("Dashboard");
     } finally {
       setSubmitting(false);
     }
   }, [invalidateFitnessQueries, navigation, selectedGoal]);
 
+  const disabled = submitting || loading || !selectedGoal;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+    <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <StepCountBg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.centerWrapper} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={COLORS.gradientCard} style={styles.popupCard}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.textMedium} />
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+        <ScrollView
+          contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back */}
+          <TouchableOpacity style={ss.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
           </TouchableOpacity>
 
-          <Text style={styles.eyebrow}>Activity target</Text>
-          <Text style={styles.title}>Choose your activity goal</Text>
-          <Text style={styles.subtitle}>
-            Pick the pace that feels realistic. You can adjust it later.
-          </Text>
+          <Text style={ss.eyebrow}>Activity target</Text>
+          <Text style={ss.title}>Choose your{"\n"}activity goal</Text>
+          <Text style={ss.subtitle}>Pick the pace that feels realistic. You can adjust it later.</Text>
 
-          {loadingPlan ? (
-            <View style={styles.stateBox}>
-              <ActivityIndicator color={COLORS.primaryIndigo} />
-              <Text style={styles.stateText}>Loading your recommended goals...</Text>
+          {/* Goal options */}
+          {loading ? (
+            <View style={ss.stateBox}>
+              <ActivityIndicator color={VD.accent} size="large" />
+              <Text style={ss.stateText}>Loading your recommended goals…</Text>
             </View>
-          ) : errorMessage ? (
-            <View style={styles.stateBox}>
-              <Text style={styles.stateText}>{errorMessage}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={loadPlan} activeOpacity={0.85}>
-                <Text style={styles.retryText}>Retry</Text>
+          ) : error ? (
+            <View style={ss.stateBox}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={28} color={VD.warning} />
+              <Text style={ss.stateText}>{error}</Text>
+              <TouchableOpacity style={ss.retryBtn} onPress={loadPlan} activeOpacity={0.85}>
+                <Text style={ss.retryText}>Retry</Text>
               </TouchableOpacity>
             </View>
           ) : goals.length === 0 ? (
-            <View style={styles.stateBox}>
-              <Text style={styles.stateText}>No step goals are available right now.</Text>
+            <View style={ss.stateBox}>
+              <MaterialCommunityIcons name="walk" size={28} color={VD.whiteLow} />
+              <Text style={ss.stateText}>No step goals available right now.</Text>
             </View>
           ) : (
             goals.map((item) => {
-              const isActive = selected === item.id;
-
+              const active = selected === item.id;
               return (
                 <TouchableOpacity
                   key={`${item.id}-${item.dailySteps}`}
-                  activeOpacity={0.88}
-                  style={[styles.goalCard, isActive && styles.goalCardSelected]}
+                  activeOpacity={0.85}
+                  style={[ss.goalCard, active && ss.goalCardSelected]}
                   onPress={() => setSelected(item.id)}
                 >
-                  <View style={styles.goalLeft}>
-                    <View style={styles.goalIconWrap}>
-                      <StepIcon width={22} height={22} />
-                    </View>
-                    <View style={styles.goalCopy}>
-                      <Text style={styles.goalText}>{item.label}</Text>
-                      <Text style={styles.goalMeta}>Daily step target</Text>
-                    </View>
+                  <View style={[ss.goalIconWrap, active && ss.goalIconWrapSelected]}>
+                    <StepIcon width={22} height={22} />
                   </View>
-
-                  <View style={styles.coinContainer}>
-                    <CoinIcon width={18} height={18} />
-                    <Text style={styles.coinText}>{item.coins}</Text>
+                  <View style={ss.goalCopy}>
+                    <Text style={ss.goalLabel}>{item.label}</Text>
+                    <Text style={ss.goalMeta}>Daily step target</Text>
+                  </View>
+                  <View style={ss.goalRight}>
+                    <View style={ss.coinBadge}>
+                      <CoinIcon width={14} height={14} />
+                      <Text style={ss.coinText}>{item.coins}</Text>
+                    </View>
+                    {active && <MaterialCommunityIcons name="check-circle" size={18} color={VD.accent} />}
                   </View>
                 </TouchableOpacity>
               );
             })
           )}
 
-          <Text style={styles.footerText}>
-            The longer you walk, the bigger the reward.
-          </Text>
+          <Text style={ss.footerText}>The longer you walk, the bigger the reward.</Text>
 
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleSetGoal}
-            disabled={submitting || loadingPlan || !selectedGoal}
-            style={styles.buttonWrap}
-          >
+          {/* CTA */}
+          <TouchableOpacity activeOpacity={0.9} onPress={handleSetGoal} disabled={disabled} style={ss.ctaWrap}>
             <LinearGradient
-              colors={submitting || loadingPlan || !selectedGoal ? ["#C7C7D1", "#AFAFBB"] : COLORS.gradientPurple}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.button}
+              colors={disabled ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#9B6FFF", "#C4A8FF"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={ss.cta}
             >
-              {submitting ? (
-                <ActivityIndicator color={COLORS.textWhite} />
-              ) : (
-                <Text style={styles.buttonText}>Set Goal</Text>
-              )}
+              {submitting
+                ? <ActivityIndicator color={VD.accent} />
+                : <Text style={[ss.ctaText, disabled && ss.ctaTextDim]}>Set Goal</Text>
+              }
             </LinearGradient>
           </TouchableOpacity>
-        </LinearGradient>
-      </ScrollView>
+
+          <View style={ss.bottomPad} />
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
 
 export default React.memo(StepGoal);
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
-  },
-  centerWrapper: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: RESPONSIVE.horizontalPadding,
-    paddingVertical: SPACING.xxl,
-  },
-  popupCard: {
-    ...fitnessCardStyle,
-    alignItems: "center",
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const ss = StyleSheet.create({
+  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  gradient: { flex: 1 },
+  scroll:   { alignItems: "center", paddingTop: SPACING.xl },
+
   backBtn: {
-    position: "absolute",
-    top: SPACING.md,
-    left: SPACING.md,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignSelf: "flex-start",
+    width: 40, height: 40,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "rgba(134,101,255,0.09)",
+    backgroundColor: VD.whiteGhost,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: SPACING.lg,
   },
+
   eyebrow: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
-    textTransform: "uppercase",
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.xs,
+    width: "100%",
+    fontSize: 11, fontWeight: "700", letterSpacing: 1.2,
+    textTransform: "uppercase", color: VD.accent, marginBottom: 6,
   },
   title: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.textDark,
-    textAlign: "center",
-    marginBottom: SPACING.xs,
+    width: "100%",
+    fontSize: 28, fontWeight: "900", color: VD.white,
+    letterSpacing: -0.6, lineHeight: 34, marginBottom: SPACING.sm,
   },
   subtitle: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
-    textAlign: "center",
-    marginBottom: SPACING.xl,
+    width: "100%",
+    fontSize: 14, color: VD.whiteMid, lineHeight: 20, marginBottom: SPACING.xl,
   },
+
   goalCard: {
     width: "100%",
-    backgroundColor: COLORS.surface,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    ...SHADOWS.small,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, marginBottom: SPACING.sm,
   },
-  goalCardSelected: {
-    borderColor: COLORS.primaryIndigo,
-    backgroundColor: "#F5F0FF",
-  },
-  goalLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: SPACING.sm,
-  },
+  goalCardSelected: { borderColor: VD.accent, backgroundColor: VD.accentFaint },
   goalIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "rgba(252,139,173,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: SPACING.sm,
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: "rgba(252,139,173,0.15)",
+    alignItems: "center", justifyContent: "center",
+    marginRight: SPACING.md,
   },
-  goalCopy: {
-    flex: 1,
+  goalIconWrapSelected: { backgroundColor: VD.accentFaint },
+  goalCopy:  { flex: 1 },
+  goalLabel: { fontSize: 15, fontWeight: "700", color: VD.white },
+  goalMeta:  { fontSize: 11, color: VD.whiteLow, marginTop: 2 },
+  goalRight: { alignItems: "center", gap: 6 },
+  coinBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(251,191,36,0.15)",
+    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: "rgba(251,191,36,0.25)",
   },
-  goalText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
-    flexShrink: 1,
-  },
-  goalMeta: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  coinContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  coinText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primaryPurple,
-  },
-  footerText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMedium,
-    textAlign: "center",
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  buttonWrap: {
-    width: "100%",
-  },
-  button: {
-    height: RESPONSIVE.buttonHeight,
-    borderRadius: BORDER_RADIUS.large,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
-  },
+  coinText: { fontSize: 12, fontWeight: "700", color: VD.warning },
+
   stateBox: {
-    width: "100%",
-    minHeight: 130,
-    alignItems: "center",
-    justifyContent: "center",
+    width: "100%", minHeight: 150,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.lg, marginBottom: SPACING.lg, gap: SPACING.sm,
   },
-  stateText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMedium,
-    textAlign: "center",
-    marginTop: SPACING.sm,
+  stateText: { fontSize: 13, color: VD.whiteLow, textAlign: "center" },
+  retryBtn: {
+    marginTop: SPACING.xs,
+    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.large,
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1, borderColor: VD.cardBorder,
   },
-  retryButton: {
-    marginTop: SPACING.md,
-    minHeight: 40,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: BORDER_RADIUS.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primaryIndigo,
+  retryText: { fontSize: 13, fontWeight: "700", color: VD.accent },
+
+  footerText: {
+    fontSize: 13, color: VD.whiteLow, textAlign: "center",
+    marginTop: SPACING.sm, marginBottom: SPACING.xl, fontStyle: "italic",
   },
-  retryText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+
+  ctaWrap: { width: "100%" },
+  cta: {
+    height: 54, borderRadius: BORDER_RADIUS.large,
+    alignItems: "center", justifyContent: "center",
   },
+  ctaText:    { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+  ctaTextDim: { color: VD.whiteLow },
+
+  bottomPad: { height: SPACING.xxl },
 });

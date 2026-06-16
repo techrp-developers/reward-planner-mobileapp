@@ -5,7 +5,7 @@
  */
 
 import axios from 'axios';
-import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
+import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 
 const CRM_BASE_URL = 'https://rewardplanners.com/api/crm/v1';
 

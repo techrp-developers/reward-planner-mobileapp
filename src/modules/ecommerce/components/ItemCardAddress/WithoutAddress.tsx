@@ -20,12 +20,12 @@ import type { HomeStackParamList } from '../../navigation/types'
 import ProductHeadColor from '../../constants/heading/Poduct_Head_Color'
 import CartItemCard from '../../constants/itemcart/CartItemCard'
 import BillDetailsCard from '../../constants/itemcart/BillDetailsCard'
-import CouponsSection from '../../constants/coupan/CouponsSection'
+// import CouponsSection from '../../constants/coupan/CouponsSection'
 import AddressPage from './AddressPage'
 import { fetchCartItems, fetchCartSummary, updateCartQty, deleteCartItem } from '../../api/CartApi'
 import { getProductImageUrl } from '../../api/ProductApi'
 import EmptyCart from '../cart/EmptyCart'
-import { useAuth } from '../../auth/context/AuthContext'
+import { useAuth } from '../../../common/auth/context/AuthContext'
 import RecommendedProducts from '../Promotion/RecommendedProducts'
 import RecentProduct from '../Promotion/RecentProduct'
 import SkeletonBox from '../../../services/component/constant/SkeletonBox'
@@ -39,10 +39,10 @@ import {
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 const { height } = Dimensions.get('window')
 
-const COUPONS = [
-  { id: 1, code: 'RPSLAY200', title: 'Add ₹248 more to avail this offer', subtitle: 'Get Flat ₹200 off' },
-  { id: 2, code: 'RPCC200', title: 'Buy for ₹7777 to avail', subtitle: 'BOB Credit Card Offer' },
-]
+// const COUPONS = [
+//   { id: 1, code: 'RPSLAY200', title: 'Add ₹248 more to avail this offer', subtitle: 'Get Flat ₹200 off' },
+//   { id: 2, code: 'RPCC200', title: 'Buy for ₹7777 to avail', subtitle: 'BOB Credit Card Offer' },
+// ]
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -324,16 +324,15 @@ export default function WithoutAddress() {
   const footer = useMemo(() => {
     return (
       <>
-        <View style={styles.wrapper}>
+        {/* <View style={styles.wrapper}>
           <View style={styles.headerRow}>
             <Text style={styles.headerText}>Coupons and Offers</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Coupan')}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-
           <CouponsSection coupons={COUPONS.slice(0, 1)} />
-        </View>
+        </View> */}
 
         <BillDetailsCard
           cartTotal={cartSummary.cartTotal}
@@ -355,7 +354,6 @@ export default function WithoutAddress() {
     cartSummary.finalPayable,
     cartSummary.totalRedeemed,
     cartSummary.totalRewardEarn,
-    navigation,
     useRewards,
   ])
 

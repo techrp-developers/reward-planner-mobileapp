@@ -356,7 +356,7 @@ const GradientButton = React.memo(({
 }) => (
   <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={disabled} style={styles.buttonWrap}>
     <LinearGradient
-      colors={disabled ? ["#C7C7D1", "#AFAFBB"] : COLORS.gradientPurple}
+      colors={disabled ? [COLORS.textMuted, "rgba(107, 114, 128, 0.7)"] : COLORS.gradientPurple}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.button}
@@ -399,13 +399,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "rgba(134,101,255,0.09)",
+    backgroundColor: "rgba(124, 77, 255, 0.09)", // Fixed: Used primaryPurple alpha representation
     alignItems: "center",
     justifyContent: "center",
   },
   progressPill: {
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: "rgba(166,84,205,0.1)",
+    backgroundColor: "rgba(124, 77, 255, 0.1)", // Fixed: Swapped with soft version of primaryPurple 
     paddingVertical: 7,
     paddingHorizontal: 14,
   },
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   },
   goalSelected: {
     borderColor: COLORS.primaryIndigo,
-    backgroundColor: "#F5F0FF",
+    backgroundColor: "rgba(113, 77, 245, 0.08)", // Fixed: Matches your primaryIndigo theme tint
   },
   goalLabel: {
     ...TYPOGRAPHY.caption,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: "#DDD6FE",
+    backgroundColor: COLORS.border, // Fixed: Swapped hardcoded light violet with your core border definition
     alignSelf: "center",
     marginBottom: SPACING.sm,
   },
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F1F6",
+    borderBottomColor: COLORS.border, // Fixed: Swapped out hardcoded item separation line
   },
   modalText: {
     ...TYPOGRAPHY.bodyMedium,

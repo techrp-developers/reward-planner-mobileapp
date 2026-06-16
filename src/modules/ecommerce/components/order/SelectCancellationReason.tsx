@@ -6,7 +6,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
 
 import OrderHeading from "../../constants/heading/OrderHeading";
-import OrderItemCard from "../../constants/order/OrderItemCard";
+import OrderItemCard from "../../../common/order/OrderItemCard";
 import Product from "../../../../assets/product/product(1).svg";
 import { HomeStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";

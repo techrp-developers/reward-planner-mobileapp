@@ -5,7 +5,7 @@ import WithoutAddress from '../components/ItemCardAddress/WithoutAddress';
 import WithAddress from '../components/ItemCardAddress/WithAddress';
 import { fetchAllAddress } from '../api/AddressApi';
 import { fetchCartItems } from '../api/CartApi';
-import { useAuth } from '../auth/context/AuthContext';
+import { useAuth } from '../../common/auth/context/AuthContext';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import {
   addressesQueryKey,

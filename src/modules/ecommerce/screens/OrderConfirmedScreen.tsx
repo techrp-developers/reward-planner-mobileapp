@@ -5,16 +5,16 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import OrderHeading from "../constants/heading/OrderHeading";
-import OrderItemCard from "../constants/order/OrderItemCard";
+import OrderItemCard from "../../common/order/OrderItemCard";
 
 import Product from "../../../assets/product/product(1).svg";
 import { HomeStackParamList } from "../navigation/types";
-import OrderStatusJourney, { OrderStatusItem } from "../constants/order/OrderStatusJourney";
-import DeliveryDetailsCard from "../constants/order/DeliveryDetailsCard";
-import PriceDetailsCard from "../constants/order/PriceDetailsCard";
-import InvoiceAndServiceBanner from "../constants/order/InvoiceAndServiceBanner";
+import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderStatusJourney";
+import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
+import PriceDetailsCard from "../../common/order/PriceDetailsCard";
+import InvoiceAndServiceBanner from "../../common/order/InvoiceAndServiceBanner";
 import ProductCarousel from "../components/order/ProductCarousel";
-import OrderCancelModal from "../constants/order/OrderCancelModal";
+import OrderCancelModal from "../../common/order/OrderCancelModal";
 import { fetchOrderDetails } from "../api/OrderApi";
 import { fetchAllProducts, getProductImageUrl } from "../api/ProductApi";
 

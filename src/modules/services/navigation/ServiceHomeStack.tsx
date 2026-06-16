@@ -15,7 +15,7 @@ export default function ServiceHomeStack() {
             }}
         >
             <Stack.Screen name="Home" getComponent={() => require("../component/screens/HomeScreen").default} />
-            <Stack.Screen name="ServiceSearch" getComponent={() => require("../screens/ServiceSearchScreen").default} />
+            <Stack.Screen name="ServiceSearch" getComponent={() => require("../component/screens/ServiceSearchScreen").default} />
             <Stack.Screen name="Health" getComponent={() => require("../component/insurance/Health").default} />
             <Stack.Screen name="SuperTopUp" getComponent={() => require("../component/insurance/SuperTop").default} />
             <Stack.Screen name="PersonalAccident" getComponent={() => require("../component/insurance/PA").default} />
@@ -31,7 +31,11 @@ export default function ServiceHomeStack() {
             <Stack.Screen name="Profile" getComponent={() => require("../component/screens/Profile").default} />
             <Stack.Screen
                 name="MyOrder"
-                getComponent={() => require("../../ecommerce/components/order/MyOrder").default}
+                getComponent={() => require("../component/order/MyOrder").default}
+            />
+            <Stack.Screen
+                name="ServiceOrderDetail"
+                getComponent={() => require("../component/order/ServiceOrderDetail").default}
             />
             <Stack.Screen
                 name="WalletHistory"
@@ -77,6 +81,73 @@ export default function ServiceHomeStack() {
             <Stack.Screen
                 name="SubmittedSuccessful"
                 getComponent={() => require("../component/screens/SubmittedSuccessful").default}
+            />
+
+            {/* ── Mutual Fund Calculators ─────────────────────────────── */}
+            <Stack.Screen
+                name="MutualFundCalculators"
+                getComponent={() => require("../component/mutualfund/MFScreen").default}
+            />
+            {/* ── Mutual Fund FAQ ──────────────────────────────────────── */}
+            <Stack.Screen
+                name="CommonQuestions"
+                getComponent={() => require("../component/mutualfund/CommonQuestionsScreen").default}
+            />
+            <Stack.Screen
+                name="FAQListing"
+                getComponent={() => require("../component/mutualfund/FAQListingScreen").default}
+            />
+            <Stack.Screen
+                name="SIPCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").SIPCalculator}
+            />
+            <Stack.Screen
+                name="GoalSIPCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").GoalSIPCalculator}
+            />
+            <Stack.Screen
+                name="SmartGoalCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").SmartGoalCalculator}
+            />
+            <Stack.Screen
+                name="InflationCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").InflationCalculator}
+            />
+            <Stack.Screen
+                name="CostOfDelayCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").CostOfDelayCalculator}
+            />
+            <Stack.Screen
+                name="LumpsumCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").LumpsumCalculator}
+            />
+            <Stack.Screen
+                name="RetirementCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").RetirementCalculator}
+            />
+            <Stack.Screen
+                name="StepUpSIPCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").StepUpSIPCalculator}
+            />
+            <Stack.Screen
+                name="SWPCalculator"
+                getComponent={() => require("../component/mutualfund/Calculators").SWPCalculator}
+            />
+            <Stack.Screen
+                name="CommonQuestionsScreen"
+                getComponent={() => require("../component/mutualfund/CommonQuestionsScreen").default}
+            />
+            <Stack.Screen
+                name="ArticleDetails"
+                getComponent={() => require("../component/mutualfund/ArticleDetails").default}
+            />
+            <Stack.Screen
+                name="MFInvestorsDetail"
+                getComponent={() => require("../component/mutualfund/MFInvestorsDetail").default}
+            />
+            <Stack.Screen
+                name="MFSectionArticles"
+                getComponent={() => require("../component/mutualfund/MFSectionArticles").default}
             />
         </Stack.Navigator>
     );

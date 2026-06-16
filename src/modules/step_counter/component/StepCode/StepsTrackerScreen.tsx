@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Linking,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -11,181 +10,148 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SendIntentAndroid from 'react-native-send-intent';
 
 import { useStepTracker } from './useStepTracker';
-import {
-  BORDER_RADIUS,
-  COLORS,
-  RESPONSIVE,
-  SPACING,
-  TYPOGRAPHY,
-  fitnessCardStyle,
-} from '../../utils/theme';
-import StepCountBg from '../../assets/StepCount/Step_Count.svg';
+import { BORDER_RADIUS, RESPONSIVE, SPACING } from '../../utils/theme';
 import { useAlert } from '../../../../modules/ecommerce/components/alerts';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Violet Dusk palette ──────────────────────────────────────────────────────
 
-const PROVIDER_ICONS: Record<string, { name: string; color: string }> = {
-  'Health Connect': { name: 'heart-pulse', color: '#E63946' },
-  'Samsung Health':  { name: 'samsung',    color: '#1428A0' },
-  'Google Fit':      { name: 'google-fit', color: '#34A853' },
+const VD = {
+  accent:      '#C4A8FF',
+  accentFaint: 'rgba(196,168,255,0.12)',
+  accentDim:   'rgba(196,168,255,0.25)',
+  cardBg:      'rgba(255,255,255,0.09)',
+  cardBorder:  'rgba(196,168,255,0.18)',
+  white:       '#FFFFFF',
+  whiteMid:    'rgba(255,255,255,0.70)',
+  whiteLow:    'rgba(255,255,255,0.45)',
+  whiteGhost:  'rgba(255,255,255,0.10)',
+  success:     '#4ADE80',
+  warning:     '#FBBF24',
+  error:       '#F87171',
 };
 
-const PERMISSION_STEPS = [
-  { icon: 'numeric-1-circle', text: 'Open Health Connect using the button above' },
-  { icon: 'numeric-2-circle', text: 'Tap "App permissions" inside Health Connect' },
-  { icon: 'numeric-3-circle', text: 'Find this app in the list and tap it' },
-  { icon: 'numeric-4-circle', text: 'Enable "Steps" under the Read permissions' },
-  { icon: 'numeric-5-circle', text: 'Return here — the status will update automatically' },
-];
+const BG = ['#1A1040', '#3D2080', '#6B3FA0'];
+
+// ─── Brand colours (on-dark) ──────────────────────────────────────────────────
+
+const BRAND = {
+  hc:      { icon: 'heart-pulse', bg: 'rgba(230,57,70,0.18)',  tint: '#FF6B7A' },
+  samsung: { icon: 'cellphone',   bg: 'rgba(20,40,160,0.22)', tint: '#7B9FFF' },
+  google:  { icon: 'google-fit',  bg: 'rgba(52,168,83,0.18)', tint: '#4ADE80' },
+};
 
 type OptionalProvider = 'Samsung Health' | 'Google Fit';
 
-// ─── ProviderRow ──────────────────────────────────────────────────────────────
+// ─── Permission guide (animated accordion) ────────────────────────────────────
 
-type ProviderRowProps = {
-  title: string;
-  installed: boolean;
-  connected: boolean;
-  mandatory: boolean;
-  selected: boolean;
-  onPress: () => void;
-};
-
-const ProviderRow = ({
-  title,
-  installed,
-  connected,
-  mandatory,
-  selected,
-  onPress,
-}: ProviderRowProps) => {
-  const icon = PROVIDER_ICONS[title];
-
-  const statusLabel = connected ? 'Connected' : installed ? 'Open' : 'Install';
-  const statusColor = connected
-    ? '#16A34A'
-    : installed
-    ? (COLORS.primaryPurple ?? '#7C3AED')
-    : '#DC2626';
-
-  const handlePress = () => {
-    if (!mandatory && selected) return;
-    onPress();
-  };
-
-  return (
-    <TouchableOpacity
-      style={[styles.providerRow, selected && styles.providerRowSelected]}
-      onPress={handlePress}
-      activeOpacity={selected && !mandatory ? 1 : 0.75}
-    >
-      <View style={styles.providerLeft}>
-        <View style={[styles.iconBadge, { backgroundColor: icon.color + '18' }]}>
-          <MaterialCommunityIcons name={icon.name} size={24} color={icon.color} />
-        </View>
-        <View style={styles.providerTextGroup}>
-          <Text style={styles.providerTitle}>{title}</Text>
-          {mandatory && (
-            <View style={styles.mandatoryBadge}>
-              <Text style={styles.mandatoryText}>Required</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.providerRight}>
-        <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
-        {!mandatory && (
-          <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-            {selected && <View style={styles.radioInner} />}
-          </View>
-        )}
-        {mandatory && connected && (
-          <MaterialCommunityIcons name="check-circle" size={20} color="#16A34A" />
-        )}
-        {mandatory && !connected && (
-          <MaterialCommunityIcons
-            name="chevron-right"
-            size={20}
-            color={COLORS.textMedium ?? '#888'}
-          />
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-// ─── PermissionGuide ──────────────────────────────────────────────────────────
+const STEPS = [
+  { icon: 'numeric-1-circle-outline', title: 'Open Health Connect',  desc: 'Tap the Health Connect row above to open or install it.' },
+  { icon: 'numeric-2-circle-outline', title: 'App Permissions',      desc: 'Inside Health Connect, tap "App permissions" from the home screen.' },
+  { icon: 'numeric-3-circle-outline', title: 'Find this app',        desc: 'Scroll to Rewards Planners and tap it.' },
+  { icon: 'numeric-4-circle-outline', title: 'Enable Steps',         desc: 'Turn on "Steps" under the Read permissions toggle.' },
+  { icon: 'numeric-5-circle-outline', title: 'Come back here',       desc: 'Return to this screen — the status refreshes automatically.' },
+];
 
 const PermissionGuide = ({ visible }: { visible: boolean }) => {
-  // FIX 3: animHeight and animOpacity are created with useRef so their
-  // .current value is stable across renders — they never change identity.
-  // ESLint still flags them as missing deps because it can't statically
-  // prove a ref's .current is stable. The correct fix is to read them
-  // into local variables BEFORE the useEffect and list those variables.
-  // Because Animated.Value refs are initialised once and never reassigned,
-  // this is safe and silences the exhaustive-deps warning without
-  // suppressing the rule globally.
-  const animHeightRef  = useRef(new Animated.Value(0));
-  const animOpacityRef = useRef(new Animated.Value(0));
-
-  const animHeight  = animHeightRef.current;
-  const animOpacity = animOpacityRef.current;
+  const hRef  = useRef(new Animated.Value(0));
+  const opRef = useRef(new Animated.Value(0));
+  const h  = hRef.current;
+  const op = opRef.current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(animHeight, {
-        toValue: visible ? 1 : 0,
-        duration: 300,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: false,
-      }),
-      Animated.timing(animOpacity, {
-        toValue: visible ? 1 : 0,
-        duration: 250,
-        useNativeDriver: false,
-      }),
+      Animated.timing(h,  { toValue: visible ? 1 : 0, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(op, { toValue: visible ? 1 : 0, duration: 250, useNativeDriver: false }),
     ]).start();
-  }, [visible, animHeight, animOpacity]); // animHeight/animOpacity are stable refs — safe to list
-
-  const maxHeight = animHeight.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [0, 300],
-  });
+  }, [visible, h, op]);
 
   return (
-    <Animated.View style={[styles.guideContainer, { maxHeight, opacity: animOpacity }]}>
-      <ScrollView
-        nestedScrollEnabled
-        showsVerticalScrollIndicator
-        style={styles.guideScroll}
-        contentContainerStyle={styles.guideScrollContent}
-      >
-        <View style={styles.guideHeader}>
-          <MaterialCommunityIcons name="information-outline" size={16} color="#B45309" />
-          <Text style={styles.guideHeaderText}>
-            Steps permission not granted — follow these steps:
-          </Text>
+    <Animated.View style={[ss.accordion, { opacity: op, maxHeight: h.interpolate({ inputRange: [0, 1], outputRange: [0, 440] }) }]}>
+      <View style={ss.guide}>
+        <View style={ss.guideHeader}>
+          <MaterialCommunityIcons name="shield-key-outline" size={14} color={VD.warning} />
+          <Text style={ss.guideHeaderText}>How to grant Steps permission</Text>
         </View>
-
-        {PERMISSION_STEPS.map((step, i) => (
-          <View key={i} style={styles.guideStep}>
-            <MaterialCommunityIcons
-              name={step.icon}
-              size={20}
-              color={COLORS.primaryPurple ?? '#7C3AED'}
-            />
-            <Text style={styles.guideStepText}>{step.text}</Text>
+        {STEPS.map((s, i) => (
+          <View key={i} style={ss.guideStep}>
+            <View style={ss.guideStepLeft}>
+              <MaterialCommunityIcons name={s.icon} size={22} color={VD.accent} />
+              {i < STEPS.length - 1 && <View style={ss.guideLine} />}
+            </View>
+            <View style={ss.guideStepRight}>
+              <Text style={ss.guideStepTitle}>{s.title}</Text>
+              <Text style={ss.guideStepDesc}>{s.desc}</Text>
+            </View>
           </View>
         ))}
-      </ScrollView>
+      </View>
     </Animated.View>
+  );
+};
+
+// ─── Provider card ────────────────────────────────────────────────────────────
+
+type ProviderCardProps = {
+  title:     string;
+  subtitle:  string;
+  iconName:  string;
+  iconBg:    string;
+  iconTint:  string;
+  installed: boolean;
+  connected: boolean;
+  mandatory: boolean;
+  selected:  boolean;
+  onPress:   () => void;
+};
+
+const ProviderCard = ({
+  title, subtitle, iconName, iconBg, iconTint,
+  installed, connected, mandatory, selected, onPress,
+}: ProviderCardProps) => {
+  const statusLabel = connected ? 'Connected' : installed ? 'Open' : 'Install';
+  const statusColor = connected ? VD.success : installed ? VD.accent : VD.warning;
+
+  return (
+    <TouchableOpacity
+      style={[ss.providerCard, selected && ss.providerCardSelected]}
+      onPress={onPress}
+      activeOpacity={0.78}
+    >
+      <View style={[ss.providerIcon, { backgroundColor: iconBg }]}>
+        <MaterialCommunityIcons name={iconName} size={26} color={iconTint} />
+      </View>
+
+      <View style={ss.providerText}>
+        <View style={ss.providerTitleRow}>
+          <Text style={ss.providerTitle}>{title}</Text>
+          {mandatory && (
+            <View style={ss.requiredBadge}>
+              <Text style={ss.requiredText}>Required</Text>
+            </View>
+          )}
+        </View>
+        <Text style={ss.providerSubtitle}>{subtitle}</Text>
+      </View>
+
+      <View style={ss.providerAction}>
+        {mandatory ? (
+          <View style={[ss.statusPill, { backgroundColor: statusColor + '22' }]}>
+            <Text style={[ss.statusText, { color: statusColor }]}>{statusLabel}</Text>
+          </View>
+        ) : (
+          <View style={[ss.radio, selected && ss.radioSelected]}>
+            {selected && <View style={ss.radioDot} />}
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 };
 
@@ -193,18 +159,11 @@ const PermissionGuide = ({ visible }: { visible: boolean }) => {
 
 export default function StepsTrackerScreen() {
   const {
-    healthConnectStatus,
-    grantedPermissions,
-    healthConnectError,
-    isSetupComplete,
-    openHealthConnect,
-    totalSteps,
-    refreshStatus,
+    healthConnectStatus, grantedPermissions,
+    healthConnectError, isSetupComplete,
+    openHealthConnect, totalSteps, refreshStatus,
   } = useStepTracker();
 
-  // FIX 1: useNavigation is stable across renders (React Navigation guarantees
-  // this). Adding it to the useEffect dependency array below satisfies ESLint
-  // without causing extra re-runs. This is the recommended pattern.
   const navigation = useNavigation<any>();
   const alert      = useAlert();
 
@@ -213,477 +172,255 @@ export default function StepsTrackerScreen() {
   const [selectedOptional,         setSelectedOptional]         = useState<OptionalProvider | null>(null);
   const [guideOpen,                setGuideOpen]                = useState(false);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+  const isHCInstalled = healthConnectStatus !== '0';
+  const hasStepsPerm  = grantedPermissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
+  const isHCReady     = healthConnectStatus === '2' && hasStepsPerm;
+  const showGuide     = isHCInstalled && !hasStepsPerm;
+  const canProceed    = isHCReady && selectedOptional !== null && totalSteps > 0;
 
-  const isHealthConnectInstalled = healthConnectStatus !== '0';
+  useEffect(() => { checkApps(); }, []);
+  useEffect(() => { if (isSetupComplete && isHCReady) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, navigation]);
+  useEffect(() => { setGuideOpen(showGuide); }, [showGuide]);
 
-  const hasStepsPermission = grantedPermissions.some(
-    p => p.recordType === 'Steps' && p.accessType === 'read',
-  );
-
-  const isHealthConnectReady = healthConnectStatus === '2' && hasStepsPermission;
-
-  const showPermissionGuide = isHealthConnectInstalled && !hasStepsPermission;
-
-  const canProceed = isHealthConnectReady && selectedOptional !== null && totalSteps > 0;
-
-  // ── Effects ────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    checkInstalledApps();
-  }, []);
-
-  // FIX 1: `navigation` added to the dependency array.
-  // useNavigation() returns a stable object (same reference every render),
-  // so adding it here has zero runtime cost but satisfies react-hooks/exhaustive-deps.
-  useEffect(() => {
-    if (isSetupComplete && isHealthConnectReady) {
-      navigation.replace('Dashboard');
-    }
-  }, [isSetupComplete, isHealthConnectReady, navigation]);
-
-  useEffect(() => {
-    setGuideOpen(showPermissionGuide);
-  }, [showPermissionGuide]);
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  const checkInstalledApps = async () => {
+  const checkApps = async () => {
     try {
-      const fitInstalled     = await SendIntentAndroid.isAppInstalled('com.google.android.apps.fitness');
-      const samsungInstalled = await SendIntentAndroid.isAppInstalled('com.sec.android.app.shealth');
-      setIsGoogleFitInstalled(fitInstalled);
-      setIsSamsungHealthInstalled(samsungInstalled);
-    } catch (e) {
-      console.log('App detection failed:', e);
-    }
+      const fit     = await SendIntentAndroid.isAppInstalled('com.google.android.apps.fitness');
+      const samsung = await SendIntentAndroid.isAppInstalled('com.sec.android.app.shealth');
+      setIsGoogleFitInstalled(fit);
+      setIsSamsungHealthInstalled(samsung);
+    } catch {}
   };
 
-  const installHealthConnect = async () => {
-    try {
-      await Linking.openURL('market://details?id=com.google.android.apps.healthdata');
-    } catch {
-      await Linking.openURL(
-        'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata',
-      );
-    }
+  const installHC = async () => {
+    try { await Linking.openURL('market://details?id=com.google.android.apps.healthdata'); }
+    catch { await Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata'); }
   };
 
-  const handleHealthConnect = () => {
-    if (healthConnectStatus === '0') {
-      installHealthConnect();
-    } else {
-      openHealthConnect();
-    }
-  };
+  const handleHCPress = () => (healthConnectStatus === '0' ? installHC() : openHealthConnect());
 
-  const handleOptionalProvider = async (provider: OptionalProvider) => {
-    if (selectedOptional === provider) return;
-
+  const handleOptional = async (provider: OptionalProvider) => {
     setSelectedOptional(provider);
-
     try {
       if (provider === 'Google Fit') {
-        if (isGoogleFitInstalled) {
-          // FIX 2: SendIntentAndroid.openApp requires a second argument — an
-          // extras object. Pass an empty object `{}` when no extras are needed.
-          // The type signature is: openApp(packageName: string, extras: Record<string, string>)
-          await SendIntentAndroid.openApp('com.google.android.apps.fitness', {});
-        } else {
-          await Linking.openURL(
-            'https://play.google.com/store/apps/details?id=com.google.android.apps.fitness',
-          );
-        }
+        isGoogleFitInstalled
+          ? await SendIntentAndroid.openApp('com.google.android.apps.fitness', {})
+          : await Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.fitness');
       } else {
-        if (isSamsungHealthInstalled) {
-          // FIX 2: same fix for Samsung Health
-          await SendIntentAndroid.openApp('com.sec.android.app.shealth', {});
-        } else {
-          await Linking.openURL(
-            'https://play.google.com/store/apps/details?id=com.sec.android.app.shealth',
-          );
-        }
+        isSamsungHealthInstalled
+          ? await SendIntentAndroid.openApp('com.sec.android.app.shealth', {})
+          : await Linking.openURL('https://play.google.com/store/apps/details?id=com.sec.android.app.shealth');
       }
-    } catch (e) {
-      console.log(`Failed to open ${provider}`, e);
-    }
+    } catch {}
   };
 
-  const handleNext = useCallback(() => {
-    if (!isHealthConnectReady) {
-      if (!isHealthConnectInstalled) {
-        alert.warning(
-          'Health Connect Required',
-          'Please install Health Connect to continue.',
-        );
-        return;
-      }
+  const handleContinue = useCallback(() => {
+    if (!isHCReady) {
       alert.warning(
-        'Permission Missing',
-        'Please grant Steps permission in Health Connect, then return here.',
+        !isHCInstalled ? 'Health Connect Required' : 'Permission Missing',
+        !isHCInstalled ? 'Please install Health Connect to continue.'
+                       : 'Please grant Steps permission in Health Connect, then return here.',
       );
-      setGuideOpen(true);
+      if (isHCInstalled) setGuideOpen(true);
       return;
     }
-
     if (totalSteps <= 0) {
-      alert.warning(
-        'No Steps Found',
-        'Please open Google Fit or Samsung Health, allow Health Connect sync, walk a few steps, then return.',
-      );
+      alert.warning('No Steps Found', 'Open Google Fit or Samsung Health, allow Health Connect sync, walk a few steps, then return.');
       refreshStatus();
       return;
     }
-
     if (!selectedOptional) {
-      alert.info(
-        'Select a Fitness App',
-        'Please select either Samsung Health or Google Fit to continue.',
-      );
+      alert.info('Select a Fitness App', 'Choose Samsung Health or Google Fit to continue.');
       return;
     }
-
     navigation.navigate('StepForm');
-  }, [
-    isHealthConnectReady,
-    isHealthConnectInstalled,
-    totalSteps,
-    selectedOptional,
-    navigation,
-    alert,
-    refreshStatus,
-  ]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  }, [isHCReady, isHCInstalled, totalSteps, selectedOptional, navigation, alert, refreshStatus]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+    <SafeAreaView style={ss.safe} edges={['top', 'bottom']}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <StepCountBg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.centerWrapper}
-        showsVerticalScrollIndicator={false}
-      >
-        <LinearGradient colors={COLORS.gradientWelcome} style={styles.card}>
-
-          {/* Back */}
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.78}
-          >
-            <MaterialCommunityIcons
-              name="chevron-left"
-              size={RESPONSIVE.iconMedium}
-              color={COLORS.textMedium}
-            />
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+        <ScrollView
+          contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity style={ss.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.78}>
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
           </TouchableOpacity>
 
-          {/* Heading */}
-          <View style={styles.headingGroup}>
-            <Text style={styles.eyebrow}>RP Move</Text>
-            <Text style={styles.title}>Connect Your Apps</Text>
-            <Text style={styles.description}>
+          <View style={ss.headingGroup}>
+            <Text style={ss.eyebrow}>RP Move</Text>
+            <Text style={ss.title}>Connect Your Apps</Text>
+            <Text style={ss.description}>
               Link your fitness apps so we can track your steps and reward you with coins.
             </Text>
           </View>
 
-          {/* ── Required ──────────────────────────────────────────── */}
-          <View style={styles.sectionBlock}>
-            <Text style={styles.sectionLabel}>Required</Text>
+          {/* Required */}
+          <Text style={ss.sectionLabel}>Required</Text>
+          <ProviderCard
+            title="Health Connect"
+            subtitle="Google's unified health data platform"
+            iconName={BRAND.hc.icon} iconBg={BRAND.hc.bg} iconTint={BRAND.hc.tint}
+            installed={isHCInstalled} connected={isHCReady}
+            mandatory selected={false} onPress={handleHCPress}
+          />
 
-            <ProviderRow
-              title="Health Connect"
-              connected={isHealthConnectReady}
-              installed={isHealthConnectInstalled}
-              mandatory
-              selected={false}
-              onPress={handleHealthConnect}
-            />
+          <TouchableOpacity style={ss.guideToggle} onPress={() => setGuideOpen(v => !v)} activeOpacity={0.7}>
+            <MaterialCommunityIcons name={guideOpen ? 'chevron-up' : 'information-outline'} size={14} color={VD.warning} />
+            <Text style={ss.guideToggleText}>
+              {isHCReady ? 'View permission details' : 'How to grant Steps permission'}
+            </Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.guideToggle}
-              onPress={() => setGuideOpen(v => !v)}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name={guideOpen ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color="#B45309"
-              />
-              <Text style={styles.guideToggleText}>
-                {isHealthConnectReady
-                  ? 'View permission details'
-                  : 'How to grant Steps permission'}
-              </Text>
-            </TouchableOpacity>
+          <PermissionGuide visible={guideOpen} />
 
-            <PermissionGuide visible={guideOpen} />
+          {/* Choose one */}
+          <Text style={[ss.sectionLabel, ss.sectionLabelGap]}>Choose Your Fitness App</Text>
+          <Text style={ss.sectionHint}>
+            Select the app that syncs your step data to Health Connect.
+          </Text>
+
+          <ProviderCard
+            title="Samsung Health"
+            subtitle="Ideal for Samsung devices — syncs automatically"
+            iconName={BRAND.samsung.icon} iconBg={BRAND.samsung.bg} iconTint={BRAND.samsung.tint}
+            installed={isSamsungHealthInstalled} connected={false}
+            mandatory={false} selected={selectedOptional === 'Samsung Health'}
+            onPress={() => handleOptional('Samsung Health')}
+          />
+          <ProviderCard
+            title="Google Fit"
+            subtitle="Works on all Android phones — great for step tracking"
+            iconName={BRAND.google.icon} iconBg={BRAND.google.bg} iconTint={BRAND.google.tint}
+            installed={isGoogleFitInstalled} connected={false}
+            mandatory={false} selected={selectedOptional === 'Google Fit'}
+            onPress={() => handleOptional('Google Fit')}
+          />
+
+          <View style={ss.appTip}>
+            <MaterialCommunityIcons name="lightbulb-outline" size={13} color={VD.accent} />
+            <Text style={ss.appTipText}>
+              After selecting, open the app → Settings → Manage connected apps → Enable Health Connect.
+            </Text>
           </View>
 
-          {/* ── Choose one ────────────────────────────────────────── */}
-          <View style={styles.sectionBlock}>
-            <Text style={styles.sectionLabel}>Choose One</Text>
-
-            <ProviderRow
-              title="Samsung Health"
-              installed={isSamsungHealthInstalled}
-              connected={false}
-              mandatory={false}
-              selected={selectedOptional === 'Samsung Health'}
-              onPress={() => handleOptionalProvider('Samsung Health')}
-            />
-
-            <ProviderRow
-              title="Google Fit"
-              installed={isGoogleFitInstalled}
-              connected={false}
-              mandatory={false}
-              selected={selectedOptional === 'Google Fit'}
-              onPress={() => handleOptionalProvider('Google Fit')}
-            />
-          </View>
-
-          {/* HC SDK error */}
           {!!healthConnectError && (
-            <Text style={styles.errorText}>{healthConnectError}</Text>
+            <View style={ss.errorRow}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={13} color={VD.error} />
+              <Text style={ss.errorText}>{healthConnectError}</Text>
+            </View>
           )}
 
           {/* CTA */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleNext}
-            style={styles.buttonWrapper}
-          >
+          <TouchableOpacity activeOpacity={0.9} onPress={handleContinue} style={ss.ctaWrap}>
             <LinearGradient
-              colors={canProceed ? COLORS.gradientPurple : ['#C7C7D1', '#AFAFBB']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.button}
+              colors={canProceed ? ['#9B6FFF', '#C4A8FF'] : ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.10)']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={ss.cta}
             >
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={[ss.ctaText, !canProceed && ss.ctaTextDim]}>Continue</Text>
+              <MaterialCommunityIcons name="arrow-right" size={18} color={canProceed ? '#1A1040' : VD.whiteLow} />
             </LinearGradient>
           </TouchableOpacity>
 
-        </LinearGradient>
-      </ScrollView>
+          <View style={ss.bottomPad} />
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
-  },
-  centerWrapper: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: RESPONSIVE.horizontalPadding,
-    paddingVertical: SPACING.xxl,
-  },
-  card: {
-    ...fitnessCardStyle,
-    alignItems: 'stretch',
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
-  },
+const ss = StyleSheet.create({
+  safe:     { flex: 1, backgroundColor: '#1A1040' },
+  gradient: { flex: 1 },
+  scroll:   { alignItems: 'center', paddingTop: SPACING.xl },
+
   backBtn: {
-    position: 'absolute',
-    top: SPACING.md,
-    left: SPACING.md,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    width: 40, height: 40,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: 'rgba(134,101,255,0.09)',
-  },
-  headingGroup: {
-    alignItems: 'center',
-    marginTop: SPACING.xxl + SPACING.md,
+    backgroundColor: VD.whiteGhost,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    alignItems: 'center', justifyContent: 'center',
     marginBottom: SPACING.lg,
   },
-  eyebrow: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
-    textTransform: 'uppercase',
-    marginBottom: SPACING.xs,
+
+  headingGroup: { width: '100%', marginBottom: SPACING.xl },
+  eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: VD.accent, marginBottom: 6 },
+  title:   { fontSize: 24, fontWeight: '800', color: VD.white, letterSpacing: -0.5, lineHeight: 30, marginBottom: 8 },
+  description: { fontSize: 14, color: VD.whiteMid, lineHeight: 21 },
+
+  sectionLabel:    { width: '100%', fontSize: 11, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: VD.whiteLow, marginBottom: SPACING.sm },
+  sectionLabelGap: { marginTop: SPACING.lg },
+  sectionHint:     { width: '100%', fontSize: 12, color: VD.whiteLow, lineHeight: 18, marginBottom: SPACING.sm, marginTop: -SPACING.xs },
+
+  // Provider card
+  providerCard: {
+    width: '100%', flexDirection: 'row', alignItems: 'center',
+    backgroundColor: VD.cardBg, borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, marginBottom: SPACING.sm,
   },
-  title: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.textDark,
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
-  },
-  description: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textMedium,
-    textAlign: 'center',
-  },
-  sectionBlock: {
-    marginBottom: SPACING.md,
-  },
-  sectionLabel: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: SPACING.xs,
-    marginLeft: SPACING.xs,
-  },
-  providerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderRadius: BORDER_RADIUS.medium,
-    marginBottom: SPACING.sm,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  providerRowSelected: {
-    borderColor: COLORS.primaryPurple,
-    backgroundColor: 'rgba(124,58,237,0.06)',
-  },
-  providerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: BORDER_RADIUS.medium,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  providerTextGroup: {
-    flexDirection: 'column',
-  },
-  providerTitle: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
-  },
-  mandatoryBadge: {
-    marginTop: 2,
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  mandatoryText: {
-    ...TYPOGRAPHY.caption,
-    color: '#DC2626',
-    fontSize: 10,
-  },
-  providerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  statusLabel: {
-    ...TYPOGRAPHY.caption,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#C4C4C4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOuterSelected: {
-    borderColor: COLORS.primaryPurple,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primaryPurple,
-  },
-  guideToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.xs,
-    gap: 4,
-  },
-  guideToggleText: {
-    ...TYPOGRAPHY.caption,
-    color: '#B45309',
-    fontSize: 12,
-  },
-  guideContainer: {
-    overflow: 'hidden',
-    borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    marginTop: SPACING.xs,
-  },
-  guideScroll: {
-    maxHeight: 260,
-  },
-  guideScrollContent: {
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  guideHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginBottom: SPACING.xs,
-  },
-  guideHeaderText: {
-    ...TYPOGRAPHY.caption,
-    color: '#92400E',
-    flex: 1,
-    lineHeight: 18,
-  },
-  guideStep: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  guideStepText: {
-    ...TYPOGRAPHY.caption,
-    color: '#78350F',
-    flex: 1,
-    lineHeight: 18,
-  },
-  errorText: {
-    ...TYPOGRAPHY.caption,
-    color: '#DC2626',
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
-  },
-  buttonWrapper: {
-    width: '100%',
-    marginTop: SPACING.md,
-  },
-  button: {
-    height: RESPONSIVE.buttonHeight,
+  providerCardSelected: { borderColor: VD.accent, backgroundColor: VD.accentFaint },
+  providerIcon:    { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md, flexShrink: 0 },
+  providerText:    { flex: 1, marginRight: SPACING.sm },
+  providerTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+  providerTitle:   { fontSize: 14, fontWeight: '700', color: VD.white },
+  providerSubtitle:{ fontSize: 11, color: VD.whiteLow, lineHeight: 16 },
+  providerAction:  { flexShrink: 0 },
+  requiredBadge:   { backgroundColor: 'rgba(248,113,113,0.18)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  requiredText:    { fontSize: 10, fontWeight: '700', color: VD.error },
+  statusPill:      { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
+  statusText:      { fontSize: 11, fontWeight: '700' },
+  radio:           { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: VD.whiteLow, alignItems: 'center', justifyContent: 'center' },
+  radioSelected:   { borderColor: VD.accent },
+  radioDot:        { width: 10, height: 10, borderRadius: 5, backgroundColor: VD.accent },
+
+  // Guide toggle
+  guideToggle: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: SPACING.xs, marginBottom: SPACING.xs },
+  guideToggleText: { fontSize: 12, color: VD.warning, fontWeight: '600' },
+
+  // Guide accordion
+  accordion: { overflow: 'hidden', width: '100%' },
+  guide: {
+    backgroundColor: 'rgba(251,191,36,0.07)',
     borderRadius: BORDER_RADIUS.large,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.22)',
+    padding: SPACING.md, marginBottom: SPACING.md,
   },
-  buttonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+  guideHeader:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.md },
+  guideHeaderText: { fontSize: 12, fontWeight: '700', color: VD.warning, flex: 1 },
+  guideStep:       { flexDirection: 'row', gap: SPACING.sm, paddingBottom: SPACING.md },
+  guideStepLeft:   { alignItems: 'center', width: 22 },
+  guideLine:       { flex: 1, width: 1.5, backgroundColor: VD.accentDim, marginTop: 6 },
+  guideStepRight:  { flex: 1, paddingBottom: SPACING.xs },
+  guideStepTitle:  { fontSize: 13, fontWeight: '700', color: VD.white, marginBottom: 2 },
+  guideStepDesc:   { fontSize: 12, color: VD.whiteLow, lineHeight: 17 },
+
+  // App tip
+  appTip: {
+    width: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: VD.accentFaint, borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, marginTop: SPACING.xs, marginBottom: SPACING.md,
   },
+  appTipText: { flex: 1, fontSize: 12, color: VD.whiteLow, lineHeight: 18 },
+
+  // Error
+  errorRow:  { width: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm },
+  errorText: { flex: 1, fontSize: 12, color: VD.error, fontWeight: '500' },
+
+  // CTA
+  ctaWrap: { width: '100%', marginTop: SPACING.md },
+  cta: {
+    height: 54, borderRadius: BORDER_RADIUS.large,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  ctaText:    { fontSize: 16, fontWeight: '800', color: '#1A1040', letterSpacing: 0.2 },
+  ctaTextDim: { color: VD.whiteLow },
+
+  bottomPad: { height: SPACING.xxl },
 });

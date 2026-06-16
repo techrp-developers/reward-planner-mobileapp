@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ProductCard from "../../constants/product_cart/ProductCard";
 import HorizontalProductList from "../common/HorizontalProductList";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../../common/auth/context/AuthContext";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import type { HomeStackParamList } from "../../navigation/types";
 import { getRecommendedProducts } from "../../api/PromotionalApi";

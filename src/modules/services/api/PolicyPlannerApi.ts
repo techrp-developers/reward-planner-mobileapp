@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
+import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 
 const HEALTH_BASE_URL =
   'https://policyplanner.com/health-insurance/companies/plans?policy=Health';

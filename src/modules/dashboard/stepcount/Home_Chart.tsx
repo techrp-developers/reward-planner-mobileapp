@@ -1,109 +1,89 @@
-
-
-import React, { useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
 import StepsCounterCard from "./StepsCounterCard";
 import HealthStatusCard from "./HealthStatusCard";
+import { rs} from "../../../utils/responsive";
+import { useStepTracker, StepDataState } from "../../step_counter/component/StepCode/useStepTracker";
 
+// ── Constants ──────────────────────────────────────────────────────────────
+const GOAL_STEPS = 7000;
 
-
-
-// ── Query key ──────────────────────────────────────────────────────────────
-const HOME_CHART_QUERY_KEY = ["home", "dashboard-cards"] as const;
-
-// ── Types ──────────────────────────────────────────────────────────────────
-type StepProgress = {
-  steps: number;
-  goal_steps: number;
-  progress_percent: number;
-  steps_today_delta: number;
+// ── StepStatusBanner ───────────────────────────────────────────────────────
+type BannerProps = {
+  state: StepDataState;
+  onConnectSource: () => void;
+  onRefresh: () => void;
+  onGrantPermission: () => void;
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-const safeNumber = (value: unknown, fallback = 0): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-};
+function StepStatusBanner({ state }: BannerProps) {
+  if (state === 'ok' || state === 'loading') return null;
 
-const normalizeStepProgress = (response: any): StepProgress => {
-  const stepsData =
-    response?.user?.steps || response?.data?.steps || response?.steps || {};
+  // if (state === 'no_permission') {
+  //   return (
+  //     <TouchableOpacity style={[bannerStyles.banner, bannerStyles.red]} onPress={onGrantPermission} activeOpacity={0.8}>
+  //       <Text style={bannerStyles.icon}>🔒</Text>
+  //       <Text style={[bannerStyles.text, bannerStyles.textRed]}>
+  //         Steps permission not granted — tap to fix
+  //       </Text>
+  //     </TouchableOpacity>
+  //   );
+  // }
 
-  const steps = safeNumber(stepsData.steps);
-  const goalSteps = safeNumber(stepsData.goal_steps);
-  const progressPercent = safeNumber(
-    stepsData.progress_percent,
-    goalSteps > 0 ? (steps / goalSteps) * 100 : 0
-  );
-  const stepsDelta = safeNumber(stepsData.steps_today_delta ?? stepsData.delta, 320);
+  // if (state === 'no_source') {
+  //   return (
+  //     <TouchableOpacity style={[bannerStyles.banner, bannerStyles.amber]} onPress={onConnectSource} activeOpacity={0.8}>
+  //       <Text style={bannerStyles.icon}>🔗</Text>
+  //       <Text style={[bannerStyles.text, bannerStyles.textAmber]}>
+  //         No fitness app connected — tap to open Health Connect
+  //       </Text>
+  //     </TouchableOpacity>
+  //   );
+  // }
 
-  return {
-    steps,
-    goal_steps: goalSteps,
-    progress_percent: Math.max(0, Math.min(progressPercent, 100)),
-    steps_today_delta: stepsDelta,
-  };
-};
+  // no_steps_today
+  // return (
+  //   <TouchableOpacity style={[bannerStyles.banner, bannerStyles.grey]} onPress={onRefresh} activeOpacity={0.8}>
+  //     <Text style={bannerStyles.icon}>🔄</Text>
+  //     <Text style={[bannerStyles.text, bannerStyles.textGrey]}>
+  //       No steps recorded today — make sure your fitness app is syncing
+  //     </Text>
+  //   </TouchableOpacity>
+  // );
+}
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function Home_Chart() {
   const { width } = useWindowDimensions();
   const navigation = useNavigation<any>();
-  const queryClient = useQueryClient();
 
-  // ── Layout ──
+  const {
+    totalSteps,
+    stepDataState,
+    openHealthConnect,
+    refreshSteps,
+    requestStepsPermission,
+  } = useStepTracker();
+
   const layout = useMemo(() => {
-    const horizontalPadding = width >= 768 ? 20 : 16;
-    const gap = 12;
-    const maxContentWidth = 540;
+    const horizontalPadding = rs(width >= 768 ? 20 : 16);
+    const gap = rs(12);
+    const maxContentWidth = rs(540);
     const contentWidth = Math.min(width - horizontalPadding * 2, maxContentWidth);
     const cardWidth = Math.floor((contentWidth - gap) / 2);
     return { cardWidth, containerPadding: horizontalPadding, contentWidth, gap };
   }, [width]);
 
-  // ── Step progress query ──
-  const stepQuery = useQuery<StepProgress>({
-    queryKey: HOME_CHART_QUERY_KEY,
-    queryFn: async () => {
-      // Replace with your real API call:
-      // return normalizeStepProgress(await fetchUserInfo());
-
-      // ── Mock data for development ──
-      return {
-        steps: 4820,
-        goal_steps: 7000,
-        progress_percent: 68.86,
-        steps_today_delta: 320,
-      };
-    },
-    // refetchInterval: () => (isAuthenticated() ? 5000 : false),
-    refetchInterval: 5000,
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  const stepData: StepProgress = stepQuery.data ?? {
-    steps: 0,
-    goal_steps: 0,
-    progress_percent: 0,
-    steps_today_delta: 0,
-  };
-
-  // ── Invalidate on focus ──
-  useFocusEffect(
-    useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: HOME_CHART_QUERY_KEY });
-    }, [queryClient])
+  const progressPercent = useMemo(
+    () => Math.min((totalSteps / GOAL_STEPS) * 100, 100),
+    [totalSteps],
   );
 
-  // ── Navigation handlers ──
   const goToRewards = useCallback(() => {
     const parent = navigation.getParent?.();
     parent?.navigate("RewardStack", { moduleName: "Step Counter" });
@@ -113,36 +93,37 @@ export default function Home_Chart() {
     navigation.navigate?.("HealthStack");
   }, [navigation]);
 
-  // ── Render ──
   return (
     <View style={[styles.container, { paddingHorizontal: layout.containerPadding }]}>
       <View style={[styles.row, { maxWidth: layout.contentWidth, gap: layout.gap }]}>
-        {/* LEFT: Steps Counter */}
         <StepsCounterCard
-          steps={stepData.steps}
-          goalSteps={stepData.goal_steps}
-          progressPercent={stepData.progress_percent}
-          stepsToday={stepData.steps_today_delta}
+          steps={totalSteps}
+          goalSteps={GOAL_STEPS}
+          progressPercent={progressPercent}
+          stepsToday={totalSteps}
           onPress={goToRewards}
-          loading={stepQuery.isLoading}
+          loading={stepDataState === 'loading'}
           cardWidth={layout.cardWidth}
         />
-
-        {/* RIGHT: Health Status */}
         <HealthStatusCard
           status="active"
           onNavigate={goToHealth}
           cardWidth={layout.cardWidth}
         />
       </View>
+      <StepStatusBanner
+        state={stepDataState}
+        onConnectSource={openHealthConnect}
+        onRefresh={refreshSteps}
+        onGrantPermission={requestStepsPermission}
+      />
     </View>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 14,
+    paddingVertical: rs(14),
     backgroundColor: "transparent",
   },
   row: {
@@ -152,3 +133,23 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
   },
 });
+
+// const bannerStyles = StyleSheet.create({
+//   banner: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     borderRadius: rs(10),
+//     paddingHorizontal: rs(12),
+//     paddingVertical: rs(8),
+//     marginTop: rs(8),
+//     gap: rs(8),
+//   },
+//   red:       { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
+//   amber:     { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
+//   grey:      { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
+//   icon:      { fontSize: fs(14) },
+//   text:      { flex: 1, fontSize: fs(11), fontWeight: '500', lineHeight: rs(16) },
+//   textRed:   { color: '#991B1B' },
+//   textAmber: { color: '#92400E' },
+//   textGrey:  { color: '#374151' },
+// });

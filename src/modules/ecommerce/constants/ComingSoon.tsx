@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Image, 
-  SafeAreaView, 
-  StatusBar, 
-  Dimensions 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  StatusBar,
+  Dimensions
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient'; // Ensure this is installed
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import coming_soon from "../../../assets/product/coming_soon.png";

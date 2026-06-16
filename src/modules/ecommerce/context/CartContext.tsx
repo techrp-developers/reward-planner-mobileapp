@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchCartItems, addToCart, deleteCartItem, updateCartQty } from "../api/CartApi";
-import { useAuth } from "../auth/context/AuthContext";
+import { useAuth } from "../../common/auth/context/AuthContext";
 import {
   cartItemsQueryKey,
   cartSummaryQueryKey,

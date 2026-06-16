@@ -1,295 +1,449 @@
-/**
- * HeaderComponent.tsx
- *
- * FIX: "Hello, Devashish" was hidden behind the camera notch / Dynamic Island.
- *
- * Root cause: <SafeAreaView flex:0> with the gradient inside it meant the
- * gradient started BELOW the safe area — but on many devices the content
- * still rendered too high because SafeAreaView top inset only applies on iOS
- * and not consistently across Android OEMs.
- *
- * Solution:
- *  1. Remove <SafeAreaView> as the outer wrapper entirely.
- *  2. Use useSafeAreaInsets() from react-native-safe-area-context to read
- *     the exact top inset for the current device (notch / Dynamic Island /
- *     punch-hole / plain status bar).
- *  3. Apply that inset + a small extra breathing room as paddingTop on the
- *     LinearGradient — the gradient now covers the full status bar area
- *     giving the beautiful full-bleed purple look while pushing content
- *     safely below the camera.
- */
-
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   Image,
-  Switch,
   StyleSheet,
   StatusBar,
   Platform,
   TouchableOpacity,
+  TextInput,
+  Animated,
+  type ImageStyle,
+  type LayoutChangeEvent,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// Local logo asset — adjust path to match your project
+import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../../../theme/ThemeContext';
 import Logo from '../../../assets/menu/logo.png';
+import { useGlobalSearch } from './useGlobalSearch';
+import SearchDropdown from './SearchDropdown';
 
-// Fallback if safe-area-context somehow returns 0
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
-const IOS_FALLBACK_TOP    = 50; // covers even the Dynamic Island (59 pt safe)
+const IOS_FALLBACK_TOP   = 50;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
+
 interface HeaderProps {
-  userName?:            string;
-  companyLogoUri?:      string;
-  onNotificationPress?: () => void;
-  onAIToggle?:          (value: boolean) => void;
+  userName?:              string;
+  userImageUri?:          string;
+  companyLogoUri?:        string;
+  onNotificationPress?:   () => void;
+  onAIToggle?:            (value: boolean) => void;
+  onSearchSubmit?:        (query: string) => void;
+  onSearchActiveChange?:  (active: boolean) => void;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────────
+
 const HeaderComponent: React.FC<HeaderProps> = ({
-  userName = 'Devashish',
+  userName = 'User',
+  userImageUri,
   companyLogoUri,
   onNotificationPress,
-  onAIToggle,
+  onSearchSubmit,
+  onSearchActiveChange,
 }) => {
-  const [aiEnabled, setAiEnabled] = useState<boolean>(false);
+  const { isDark }   = useAppTheme();
+  const navigation   = useNavigation<any>();
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [headerHeight, setHeaderHeight] = useState(0);
 
-  // ── Safe-area top inset ──────────────────────────────────────────────────
-  const insets    = useSafeAreaInsets();
-  const safeTop   = insets.top > 0
+  // All animations use native driver (opacity + transform only)
+  const dateFade    = useRef(new Animated.Value(1)).current;
+  const searchFade  = useRef(new Animated.Value(0)).current;
+  const searchSlide = useRef(new Animated.Value(28)).current;
+  const inputRef    = useRef<TextInput>(null);
+
+  const insets  = useSafeAreaInsets();
+  const safeTop = insets.top > 0
     ? insets.top
     : Platform.OS === 'android' ? ANDROID_STATUS_BAR : IOS_FALLBACK_TOP;
 
-  // 8 pt extra so content breathes nicely below the camera area
-  const topPadding = safeTop + 8;
+  // ── Global search hook ────────────────────────────────────────────────────
 
-  const handleToggle = (value: boolean) => {
-    setAiEnabled(value);
-    onAIToggle?.(value);
-  };
+  const { results, loading, isEmpty, reset } = useGlobalSearch(searchQuery);
+  const showDropdown = searchActive && searchQuery.trim().length > 0;
+
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+
+  const tk = useMemo(() => ({
+    headerGradient:   isDark ? ['#1A1A2E', '#2D2D44'] : ['#C8B9FF', '#F0EDFF'],
+    helloColor:       isDark ? '#A89FD8' : '#6B5BA8',
+    nameColor:        isDark ? '#FFFFFF'  : '#1A1A2E',
+    logoPillBg:       isDark ? '#2D2D44'  : '#FFFFFF',
+    avatarRingBg:     isDark ? '#2D1F6E'  : '#E9E4FF',
+    dateColor:        isDark ? '#C4BCFF'  : '#4A3A82',
+    iconBg:           isDark ? 'rgba(255,255,255,0.10)' : 'rgba(124,92,252,0.12)',
+    iconTint:         isDark ? '#D0CBFF'  : '#7C5CFC',
+    searchBg:         isDark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.80)',
+    searchBorder:     isDark ? 'rgba(255,255,255,0.15)' : 'rgba(124,92,252,0.25)',
+    searchTextColor:  isDark ? '#FFFFFF'  : '#1A1A2E',
+    placeholderColor: isDark ? '#6A6A8E'  : '#9B8FCC',
+  }), [isDark]);
+
+  const formattedDate = useMemo(() => {
+    const n = new Date();
+    const D = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${D[n.getDay()]}, ${n.getDate()} ${M[n.getMonth()]}`;
+  }, []);
+
+  // ── Layout measurement — drives dropdown top position ─────────────────────
+
+  const handleHeaderLayout = useCallback((e: LayoutChangeEvent) => {
+    setHeaderHeight(e.nativeEvent.layout.height);
+  }, []);
+
+  // ── Search animation ──────────────────────────────────────────────────────
+
+  const openSearch = useCallback(() => {
+    setSearchActive(true);
+    onSearchActiveChange?.(true);
+    Animated.parallel([
+      Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
+      Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start(() => inputRef.current?.focus());
+  }, [dateFade, searchFade, searchSlide, onSearchActiveChange]);
+
+  const closeSearch = useCallback(() => {
+    inputRef.current?.blur();
+    onSearchActiveChange?.(false);
+    Animated.parallel([
+      Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
+      Animated.timing(searchSlide, { toValue: 28, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setSearchActive(false);
+      setSearchQuery('');
+      reset();
+    });
+  }, [dateFade, searchFade, searchSlide, reset, onSearchActiveChange]);
+
+  const handleQueryChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    closeSearch();
+    onSearchSubmit?.(q);
+    navigation.navigate('Search', { query: q });
+  }, [searchQuery, closeSearch, onSearchSubmit, navigation]);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    // The gradient now starts from y=0 (behind the status bar / notch).
-    // paddingTop pushes all content below the camera cutout.
-    <LinearGradient
-      colors={['#C8B9FF', '#F0EDFF']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={[styles.gradient, { paddingTop: topPadding }]}
-    >
-      {/* ── Top Row: Greeting | Logo + Bell ── */}
-      <View style={styles.topRow}>
+    // Outer wrapper: creates a stacking context so the dropdown overlays
+    // dashboard content below without affecting the layout flow.
+    <View style={styles.wrapper}>
 
-        {/* Left — "Hello, \n Devashish" */}
-        <View>
-          <Text style={styles.helloText}>Hello,</Text>
-          <Text style={styles.nameText}>{userName}</Text>
-        </View>
+      <LinearGradient
+        colors={tk.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.gradient, { paddingTop: safeTop + 10 }]}
+        onLayout={handleHeaderLayout}
+      >
+        {/* ── Row 1 : Avatar | Greeting | Logo ── */}
+        <View style={styles.topRow}>
 
-        {/* Right — logo pill + bell */}
-        <View style={styles.rightBlock}>
-
-          {/* Company logo pill */}
-          <View style={styles.logoPill}>
-            {companyLogoUri ? (
-              <Image
-                source={typeof companyLogoUri === 'string' ? { uri: companyLogoUri } : companyLogoUri}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            ) : (
-              /* Local PNG asset */
-              <Image source={Logo} style={styles.logoImage} resizeMode="contain" />
-            )}
-          </View>
-
-          {/* Notification bell */}
           <TouchableOpacity
-            style={styles.bellWrapper}
-            onPress={onNotificationPress}
-            activeOpacity={0.75}
-            accessibilityLabel="Notifications"
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="bell" size={18} color="#1A1A2E" />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>1</Text>
+            <View style={[styles.avatarRing, { backgroundColor: tk.avatarRingBg }]}>
+              {userImageUri ? (
+                <Image
+                  source={{ uri: userImageUri }}
+                  style={styles.avatarImg as ImageStyle}
+                  resizeMode="cover"
+                />
+              ) : (
+                <MaterialCommunityIcons name="account-circle" size={32} color="#7C5CFC" />
+              )}
             </View>
           </TouchableOpacity>
 
+          <View style={styles.greetWrap}>
+            <Text style={[styles.helloText, { color: tk.helloColor }]}>Hello,</Text>
+            <Text style={[styles.nameText, { color: tk.nameColor }]} numberOfLines={1}>
+              {userName}
+            </Text>
+          </View>
+
+          <View style={[styles.logoPill, { backgroundColor: tk.logoPillBg }]}>
+            <Image
+              source={companyLogoUri ? { uri: companyLogoUri } : Logo}
+              style={styles.logoImage as ImageStyle}
+              resizeMode="contain"
+            />
+          </View>
+
         </View>
-      </View>
 
-      {/* ── AI Assistant Toggle Row ── */}
-      <View style={styles.aiRow}>
+        {/* ── Row 2 : Date ←→ Search | Actions ── */}
+        <View style={styles.bottomRow}>
 
-        {/* Sparkle + label */}
-        <View style={styles.aiLabelRow}>
-          <Text style={styles.sparkleIcon}>✦</Text>
-          <Text style={styles.aiLabelText}>RP AI Assistant</Text>
+          {/*
+           * flexZone: two absolutely-stacked children
+           *   1. Date label — fades out when search opens
+           *   2. Search pill — slides in from the right
+           */}
+          <View style={styles.flexZone}>
+
+            {/* Date */}
+            <Animated.View
+              style={[StyleSheet.absoluteFill, styles.dateCentered, { opacity: dateFade }]}
+              pointerEvents={searchActive ? 'none' : 'auto'}
+            >
+              <MaterialCommunityIcons
+                name="calendar-month-outline"
+                size={13}
+                color={tk.dateColor}
+                style={styles.calIcon}
+              />
+              <Text style={[styles.dateText, { color: tk.dateColor }]} numberOfLines={1}>
+                {formattedDate}
+              </Text>
+            </Animated.View>
+
+            {/* Search pill */}
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                styles.searchPill,
+                {
+                  backgroundColor: tk.searchBg,
+                  borderColor:     tk.searchBorder,
+                  opacity:         searchFade,
+                  transform: [{ translateX: searchSlide }],
+                },
+              ]}
+              pointerEvents={searchActive ? 'auto' : 'none'}
+            >
+              <MaterialCommunityIcons
+                name="magnify"
+                size={16}
+                color={tk.placeholderColor}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                ref={inputRef}
+                placeholder="Search products, services…"
+                placeholderTextColor={tk.placeholderColor}
+                value={searchQuery}
+                onChangeText={handleQueryChange}
+                onSubmitEditing={handleSubmit}
+                style={[styles.searchInput, { color: tk.searchTextColor }]}
+                editable={searchActive}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => { setSearchQuery(''); reset(); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialCommunityIcons name="close-circle" size={16} color={tk.placeholderColor} />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+
+          </View>
+
+          {/* Icon buttons */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              onPress={searchActive ? closeSearch : openSearch}
+              style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
+              activeOpacity={0.75}
+            >
+              <MaterialCommunityIcons
+                name={searchActive ? 'close' : 'magnify'}
+                size={19}
+                color={tk.iconTint}
+              />
+            </TouchableOpacity>
+
+            {!searchActive && (
+              <TouchableOpacity
+                onPress={onNotificationPress}
+                style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
+                activeOpacity={0.75}
+              >
+                <MaterialCommunityIcons name="bell-outline" size={19} color={tk.iconTint} />
+              </TouchableOpacity>
+            )}
+          </View>
+
         </View>
+      </LinearGradient>
 
-        {/* OFF/ON + Switch */}
-        <View style={styles.toggleWrapper}>
-          {!aiEnabled && <Text style={styles.offLabel}>OFF</Text>}
-          <Switch
-            value={aiEnabled}
-            onValueChange={handleToggle}
-            thumbColor="#FFFFFF"
-            trackColor={{ false: '#D0CCE8', true: '#7C5CFC' }}
-            ios_backgroundColor="#D0CCE8"
-            style={styles.switchControl}
+      {/* ── Search Dropdown ─────────────────────────────────────────────────
+       *  Absolutely positioned below the gradient so it overlays page content
+       *  without affecting the layout flow of the dashboard.
+       */}
+      {showDropdown && headerHeight > 0 && (
+        <View
+          style={[styles.dropdownWrap, { top: headerHeight }]}
+        >
+          <SearchDropdown
+            query={searchQuery}
+            results={results}
+            loading={loading}
+            isEmpty={isEmpty}
+            onClose={closeSearch}
           />
-          {aiEnabled && <Text style={styles.onLabel}>ON</Text>}
         </View>
+      )}
 
-      </View>
-    </LinearGradient>
+    </View>
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+// ── Styles ───────────────────────────────────────────────────────────────────
 
-  gradient: {
-    // paddingTop applied dynamically (topPadding)
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+const styles = StyleSheet.create({
+  // Outer wrapper creates a stacking context
+  wrapper: {
+    zIndex: 100,
   },
 
-  // ── Top row ──
+  gradient: {
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+  },
+
+  // ── Row 1 ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: 16,
   },
-
+  avatarRing: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: '#7C5CFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  greetWrap: {
+    flex: 1,
+  },
   helloText: {
-    fontSize: 22,
+    fontSize: 12,
     fontWeight: '400',
-    color: '#1A1A2E',
-    lineHeight: 28,
+    lineHeight: 17,
+    letterSpacing: 0.2,
   },
   nameText: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A2E',
-    lineHeight: 28,
+    lineHeight: 23,
+    letterSpacing: -0.2,
   },
-
-  rightBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-
-  // Logo pill
   logoPill: {
-    // backgroundColor: '#FFFFFF',
-    // borderRadius: 14,
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minWidth: 110,
+    minWidth: 100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logoImage: {
-    width: 100,
-    height: 36,
-  },
-
-  // Bell
-  bellWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9B8FCC',
+    flexShrink: 0,
+    shadowColor: '#7C5CFC',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.10,
     shadowRadius: 6,
     elevation: 3,
   },
-  badge: {
-    position: 'absolute',
-    top: 3,
-    right: 3,
-    backgroundColor: '#FF3B30',
-    borderRadius: 8,
-    minWidth: 15,
-    height: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  badgeText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    lineHeight: 11,
+  logoImage: {
+    width: 90,
+    height: 32,
   },
 
-  // ── AI Toggle ──
-  aiRow: {
+  // ── Row 2 ──
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(124, 92, 252, 0.10)',
-    shadowColor: '#9B8FCC',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    elevation: 4,
+    gap: 10,
+    height: 40,
+  },
+  flexZone: {
+    flex: 1,
+    position: 'relative',
+    height: 40,
   },
 
-  aiLabelRow: {
+  // Date
+  dateCentered: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calIcon: {
+    marginRight: 5,
+  },
+  dateText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    flexShrink: 1,
+  },
+
+  // Search pill
+  searchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 6,
+  },
+  searchIcon: {},
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 0,
+    height: 40,
+  },
+
+  // Action buttons
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
-  sparkleIcon: {
-    fontSize: 20,
-    color: '#7C5CFC',
-  },
-  aiLabelText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1A1A2E',
-    letterSpacing: -0.1,
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  toggleWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  // Dropdown container — absolute, overlays content below header
+  dropdownWrap: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    zIndex: 200,
+    elevation: 20,
   },
-  offLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#A0A0B8',
-    letterSpacing: 0.5,
-  },
-  onLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7C5CFC',
-    letterSpacing: 0.5,
-  },
-  switchControl: {
-    transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }],
-  },
+
 });
 
 export default HeaderComponent;

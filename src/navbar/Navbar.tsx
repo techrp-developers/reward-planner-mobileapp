@@ -17,9 +17,9 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { fetchUserInfo, getStoredUserName } from "../modules/ecommerce/api/AuthAPI";
+import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
-import { useAuth } from "../modules/ecommerce/auth/context/AuthContext";
+import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import ProductTop from "./assete/Product_BG.jpg";
@@ -128,17 +128,24 @@ const getActiveModuleFromState = (state?: NavStateLike): TopTab | null => {
   if (!state?.routes?.length) return null;
 
   let currentState = state;
-  // Traverse down the navigation tree to find ModuleStack level
   while (currentState?.routes?.length) {
     const focused = currentState.routes[currentState.index] ?? currentState.routes[0];
 
-    // Check if focused route is one of our modules
     if (focused?.name === "ProductModule") return "Product";
     if (focused?.name === "ServicesModule") return "Services";
     if (focused?.name === "PaymentsModule") return "Payments";
     if (focused?.name === "DineOutModule") return "DineOut";
+    if (focused?.name === "Dashboard") return "Product";
 
-    // If not found yet, go deeper
+    // When navigate('Home', { screen: 'ServicesModule' }) fires, Home.state may be
+    // undefined for the first render tick before ModuleStack processes the nested params.
+    // Check params.screen as an immediate signal so the correct tab highlights without flash.
+    const paramsScreen = focused?.params?.screen as string | undefined;
+    if (paramsScreen === "ProductModule") return "Product";
+    if (paramsScreen === "ServicesModule") return "Services";
+    if (paramsScreen === "PaymentsModule") return "Payments";
+    if (paramsScreen === "DineOutModule") return "DineOut";
+
     if (focused?.state) {
       currentState = focused.state;
     } else {
@@ -300,32 +307,27 @@ export default function Navbar() {
       if (tab === activeTab || isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      let targetRoute:
-        | "ProductModule"
-        | "ServicesModule"
-        | "PaymentsModule"
-        | "DineOutModule" = "ProductModule";
-      let params: { moduleName: TopTab } | undefined;
+      const SCREEN: Record<TopTab, string> = {
+        Product: "ProductModule",
+        Services: "ServicesModule",
+        Payments: "PaymentsModule",
+        DineOut: "DineOutModule",
+      };
 
-      if (tab === "Services") {
-        targetRoute = "ServicesModule";
-        params = { moduleName: "Services" };
-      } else if (tab === "Payments") {
-        targetRoute = "PaymentsModule";
-        params = { moduleName: "Payments" };
-      } else if (tab === "DineOut") {
-        targetRoute = "DineOutModule";
-        params = { moduleName: "DineOut" };
-      } else {
-        params = { moduleName: "Product" };
-      }
+      // navigate('Home', { screen }) works from both Dashboard (AppStack – mounts MainLayout
+      // then navigates inside ModuleStack) and from within MainLayout (already on Home –
+      // React Navigation detects the screen is focused and updates the nested state directly).
+      // No handleNavigateWithPrefetch wrapper so the switch is instant (<1 frame).
+      (navigation as any).navigate("Home", {
+        screen: SCREEN[tab],
+        params: { moduleName: tab },
+      });
 
-      navigateToScreen(targetRoute, params);
       requestAnimationFrame(() => {
         isNavigatingRef.current = false;
       });
     },
-    [activeTab, navigateToScreen]
+    [activeTab, navigation]
   );
 
   const navigateToAddAddress = React.useCallback(() => {
@@ -506,7 +508,7 @@ export default function Navbar() {
           style={styles.searchContainer}
           onPress={() => {
             if (activeTab === "Services") {
-              navigateToScreen("ServicesModule", { screen: "ServiceSearch" });
+              navigateToScreen("ServiceSearch");
             } else {
               navigateToScreen("SearchScreen");
             }

@@ -16,9 +16,11 @@ type Props = {
   search?: string;
   onChangeSearch?: (v: string) => void;
   onFocusSearch?: () => void;
+  onBackPress?: () => void;
+  autoFocus?: boolean;
 };
 
-function ServiceHead({ showSearch, search, onChangeSearch, onFocusSearch }: Props) {
+function ServiceHead({ showSearch, search, onChangeSearch, onFocusSearch, onBackPress, autoFocus }: Props) {
   const { width } = useWindowDimensions();
   const HEADER_HEIGHT = Math.round(width * 0.4);
 
@@ -26,6 +28,17 @@ function ServiceHead({ showSearch, search, onChangeSearch, onFocusSearch }: Prop
     <View style={[styles.container, { height: HEADER_HEIGHT }]}>
       <StatusBar translucent backgroundColor="transparent" />
       <Image source={ServiceTop} style={styles.absoluteFill} resizeMode="cover" />
+
+      {onBackPress && (
+        <TouchableOpacity
+          onPress={onBackPress}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.backBtn}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
+
       {showSearch && (
         <View style={styles.searchWrap}>
           <MaterialCommunityIcons name="magnify" size={20} color="#A654CD" />
@@ -37,6 +50,7 @@ function ServiceHead({ showSearch, search, onChangeSearch, onFocusSearch }: Prop
             onChangeText={onChangeSearch}
             onFocus={onFocusSearch}
             returnKeyType="search"
+            autoFocus={autoFocus}
           />
           {search && search.length > 0 && (
             <TouchableOpacity onPress={() => onChangeSearch?.("")}>
@@ -92,5 +106,16 @@ const styles = StyleSheet.create({
     color: "#111827",
     paddingVertical: 0,
     textAlignVertical: "center",
+  },
+  backBtn: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

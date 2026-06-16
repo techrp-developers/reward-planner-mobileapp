@@ -1,4 +1,4 @@
-import api from "../../ecommerce/auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 // =========================================
 // TYPES

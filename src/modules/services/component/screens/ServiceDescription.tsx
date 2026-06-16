@@ -19,7 +19,7 @@
     import { getServiceImageUrl } from '../../utils/serviceImage';
     import { addServiceToCart, getBuyNowPreview } from '../../api/CartAPI';
     import { useServiceDetails } from '../../hooks/useServiceDetails';
-    import { fetchUserInfo } from '../../../ecommerce/api/AuthAPI';
+    import { fetchUserInfo } from '../../../common/auth/api/AuthAPI';
     import { HomeStackParamList } from '../../navigation/type';
     import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
     import {

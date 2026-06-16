@@ -8,9 +8,9 @@ export interface DailyData {
 export interface StepStats {
   currentSteps: number;
   goalSteps: number;
-  distance_km: number | string;
-  active_minutes: number | string;
-  calories: number | string;
+  distance_km: number;
+  active_minutes: number;
+  calories: number;
 }
 
 export interface StreakPlan {

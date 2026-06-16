@@ -511,10 +511,24 @@ const GoalCelebrationScreen: React.FC<Props> = ({ route, navigation }) => {
 export default GoalCelebrationScreen;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Violet Dusk palette ─────────────────────────────────────────────────────
+const VD = {
+  bg0:         "#1A1040",
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  accentDim:   "rgba(196,168,255,0.25)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  warning:     "#FBBF24",
+};
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(230, 233, 248, 0.97)",
+    backgroundColor: VD.bg0,
   },
   scrollContent: {
     alignItems: "center",
@@ -523,32 +537,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  dotsRow: { flexDirection: "row", marginBottom: 12, gap: 6 },
-  dot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: "#C5C9E3" },
-  dotActive: { backgroundColor: "#6B6FD8", width: 20 },
+  dotsRow:   { flexDirection: "row", marginBottom: 12, gap: 6 },
+  dot:       { width: 7, height: 7, borderRadius: 4, backgroundColor: VD.accentDim },
+  dotActive: { backgroundColor: VD.accent, width: 20 },
 
   card: {
     width: SCREEN_WIDTH - 40,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: VD.cardBg,
     borderRadius: 28,
     alignItems: "center",
     paddingTop: 20,
     paddingBottom: 24,
     paddingHorizontal: 20,
-    shadowColor: "#8B90CC",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 12,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
     overflow: "hidden",
   },
 
   cardHeader:        { flexDirection: "row", alignItems: "center", marginBottom: 8, width: "100%" },
-  headerDividerLeft: { flex: 1, height: 1, backgroundColor: "#E0E3F0", marginRight: 10 },
-  headerDividerRight:{ flex: 1, height: 1, backgroundColor: "#E0E3F0", marginLeft: 10 },
+  headerDividerLeft: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: VD.cardBorder, marginRight: 10 },
+  headerDividerRight:{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: VD.cardBorder, marginLeft: 10 },
   categoryLabel: {
     fontSize: 11, fontWeight: "700", letterSpacing: 1.5,
-    color: "#7B80B0", textTransform: "uppercase",
+    color: VD.accent, textTransform: "uppercase",
   },
 
   confettiContainer: {
@@ -570,8 +581,8 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    borderWidth: 3,
-    borderColor: "#9B6FF5",
+    borderWidth: 2,
+    borderColor: VD.accent,
     alignSelf: "center",
   },
 
@@ -591,65 +602,63 @@ const styles = StyleSheet.create({
     right: 0,
   },
   badgeValue: {
-    fontSize: 36, fontWeight: "900", color: "#FFFFFF",
+    fontSize: 36, fontWeight: "900", color: VD.white,
     letterSpacing: -0.5,
-    textShadowColor: "rgba(0,0,0,0.15)",
+    textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
 
   headline: {
-    fontSize: 20, fontWeight: "700", color: "#1A1D3A",
+    fontSize: 20, fontWeight: "700", color: VD.white,
     textAlign: "center", lineHeight: 28, marginBottom: 8, letterSpacing: -0.2,
   },
-  subtext: { fontSize: 14, color: "#7B80B0", textAlign: "center", marginBottom: 12 },
-  subtextHighlight: { color: "#E05A7A", fontWeight: "700" },
+  subtext:          { fontSize: 14, color: VD.whiteLow, textAlign: "center", marginBottom: 12 },
+  subtextHighlight: { color: VD.accent, fontWeight: "700" },
 
   rewardBadge: {
-    backgroundColor: "#FFF8E6", borderRadius: 20,
+    backgroundColor: "rgba(251,191,36,0.15)", borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 6,
-    borderWidth: 1, borderColor: "#FFD97A", marginBottom: 16,
+    borderWidth: 1, borderColor: "rgba(251,191,36,0.35)", marginBottom: 16,
   },
-  rewardText: { fontSize: 13, fontWeight: "700", color: "#C07A00" },
+  rewardText: { fontSize: 13, fontWeight: "700", color: VD.warning },
 
   statsRow: {
     flexDirection: "row", justifyContent: "space-around", width: "100%",
-    backgroundColor: "#F5F6FD", borderRadius: 16,
+    backgroundColor: VD.accentFaint, borderRadius: 16,
     paddingVertical: 14, paddingHorizontal: 8, marginBottom: 20,
+    borderWidth: 1, borderColor: VD.cardBorder,
   },
   statItem:  { alignItems: "center", flex: 1 },
   statIcon:  { fontSize: 18, marginBottom: 4 },
-  statValue: { fontSize: 15, fontWeight: "800", color: "#1A1D3A", letterSpacing: -0.3 },
+  statValue: { fontSize: 15, fontWeight: "800", color: VD.white, letterSpacing: -0.3 },
   statLabel: {
-    fontSize: 10, color: "#9195BB", fontWeight: "600",
+    fontSize: 10, color: VD.whiteLow, fontWeight: "600",
     letterSpacing: 0.4, textTransform: "uppercase", marginTop: 2,
   },
 
   shareSection: { flexDirection: "row", alignItems: "center", width: "100%", marginBottom: 14 },
-  shareDivider: { flex: 1, height: 1, backgroundColor: "#E8EAF5" },
-  shareLabel:   { fontSize: 12, color: "#9195BB", fontWeight: "600", marginHorizontal: 12, letterSpacing: 0.5 },
+  shareDivider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: VD.cardBorder },
+  shareLabel:   { fontSize: 12, color: VD.whiteLow, fontWeight: "600", marginHorizontal: 12, letterSpacing: 0.5 },
   socialRow:    { flexDirection: "row", gap: 12, marginBottom: 20 },
   socialBtn:    { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  socialIcon:   { fontSize: 18, color: "#FFFFFF" },
+  socialIcon:   { fontSize: 18, color: VD.white },
 
   ctaBtn: {
-    backgroundColor: "#4E54D4", borderRadius: 16,
+    backgroundColor: VD.accent, borderRadius: 16,
     paddingVertical: 14, paddingHorizontal: 40,
     width: "100%", alignItems: "center",
-    shadowColor: "#4E54D4", shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
   },
-  ctaBtnText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.3 },
+  ctaBtnText: { fontSize: 16, fontWeight: "800", color: VD.bg0, letterSpacing: 0.3 },
 
   totalRewardRow: {
-    marginTop: 20, backgroundColor: "#FFFFFF", borderRadius: 14,
+    marginTop: 20, backgroundColor: VD.cardBg, borderRadius: 14,
     paddingHorizontal: 20, paddingVertical: 12,
     width: SCREEN_WIDTH - 40, alignItems: "center",
-    shadowColor: "#8B90CC", shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
+    borderWidth: 1, borderColor: VD.cardBorder,
   },
-  totalRewardText:  { fontSize: 14, color: "#6B6FD8", fontWeight: "600" },
-  totalRewardCoins: { fontWeight: "800", color: "#C07A00" },
+  totalRewardText:  { fontSize: 14, color: VD.accent, fontWeight: "600" },
+  totalRewardCoins: { fontWeight: "800", color: VD.warning },
   skipBtn:  { marginTop: 16, paddingVertical: 8, paddingHorizontal: 20 },
-  skipText: { fontSize: 13, color: "#9195BB", fontWeight: "500" },
+  skipText: { fontSize: 13, color: VD.whiteLow, fontWeight: "500" },
 });

@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RootStackParamList } from "@/navigation/types";
-import { fetchUserInfo, isAuthenticated } from "../../api/AuthAPI";
+import { fetchUserInfo, isAuthenticated } from "../../../common/auth/api/AuthAPI";
 
 const HOME_CHART_STEP_PROGRESS_QUERY_KEY = ["ecommerce", "home-chart", "step-progress"] as const;
 

@@ -30,6 +30,12 @@ type Props = {
 const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
 const DEFAULT_INITIAL_RENDER = 4;
 
+// Grid spacing — fixed (not screen-width-percentage) so columns stay evenly
+// balanced with no leftover center gap, regardless of device width.
+const HORIZONTAL_PADDING = 24; // 12 on each side
+const COLUMN_GAP = 10;
+const ROW_GAP = 12;
+
 // Responsive column logic
 const getResponsiveColumns = (width: number) => (width >= 768 ? 3 : 2);
 
@@ -155,10 +161,11 @@ export default function ProductGrid({
   const list = Array.isArray(source) ? source : [];
   const dataToShow = shouldFetch ? list.slice(0, effectiveTake) : list;
 
-  // Responsive card width calculation
-  const horizPadding = 16 * 2; // padding in styles.listContent is 16 on each side → total 32
-  const gap = Math.round(screenWidth * 0.025);
-  const cardWidth = Math.floor((screenWidth - horizPadding - gap * (columns - 1)) / columns);
+  // Card width: total row width minus fixed horizontal padding and the
+  // gaps *between* columns, split evenly — no leftover center gap.
+  const cardWidth = Math.floor(
+    (screenWidth - HORIZONTAL_PADDING - COLUMN_GAP * (columns - 1)) / columns
+  );
 
   const skeletonItemStyles = useMemo(() => {
     return Array.from({ length: effectiveTake }, (_, index) => {
@@ -167,12 +174,12 @@ export default function ProductGrid({
         key: `skeleton-${index}`,
         wrapperStyle: {
           width: cardWidth,
-          marginRight: isLastInRow ? 0 : gap,
-          marginBottom: gap,
+          marginRight: isLastInRow ? 0 : COLUMN_GAP,
+          marginBottom: ROW_GAP,
         },
       };
     });
-  }, [effectiveTake, columns, cardWidth, gap]);
+  }, [effectiveTake, columns, cardWidth]);
 
   const errorMsg = error
     ? hasRelatedContext
@@ -210,12 +217,12 @@ export default function ProductGrid({
       const itemKey = String(item?.id ?? item?.product_id ?? item?._id ?? "");
       const shouldLoadImage = visibleProductIdsRef.current.has(itemKey);
       return (
-        <View style={[styles.itemWrap, { width: cardWidth, marginBottom: gap }]}>
+        <View style={[styles.itemWrap, { width: cardWidth }]}>
           <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage={shouldLoadImage} />
         </View>
       );
     },
-    [cardWidth, gap]
+    [cardWidth]
   );
 
   const handleEndReached = useCallback(() => {
@@ -279,15 +286,18 @@ export default function ProductGrid({
 
 const styles = StyleSheet.create({
   listContent: {
-    padding: 16,
+    paddingHorizontal: HORIZONTAL_PADDING / 2,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
-  columnRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
+columnRow: {
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: 10,
+},
   itemWrap: {
     alignSelf: "stretch",
+    marginBottom: ROW_GAP,
   },
   skeletonRow: {
     flexDirection: "row",

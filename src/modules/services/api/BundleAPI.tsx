@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { BASE_API_URL } from './api';
-import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
+import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 
 
 // ===================== Types =====================
@@ -496,13 +496,16 @@ export const getBuyNowBundlePreview = async (payload: {
 export const buyNowBundle = async (payload: {
   bundle_id: number;
   selected_items: number[];
+  address_id: number;
 }) => {
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await axios.post(
       `${BASE_API_URL}/service-checkout/buy-now-bundle`,
       payload,
       {
         headers: {
+          ...authHeaders,
           "Content-Type": "application/json",
         },
       }
