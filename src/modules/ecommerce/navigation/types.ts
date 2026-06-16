@@ -77,6 +77,7 @@ OrderConfirmedScreen: {
   Settings: undefined;
   Privacy: undefined;
   Support: undefined;
+  ChangePassword: undefined;
 };
 
 export type MainTabParamList = {

@@ -15,7 +15,7 @@ export default function ServiceHomeStack() {
             }}
         >
             <Stack.Screen name="Home" getComponent={() => require("../component/screens/HomeScreen").default} />
-            <Stack.Screen name="ServiceSearch" getComponent={() => require("../screens/ServiceSearchScreen").default} />
+            <Stack.Screen name="ServiceSearch" getComponent={() => require("../component/screens/ServiceSearchScreen").default} />
             <Stack.Screen name="Health" getComponent={() => require("../component/insurance/Health").default} />
             <Stack.Screen name="SuperTopUp" getComponent={() => require("../component/insurance/SuperTop").default} />
             <Stack.Screen name="PersonalAccident" getComponent={() => require("../component/insurance/PA").default} />
@@ -31,7 +31,11 @@ export default function ServiceHomeStack() {
             <Stack.Screen name="Profile" getComponent={() => require("../component/screens/Profile").default} />
             <Stack.Screen
                 name="MyOrder"
-                getComponent={() => require("../../ecommerce/components/order/MyOrder").default}
+                getComponent={() => require("../component/order/MyOrder").default}
+            />
+            <Stack.Screen
+                name="ServiceOrderDetail"
+                getComponent={() => require("../component/order/ServiceOrderDetail").default}
             />
             <Stack.Screen
                 name="WalletHistory"

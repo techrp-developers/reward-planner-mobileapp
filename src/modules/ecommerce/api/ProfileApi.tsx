@@ -1,7 +1,7 @@
 // src/api/ProfileApi.tsx
 
 import axios from "axios";
-import { getAuthHeaders, clearAuthToken } from "./AuthAPI";
+import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
 
 const API_BASE_URL = "https://rewardplanners.com/api/crm/v1";
 

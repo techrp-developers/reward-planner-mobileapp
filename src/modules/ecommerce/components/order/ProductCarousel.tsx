@@ -1,6 +1,6 @@
 import React from "react";
 import { View, FlatList, StyleSheet, Dimensions } from "react-native";
-import OrderProductCart from "../../constants/order/OrderProductCart";
+import OrderProductCart from "../../../common/order/OrderProductCart";
 
 const { width } = Dimensions.get("window");
 

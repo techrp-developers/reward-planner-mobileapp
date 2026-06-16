@@ -163,11 +163,11 @@ const RewardsOverview: React.FC = () => {
 
         {/* Stats row */}
         <View style={[styles.statsRow, t.statsRow]}>
-          <StatColumn label="Rewards Earned" value={formatPts(state.balance)} />
+          <StatColumn label="Available Rewards" value={formatPts(state.balance)} />
           <View style={[styles.statDivider, t.statDivider]} />
-          <StatColumn label="Total Spent" value={formatINR(state.totalSpent)} />
+          <StatColumn label="Rewards Earned" value={formatINR(state.totalSpent)} />
           <View style={[styles.statDivider, t.statDivider]} />
-          <StatColumn label="Total Redeemed" value={formatINR(state.totalRedeemed)} />
+          <StatColumn label="Redeemed" value={formatINR(state.totalRedeemed)} />
         </View>
 
         {/* Savings banner */}

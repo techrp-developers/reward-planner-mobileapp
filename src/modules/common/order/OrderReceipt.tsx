@@ -13,8 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { fetchOrderReceipt } from "../../api/OrderApi";
-import { getProductImageUrl } from "../../api/ProductApi";
+import { fetchOrderReceipt } from "../../ecommerce/api/OrderApi";
+import { getProductImageUrl } from "../../ecommerce/api/ProductApi";
 
 interface OrderReceiptProps {
   orderId: number;
@@ -61,24 +61,24 @@ export default function OrderReceipt({ orderId }: OrderReceiptProps) {
     );
   }
 
-const {
-  items = [],
-  address = {},
-  bill = {},
-  rewards = {},
-  username = "",
-  expectedDeliveryDate = "",
-  actualDeliveryDate = null,
-} = receipt;
+  const {
+    items = [],
+    address = {},
+    bill = {},
+    rewards = {},
+    username = "",
+    expectedDeliveryDate = "",
+    actualDeliveryDate = null,
+  } = receipt;
 
-const rewardsEarned = Number(rewards?.earned || 0);
-const rewardsUsed = Number(rewards?.used || 0);
+  const rewardsEarned = Number(rewards?.earned || 0);
+  const rewardsUsed = Number(rewards?.used || 0);
 
-const deliveryDate =
-  actualDeliveryDate ||
-  expectedDeliveryDate ||
-  receipt?.deliveryDate ||
-  "";
+  const deliveryDate =
+    actualDeliveryDate ||
+    expectedDeliveryDate ||
+    receipt?.deliveryDate ||
+    "";
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
@@ -97,15 +97,15 @@ const deliveryDate =
 
             {/* Products */}
             {items?.map((item: any, idx: number) => (
-                <ProductRow
-  key={`${item.product_name}-${idx}`}
-  name={item.product_name}
-  image={item.image}
-  qty={item.quantity}
-  price={item.final_price || item.price}
-  originalPrice={item.price}
-  rewardDiscount={item.reward_discount}
-/>
+              <ProductRow
+                key={`${item.product_name}-${idx}`}
+                name={item.product_name}
+                image={item.image}
+                qty={item.quantity}
+                price={item.final_price || item.price}
+                originalPrice={item.price}
+                rewardDiscount={item.reward_discount}
+              />
             ))}
 
             {/* Address */}
@@ -114,15 +114,15 @@ const deliveryDate =
               <View>
                 <Text style={styles.addressName}>Delivering to {username}</Text>
                 <Text style={styles.addressText}>
-                 {[
-  address?.line1,
-  address?.line2,
-  address?.city,
-  address?.state,
-  address?.zipcode,
-]
-  .filter(Boolean)
-  .join(", ")}
+                  {[
+                    address?.line1,
+                    address?.line2,
+                    address?.city,
+                    address?.state,
+                    address?.zipcode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
                 </Text>
               </View>
             </View>
@@ -330,16 +330,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   oldPrice: {
-  fontSize: 12,
-  color: "#9CA3AF",
-  textDecorationLine: "line-through",
-  marginLeft: 8,
-},
+    fontSize: 12,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+    marginLeft: 8,
+  },
 
-rewardSave: {
-  marginTop: 6,
-  fontSize: 11,
-  color: "#22C55E",
-  fontWeight: "600",
-},
+  rewardSave: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#22C55E",
+    fontWeight: "600",
+  },
 });

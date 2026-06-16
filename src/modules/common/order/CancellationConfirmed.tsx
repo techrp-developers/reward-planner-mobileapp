@@ -9,17 +9,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Product from "../../../../assets/product/product(1).svg";
 
 import { Text } from "react-native";
-import { HomeStackParamList } from "../../navigation/types";
-import OrderHeading from "../heading/OrderHeading";
 import OrderItemCard from "./OrderItemCard";
 import DeliveryDetailsCard from "./DeliveryDetailsCard";
 import PriceDetailsCard from "./PriceDetailsCard";
 import InvoiceAndServiceBanner from "./InvoiceAndServiceBanner";
-import ProductCarousel from "../../components/order/ProductCarousel";
-import { PRODUCTS } from "../productData";
 import OrderCancelModal from "./OrderCancelModal";
 import LinearGradient from "react-native-linear-gradient";
 import CancellationAndRefundCard from "./CancellationTimeline";
+import { HomeStackParamList } from "@/modules/ecommerce/navigation/types";
+import OrderHeading from "@/modules/ecommerce/constants/heading/OrderHeading";
+import ProductCarousel from "@/modules/ecommerce/components/order/ProductCarousel";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -91,11 +90,11 @@ export default function CancellationConfirmed() {
                     paymentMethod="Credit Card"
                 />
 
-                <InvoiceAndServiceBanner />
+                <InvoiceAndServiceBanner orderId="65327VH" />
                 <View>
                     <Text>You may also like this</Text>
 
-                    <ProductCarousel products={PRODUCTS} />
+                    <ProductCarousel products={[]} />
                 </View>
                 <OrderCancelModal
                     visible={isModalVisible}

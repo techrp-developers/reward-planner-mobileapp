@@ -4,11 +4,12 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { checkAppVersion } from "../modules/common/versionupdate/checkAppVersion";
 import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
+import { RewardModal } from "../modules/common/reward/RewardModal";
 
 import ServiceHomeStack from "../modules/services/navigation/ServiceHomeStack";
 import RewardHomeStack from "../modules/step_counter/navigation/RewardHomeStack";
 import BBPSHomeStack from "../modules/bbps/navigation/BBPSHomeStack";
-import Dashbord from "../modules/dashboard/dashboard/Dashbord";
+// import Dashbord from "../modules/dashboard/dashboard";
 import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
 
 import MainLayout from "./MainLayout";
@@ -21,17 +22,11 @@ import OTPScreen from "../modules/common/auth/screens/OTPScreen";
 import SetNewPassword from "../modules/common/auth/screens/SetNewPassword";
 import AccountActivationSuccess from "../modules/common/auth/screens/AccountActivationSuccess";
 import VerifyEmailScreen from "../modules/common/auth/screens/VerifyEmailScreen";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type AuthStackParamList = {
-  Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
-};
+import ForgotPasswordScreen from "../modules/common/auth/screens/ForgotPasswordScreen";
+import PasswordUpdatedSuccess from "../modules/common/auth/screens/PasswordUpdatedSuccess";
+import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
+import Dashbord from "../modules/dashboard/dashboard/dashbord";
+export type { AuthStackParamList };
 
 export type AppStackParamList = {
   Dashboard: undefined;
@@ -40,11 +35,17 @@ export type AppStackParamList = {
   ProductDetails: { productId: number | string };
   Cart: undefined;
   Orders: undefined;
+  MyOrder: undefined;
+  WishList: undefined;
+  PrivacyPolicy: undefined;
+  AddressSelect: { fromCart?: boolean } | undefined;
+  ChangePassword: undefined;
   Profile: undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
+  ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: undefined;
   StepCount: undefined;
@@ -86,6 +87,8 @@ function AuthNavigator() {
       <AuthStack.Screen name="OTPScreen" component={OTPScreen} />
       <AuthStack.Screen name="SetNewPassword" component={SetNewPassword} />
       <AuthStack.Screen name="AccountActivationSuccess" component={AccountActivationSuccess} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="PasswordSuccess" component={PasswordUpdatedSuccess} />
       <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
     </AuthStack.Navigator>
   );
@@ -138,6 +141,12 @@ function AppNavigator() {
         }
       />
       <AppStack.Screen
+        name="ServiceSearch"
+        getComponent={() =>
+          require("../modules/services/component/screens/ServiceSearchScreen").default
+        }
+      />
+      <AppStack.Screen
         name="WalletHistory"
         getComponent={() =>
           require("../modules/ecommerce/components/home/Wallet_History").default
@@ -185,6 +194,36 @@ function AppNavigator() {
           require("../modules/ecommerce/profile/TodoList").default
         }
       />
+      <AppStack.Screen
+        name="MyOrder"
+        getComponent={() =>
+          require("../modules/ecommerce/components/order/MyOrder").default
+        }
+      />
+      <AppStack.Screen
+        name="WishList"
+        getComponent={() =>
+          require("../modules/ecommerce/screens/WishlistScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="PrivacyPolicy"
+        getComponent={() =>
+          require("../modules/ecommerce/profile/PrivacyPolicy").default
+        }
+      />
+      <AppStack.Screen
+        name="AddressSelect"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/AddressSelectScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="ChangePassword"
+        getComponent={() =>
+          require("../modules/common/auth/screens/ChangePasswordScreen").default
+        }
+      />
 
     </AppStack.Navigator>
     </StepTrackerProvider>
@@ -225,7 +264,7 @@ const MODAL_HIDDEN: VersionModalState = {
 };
 
 export default function RootNavigator() {
-  const { isAuthenticated, isInitializing, termsAccepted } = useAuth();
+  const { isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
   const [versionModal, setVersionModal] = useState<VersionModalState>(MODAL_HIDDEN);
   const [biometricCleared, setBiometricCleared] = useState(false);
 
@@ -258,6 +297,12 @@ export default function RootNavigator() {
   // terms status API call hasn't resolved yet (termsAccepted is still null).
   const isCheckingTerms = isAuthenticated && termsAccepted === null;
   const showSplash = isInitializing || isCheckingTerms;
+
+  // Only surface the first-login reward popup once the user has actually
+  // reached the authenticated app (past Splash/TermsGate/biometric lock),
+  // so it doesn't stack on top of those gates.
+  const showRewardModal =
+    !showSplash && biometricCleared && isAuthenticated && termsAccepted === true && firstLoginReward !== null;
 
   const navigator = showSplash ? (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
@@ -309,6 +354,11 @@ export default function RootNavigator() {
         maintenance={versionModal.maintenance}
         updateUrl={versionModal.updateUrl}
         onLater={() => setVersionModal(MODAL_HIDDEN)}
+      />
+      <RewardModal
+        visible={showRewardModal}
+        points={firstLoginReward ?? 0}
+        onClose={markFirstLoginRewardShown}
       />
     </>
   );

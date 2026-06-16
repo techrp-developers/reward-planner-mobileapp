@@ -16,19 +16,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../../../ecommerce/components/alerts";
-import { RewardModal } from "../../reward/RewardModal";
 import Logo from "../../../../assets/homepage/login_logo.svg";
+import type { AuthStackParamList } from "../navigation/types";
 
-type AuthModalStackParamList = {
-  Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
-};
-
-type Props = NativeStackScreenProps<AuthModalStackParamList, "Login">;
+type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login, loading } = useAuth();
@@ -37,8 +28,6 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [rewardModalVisible, setRewardModalVisible] = useState(false);
-  const [rewardCoins, setRewardCoins] = useState(0);
 
   const onLogin = useCallback(async () => {
     try {
@@ -54,19 +43,10 @@ export default function LoginScreen({ navigation }: Props) {
         return;
       }
 
-      const response = await login({
+      await login({
         email: cleanEmail,
         password,
       });
-
-      // Show reward modal if user has coins.
-      if (
-        response?.firstLoginReward?.coins &&
-        response.firstLoginReward.coins > 0
-      ) {
-        setRewardCoins(response.firstLoginReward.coins);
-        setRewardModalVisible(true);
-      }
     } catch (error: any) {
       const status = Number(error?.response?.status || 0);
       const data = error?.response?.data;
@@ -90,17 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
     }
   }, [email, password, login, alert]);
 
-  const handleRewardModalClose = useCallback(() => {
-    setRewardModalVisible(false);
-
-    // Navigate to home after reward modal closes.
-    setTimeout(() => {
-      navigation.navigate("Home" as any);
-    }, 300);
-  }, [navigation]);
-
   return (
-    <>
       <SafeAreaView style={styles.screen} edges={["left", "right", "top"]}>
         <KeyboardAvoidingView
           style={styles.keyboardWrap}
@@ -166,6 +136,13 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
 
               <TouchableOpacity
+                onPress={() => navigation.navigate("ForgotPassword")}
+                style={styles.forgotWrap}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={onLogin}
                 disabled={loading}
@@ -199,13 +176,6 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      <RewardModal
-        visible={rewardModalVisible}
-        coins={rewardCoins}
-        onClose={handleRewardModalClose}
-      />
-    </>
   );
 }
 
@@ -286,5 +256,15 @@ const styles = StyleSheet.create({
   signUp: {
     color: "#7B2CBF",
     fontWeight: "bold",
+  },
+  forgotWrap: {
+    alignSelf: "flex-end",
+    marginBottom: 16,
+    marginTop: -6,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: "#A654CD",
+    fontWeight: "600",
   },
 });

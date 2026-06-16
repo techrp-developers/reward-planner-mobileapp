@@ -15,26 +15,20 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Logo from "../../../../assets/homepage/login_logo.svg";
-import { setPassword } from "../../../ecommerce/api/AuthAPI";
+import { setPassword, resetPassword } from "../api/AuthAPI";
 import { useAlert } from "../../../ecommerce/components/alerts";
+import type { AuthStackParamList } from "../navigation/types";
 
-type AuthModalStackParamList = {
-  Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
-};
-
-type SetNewPasswordNavigationProp = NativeStackNavigationProp<AuthModalStackParamList>;
-type SetNewPasswordRouteProp = RouteProp<AuthModalStackParamList, "SetNewPassword">;
+type SetNewPasswordNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+type SetNewPasswordRouteProp = RouteProp<AuthStackParamList, "SetNewPassword">;
 
 function SetNewPassword() {
   const navigation = useNavigation<SetNewPasswordNavigationProp>();
   const route = useRoute<SetNewPasswordRouteProp>();
   const alert = useAlert();
   const email = route.params?.email || "";
+  const type = route.params?.type ?? "activation";
+  const isForgotPassword = type === "forgot-password";
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -60,15 +54,21 @@ function SetNewPassword() {
 
     try {
       setLoading(true);
-      await setPassword({ email, password: newPassword });
-      alert.success("Success", "Password set successfully");
-      // Navigate to account activation success screen
-      navigation.navigate("AccountActivationSuccess");
+
+      if (isForgotPassword) {
+        await resetPassword({ email, newPassword });
+        alert.success("Success", "Password reset successfully");
+        navigation.navigate("PasswordSuccess");
+      } else {
+        await setPassword({ email, password: newPassword });
+        alert.success("Success", "Password set successfully");
+        navigation.navigate("AccountActivationSuccess");
+      }
     } catch (error: any) {
       console.log("Set password error:", error?.response?.data || error?.message);
       alert.error(
         "Failed",
-        error?.response?.data?.message || "Failed to set password"
+        error?.response?.data?.message || "Failed to update password"
       );
     } finally {
       setLoading(false);
@@ -91,7 +91,9 @@ function SetNewPassword() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.title}>Set Your New Password</Text>
+            <Text style={styles.title}>
+              {isForgotPassword ? "Reset Your Password" : "Set Your New Password"}
+            </Text>
 
             {/* New Password */}
             <Text style={styles.label}>New Password</Text>
@@ -146,7 +148,9 @@ function SetNewPassword() {
                 style={styles.confirmBtn}
               >
                 <Text style={styles.confirmText}>
-                  {loading ? "Setting Password..." : "Activate Account"}
+                  {loading
+                    ? isForgotPassword ? "Resetting..." : "Setting Password..."
+                    : isForgotPassword ? "Reset Password" : "Activate Account"}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>

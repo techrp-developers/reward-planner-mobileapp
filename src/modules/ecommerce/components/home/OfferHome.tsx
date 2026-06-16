@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image as RNImage,
   Alert,
+  Linking,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
@@ -17,12 +18,10 @@ import LinearGradient from "react-native-linear-gradient";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 
 import {
-  fetchAllOfferPosters,
-  fetchAllProducts,
   getProductImageUrl,
-  getOfferPosterUrl,
-  fetchProductDetailsByID
+  fetchProductDetailsByID,
 } from "../../api/ProductApi";
+import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
 import { setWishlistState } from "../../api/WishlistApi";
@@ -30,7 +29,6 @@ import {
   handleNavigateWithPrefetch,
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
-
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -103,7 +101,7 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
         rpPriceValue > 0
           ? `₹${rpPriceValue.toLocaleString()}`
           : null,
-      brandName: item.brand || "BRAND",
+      brandName: item.brand || "brand_name",
       productTitle: item.title || item.product_name || "Product Title",
       imageUrl: getProductImageUrl(Array.isArray(item.images) ? item.images[0] : item.image),
     };
@@ -208,44 +206,69 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // Main Component
 // ---------------------------------------------------------------------
 export default function OfferHome() {
-  const { data: products = [], isLoading: isProductsLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "offer-products"],
-    queryFn: async () => {
-      const resProducts = await fetchAllProducts();
-      const all = resProducts?.products ?? [];
-      return [...all].sort(() => Math.random() - 0.5).slice(0, 5);
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const navigation = useNavigation<Nav>();
 
-  const { data: posters = [], isLoading: isPostersLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "offer-posters"],
-    queryFn: async () => {
-      const resPosters = await fetchAllOfferPosters();
-      return Array.isArray(resPosters) ? resPosters : [];
-    },
+  const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
+    queryKey: ["ecommerce", "home", "campaign-home"],
+    queryFn: getCampaignHome,
     staleTime: 10 * 60 * 1000,
   });
 
-  const flashSalesPoster = useMemo(() => {
-    const flashPoster = posters.find((p: any) => p.poster_id === 4);
-    return flashPoster ? getOfferPosterUrl(flashPoster.poster_image) : null;
-  }, [posters]);
+  const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
+
+  const { data: products = [], isLoading: isProductsLoading } = useQuery({
+    queryKey: ["ecommerce", "home", "flash-products", flashCampaignId],
+    queryFn: () => getCampaignProducts(flashCampaignId!),
+    enabled: flashCampaignId != null,
+    staleTime: 5 * 60 * 1000,
+    select: (res) =>
+      (res.data ?? []).map((p) => ({
+        id: p.id,
+        product_id: p.product_id,
+        variant_id: p.variant_id,
+        product_name: p.product_name,
+        title: p.product_name,
+        brand: p.brand_name || '',
+        price: p.price ?? p.final_price,
+        mrp: p.mrp,
+        originalPrice: p.originalPrice ?? p.mrp,
+        discount: p.discount,
+        rp_price: p.rp_price,
+        image: p.image || null,
+        images: p.image ? [p.image] : [],
+        is_wishlisted: false,
+      })),
+  });
 
   const banner = useMemo(() =>
-    posters
-      .filter((p: any) => p.poster_id !== 4)
-      .map((p: any) => ({
-        id: p.poster_id,
-        image: getOfferPosterUrl(p.poster_image),
-        redirectType: p.redirect_type,
-        redirectId: p.redirect_id,
-        redirectUrl: p.redirect_url,
-      })),
-    [posters]
+    (campaignHome?.data?.posters ?? []).map(p => ({
+      id: p.campaign_id,
+      title: p.title,
+      image: p.banner_image,
+      redirectType: p.redirect_type,
+      redirectId: p.redirect_id,
+      redirectUrl: p.redirect_url,
+    })),
+    [campaignHome]
   );
 
-  if (isProductsLoading || isPostersLoading) {
+  const flashSalesPoster = useMemo(() => {
+    const flash = campaignHome?.data?.flash_sales?.[0];
+    return flash?.banner_image ?? null;
+  }, [campaignHome]);
+
+  const handleBannerPress = (offer: typeof banner[number]) => {
+    if (offer.redirectType === 'category' && offer.redirectId != null) {
+      navigation.navigate('Category', {
+        categoryId: offer.redirectId,
+        title: offer.title,
+      });
+    } else if (offer.redirectType === 'url' && offer.redirectUrl) {
+      Linking.openURL(offer.redirectUrl);
+    }
+  };
+
+  if (isProductsLoading || isCampaignLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading offers...</Text>
@@ -267,7 +290,7 @@ export default function OfferHome() {
               key={offer.id}
               style={styles.offerCard}
               activeOpacity={0.85}
-              onPress={() => console.log(offer.redirectType, offer.redirectId)}
+              onPress={() => handleBannerPress(offer)}
             >
               <RNImage source={{ uri: offer.image }} style={styles.offerImage} resizeMode="cover" />
             </TouchableOpacity>

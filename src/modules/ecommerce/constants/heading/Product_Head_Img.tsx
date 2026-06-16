@@ -15,6 +15,7 @@ import {
   handleNavigateWithPrefetch,
   prefetchCartScreenData,
 } from "../../navigation/navigationPerformance";
+import { useCart } from "../../context/CartContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -25,7 +26,7 @@ export default function ProductHead({
   onBackPress,
   onSearchPress,
   onCartPress,
-  cartCount = 0,
+  // cartCount = 0,
   showNotificationDot = true,
 }: {
   headerHeight?: number;
@@ -38,6 +39,7 @@ export default function ProductHead({
 }) {
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
+  const { totalQuantity: cartCount } = useCart();
 
   const calculatedHeaderHeight = Math.round(width * BASE_HEADER_RATIO);
   const HEADER_HEIGHT = headerHeight ?? calculatedHeaderHeight;

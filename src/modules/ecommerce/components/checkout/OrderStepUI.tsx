@@ -134,9 +134,11 @@ export default function OrderStepUI() {
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [useRewards, setUseRewards] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const isCreatingOrder = useRef(false);
   const [hasCheckoutStarted, setHasCheckoutStarted] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const queryClient = useQueryClient();
+  const skipItemsRefresh = useRef(false);
 
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const handleUnauthorized = useCallback(async () => {
@@ -328,9 +330,19 @@ export default function OrderStepUI() {
     }
   }, [addressError, handleUnauthorized]);
 
-  useEffect(() => {
+  // Sync `items`/`cartSummary` from checkoutData synchronously during render
+  // (not in a useEffect) so they update in the same render pass as
+  // `isCheckoutFetching` flipping to false. Doing this in an effect leaves a
+  // one-frame window where checkoutData is ready but items is still stale/
+  // empty, which briefly tripped the EmptyCart view on checkout redirect.
+  const prevCheckoutDataRef = useRef<typeof checkoutData>(undefined);
+  if (prevCheckoutDataRef.current !== checkoutData) {
+    prevCheckoutDataRef.current = checkoutData;
     if (checkoutData) {
-      setItems(Array.isArray(checkoutData.items) ? checkoutData.items : []);
+      if (!skipItemsRefresh.current) {
+        setItems(Array.isArray(checkoutData.items) ? checkoutData.items : []);
+      }
+      skipItemsRefresh.current = false;
       setCartSummary(prev => {
         const s = checkoutData.summary;
         if (!s) return prev;
@@ -343,19 +355,19 @@ export default function OrderStepUI() {
         ) return prev;
         return s;
       });
-      return;
+    } else {
+      setItems(prev => (prev.length === 0 ? prev : []));
+      setCartSummary(prev =>
+        prev.productTotal === 0 &&
+        prev.shippingTotal === 0 &&
+        prev.payableAmount === 0 &&
+        prev.reward.redeemCoins === 0 &&
+        prev.reward.earnCoins === 0
+          ? prev
+          : emptyCheckoutSummary()
+      );
     }
-    setItems(prev => (prev.length === 0 ? prev : []));
-    setCartSummary(prev =>
-      prev.productTotal === 0 &&
-      prev.shippingTotal === 0 &&
-      prev.payableAmount === 0 &&
-      prev.reward.redeemCoins === 0 &&
-      prev.reward.earnCoins === 0
-        ? prev
-        : emptyCheckoutSummary()
-    );
-  }, [checkoutData]);
+  }
 
   const checkoutPayableAmount = useMemo(() => {
     return getCheckoutPayableAmount(cartSummary, useRewards);
@@ -414,6 +426,10 @@ export default function OrderStepUI() {
   );
 
   const handlePlaceOrder = async () => {
+    if (isCreatingOrder.current) {
+      console.log("⏸️ Order creation already in progress (ref guard)");
+      return;
+    }
     let createdCartOrder = false;
     const cartSnapshot =
       mode !== "buy_now"
@@ -463,18 +479,24 @@ export default function OrderStepUI() {
         console.log("⏸️ Order placement already in progress");
         return;
       }
+      isCreatingOrder.current = true;
       setPlacing(true);
+
+      const t0 = performance.now();
+      console.log("🕐 [t=0ms] Checkout tap");
 
       const selectedAddressId = address?.address_id ?? address?.id;
       if (!selectedAddressId) {
+        isCreatingOrder.current = false;
         setPlacing(false);
         Alert.alert("Select Address", "Please select a delivery address to continue.");
         return;
       }
 
-      console.log("📦 Creating order...");
+      console.log("📦 Creating order...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
-      // ✅ Step 1: Create Order via API
+      // Fetch latest checkout summary — uses React Query cache if data is < 30s old,
+      // otherwise re-fetches to ensure expected_total matches server price.
       const latestCheckoutData = await queryClient.fetchQuery({
         queryKey: checkoutQueryKey,
         queryFn: async () => {
@@ -483,16 +505,12 @@ export default function OrderStepUI() {
           }
           return fetchCheckoutCart(useRewards);
         },
-        staleTime: 0,
+        staleTime: 30_000,
       });
-      const latestParsedCheckout = parseCheckoutResponse(latestCheckoutData);
-      const latestSummary = latestParsedCheckout.summary;
+      const latestSummary = parseCheckoutResponse(latestCheckoutData).summary;
       const expectedPrice = getCheckoutPayableAmount(latestSummary, useRewards);
 
-      setItems(latestParsedCheckout.items);
-      setCartSummary(latestSummary);
-
-      console.log("ðŸ§¾ Checkout expected price:", {
+      console.log("🧾 Checkout expected price:", {
         expectedPrice,
         useRewards,
         productTotal: latestSummary.productTotal,
@@ -521,6 +539,7 @@ export default function OrderStepUI() {
       }
 
       if (orderRes?.success === false) {
+        isCreatingOrder.current = false;
         setPlacing(false);
         const serverMessage =
           orderRes.message ||
@@ -540,6 +559,7 @@ export default function OrderStepUI() {
       );
 
       if (!Number.isFinite(orderId) || orderId <= 0) {
+        isCreatingOrder.current = false;
         setPlacing(false);
         console.log("Order ID missing");
         alert.error("Order Error", "Order ID missing. Please try again.");
@@ -548,11 +568,11 @@ export default function OrderStepUI() {
 
       const paymentAmount = expectedPrice;
 
-      console.log("✅ Order created:", orderId, "Amount:", paymentAmount);
+      console.log("✅ Order created:", orderId, "Amount:", paymentAmount, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       // ✅ Step 2: Create Payment Order with Razorpay
       const paymentData = await createPaymentOrder(orderId, paymentAmount);
-      console.log("💳 Payment order created:", paymentData);
+      console.log("💳 Payment order created:", paymentData, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       const options = {
         key: paymentData.key,
@@ -569,13 +589,11 @@ export default function OrderStepUI() {
         theme: { color: "#8665FF" },
       };
 
-      setPlacing(false);
-
+      console.log("🚀 Opening Razorpay...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
       // ✅ Step 3: Open Razorpay Checkout
       RazorpayCheckout.open(options)
         .then(async (response) => {
           console.log("💰 Payment successful:", response);
-          setPlacing(true);
 
           try {
             // ✅ Step 4: Verify payment
@@ -599,6 +617,7 @@ export default function OrderStepUI() {
                 }
               }
 
+              isCreatingOrder.current = false;
               setPlacing(false);
               navigateToOrderConfirm(orderId);
               return;
@@ -620,6 +639,7 @@ export default function OrderStepUI() {
                 }
               }
 
+              isCreatingOrder.current = false;
               setPlacing(false);
               navigateToOrderConfirm(orderId);
               return;
@@ -628,17 +648,20 @@ export default function OrderStepUI() {
             // ❌ Final failure
             console.error("❌ Payment verification failed after retries");
             await restoreCartAfterPaymentFailure();
+            isCreatingOrder.current = false;
             setPlacing(false);
             alert.error("Payment Verification Failed", "Your payment could not be verified. Please contact support if amount was debited.");
 
           } catch (verifyError) {
             console.error("❌ Payment verification error:", verifyError);
             await restoreCartAfterPaymentFailure();
+            isCreatingOrder.current = false;
             setPlacing(false);
             alert.error("Payment Error", "Unable to verify payment. Please check your order status.");
           }
         })
         .catch(async (error: any) => {
+          isCreatingOrder.current = false;
           setPlacing(false);
           console.error("❌ Payment cancelled/failed:", error);
 
@@ -675,6 +698,7 @@ export default function OrderStepUI() {
           alert.error("Payment Failed", String(errorText));
         });
     } catch (e: any) {
+      isCreatingOrder.current = false;
       setPlacing(false);
 
       if (Number(e?.response?.status) === 401) {
@@ -719,18 +743,27 @@ export default function OrderStepUI() {
       return;
     }
 
+    // Optimistic update before API call
+    setItems(p =>
+      p.map(i =>
+        i.cart_item_id === item.cart_item_id
+          ? { ...i, quantity: newQty }
+          : i
+      )
+    );
     try {
       await updateCartQty(item.cart_item_id, newQty);
+      skipItemsRefresh.current = true;
+      await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
+    } catch {
+      // Revert on failure
       setItems(p =>
         p.map(i =>
           i.cart_item_id === item.cart_item_id
-            ? { ...i, quantity: newQty }
+            ? { ...i, quantity: item.quantity }
             : i
         )
       );
-      await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
-    } catch (err) {
-      console.log("Qty update failed", err);
       alert.error("Update Failed", "Could not update quantity. Please try again.");
     }
   };
@@ -745,12 +778,15 @@ export default function OrderStepUI() {
       return;
     }
 
+    // Optimistic update before API call
+    setItems(p => p.map(i => i.cart_item_id === item.cart_item_id ? { ...i, quantity: newQty } : i));
     try {
       await updateCartQty(item.cart_item_id, newQty);
-      setItems(p => p.map(i => i.cart_item_id === item.cart_item_id ? { ...i, quantity: newQty } : i));
+      skipItemsRefresh.current = true;
       await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
-    } catch (err) {
-      console.log("Qty update failed", err);
+    } catch  {
+      // Revert on failure
+      setItems(p => p.map(i => i.cart_item_id === item.cart_item_id ? { ...i, quantity: item.quantity } : i));
       alert.error("Update Failed", "Could not update quantity. Please try again.");
     }
   };
@@ -774,7 +810,14 @@ export default function OrderStepUI() {
 
   const loading =
     isAuthenticated &&
-    (!isBuyNowValid || !hasCheckoutStarted || (!checkoutData && (isCheckoutFetching || isAddressFetching)));
+    (
+      !isBuyNowValid ||
+      !hasCheckoutStarted ||
+      isCheckoutFetching ||
+      isAddressFetching ||
+      (hasCheckoutStarted && checkoutData === undefined) ||
+      (mode === "buy_now" && isBuyNowValid && items.length === 0 && !checkoutError)
+    );
 
   if (loading) {
     return (
@@ -794,21 +837,19 @@ if (
   items.length === 0 &&
   hasCheckoutStarted &&
   !isCheckoutFetching &&
-  !isAddressFetching
+  !isAddressFetching &&
+  checkoutData !== undefined &&
+  mode !== "buy_now"
 ) {    return (
       <View style={styles.container}>
         <ProductHeadColor
-          title={mode === "buy_now" ? "Buy Now Checkout" : "Cart"}
+          title="Cart"
           onBackPress={() => navigation.goBack()}
           onSearchPress={() => Alert.alert("Search", "Open search")}
           onBellPress={() => Alert.alert("Notifications", "Open notifications")}
         />
         <EmptyCart
-          message={
-            mode === "buy_now"
-              ? "Unable to load the selected item. Please login and try again."
-              : "Your cart is empty. Add products to continue."
-          }
+          message="Your cart is empty. Add products to continue."
           onBrowse={() => navigation.navigate("Home")}
         />
       </View>

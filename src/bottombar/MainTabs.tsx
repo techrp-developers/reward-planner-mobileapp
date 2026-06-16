@@ -3,21 +3,19 @@ import React from "react";
 import {
   createBottomTabNavigator,
 } from "@react-navigation/bottom-tabs";
-import HomeStack from "./HomeStack";
-import type { MainTabParamList } from "./types";
+import HomeStack from "../modules/ecommerce/navigation/HomeStack";
+import type { MainTabParamList } from "../modules/ecommerce/navigation/types";
 import BottomTabs from "./BottomTabs";
-import { useAuth } from "../../common/auth/context/AuthContext";
-import { useCart } from "../context/CartContext";
+import { useAuth } from "../modules/common/auth/context/AuthContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 type CustomTabBarProps = {
   navigation: any;
-  cartCount: number;
   isAuthenticated: boolean;
 };
 
-function CustomTabBar({ navigation, cartCount, isAuthenticated }: CustomTabBarProps) {
+function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
   const goTo = React.useCallback(
     (screen: string) => {
       navigation.navigate("HomeTab", { screen });
@@ -39,7 +37,6 @@ function CustomTabBar({ navigation, cartCount, isAuthenticated }: CustomTabBarPr
 
   return (
     <BottomTabs
-      cartCount={cartCount}
       onTabPress={(tab) => {
         switch (tab) {
           case "Home":
@@ -74,17 +71,15 @@ function CustomTabBar({ navigation, cartCount, isAuthenticated }: CustomTabBarPr
 
 export default function MainTabs() {
   const { isAuthenticated } = useAuth();
-  const { totalQuantity } = useCart();
-  
+
   const renderTabBar = React.useCallback(
     (props: any) => (
       <CustomTabBar
         {...props}
-        cartCount={totalQuantity}
         isAuthenticated={isAuthenticated}
       />
     ),
-    [totalQuantity, isAuthenticated]
+    [isAuthenticated]
   );
 
   return (

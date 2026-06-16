@@ -6,39 +6,40 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Logo from "../../../../assets/homepage/login_logo.svg";
-import { activateAccount, verifyActivationOtp } from "../../../ecommerce/api/AuthAPI";
+import {
+  verifyActivationOtp,
+  verifyForgotPasswordOtp,
+  resendOtp,
+  resendActivationOtp,
+} from "../api/AuthAPI";
 import { useAlert } from "../../../ecommerce/components/alerts";
+import type { AuthStackParamList } from "../navigation/types";
 
-type AuthModalStackParamList = {
-  Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
-};
-
-type OTPScreenNavigationProp = NativeStackNavigationProp<AuthModalStackParamList>;
-type OTPScreenRouteProp = RouteProp<AuthModalStackParamList, "OTPScreen">;
+type OTPScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+type OTPScreenRouteProp = RouteProp<AuthStackParamList, "OTPScreen">;
 
 function OTPScreen() {
   const navigation = useNavigation<OTPScreenNavigationProp>();
   const route = useRoute<OTPScreenRouteProp>();
   const alert = useAlert();
+
   const email = route.params?.email || "";
+  const type = route.params?.type ?? "activation";
+  const isForgotPassword = type === "forgot-password";
 
   const [otpValues, setOtpValues] = useState(["", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [loading, setLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(true);
   const otpRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
 
-  // Countdown logic
   useEffect(() => {
     if (timer === 0) {
       setResendCooldown(false);
@@ -57,16 +58,12 @@ function OTPScreen() {
     newOtp[index] = text;
     setOtpValues(newOtp);
 
-    // Auto-focus next input
     if (text && index < 3) {
       otpRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleOtpKeyPress = (
-    e: any,
-    index: number
-  ) => {
+  const handleOtpKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === "Backspace" && !otpValues[index] && index > 0) {
       otpRefs.current[index - 1]?.focus();
     }
@@ -81,12 +78,17 @@ function OTPScreen() {
 
     try {
       setLoading(true);
-      await verifyActivationOtp({ email, otp });
-      alert.success("Verified", "OTP verified successfully");
-      // Navigate to SetNewPassword
-      navigation.navigate("SetNewPassword", { email });
+
+      if (isForgotPassword) {
+        await verifyForgotPasswordOtp({ email, otp });
+        alert.success("Verified", "OTP verified successfully");
+        navigation.navigate("SetNewPassword", { email, type: "forgot-password" });
+      } else {
+        await verifyActivationOtp({ email, otp });
+        alert.success("Verified", "OTP verified successfully");
+        navigation.navigate("SetNewPassword", { email, type: "activation" });
+      }
     } catch (error: any) {
-      console.log("OTP verification error:", error?.response?.data || error?.message);
       alert.error(
         "Verification Failed",
         error?.response?.data?.message || "Invalid OTP"
@@ -97,10 +99,17 @@ function OTPScreen() {
   };
 
   const handleResend = async () => {
-    if (resendCooldown) return;
+    if (resendCooldown || resendLoading) return;
 
     try {
-      await activateAccount({ email });
+      setResendLoading(true);
+
+      if (isForgotPassword) {
+        await resendOtp({ email });
+      } else {
+        await resendActivationOtp({ email });
+      }
+
       alert.info("Resent", "New OTP sent to your email");
       setTimer(60);
       setResendCooldown(true);
@@ -111,6 +120,8 @@ function OTPScreen() {
         "Resend Failed",
         error?.response?.data?.message || "Failed to resend OTP"
       );
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -121,13 +132,14 @@ function OTPScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.title}>Email OTP Verification</Text>
+        <Text style={styles.title}>
+          {isForgotPassword ? "Reset Password OTP" : "Email OTP Verification"}
+        </Text>
 
         <Text style={styles.subText}>
           Enter the OTP sent to {email || "your email"}
         </Text>
 
-        {/* OTP Inputs */}
         <View style={styles.otpRow}>
           {[0, 1, 2, 3].map((_, i) => (
             <TextInput
@@ -141,23 +153,24 @@ function OTPScreen() {
               value={otpValues[i]}
               onChangeText={(text) => handleOtpChange(text, i)}
               onKeyPress={(e) => handleOtpKeyPress(e, i)}
+              editable={!loading}
             />
           ))}
         </View>
 
-        {/* Timer */}
         <Text style={styles.timerText}>
-          Didn’t receive an OTP?{" "}
+          Didn't receive an OTP?{" "}
           {timer > 0 ? (
-            <Text>Resend in {timer} seconds</Text>
+            <Text>Resend in {timer}s</Text>
+          ) : resendLoading ? (
+            <Text style={styles.resend}>Sending...</Text>
           ) : (
-            <TouchableOpacity onPress={handleResend} disabled={resendCooldown}>
-              <Text style={styles.resend}>Resend</Text>
-            </TouchableOpacity>
+            <Text style={styles.resend} onPress={handleResend}>
+              Resend
+            </Text>
           )}
         </Text>
 
-        {/* Verify Button */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={handleVerify}
@@ -169,9 +182,11 @@ function OTPScreen() {
             end={{ x: 0, y: 0 }}
             style={styles.verifyBtn}
           >
-            <Text style={styles.verifyText}>
-              {loading ? "Verifying..." : "Verify"}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.verifyText}>Verify</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -247,11 +262,12 @@ const styles = StyleSheet.create({
   },
 
   verifyBtn: {
-    width: "70%",
+    width: "100%",
     paddingVertical: 14,
-        paddingHorizontal: 14,
+    paddingHorizontal: 14,
     borderRadius: 10,
     alignItems: "center",
+    minWidth: 200,
   },
 
   verifyText: {

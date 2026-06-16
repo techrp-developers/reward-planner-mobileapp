@@ -11,7 +11,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
-import { setAuthToken as setLegacyAuthToken } from "../../../ecommerce/api/AuthAPI";
+import { setAuthToken as setLegacyAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
@@ -48,6 +48,9 @@ type AuthContextValue = {
   // null = not yet checked; false = must accept; true = already accepted
   termsAccepted: boolean | null;
   setTermsAccepted: (v: boolean) => void;
+  // null = no pending popup; number = reward coins to show once, post-login.
+  firstLoginReward: number | null;
+  markFirstLoginRewardShown: () => void;
   register: (payload: RegisterPayload) => Promise<any>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendVerification: (email: string) => Promise<any>;
@@ -150,6 +153,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // true  = API returned terms_accepted: true   → show App directly
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
 
+  // Pending first-login reward popup; set right after login, cleared once
+  // the Dashboard has shown it and the user dismissed it.
+  const [firstLoginReward, setFirstLoginReward] = useState<number | null>(null);
+
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
 
@@ -162,6 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setLegacyAuthToken(null);
     setTermsAccepted(null); // reset so next login re-checks
+    setFirstLoginReward(null);
     await secureDeleteItem(REFRESH_TOKEN_KEY);
   }, []);
 
@@ -240,6 +248,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // already has the user's context available.
         await checkTerms();
 
+        // The backend tracks first-login state itself: `awarded` is only
+        // true once, ever, per account — subsequent logins return
+        // awarded: false, so no local "already shown" bookkeeping needed.
+        const reward = response.data?.firstLoginReward;
+        if (reward?.awarded === true && reward?.coins > 0) {
+          setFirstLoginReward(reward.coins);
+        }
+
         return response.data;
       } finally {
         setLoading(false);
@@ -247,6 +263,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     },
     [fetchProfile, checkTerms],
   );
+
+  const markFirstLoginRewardShown = useCallback(() => {
+    setFirstLoginReward(null);
+  }, []);
 
   const restoreSession = useCallback(async () => {
     const refreshToken = await secureGetItem(REFRESH_TOKEN_KEY);
@@ -347,6 +367,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       loading,
       termsAccepted,
       setTermsAccepted,
+      firstLoginReward,
+      markFirstLoginRewardShown,
       register,
       verifyEmail,
       resendVerification,
@@ -361,6 +383,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isInitializing,
       loading,
       termsAccepted,
+      firstLoginReward,
+      markFirstLoginRewardShown,
       register,
       verifyEmail,
       resendVerification,

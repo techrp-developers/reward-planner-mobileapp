@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import HeaderComponent from '../header/HeaderComponent';
 import { useAuth } from '../../common/auth/context/AuthContext';
-import { getAuthHeaders } from '../../ecommerce/api/AuthAPI';
+import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
 import ModuleBanner from '../explore/ModuleBanner';
@@ -21,25 +21,12 @@ import ServicesModule from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
 // import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
 import { useCart } from '../../ecommerce/context/CartContext';
-import type { TabKey } from '../../ecommerce/navigation/BottomTabs';
+import type { TabKey } from '../../../bottombar/BottomTabs';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
+import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
 
-// ── Birthday API ──────────────────────────────────────────────────────────────
-// Update the path below to match your actual HRMS endpoint.
-async function fetchTodayBirthdays(authHeaders: Record<string, string>): Promise<BirthdayEmployee[]> {
-  try {
-    const res = await axios.get<{ success: boolean; data: BirthdayEmployee[] }>(
-      'https://rewardplanners.com/api/crm/v1/hrms/birthdays/today',
-      { headers: authHeaders },
-    );
-    return res.data?.success && Array.isArray(res.data.data) ? res.data.data : [];
-  } catch {
-    return [];
-  }
-}
 
 function Dashbord() {
   const { isDark } = useAppTheme();
@@ -51,6 +38,7 @@ function Dashbord() {
   const [headerUserName, setHeaderUserName] = useState<string>(user?.name ?? 'User');
   const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
+  const [thought, setThought] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
   const hasBirthdays = birthdays.length > 0;
@@ -61,23 +49,27 @@ function Dashbord() {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) return;
 
-      // Fetch user info and today's birthdays in parallel — same auth headers
-      const [userRes, todayBirthdays] = await Promise.all([
-        axios.get<{ success: boolean; data: any }>(
-          'https://rewardplanners.com/api/crm/v1/auth/user-info',
-          { headers },
-        ),
-        fetchTodayBirthdays(headers),
-      ]);
+      const userRes = await axios.get<{ success: boolean; data: any }>(
+        'https://rewardplanners.com/api/crm/v1/auth/user-info',
+        { headers },
+      );
 
       if (userRes.data?.success) {
         const d = userRes.data.data;
         if (d.name)          setHeaderUserName(d.name);
         if (d.userImage)     setHeaderUserImage(d.userImage);
         if (d.company?.logo) setHeaderCompanyLogo(d.company.logo);
-      }
+        if (d.thought)       setThought(d.thought);
 
-      setBirthdays(todayBirthdays);
+        const raw: any[] = Array.isArray(d.birthday_employees) ? d.birthday_employees : [];
+        setBirthdays(raw.map((b) => ({
+          id:          b.employeeId,
+          name:        b.name,
+          designation: b.role,
+          department:  b.department,
+          photo:       b.image ?? null,
+        })));
+      }
     } catch { }
   }, [isAuthenticated]);
 
@@ -162,7 +154,9 @@ function Dashbord() {
               </View>
 
               <Text style={styles.quote}>
-                "Success is the sum of small efforts,{'\n'}repeated day in and day out."
+                {thought
+                  ? `"${thought}"`
+                  : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
               </Text>
             </LinearGradient>
             

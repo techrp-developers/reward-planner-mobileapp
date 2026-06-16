@@ -25,7 +25,7 @@ import {
 } from "../../api/InsuranceApi";
 import { createFirebaseEnquiry } from "../../api/FirebaseService";
 import { SUPER_COVER_AMOUNTS, CITIES, CoverAmount } from "../../constant/InsuranceConstants";
-import { fetchUserInfo, getAuthHeaders, isAuthenticated } from "../../../ecommerce/api/AuthAPI";
+import { fetchUserInfo, getAuthHeaders, isAuthenticated } from "../../../common/auth/api/AuthAPI";
 import { buildSuperTopupEnquiryData } from "../../api/enquiryPayloadBuilders";
 
 type FormData = {

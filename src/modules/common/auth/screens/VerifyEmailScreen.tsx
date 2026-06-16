@@ -11,25 +11,19 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Logo from "../../../../assets/homepage/login_logo.svg";
-import { useAuth } from "../context/AuthContext";
+import { resendActivationOtp } from "../api/AuthAPI";
+import { useAlert } from "../../../ecommerce/components/alerts";
+import type { AuthStackParamList } from "../navigation/types";
 
-type AuthModalStackParamList = {
-  Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
-};
-
-type Nav = NativeStackNavigationProp<AuthModalStackParamList>;
-type VerifyRoute = RouteProp<AuthModalStackParamList, "VerifyEmail">;
+type Nav = NativeStackNavigationProp<AuthStackParamList>;
+type VerifyRoute = RouteProp<AuthStackParamList, "VerifyEmail">;
 
 export default function VerifyEmailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<VerifyRoute>();
-  const { resendVerification } = useAuth();
+  const alert = useAlert();
   const [resent, setResent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const email = route.params?.email || "";
 
@@ -60,17 +54,28 @@ export default function VerifyEmailScreen() {
         )}
 
         <TouchableOpacity
+          disabled={resendLoading}
           onPress={async () => {
+            if (!email || resendLoading) return;
             try {
-              if (!email) return;
-              await resendVerification(email);
+              setResendLoading(true);
+              await resendActivationOtp({ email });
               setResent(true);
-            } catch {
+              alert.success("Resent", "Activation OTP resent successfully");
+            } catch (error: any) {
               setResent(false);
+              alert.error(
+                "Resend Failed",
+                error?.response?.data?.message || "Failed to resend OTP"
+              );
+            } finally {
+              setResendLoading(false);
             }
           }}
         >
-          <Text style={styles.link}>Resend verification email</Text>
+          <Text style={styles.link}>
+            {resendLoading ? "Sending..." : "Resend verification email"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("Login")}>

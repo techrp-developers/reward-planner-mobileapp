@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthHeaders, clearAuthToken } from "../../ecommerce/api/AuthAPI";
+import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
 
 import { BASE_API_URL } from './api';
 
@@ -315,20 +315,21 @@ export const getCheckoutPreview = async () => {
   }
 };
 
-// place Order 
-export const placeCartOrder = async () => {
+// place Order
+export const placeCartOrder = async ({ address_id }: { address_id: number }) => {
   try {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/cart`;
 
     console.log('📦 Placing cart service order...', {
       url,
+      address_id,
       hasAuthToken: !!headers?.Authorization,
     });
 
     const res = await axios.post(
       url,
-      {}, // 🔥 no body needed (cart already stored)
+      { address_id },
       { headers }
     );
 
@@ -347,9 +348,11 @@ export const placeCartOrder = async () => {
 export const placeBuyNowOrder = async ({
   service_id,
   variant_id,
+  address_id,
 }: {
   service_id: number;
   variant_id: number;
+  address_id: number;
 }) => {
   try {
     const headers = await getAuthHeaders();
@@ -359,6 +362,7 @@ export const placeBuyNowOrder = async ({
       url,
       service_id,
       variant_id,
+      address_id,
       hasAuthToken: !!headers?.Authorization,
     });
 
@@ -367,6 +371,7 @@ export const placeBuyNowOrder = async ({
       {
         service_id,
         variant_id,
+        address_id,
       },
       { headers }
     );

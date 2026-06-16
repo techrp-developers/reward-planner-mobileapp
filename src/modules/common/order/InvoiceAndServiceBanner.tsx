@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from "react-native";
 import Share from "react-native-share";
-import ServiceBanner from "../../../../assets/order/serviceBanner.svg";
-import { fetchOrderInvoice } from "../../api/OrderApi";
+import ServiceBanner from "../../../assets/order/serviceBanner.svg";
+import { fetchOrderInvoice } from "../../ecommerce/api/OrderApi";
 
 type InvoiceAndServiceBannerProps = {
   orderId: number | string;

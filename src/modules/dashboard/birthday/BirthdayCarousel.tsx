@@ -24,7 +24,7 @@ import type { BirthdayEmployee } from './types';
 const SCREEN_WIDTH      = Dimensions.get('window').width;
 const H_PAD             = rs(16);
 const CARD_WIDTH        = SCREEN_WIDTH - H_PAD * 2;
-const AUTO_SCROLL_MS    = 4500;
+const AUTO_SCROLL_MS    = 4000;
 const SCROLL_ANIM_MS    = 350;
 
 // ─── Pagination dot ───────────────────────────────────────────────────────────
@@ -102,23 +102,35 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
     [],
   );
 
-  // ── Auto-scroll tick ──────────────────────────────────────────────────────
-  const scrollToNext = useCallback(() => {
-    if (!flatListRef.current || loopData.length <= 1 || jumpPendingRef.current) return;
+  // Mirror mutable values into refs so interval callbacks never close over stale state
+  const loopLenRef = useRef(loopData.length);
+  loopLenRef.current = loopData.length;
+
+  const birthdaysLenRef = useRef(birthdays.length);
+  birthdaysLenRef.current = birthdays.length;
+
+  // ── Stop interval ─────────────────────────────────────────────────────────
+  const stopAutoScroll = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // ── Tick — reads only from refs, no stale closures ────────────────────────
+  const tick = useCallback(() => {
+    if (!flatListRef.current) return;
+    if (jumpPendingRef.current) return;
+    if (loopLenRef.current <= 1) return;
 
     const nextIndex = currentIdxRef.current + 1;
 
-    try {
-      flatListRef.current.scrollToIndex({ index: nextIndex, animated: true });
-    } catch {
-      return;
-    }
+    flatListRef.current.scrollToIndex({ index: nextIndex, animated: true, viewPosition: 0 });
 
     currentIdxRef.current = nextIndex;
-    setActiveIndex(nextIndex % birthdays.length);
+    setActiveIndex(nextIndex % birthdaysLenRef.current);
 
-    // If we just scrolled to the cloned first item, schedule a silent reset
-    if (nextIndex === loopData.length - 1) {
+    if (nextIndex === loopLenRef.current - 1) {
       jumpPendingRef.current = true;
       setTimeout(() => {
         flatListRef.current?.scrollToIndex({ index: 0, animated: false });
@@ -127,47 +139,51 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         jumpPendingRef.current = false;
       }, SCROLL_ANIM_MS);
     }
-  }, [loopData.length, birthdays.length]);
+  }, []); // empty deps — everything read from refs
 
-  // ── Start / stop interval ──────────────────────────────────────────────────
+  // ── Start interval — clears previous before creating new ──────────────────
   const startAutoScroll = useCallback(() => {
-    if (birthdays.length <= 1) return;
-    intervalRef.current = setInterval(scrollToNext, AUTO_SCROLL_MS);
-  }, [scrollToNext, birthdays.length]);
+    if (birthdaysLenRef.current <= 1) return;
+    stopAutoScroll();
+    intervalRef.current = setInterval(tick, AUTO_SCROLL_MS);
+  }, [tick, stopAutoScroll]);
 
-  const stopAutoScroll = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
+  // Run once on mount — delay first tick by a full interval to avoid instant scroll
   useEffect(() => {
-    startAutoScroll();
-    return stopAutoScroll;
-  }, [startAutoScroll, stopAutoScroll]);
+    const firstTick = setTimeout(startAutoScroll, AUTO_SCROLL_MS);
+    return () => {
+      clearTimeout(firstTick);
+      stopAutoScroll();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pause on user drag, resume on release ─────────────────────────────────
   const onScrollBeginDrag = useCallback(() => {
     stopAutoScroll();
   }, [stopAutoScroll]);
 
-  const onMomentumScrollEnd = useCallback(() => {
+  // Sync currentIdxRef from actual scroll offset so manual swipes stay in sync
+  const onMomentumScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    if (!jumpPendingRef.current) {
+      const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+      currentIdxRef.current = index;
+      setActiveIndex(index % birthdaysLenRef.current);
+    }
     startAutoScroll();
   }, [startAutoScroll]);
 
-  // ── Track visible index for pagination dots ────────────────────────────────
-  const onViewableItemsChanged = useCallback(
+  // ── Viewability — frozen ref, never reassigned ────────────────────────────
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 55 }).current;
+
+  const onViewableItemsChangedRef = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const first = viewableItems[0];
-      if (!first || first.index === null || first.index === undefined) return;
+      if (!first || first.index == null) return;
+      if (jumpPendingRef.current) return;
       currentIdxRef.current = first.index;
-      setActiveIndex(first.index % birthdays.length);
+      setActiveIndex(first.index % birthdaysLenRef.current);
     },
-    [birthdays.length],
   );
-
-  const viewabilityConfig = useRef({ itemVisibilityPercentThreshold: 55 }).current;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const renderItem = useCallback(
@@ -201,7 +217,7 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         getItemLayout={getItemLayout}
         onScrollBeginDrag={onScrollBeginDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        onViewableItemsChanged={onViewableItemsChanged}
+        onViewableItemsChanged={onViewableItemsChangedRef.current}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={(info) => {
           // Fallback: scroll to offset if index-based scroll fails on first render

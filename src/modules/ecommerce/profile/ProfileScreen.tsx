@@ -3,7 +3,7 @@
 // API:    GET /v1/auth/user-info  (via getAuthHeaders)
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Image, ActivityIndicator, Alert, Platform, Linking, Switch,
@@ -18,7 +18,7 @@ import type { HomeStackParamList } from '../navigation/types';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import { getStoredUserName, deleteCustomer, getAuthHeaders, updateProfile } from '../api/AuthAPI';
+import { getStoredUserName, deleteCustomer, getAuthHeaders, updateProfile } from '../../common/auth/api/AuthAPI';
 import { fetchHistory } from '../api/OrderApi';
 import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirmationModal';
 import { rs, fs } from '../../../utils/responsive';
@@ -98,6 +98,14 @@ const ProfileScreen: React.FC = () => {
   const [orders, setOrders]             = useState<any[]>([]);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [logoutLoading, setLogoutLoading]           = useState(false);
+  const [showOrderMenu, setShowOrderMenu]           = useState(false);
+
+  const om = useMemo(() => ({
+    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#374151' : '#F5F3FF' },
+    parentIconBg: { backgroundColor: isDark ? '#374151' : '#F0EDFF' },
+    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#374151' : '#F5F3FF', backgroundColor: isDark ? '#1F1740' : '#FAF9FF' },
+    subIconBg:    { backgroundColor: isDark ? '#2D2060' : '#EDE9FE' },
+  }), [isDark]);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -472,7 +480,62 @@ const ProfileScreen: React.FC = () => {
           ════════════════════════════════════ */}
           <SectionHead title="Shop" isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
-            <AccountRow icon="shopping-outline"     label="My Orders"      isDark={isDark} theme={theme} onPress={() => navigation.navigate('MyOrder' as any)} />
+            {/* My Orders — expandable dropdown */}
+            <TouchableOpacity
+              style={[styles.mrow, om.parentBorder]}
+              onPress={() => setShowOrderMenu(p => !p)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.micon, om.parentIconBg]}>
+                <MaterialCommunityIcons name="shopping-outline" size={17} color="#7C5CFC" />
+              </View>
+              <View style={styles.flex1}>
+                <Text style={[styles.rowVal, { color: theme.text }]}>My Orders</Text>
+              </View>
+              <MaterialCommunityIcons
+                name={showOrderMenu ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={isDark ? '#4B5563' : '#DDD8F5'}
+              />
+            </TouchableOpacity>
+
+            {showOrderMenu && (
+              <>
+                <TouchableOpacity
+                  style={[styles.mrow, styles.subRow, om.subRowBg]}
+                  onPress={() => { setShowOrderMenu(false); navigation.navigate('MyOrder' as any); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.micon, om.subIconBg]}>
+                    <MaterialCommunityIcons name="cart-outline" size={16} color="#7C5CFC" />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={[styles.rowVal, { color: theme.text }]}>Ecommerce Orders</Text>
+                    <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Products & shopping</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.mrow, styles.subRow, om.subRowBg]}
+                  onPress={() => {
+                    setShowOrderMenu(false);
+                    (navigation as any).navigate('ServiceStack', { screen: 'MyOrder' });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.micon, om.subIconBg]}>
+                    <MaterialCommunityIcons name="briefcase-check-outline" size={16} color="#7C5CFC" />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={[styles.rowVal, { color: theme.text }]}>Service Orders</Text>
+                    <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Insurance, docs & more</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+                </TouchableOpacity>
+              </>
+            )}
+
             <AccountRow icon="heart-outline"         label="Wishlist"       isDark={isDark} theme={theme} onPress={() => navigation.navigate('WishList' as any)} />
             <AccountRow icon="map-marker-outline"    label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect' as any)} />
           </View>
@@ -486,6 +549,7 @@ const ProfileScreen: React.FC = () => {
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />
             <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('HelpForm' as any)} />
+            <AccountRow icon="lock-reset"             label="Change Password"    isDark={isDark} theme={theme} onPress={() => navigation.navigate('ChangePassword')} />
 
             {/* Divider before danger actions */}
             <View style={[styles.sectionDivider, { backgroundColor: isDark ? theme.border : '#F5F3FF' }]} />
@@ -699,6 +763,9 @@ const styles = StyleSheet.create({
 
   // Divider inside card
   sectionDivider: { height: 0.5, marginHorizontal: rs(14) },
+
+  flex1:   { flex: 1 },
+  subRow:  { paddingLeft: rs(10) },
 
   // Footer
   footer:       { alignItems: 'center', paddingVertical: rs(28), gap: rs(5) },

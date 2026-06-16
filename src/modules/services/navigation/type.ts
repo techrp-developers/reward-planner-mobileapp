@@ -31,6 +31,7 @@ export type HomeStackParamList = {
   };
   DocumentUpload: {
     order_id: number;
+    parent_order_id: string;
   };
   PackScreen: {
     packType?: 'home' | 'married' | 'job';
@@ -61,6 +62,7 @@ export type HomeStackParamList = {
   CartScreen: undefined;
   Profile: undefined;
   MyOrder: undefined;
+  ServiceOrderDetail: { parent_order_id: string };
   WalletHistory: undefined;
   TodoList: undefined;
   AddAddressMap: undefined;

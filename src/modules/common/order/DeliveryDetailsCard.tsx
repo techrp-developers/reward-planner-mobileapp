@@ -36,7 +36,7 @@ export default function DeliveryDetailsCard({
           </Text>
         </View>
 
-        {/* User Row */}
+        {/* Name Row */}
         <View style={styles.row}>
           <MaterialCommunityIcons
             name="account-circle"
@@ -44,9 +44,18 @@ export default function DeliveryDetailsCard({
             color="#A855F7"
             style={styles.icon}
           />
-          <Text style={styles.userText}>
-            {name}, {phone}
-          </Text>
+          <Text style={styles.userText}>{name}</Text>
+        </View>
+
+        {/* Phone Row */}
+        <View style={[styles.row, styles.lastRow]}>
+          <MaterialCommunityIcons
+            name="phone-outline"
+            size={20}
+            color="#A855F7"
+            style={styles.icon}
+          />
+          <Text style={styles.userText}>{phone}</Text>
         </View>
       </View>
     </View>
@@ -77,6 +86,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 10,
   },
+  lastRow: { marginBottom: 0 },
 
   icon: {
     marginRight: 10,

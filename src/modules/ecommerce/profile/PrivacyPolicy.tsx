@@ -15,7 +15,7 @@ import {
 
 import LinearGradient from "react-native-linear-gradient";
 
-import { TAB_BAR_HEIGHT } from "../navigation/BottomTabs";
+import { TAB_BAR_HEIGHT } from "../../../bottombar/BottomTabs";
 
 import {
   fetchPrivacyPolicy,

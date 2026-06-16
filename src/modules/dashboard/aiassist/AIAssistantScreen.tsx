@@ -1,4 +1,4 @@
-import { fetchUserInfo } from '../../../modules/ecommerce/api/AuthAPI';
+import { fetchUserInfo } from '../../common/auth/api/AuthAPI';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAlert } from '../../ecommerce/components/alerts';
 import {

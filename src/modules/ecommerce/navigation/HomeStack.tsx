@@ -22,8 +22,8 @@ export default function HomeStack() {
       <Stack.Screen name="AddressSelect" getComponent={() => require("../components/ItemCardAddress/AddressSelectScreen").default} />
       <Stack.Screen name="WithAddress" getComponent={() => require("../components/ItemCardAddress/WithAddress").default} />
       <Stack.Screen name="OrderStepUI" getComponent={() => require("../components/checkout/OrderStepUI").default} />
-      <Stack.Screen name="OrderConfirm" getComponent={() => require("../components/order/OrderConfirm").default} />
-      <Stack.Screen name="OrderReceipt" getComponent={() => require("../components/order/OrderReceipt").default} />
+      <Stack.Screen name="OrderConfirm" getComponent={() => require("../../common/order/OrderConfirm").default} />
+      <Stack.Screen name="OrderReceipt" getComponent={() => require("../../common/order/OrderReceipt").default} />
       <Stack.Screen name="MyOrder" getComponent={() => require("../components/order/MyOrder").default} />
       <Stack.Screen name="Coupan" getComponent={() => require("../constants/coupan/CouponsPage").default} />
       <Stack.Screen name="CategoriesScreen" getComponent={() => require("../screens/CategoriesScreen").default} />
@@ -45,6 +45,7 @@ export default function HomeStack() {
       />
       <Stack.Screen name="SelectCancellationReason" getComponent={() => require("../components/order/SelectCancellationReason").default} />
       <Stack.Screen name="OrderConfirmedScreen" getComponent={() => require("../screens/OrderConfirmedScreen").default} />
+      <Stack.Screen name="ChangePassword" getComponent={() => require("../../common/auth/screens/ChangePasswordScreen").default} />
     </Stack.Navigator>
   );
 }

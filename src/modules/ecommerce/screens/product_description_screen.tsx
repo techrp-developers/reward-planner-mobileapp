@@ -7,7 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueryClient } from "@tanstack/react-query";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import ProductHero from "../components/cart/product_hero";
-import OffersSection from "../components/cart/offersection";
+// import OffersSection from "../components/cart/offersection";
 import DeliverySection from "../components/cart/deliverysections";
 import BenefitsRow from "../components/cart/benefitsrow";
 import ProductInfoAccordions from "../components/cart/productInioaccordions";
@@ -384,14 +384,6 @@ export default function
     normalizeDescription(product?.short_description);
 
   const brandDescription = normalizeDescription(product?.brand_description);
-  const variantSpecs = Object.entries(selectedAttrs || {})
-    .map(([key, value]) => ({
-      label: key
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase()),
-      value: String(value || "").trim(),
-    }))
-    .filter((spec) => spec.value);
 
   const relatedProductId = Number(product?.product_id ?? productId ?? 0);
 
@@ -466,13 +458,22 @@ export default function
           isAdding={adding}
         />
 
-        <OffersSection />
-        <DeliverySection />
-        <BenefitsRow />
+        {/* <OffersSection /> */}
+        <DeliverySection
+          delivery_sla_min_days={product?.delivery_sla_min_days}
+          delivery_sla_max_days={product?.delivery_sla_max_days}
+          shipping_class={product?.shipping_class}
+        />
+        <BenefitsRow
+          is_returnable={product?.is_returnable}
+          is_replaceable={product?.is_replaceable}
+          return_window_days={product?.return_window_days}
+        />
         <ProductInfoAccordions
           productDescription={productDescription}
           brandDescription={brandDescription}
-          variantSpecs={variantSpecs}
+          product={product}
+          selectedVariant={selectedVariant}
         />
 
         <View style={styles.descriptionWrap}>

@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { HomeStackParamList } from "../../navigation/types";
-import { getProductImageUrl } from "../../api/ProductApi";
+import type { HomeStackParamList } from "../../ecommerce/navigation/types";
+import { getProductImageUrl } from "../../ecommerce/api/ProductApi";
 
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;

@@ -1,14 +1,15 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCart } from "../modules/ecommerce/context/CartContext";
 
-import ProfileIcon from "../../../assets/menu/profile.svg";
-import HomeIcon from "../../../assets/menu/Home.svg";
-import CenterIcon from "../../../assets/menu/Menu_Home.svg";
-import dashbord_menu from "../../../assets/menu/dashbord_home.png";
-import CartIcon from "../../../assets/menu/Cart.svg";
-import ExploreIcon from "../../../assets/menu/Explore.svg";
-import SearchIcon from "../../../assets/menu/Search.svg";
+import ProfileIcon from "../assets/menu/profile.svg";
+import HomeIcon from "../assets/menu/Home.svg";
+import CenterIcon from "../assets/menu/Menu_Home.svg";
+import dashbord_menu from "../assets/menu/dashbord_home.png";
+import CartIcon from "../assets/menu/Cart.svg";
+import ExploreIcon from "../assets/menu/Explore.svg";
+import SearchIcon from "../assets/menu/Search.svg";
 
 export const TAB_BAR_HEIGHT = 68;
 
@@ -101,12 +102,12 @@ CenterButton.displayName = "CenterButton";
 function BottomTabs({
   activeMode = "Product",
   onTabPress,
-  cartCount = 0,
   isDashboard = false,
   activeTabKey,
   onCenterPress,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { totalQuantity: cartCount } = useCart();
   const bottomInset = Math.max(insets.bottom, 8);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.

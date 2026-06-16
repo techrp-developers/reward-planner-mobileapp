@@ -14,12 +14,25 @@ type Props = {
 // API fields: price = sale price, mrp = original price
 const toNum = (v: any) => Number(String(v ?? "0").replace(/[^\d.]/g, "")) || 0;
 
-const getDeliveryDate = () => {
+const formatDeliveryDate = (dateStr: string | null | undefined): string | null => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+};
+
+const getFallbackDeliveryDate = (): string => {
   const d = new Date();
   d.setDate(d.getDate() + 5);
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `Delivery by ${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+  return d.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 };
 
 export default function CheckoutItemCart({
@@ -29,7 +42,29 @@ export default function CheckoutItemCart({
   onRemove,
   onPress,
 }: Props) {
-  const deliveryText = useMemo(() => getDeliveryDate(), []);
+  // Delivery date: use API value if available, fallback to +5 days
+  const deliveryText = useMemo(() => {
+    const formatted = formatDeliveryDate(item?.estimated_delivery_date);
+    return `Delivery by ${formatted ?? getFallbackDeliveryDate()}`;
+  }, [item?.estimated_delivery_date]);
+
+  // Return/replace policy from API
+  const isReturnable = item?.is_returnable === 1 || item?.is_returnable === true;
+  const isReplaceable = item?.is_replaceable === 1 || item?.is_replaceable === true;
+  const returnWindow = item?.return_window; // e.g. 7, 10, null
+
+  const returnPolicyText = useMemo(() => {
+    if (isReturnable && returnWindow) return `${returnWindow} Days Returnable`;
+    if (isReturnable) return "Returnable";
+    if (isReplaceable) return "Replacement Only";
+    return "Non-Returnable";
+  }, [isReturnable, isReplaceable, returnWindow]);
+
+  const returnPolicyColor = useMemo(() => {
+    if (isReturnable) return "#3B82F6";   // blue
+    if (isReplaceable) return "#F59E0B";  // amber
+    return "#EF4444";                     // red
+  }, [isReturnable, isReplaceable]);
 
   // price = discounted sale price, mrp = original price
   const salePrice = toNum(item.price || item.sale_price);
@@ -97,12 +132,16 @@ export default function CheckoutItemCart({
             )}
           </View>
 
+          {/* Delivery date */}
           <View style={styles.deliveryRow}>
             <MaterialCommunityIcons name="truck-delivery-outline" size={14} color="#16A34A" />
             <Text style={styles.delivery}>{deliveryText}</Text>
           </View>
 
-          <Text style={styles.returnText}>7 Days Returnable</Text>
+          {/* Return/Replace policy — dynamic from API */}
+          <Text style={[styles.returnText, { color: returnPolicyColor }]}>
+            {returnPolicyText}
+          </Text>
         </TouchableOpacity>
 
         {/* Close button */}
@@ -127,11 +166,11 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     borderWidth: 1,
     borderColor: "#F0F0F5",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    // elevation: 2,
+    // shadowColor: "#000",
+    // shadowOffset: { width: 0, height: 1 },
+    // shadowOpacity: 0.06,
+    // shadowRadius: 4,
   },
   topRow: {
     flexDirection: "row",
@@ -240,7 +279,6 @@ const styles = StyleSheet.create({
   },
   returnText: {
     fontSize: 12,
-    color: "#3B82F6",
     fontWeight: "500",
   },
   closeBtn: {

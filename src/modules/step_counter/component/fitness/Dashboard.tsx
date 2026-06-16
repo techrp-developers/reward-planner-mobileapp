@@ -27,7 +27,7 @@ import {
   SPACING,
   TYPOGRAPHY,
 } from "../../utils/theme";
-import { fetchUserInfo } from "../../../ecommerce/api/AuthAPI";
+import { fetchUserInfo } from "../../../common/auth/api/AuthAPI";
 import {
   useDashboardQuery,
   useFitnessStreakQuery,

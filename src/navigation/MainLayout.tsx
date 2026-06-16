@@ -5,8 +5,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Navbar from "../navbar/Navbar";
-import BottomTabs from "../modules/ecommerce/navigation/BottomTabs";
-import { TAB_BAR_HEIGHT } from "../modules/ecommerce/navigation/BottomTabs";
+import BottomTabs from "../bottombar/BottomTabs";
+import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 
 export type ModuleStackParamList = {
@@ -153,7 +153,7 @@ function MainLayout() {
         >
           <ModuleStack.Screen
             name="ProductModule"
-            getComponent={() => require("../modules/ecommerce/navigation/MainTabs").default}
+            getComponent={() => require("../bottombar/MainTabs").default}
             initialParams={{ moduleName: "Product" }}
           />
           <ModuleStack.Screen

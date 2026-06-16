@@ -7,48 +7,51 @@ import {
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { rs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-
-const Banner1  = require('../../../assets/sampleImages/Category_banner(1).png');
-const Banner2  = require('../../../assets/sampleImages/Category_banner(2).png');
-const Banner3  = require('../../../assets/sampleImages/Category_banner(3).png');
-const Banner4  = require('../../../assets/sampleImages/Category_banner(4).png');
-const Banner5  = require('../../../assets/sampleImages/Category_banner(5).png');
-const Banner6  = require('../../../assets/sampleImages/Category_banner(6).png');
-const Banner7  = require('../../../assets/sampleImages/Category_banner(7).png');
-const Banner8  = require('../../../assets/sampleImages/Category_banner(8).png');
-const Banner9  = require('../../../assets/sampleImages/Category_banner(9).png');
-const Banner10 = require('../../../assets/sampleImages/Category_banner(10).png');
-
-const bannerSources = [
-  Banner1, Banner2, Banner3, Banner4, Banner5,
-  Banner6, Banner7, Banner8, Banner9, Banner10,
-];
+import { getCampaignHome } from '../../../modules/ecommerce/api/CampaignAPI';
 
 export default function ModuleBanner() {
   const { isDark } = useAppTheme();
   const { width } = useWindowDimensions();
-  const scrollRef  = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
-  const indexRef   = useRef(0);
+  const indexRef = useRef(0);
 
   const bannerHeight = Math.round(width * 0.38);
 
-  const t = useMemo(() => ({
-    dot:       { backgroundColor: isDark ? '#374151' : '#D0D5E2' } as ViewStyle,
-    activeDot: { backgroundColor: '#4A6CF7' } as ViewStyle,
-  }), [isDark]);
+  const { data: campaignHome } = useQuery({
+    queryKey: ['ecommerce', 'home', 'campaign-home'],
+    queryFn: getCampaignHome,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const banners = useMemo(
+    () => campaignHome?.data?.dashboard_posters ?? [],
+    [campaignHome],
+  );
 
   useEffect(() => {
+    if (banners.length < 2) return;
     const timer = setInterval(() => {
-      const next = (indexRef.current + 1) % bannerSources.length;
+      const next = (indexRef.current + 1) % banners.length;
       scrollRef.current?.scrollTo({ x: next * width, animated: true });
       indexRef.current = next;
       setIndex(next);
     }, 3000);
     return () => clearInterval(timer);
-  }, [width]);
+  }, [width, banners.length]);
+
+  const t = useMemo(
+    () => ({
+      dot:       { backgroundColor: isDark ? '#374151' : '#D0D5E2' } as ViewStyle,
+      activeDot: { backgroundColor: '#4A6CF7' } as ViewStyle,
+    }),
+    [isDark],
+  );
+
+  if (banners.length === 0) return null;
 
   return (
     <View>
@@ -65,10 +68,10 @@ export default function ModuleBanner() {
           indexRef.current = newIndex;
         }}
       >
-        {bannerSources.map((src, i) => (
-          <View key={i} style={[styles.banner, { width }]}>
+        {banners.map((banner) => (
+          <View key={banner.campaign_id} style={[styles.banner, { width }]}>
             <Image
-              source={src}
+              source={{ uri: banner.banner_image }}
               style={[styles.bannerImage, { height: bannerHeight }]}
               resizeMode="cover"
             />
@@ -77,8 +80,16 @@ export default function ModuleBanner() {
       </ScrollView>
 
       <View style={styles.dots}>
-        {bannerSources.map((_, i) => (
-          <View key={i} style={[styles.dot, t.dot, i === index && styles.activeDot, i === index && t.activeDot]} />
+        {banners.map((banner, i) => (
+          <View
+            key={banner.campaign_id}
+            style={[
+              styles.dot,
+              t.dot,
+              i === index && styles.activeDot,
+              i === index && t.activeDot,
+            ]}
+          />
         ))}
       </View>
     </View>
@@ -108,13 +119,11 @@ const styles = StyleSheet.create({
     width: rs(6),
     height: rs(6),
     borderRadius: rs(3),
-    // backgroundColor via t.dot
   },
 
   activeDot: {
     width: rs(18),
     height: rs(6),
     borderRadius: rs(4),
-    // backgroundColor via t.activeDot
   },
 });

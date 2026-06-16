@@ -8,8 +8,15 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Logo from "../../../../assets/homepage/login_logo.svg";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "../navigation/types";
+
+type Nav = NativeStackNavigationProp<AuthStackParamList>;
 
 function PasswordSuccess() {
+  const navigation = useNavigation<Nav>();
+
   return (
     <View style={styles.screen}>
       <View style={styles.logoWrap}>
@@ -37,7 +44,7 @@ function PasswordSuccess() {
           You can now log in to your account using your new password.
         </Text>
 
-        <TouchableOpacity activeOpacity={0.85}>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("Login")}>
           <LinearGradient
             colors={["#A654CD", "#FC8BAD"]}
             start={{ x: 0, y: 0 }}
@@ -117,6 +124,7 @@ const styles = StyleSheet.create({
   button: {
     width: "100%",
     paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 10,
     alignItems: "center",
   },

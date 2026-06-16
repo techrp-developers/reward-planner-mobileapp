@@ -7,7 +7,7 @@ import WalletSvg from '../../../../../assets/homepage/navwallet.svg';
 import ServiceTop from '../../../../../assets/homepage/service_top_nav.png';
 import type { HomeStackParamList } from '../../../navigation/type';
 import { useCart } from "../../../../ecommerce/context/CartContext";
-import { fetchUserInfo } from "../../../../ecommerce/api/AuthAPI";
+import { fetchUserInfo } from "../../../../common/auth/api/AuthAPI";
 import { useAuth } from "../../../../common/auth/context/AuthContext";
 type CartHeadProps = {
   onBackPress?: () => void;

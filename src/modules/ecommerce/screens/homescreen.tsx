@@ -6,7 +6,7 @@ import FeaturesProduct from '../components/home/featuresProduct';
 import ProductCategory from '../components/home/productcate';
 import HomeBanner from '../components/home/HomeBanner';
 import OfferHome from '../components/home/OfferHome';
-import { TAB_BAR_HEIGHT } from '../navigation/BottomTabs';
+import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import RecentProduct from '../components/Promotion/RecentProduct';
 import NewArrivals from '../components/Promotion/NewArrivals';
 import BestSeller from '../components/Promotion/BestSeller';

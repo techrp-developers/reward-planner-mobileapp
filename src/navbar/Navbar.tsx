@@ -17,7 +17,7 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { fetchUserInfo, getStoredUserName } from "../modules/ecommerce/api/AuthAPI";
+import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
@@ -508,7 +508,7 @@ export default function Navbar() {
           style={styles.searchContainer}
           onPress={() => {
             if (activeTab === "Services") {
-              navigateToScreen("ServicesModule", { screen: "ServiceSearch" });
+              navigateToScreen("ServiceSearch");
             } else {
               navigateToScreen("SearchScreen");
             }

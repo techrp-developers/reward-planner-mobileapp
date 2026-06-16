@@ -15,7 +15,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import OrderReceipt from "./OrderReceipt";
-import { fetchOrderReceipt } from "../../api/OrderApi";
+import { fetchOrderReceipt } from "../../ecommerce/api/OrderApi";
 
 const { height } = Dimensions.get("window");
 

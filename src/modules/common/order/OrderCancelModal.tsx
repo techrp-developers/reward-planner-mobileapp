@@ -1,10 +1,10 @@
 import React from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import CoinIcon from "../../../../assets/product/rewards.svg";
-import ProductImg from "../../../../assets/product/product(2).svg";
+import CoinIcon from "../../../assets/product/rewards.svg";
+import ProductImg from "../../../assets/product/product(2).svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { HomeStackParamList } from "../../navigation/types";
+import { HomeStackParamList } from "../../ecommerce/navigation/types";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 

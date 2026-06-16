@@ -22,7 +22,7 @@ import { saveStep, completeInsurance, getQuotes, getAllPremiums, mapBasicDetails
 import { createFirebaseEnquiry } from "../../api/FirebaseService";
 import { COVER_AMOUNTS, CITIES, CoverAmount } from "../../constant/InsuranceConstants";
 import { getZoneFromCity } from "../../utils/InsuranceUtils";
-import { fetchUserInfo, getAuthHeaders, isAuthenticated } from "../../../ecommerce/api/AuthAPI";
+import { fetchUserInfo, getAuthHeaders, isAuthenticated } from "../../../common/auth/api/AuthAPI";
 import { buildHealthEnquiryData } from "../../api/enquiryPayloadBuilders";
 
 type FormData = {
