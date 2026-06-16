@@ -25,7 +25,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import ProductHead from "../constants/heading/Product_Head_Img";
 import { createReview } from "../api/ReviewApi";
-import { useAuth } from "../auth/context/AuthContext";
+import { useAuth } from "../../common/auth/context/AuthContext";
 import type { HomeStackParamList } from "../navigation/types";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
 

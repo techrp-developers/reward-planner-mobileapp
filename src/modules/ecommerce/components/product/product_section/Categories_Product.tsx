@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from "react-native";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
@@ -45,9 +46,18 @@ interface CategoryWithSubcategories extends Category {
   subcategories?: SubCategory[];
 }
 
+type CategoryProductsPage = {
+  products: any[];
+  nextPage?: number;
+  currentPage: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
 const SIDEBAR_WIDTH = 104;
 const CONTENT_PADDING = 10;
 const GRID_GAP = 8;
+const PAGE_LIMIT = 10;
 
 type CategoryRouteProp = RouteProp<HomeStackParamList, "Category">;
 
@@ -61,9 +71,7 @@ export default function Categories_Product() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | number | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | number | null>(null);
   const [filterQuery, setFilterQuery] = useState<string>("");
-  const [products, setProducts] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(false);
 
   const numColumns = 2;
   const cardWidth = useMemo(() => {
@@ -96,8 +104,6 @@ export default function Categories_Product() {
   const parseQueryParams = (query: string) => {
     if (!query?.trim()) return {};
     const params = Object.fromEntries(new URLSearchParams(query));
-
-    // Convert numeric params to number if possible
     return Object.entries(params).reduce((acc, [key, value]) => {
       const numeric = Number(value);
       acc[key] = Number.isNaN(numeric) ? value : numeric;
@@ -105,40 +111,77 @@ export default function Categories_Product() {
     }, {} as Record<string, any>);
   };
 
-  const loadProducts = useCallback(
-    async (
-      categoryIdValue: string | number,
-      subcategoryIdValue?: string | number | null,
-      page = 1
-    ) => {
-      try {
-        setLoadingProducts(true);
-        setProducts([]);
+  // ── Infinite Query ──────────────────────────────────────────────────────────
+  const {
+    data: paginatedData,
+    isLoading: isProductsLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery<CategoryProductsPage>({
+    queryKey: ["category-products", selectedCategoryId, selectedSubcategoryId, filterQuery],
+    enabled: Boolean(selectedCategoryId),
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const page = Number(pageParam) || 1;
+      console.log(
+        `[Pagination] Requesting page: ${page} | categoryId: ${selectedCategoryId} | subcategoryId: ${selectedSubcategoryId}`
+      );
 
-        const queryOptions = {
-          page,
-          ...parseQueryParams(filterQuery),
-        };
+      const queryOptions = {
+        page,
+        limit: PAGE_LIMIT,
+        ...parseQueryParams(filterQuery),
+      };
 
-        const res = subcategoryIdValue
-          ? await fetchProductsBySubcategoryId(subcategoryIdValue, queryOptions)
-          : await fetchCategoriesByID(categoryIdValue, queryOptions);
+      const res = selectedSubcategoryId
+        ? await fetchProductsBySubcategoryId(selectedSubcategoryId, queryOptions)
+        : await fetchCategoriesByID(selectedCategoryId as string | number, queryOptions);
 
-const rawProducts = extractProducts(res);
+      console.log("[Pagination] API Response:", {
+        currentPage: res?.currentPage,
+        totalPages: res?.totalPages,
+        hasMore: res?.hasMore,
+        productsCount: res?.products?.length,
+      });
 
-const normalized = rawProducts.map(normalizeProduct);
+      const rawProducts = extractProducts(res);
+      const normalized = rawProducts.map(normalizeProduct);
 
+      const hasMore = Boolean(res?.hasMore ?? res?.data?.hasMore ?? false);
+      const currentPage = Number(res?.currentPage ?? res?.data?.currentPage ?? page);
+      const totalPages = Number(res?.totalPages ?? res?.data?.totalPages ?? 1);
+      const nextPage =
+        hasMore && currentPage < totalPages ? currentPage + 1 : undefined;
 
-setProducts(normalized);      } catch (e) {
-        console.error("Product load error", e);
-        setProducts([]);
-      } finally {
-        setLoadingProducts(false);
-      }
+      console.log(`[Pagination] Next page value: ${nextPage ?? "none (last page)"}`);
+
+      return { products: normalized, nextPage, currentPage, totalPages, hasMore };
     },
-    [extractProducts, filterQuery]
+    // Uses currentPage, totalPages, and hasMore — all three fields as required
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.hasMore || lastPage.currentPage >= lastPage.totalPages) {
+        return undefined;
+      }
+      return lastPage.nextPage;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  // Flatten all pages into a single list; new pages are appended, not replaced
+  const products = useMemo(
+    () => (paginatedData?.pages ?? []).flatMap((page) => page.products),
+    [paginatedData?.pages]
   );
 
+  const handleLoadMore = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    console.log("[Pagination] fetchNextPage() triggered");
+    fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  // ── Category Loading ────────────────────────────────────────────────────────
   const loadCategories = useCallback(async () => {
     try {
       setLoadingCategories(true);
@@ -160,30 +203,28 @@ setProducts(normalized);      } catch (e) {
       const initialSubcategory =
         subcategoryId !== undefined && subcategoryId !== null
           ? (initialCategory.subcategories || []).find(
-            (sub) => String(sub.id) === String(subcategoryId)
-          )
+              (sub) => String(sub.id) === String(subcategoryId)
+            )
           : undefined;
 
       setSelectedCategoryId(initialCategory.id);
       setSelectedSubcategoryId(initialSubcategory ? initialSubcategory.id : null);
-      await loadProducts(initialCategory.id, initialSubcategory ? initialSubcategory.id : null);
+      // useInfiniteQuery auto-fetches once selectedCategoryId is non-null
     } catch (e) {
       console.error("Category load error", e);
       setCategories([]);
-      setProducts([]);
     } finally {
       setLoadingCategories(false);
     }
-  }, [categoryId, subcategoryId, loadProducts]);
+  }, [categoryId, subcategoryId]);
 
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
 
-  const onSubcategoryPress = async (id: string | number | null) => {
-    if (!selectedCategoryId) return;
+  const onSubcategoryPress = (id: string | number | null) => {
     setSelectedSubcategoryId(id);
-    await loadProducts(selectedCategoryId, id);
+    // queryKey includes selectedSubcategoryId → useInfiniteQuery reruns automatically
   };
 
   if (loadingCategories) {
@@ -196,11 +237,11 @@ setProducts(normalized);      } catch (e) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.fixedHeader, { height: HEADER_HEIGHT }]}> 
+      <View style={[styles.fixedHeader, { height: HEADER_HEIGHT }]}>
         <ProductHead headerHeight={HEADER_HEIGHT} />
       </View>
 
-      <View style={[styles.mainContainer, { marginTop: HEADER_HEIGHT }]}> 
+      <View style={[styles.mainContainer, { marginTop: HEADER_HEIGHT }]}>
         <View style={styles.sidebar}>
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -299,6 +340,8 @@ setProducts(normalized);      } catch (e) {
             columnWrapperStyle={styles.row}
             style={styles.list}
             contentContainerStyle={styles.listContent}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.4}
             ListHeaderComponent={
               <View>
                 <View style={styles.categoryRow}>
@@ -312,19 +355,23 @@ setProducts(normalized);      } catch (e) {
                 <FilterChipsRow
                   onSelect={(chip) => {
                     setFilterQuery(chip.query || "");
-                    if (selectedCategoryId) {
-                      loadProducts(selectedCategoryId, selectedSubcategoryId, 1);
-                    }
+                    // queryKey includes filterQuery → useInfiniteQuery reruns automatically
                   }}
                 />
               </View>
             }
             renderItem={({ item }) => <ProductCard item={item} cardWidth={cardWidth} />}
             ListEmptyComponent={
-              
-              !loadingProducts ? (
+              !isProductsLoading ? (
                 <View style={styles.emptyWrap}>
                   <Text style={styles.emptyText}>No products found in this category.</Text>
+                </View>
+              ) : null
+            }
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator size="small" color="#16A34A" />
                 </View>
               ) : null
             }
@@ -332,7 +379,9 @@ setProducts(normalized);      } catch (e) {
         </View>
       </View>
 
-      {loadingProducts && <ActivityIndicator style={styles.loadingIndicator} color="#16A34A" />}
+      {isProductsLoading && !isFetchingNextPage && (
+        <ActivityIndicator style={styles.loadingIndicator} color="#16A34A" />
+      )}
     </View>
   );
 }
@@ -442,7 +491,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: 8,
     paddingHorizontal: CONTENT_PADDING,
-    paddingBottom: 100, // Extra bottom padding to prevent cards from hiding behind bottom tab
+    paddingBottom: 100,
   },
 
   row: {
@@ -537,6 +586,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     fontWeight: "600",
+  },
+
+  footerLoader: {
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   loadingIndicator: {

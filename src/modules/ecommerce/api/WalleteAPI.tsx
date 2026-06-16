@@ -1,4 +1,4 @@
-import api from "../auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 /**
  * Types (optional but recommended)

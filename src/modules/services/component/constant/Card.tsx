@@ -15,6 +15,7 @@ type Props = {
   users?: string;
   offerPrice?: string;
   coins?: string;
+  discount?: string;
   onPress?: () => void;
 };
 
@@ -26,6 +27,7 @@ function Card({
   users,
   offerPrice,
   coins,
+  discount,
   onPress,
 }: Props) {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
@@ -50,6 +52,11 @@ function Card({
       <View style={styles.card}>
         {/* IMAGE */}
         <View style={styles.imageBox}>
+          {discount && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{discount} OFF</Text>
+            </View>
+          )}
 <Image
   source={imgError || !image ? fallbackImage : image}
   style={styles.cardImage}
@@ -121,10 +128,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 10,
+  },
+  discountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   cardImage: {
-    width: 100,
-    height: 120,
+    width: 150,
+    height: 200,
   },
   infoContainer: {
     paddingTop: 8,

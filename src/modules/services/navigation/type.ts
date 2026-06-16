@@ -5,6 +5,18 @@ import type { BundleEnquiryField } from '../api/BundleAPI';
 export type HomeStackParamList = {
   Home: undefined;
   ServiceSearch: undefined;
+  MutualFundCalculators: undefined;
+  CommonQuestions: undefined;
+  FAQListing: { categoryId: string; categoryTitle: string };
+  SIPCalculator: undefined;
+  GoalSIPCalculator: undefined;
+  SmartGoalCalculator: undefined;
+  InflationCalculator: undefined;
+  CostOfDelayCalculator: undefined;
+  LumpsumCalculator: undefined;
+  RetirementCalculator: undefined;
+  StepUpSIPCalculator: undefined;
+  SWPCalculator: undefined;
   ServiceDescription: {
     serviceId: number;
     categoryId?: number;
@@ -19,6 +31,7 @@ export type HomeStackParamList = {
   };
   DocumentUpload: {
     order_id: number;
+    parent_order_id: string;
   };
   PackScreen: {
     packType?: 'home' | 'married' | 'job';
@@ -49,13 +62,17 @@ export type HomeStackParamList = {
   CartScreen: undefined;
   Profile: undefined;
   MyOrder: undefined;
+  ServiceOrderDetail: { parent_order_id: string };
   WalletHistory: undefined;
   TodoList: undefined;
   AddAddressMap: undefined;
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
-
+  CommonQuestionsScreen: undefined;
+  ArticleDetails: { articleId: number; sectionId: number };
+  MFInvestorsDetail: { categoryId: number };
+  MFSectionArticles: { sectionId: number; sectionTitle: string };
   AddressSelect: { fromCart?: boolean } | undefined;
 
   ServiceCheckoutScreen: {
@@ -63,8 +80,7 @@ export type HomeStackParamList = {
     service_id?: number;
     variant_id?: number;
     bundle_id?: number; // ✅ ADD THIS
-      previewData?: any; // 👈 TEMP (recommended)
-
+    previewData?: any; // 👈 TEMP (recommended)
   };
 };
 
@@ -91,22 +107,46 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
-type ServiceItem = {
+export type ServiceItem = {
   service_id: number;
   variant_id: number;
   name: string;
-  description: string;
-  enquiry: number;
+  title?: string;
+  description?: string;
+  enquiry?: boolean | number;
+  rating?: number;
+  total_orders?: number;
   price: number;
-  image: string | null;
+  mrp?: number;
+  discount_percent?: number;
+  coins?: number;
+  service_image?: string | null;
+  variant_image?: string | null;
+  image?: string | null; // For backward compatibility
+};
+
+export type BannerItem = {
+  banner_id: number;
+  title: string;
+  image_url: string;
+  redirect_type: 'service' | 'url' | 'category' | 'bundle';
+  redirect_id?: number | null;
+  redirect_url?: string | null;
+};
+
+export type SectionItem = ServiceItem | BannerItem;
+
+export type ServiceSection = {
+  section_id: number;
+  title: string;
+  section_key: string;
+  layout_type: 'horizontal' | 'vertical' | 'grid' | 'carousel';
+  section_type: 'services' | 'bundles' | 'promotions' | 'banners';
+  items: SectionItem[];
 };
 
 export type ServiceHomeResponse = {
   success: boolean;
-  data: {
-    quick_services: ServiceItem[];
-    popular: ServiceItem[];
-    recommended: ServiceItem[];
-    value_added: ServiceItem[];
-  };
+  data?: ServiceSection[];
+  message?: string;
 };

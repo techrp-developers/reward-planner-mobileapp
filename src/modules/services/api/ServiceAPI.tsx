@@ -297,7 +297,6 @@ export const getServiceHome = async (): Promise<ServiceHomeResponse> => {
   }
 };
 
-
 export const getAllServices = async (search = '') => {
   try {
     const response = await axios.get(
@@ -319,3 +318,5 @@ export const getAllServices = async (search = '') => {
     };
   }
 };
+
+

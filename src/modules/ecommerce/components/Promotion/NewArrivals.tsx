@@ -150,12 +150,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   heading: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1A1A1A",
   },
   subHeading: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94969F",
     marginTop: 2,
   },
@@ -164,8 +164,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   exploreText: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: "#3B82F6",
   },
   loaderWrap: {

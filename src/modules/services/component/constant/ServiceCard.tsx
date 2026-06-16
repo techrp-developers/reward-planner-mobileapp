@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
   },
 
   serviceImage: {
-    width: 35,
-    height: 25,
+    width: 45,
+    height: 35,
   },
 
   content: {

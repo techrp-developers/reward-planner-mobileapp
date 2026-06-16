@@ -73,6 +73,11 @@ OrderConfirmedScreen: {
     productTitle?: string;
     productWeight?: string;
   };
+  EditProfile: undefined;
+  Settings: undefined;
+  Privacy: undefined;
+  Support: undefined;
+  ChangePassword: undefined;
 };
 
 export type MainTabParamList = {

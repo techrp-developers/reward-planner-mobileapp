@@ -15,7 +15,7 @@ interface Props {
 
 
 const OrderStatusCard: React.FC<Props> = ({
-    image,
+    // image,
     status,
     statusText,
     title,
@@ -32,7 +32,7 @@ const OrderStatusCard: React.FC<Props> = ({
                 end={{ x: 1, y: 1 }}
                 style={styles.gradientWrap}
             >                <View style={styles.image}>
-                    {image}
+                    {/* {image} */}
                 </View>
             </LinearGradient>
 

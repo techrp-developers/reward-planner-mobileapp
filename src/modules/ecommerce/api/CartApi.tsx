@@ -1,5 +1,5 @@
 // src/api/CartApi.ts
-import api from "../auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 export type AddToCartPayload = {
   product_id: number;

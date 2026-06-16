@@ -1,6 +1,6 @@
 // src/api/ProductApi.ts
 import axios from "axios";
-import api from "../auth/api/axios";
+import api from "../../common/auth/api/axios";
 
 const API_BASE_URL = "https://rewardplanners.com/api/crm";
 const IMAGE_BASE_URL = "https://rewardplanners.com";

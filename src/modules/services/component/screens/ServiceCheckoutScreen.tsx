@@ -16,17 +16,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
 import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCard';
-import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
+// import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import OrderProcedbutton from '../../../ecommerce/components/checkout/OrderProcedbutton';
 import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowPreview, getCheckoutPreview, placeBuyNowOrder, placeCartOrder, removeServiceCartItem, addServiceToCart, clearServiceCart } from '../../api/CartAPI';
+import { buyNowBundle } from '../../api/BundleAPI';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
-import { useAuth } from '../../../ecommerce/auth/context/AuthContext';
+import { useAuth } from '../../../common/auth/context/AuthContext';
 import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
 import { addressesQueryKey } from '../../../ecommerce/navigation/navigationPerformance';
 import { HomeStackParamList } from '../../navigation/type';
-import { createServiceOrderPayment, verifyServicePayment, checkServicePaymentStatus } from '../../api/OrderAPI';
+import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentStatus } from '../../api/ServicepaymentAPI';
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import RazorpayCheckout from "react-native-razorpay";
 
@@ -36,20 +37,20 @@ type NavProps = NativeStackNavigationProp<HomeStackParamList>;
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
 
-const COUPONS = [
-  {
-    id: 1,
-    code: 'RPSLAY200',
-    title: 'Add ₹248 more to avail this offer',
-    subtitle: 'Get Flat ₹200 off',
-  },
-  {
-    id: 2,
-    code: 'RPCC200',
-    title: 'Buy for ₹7777 to avail',
-    subtitle: 'BOB Credit Card Offer',
-  },
-];
+// const COUPONS = [
+//   {
+//     id: 1,
+//     code: 'RPSLAY200',
+//     title: 'Add ₹248 more to avail this offer',
+//     subtitle: 'Get Flat ₹200 off',
+//   },
+//   {
+//     id: 2,
+//     code: 'RPCC200',
+//     title: 'Buy for ₹7777 to avail',
+//     subtitle: 'BOB Credit Card Offer',
+//   },
+// ];
 
 type ServicePreviewItem = {
   id: number | string;
@@ -245,14 +246,14 @@ export default function ServiceCheckoutScreen() {
   const navigation = useNavigation<NavProps>();
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
-  const { mode: routeMode, service_id, variant_id, previewData: passedPreview } = route.params ?? {};
+  const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};
   const mode = routeMode === 'buy_now' ? 'buy_now' : 'cart';
 
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
 
   const pulse = useRef(new Animated.Value(0)).current;
-  const [showAllCoupons, setShowAllCoupons] = useState(false);
+  // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [removingId, setRemovingId] = useState<string | number | null>(null);
   const [hasStarted, setHasStarted] = useState(mode === 'buy_now' ? !!passedPreview : false);
@@ -401,15 +402,38 @@ export default function ServiceCheckoutScreen() {
 
       console.log("📦 Creating order...");
 
+      console.log("🏠 Address debug:", JSON.stringify(address, null, 2));
+      const address_id = Number(address?.id ?? (address as any)?.address_id ?? 0);
+      if (!address_id) {
+        setPlacing(false);
+        Alert.alert(
+          "No Address",
+          "Please add a delivery address to continue.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Add Address", onPress: () => navigation.navigate('AddressSelect') },
+          ],
+        );
+        return;
+      }
+
       // ✅ Step 1: Create Order via API
       let orderRes;
-      if (mode === "buy_now" && service_id && variant_id) {
+      if (mode === "buy_now" && bundle_id) {
+        const selected_items = items
+          .flatMap((item) => item.bundle_items ?? [])
+          .map((i: any) => Number(i.id))
+          .filter((id) => Number.isFinite(id) && id > 0);
+
+        orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
+      } else if (mode === "buy_now" && service_id && variant_id) {
         orderRes = await placeBuyNowOrder({
           service_id: Number(service_id),
           variant_id: Number(variant_id),
+          address_id,
         });
       } else {
-        orderRes = await placeCartOrder();
+        orderRes = await placeCartOrder({ address_id });
         createdCartOrder = true;
       }
 
@@ -469,23 +493,16 @@ export default function ServiceCheckoutScreen() {
 
       // ✅ Step 2: Create Payment Order
       console.log("💳 Creating payment order with parent_order_id:", parent_order_id);
-      const paymentRes = await createServiceOrderPayment(parent_order_id);
-      const paymentData = paymentRes?.data || paymentRes;
+      const paymentRes = await createServicePaymentOrder(parent_order_id);
+      const paymentData = paymentRes.data;
 
       console.log("💳 Payment Order Response:", paymentData);
-
-      // orderId is the Razorpay order id returned by our backend create-order
-      const razorpay_order_id_str =
-        paymentData.orderId ??
-        paymentData.razorpay_order_id ??
-        paymentData.order_id ??
-        "";
 
       const options = {
         key: paymentData.key || "rzp_test_xxx",
         amount: paymentData.amount,
         currency: paymentData.currency || "INR",
-        order_id: razorpay_order_id_str,
+        order_id: paymentData.orderId,
         name: "Reward Planners",
         description: "Service Payment",
         theme: { color: "#8665FF" },
@@ -520,7 +537,6 @@ export default function ServiceCheckoutScreen() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                parent_order_id,
               });
 
               console.log("🔐 Payment verified:", verifyRes);
@@ -540,12 +556,14 @@ export default function ServiceCheckoutScreen() {
             // ✅ Step 5: Navigate to DocumentUpload
             navigation.navigate("DocumentUpload", {
               order_id: numeric_order_id,
+              parent_order_id: parent_order_id,
             });
           } catch (error) {
             console.error("❌ Post-payment flow failed:", error);
             setPlacing(false);
             navigation.navigate("DocumentUpload", {
               order_id: numeric_order_id,
+              parent_order_id: parent_order_id,
             });
           }
         })
@@ -608,7 +626,7 @@ export default function ServiceCheckoutScreen() {
         "Failed to place order";
       alert.error?.("Error", serverMessage);
     }
-  }, [mode, service_id, variant_id, navigation, placing, alert, items, queryClient, refetchCheckout]);
+  }, [mode, service_id, variant_id, bundle_id, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
   const handleRemoveFromCheckout = useCallback(async (item: ServicePreviewItem) => {
     if (mode !== 'cart' || !item.id) return;
     if (removingId === item.id) return;
@@ -697,19 +715,23 @@ export default function ServiceCheckoutScreen() {
         {/* Address card */}
         <View style={styles.card}>
           <View style={styles.addressRow}>
-            <MaterialCommunityIcons name="home-variant" size={28} color="#7C3AED" />
+            <MaterialCommunityIcons name="home-variant" size={28} color={address ? '#7C3AED' : '#EF4444'} />
             <View style={styles.addressBody}>
               <View style={styles.addressTopRow}>
                 <Text style={styles.addressTitle}>
-                  Delivering to {address?.contact_name || 'User'}
+                  {address ? `Delivering to ${address.contact_name || 'User'}` : 'No delivery address'}
                 </Text>
                 <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AddressSelect')}>
-                  <Text style={styles.changeText}>Change</Text>
+                  <Text style={styles.changeText}>{address ? 'Change' : '+ Add Address'}</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.addressSub} numberOfLines={2}>
-                {addressLine || 'No address selected'}
-              </Text>
+              {address ? (
+                <Text style={styles.addressSub} numberOfLines={2}>{addressLine}</Text>
+              ) : (
+                <Text style={[styles.addressSub, styles.addressMissing]}>
+                  Please add a delivery address to continue
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -771,7 +793,7 @@ export default function ServiceCheckoutScreen() {
         ))}
 
         {/* Coupons */}
-        <View style={styles.couponsWrapper}>
+        {/* <View style={styles.couponsWrapper}>
           <View style={styles.couponsHeader}>
             <Text style={styles.couponsTitle}>Coupons and Offers</Text>
             <TouchableOpacity onPress={() => setShowAllCoupons((p) => !p)}>
@@ -779,7 +801,7 @@ export default function ServiceCheckoutScreen() {
             </TouchableOpacity>
           </View>
           <CouponsSection coupons={showAllCoupons ? COUPONS : COUPONS.slice(0, 1)} />
-        </View>
+        </View> */}
 
         {/* Bill details */}
         <BillDetailsCard
@@ -796,6 +818,7 @@ export default function ServiceCheckoutScreen() {
         total={summary.grandTotal}
         count={items.length}
         loading={placing}
+        disabled={isAddressFetching}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
       />
@@ -836,6 +859,7 @@ const styles = StyleSheet.create({
   addressTitle: { fontSize: 13, fontWeight: '700', color: '#111827', flex: 1 },
   changeText: { fontSize: 13, fontWeight: '600', color: '#7C3AED', marginLeft: 8 },
   addressSub: { marginTop: 3, fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  addressMissing: { color: '#EF4444', fontWeight: '500' },
 
   // service item card
   itemRow: { flexDirection: 'row', gap: 12 },

@@ -7,6 +7,7 @@ type Props = {
   total: number;
   count: number;
   loading?: boolean;
+  disabled?: boolean;
   onPlaceOrder?: () => void | Promise<void>;
   wrapperPaddingBottom?: number;
 };
@@ -15,6 +16,7 @@ export default function OrderProcedbutton({
   total,
   count,
   loading = false,
+  disabled = false,
   onPlaceOrder,
   wrapperPaddingBottom = 80,
 }: Props) {
@@ -33,8 +35,8 @@ export default function OrderProcedbutton({
           <Text style={styles.items}>{count} items selected</Text>
         </View>
 
-        <TouchableOpacity activeOpacity={0.85} onPress={onPlaceOrder} disabled={loading}>
-          <LinearGradient colors={['#8665FF', '#5B47A3']} style={[styles.button, loading ? styles.disabledButton : null]}>
+        <TouchableOpacity activeOpacity={0.85} onPress={onPlaceOrder} disabled={loading || disabled}>
+          <LinearGradient colors={['#8665FF', '#5B47A3']} style={[styles.button, (loading || disabled) ? styles.disabledButton : null]}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (

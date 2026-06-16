@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthHeaders } from "./AuthAPI";
+import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import { normalizeProduct } from "../utils/normalizeProduct";
 
 const API_BASE_URL = "https://rewardplanners.com/api/crm";

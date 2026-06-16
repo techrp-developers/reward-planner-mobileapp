@@ -41,7 +41,9 @@ export default function BillDetailsCard({
 
   const rewardDiscount = useRewards ? safeRedeemed : 0
   const payableAmount = safeFinalPayable
-  const canUseRewards = safeRedeemed > 0 || safeRewardEarn > 0
+  // When rewards are OFF the API returns redeemCoins=0, so we must not lock
+  // the switch based on that zero — allow re-enabling whenever rewards are off.
+  const canUseRewards = !useRewards || safeRedeemed > 0 || safeRewardEarn > 0
 
   useEffect(() => {
     onPayableChange?.(payableAmount)

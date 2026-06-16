@@ -17,6 +17,16 @@ import { useTodayHourlyStatsQuery } from '../../api/useFitnessQueries';
 
 const { width } = Dimensions.get('window');
 
+const VD = {
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteGhost:  "rgba(255,255,255,0.10)",
+  warning:     "#FBBF24",
+};
+
 const DEFAULT_HOURLY_DATA: HourlyStatItem[] = [
   { time: '6AM', steps: 0 },
   { time: '9AM', steps: 0 },
@@ -88,7 +98,7 @@ const StatisticsGraph: React.FC = () => {
       <View style={styles.graphContainer}>
         {loading ? (
           <View style={[styles.loaderBox, { width: graphWidth, height: GRAPH_HEIGHT }]}>
-            <ActivityIndicator color="#7FB3FF" />
+            <ActivityIndicator color={VD.accent} />
           </View>
         ) : (
           <Svg height={GRAPH_HEIGHT} width={graphWidth}>
@@ -103,7 +113,7 @@ const StatisticsGraph: React.FC = () => {
                     cx={x + BAR_WIDTH / 2}
                     cy={GRAPH_HEIGHT - 8}
                     r={DOT_RADIUS}
-                    fill="#D1D5DB"
+                    fill={VD.whiteGhost}
                   />
                 );
               }
@@ -122,7 +132,7 @@ const StatisticsGraph: React.FC = () => {
                   width={BAR_WIDTH}
                   height={barHeight}
                   rx={3}
-                  fill="#7FB3FF"
+                  fill={VD.accent}
                 />
               );
             })}
@@ -137,11 +147,7 @@ const StatisticsGraph: React.FC = () => {
 
         <View style={styles.labelsContainer}>
           <View style={styles.labelWithIcon}>
-            <MaterialCommunityIcons
-              name="weather-sunny"
-              size={30}
-              color="#FDBA18"
-            />
+            <MaterialCommunityIcons name="weather-sunny" size={24} color={VD.warning} />
           </View>
 
           <Text style={styles.timeLabel}>6AM</Text>
@@ -149,11 +155,7 @@ const StatisticsGraph: React.FC = () => {
           <Text style={styles.timeLabel}>6PM</Text>
 
           <View style={styles.labelWithIcon}>
-            <MaterialCommunityIcons
-              name="weather-night"
-              size={30}
-              color="#A21CEF"
-            />
+            <MaterialCommunityIcons name="weather-night" size={24} color={VD.accent} />
           </View>
         </View>
       </View>
@@ -165,87 +167,67 @@ export default React.memo(StatisticsGraph);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "transparent",  // glassCard wrapper in Dashboard provides bg
     borderRadius: 18,
     padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    marginBottom: 0,
   },
-
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
-
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: "800",
+    color: VD.white,
+    letterSpacing: -0.3,
   },
-
   dropdown: {
     minHeight: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: VD.cardBorder,
     borderRadius: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 10,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    backgroundColor: VD.accentFaint,
   },
-
   dropdownText: {
-    fontSize: 18,
-    color: '#4B5563',
-    fontWeight: '700',
-    marginRight: 8,
+    fontSize: 13,
+    color: VD.accent,
+    fontWeight: "700",
   },
-
   graphContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
-
   loaderBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-
   retryText: {
-    color: '#3B6BFF',
+    color: VD.accent,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 4,
   },
-
   labelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 6,
     marginTop: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
-
   labelWithIcon: {
-    width: 32,
-    alignItems: 'center',
+    width: 28,
+    alignItems: "center",
   },
-
   timeLabel: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: '700',
+    fontSize: 11,
+    color: VD.whiteLow,
+    fontWeight: "600",
   },
 });

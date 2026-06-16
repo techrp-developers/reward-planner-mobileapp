@@ -22,5 +22,9 @@ export type RootStackParamList = {
   WalletHistory: undefined;
   SearchScreen: undefined;
   BBPSHomeStack: undefined;
-
+  ExploreModule: undefined;
+  HelpForm: undefined;
+  StepCount: undefined;
+  TermsAndConditions: undefined;
+  OrderConfirmedScreen: { order_id?: number } | undefined;
 };

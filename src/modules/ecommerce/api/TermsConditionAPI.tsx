@@ -1,6 +1,6 @@
 import api, {
   API_BASE_URL,
-} from "../auth/api/axios";
+} from "../../common/auth/api/axios";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -118,6 +118,7 @@ export type PrivacyPolicyResponse = {
 };
 
 // GET PRIVACY POLICY
+
 export const fetchPrivacyPolicy =
   async (): Promise<PrivacyPolicyResponse> => {
     const response =

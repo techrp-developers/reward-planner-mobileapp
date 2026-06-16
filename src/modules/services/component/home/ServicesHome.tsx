@@ -116,6 +116,17 @@ export default function ServicesHome() {
       return;
     }
 
+    // Mutual Fund category → open calculator grid directly
+    const categoryName = String(category?.name || '').toLowerCase();
+    if (
+      categoryName.includes('mutual fund') ||
+      categoryName.includes('mf calculator') ||
+      categoryName.includes('mutual fund calculator')
+    ) {
+      navigation.navigate('MutualFundCalculators');
+      return;
+    }
+
     const displayType = String(category?.display_type || 'list').toLowerCase();
     const title = String(category?.name || 'Service');
 

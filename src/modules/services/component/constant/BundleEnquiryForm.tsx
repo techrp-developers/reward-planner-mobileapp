@@ -18,7 +18,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ScreenHeader from './navbar/ScreenHeaderColor';
 import Banner from './Banner';
 import { HomeStackParamList } from '../../navigation/type';
-import { fetchUserInfo } from '../../../ecommerce/api/AuthAPI';
+import { fetchUserInfo } from '../../../common/auth/api/AuthAPI';
 import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
 import {
   getBundleDetail,

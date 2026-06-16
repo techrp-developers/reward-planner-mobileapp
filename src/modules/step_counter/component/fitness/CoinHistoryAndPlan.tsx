@@ -16,16 +16,21 @@ import {
   fetchStepHistory,
   type StepHistoryItem,
 } from '../../api/DashboardAPI';
-import {
-  BORDER_RADIUS,
-  COLORS,
-  SHADOWS,
-  SPACING,
-  TYPOGRAPHY,
-} from '../../utils/theme';
-
+import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../../utils/theme';
 import CoinIcon from '../../../../assets/product/rewards.svg';
 import HeartPlantIcon from '../../assets/StepCount/heartPlant.svg';
+
+const VD = {
+  accent:      "#C4A8FF",
+  accentFaint: "rgba(196,168,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.09)",
+  cardBorder:  "rgba(196,168,255,0.18)",
+  white:       "#FFFFFF",
+  whiteMid:    "rgba(255,255,255,0.70)",
+  whiteLow:    "rgba(255,255,255,0.45)",
+  success:     "#4ADE80",
+  warning:     "#FBBF24",
+};
 
 type CoinHistoryNavProp = NativeStackNavigationProp<FitnessStackParamList>;
 
@@ -96,14 +101,14 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={COLORS.primaryIndigo}
+              color={VD.accent}
             />
           </TouchableOpacity>
         </View>
 
         {loading ? (
           <View style={styles.historyState}>
-            <ActivityIndicator size="small" color={COLORS.primaryIndigo} />
+            <ActivityIndicator size="small" color={VD.accent} />
             <Text style={styles.stateText}>Loading coin activity...</Text>
           </View>
         ) : errorMessage ? (
@@ -115,7 +120,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="refresh"
               size={20}
-              color={COLORS.primaryIndigo}
+              color={VD.accent}
             />
             <Text style={styles.stateText}>Unable to load coins. Tap to retry.</Text>
           </TouchableOpacity>
@@ -124,7 +129,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="wallet-giftcard"
               size={22}
-              color={COLORS.primaryIndigo}
+              color={VD.accent}
             />
             <Text style={styles.stateText}>Your earned coins will appear here.</Text>
           </View>
@@ -165,7 +170,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
-              color={COLORS.textMuted}
+              color={VD.whiteLow}
             />
           </View>
 
@@ -182,7 +187,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={COLORS.primaryIndigo}
+              color={VD.accent}
             />
           </TouchableOpacity>
         </View>
@@ -202,37 +207,36 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     padding: SPACING.lg,
     borderRadius: BORDER_RADIUS.large,
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.card,
+    borderColor: VD.cardBorder,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SPACING.md,
   },
   cardTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
   },
   viewMoreButton: {
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: '#F4F0FF',
+    backgroundColor: VD.accentFaint,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: VD.cardBorder,
   },
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.primaryIndigo,
+    color: VD.accent,
     marginRight: 4,
   },
   coinList: {
@@ -241,113 +245,114 @@ const styles = StyleSheet.create({
   coinItem: {
     width: 96,
     minHeight: 118,
-    backgroundColor: '#FBF7FF',
+    backgroundColor: VD.accentFaint,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.sm,
     marginRight: SPACING.sm,
     borderRadius: BORDER_RADIUS.large,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'rgba(113,77,245,0.12)',
+    borderColor: VD.cardBorder,
   },
   date: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
+    color: VD.whiteLow,
     marginBottom: SPACING.xs,
   },
   coinColumn: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   coinIconWrap: {
     width: 34,
     height: 34,
     borderRadius: BORDER_RADIUS.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF8E8',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(251,191,36,0.15)",
     marginBottom: 4,
   },
   coinValue: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.success,
+    color: VD.success,
   },
   coinDebit: {
-    color: COLORS.warning,
+    color: VD.warning,
   },
   coinTitle: {
     ...TYPOGRAPHY.caption,
     maxWidth: 78,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: "center",
   },
   historyState: {
     minHeight: 104,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BORDER_RADIUS.large,
-    backgroundColor: '#FBF7FF',
+    backgroundColor: VD.accentFaint,
     borderWidth: 1,
-    borderColor: 'rgba(113,77,245,0.12)',
+    borderColor: VD.cardBorder,
     paddingHorizontal: SPACING.md,
   },
   stateText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    textAlign: 'center',
+    color: VD.whiteLow,
+    textAlign: "center",
     marginTop: SPACING.xs,
   },
   planCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     padding: SPACING.lg,
     borderRadius: BORDER_RADIUS.large,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.card,
+    borderColor: VD.cardBorder,
   },
   planCopy: {
     flex: 1,
   },
   planHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: SPACING.xs,
   },
   planTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
     flex: 1,
     paddingRight: SPACING.xs,
   },
   planDescription: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
+    color: VD.whiteMid,
     marginBottom: SPACING.sm,
   },
   getPlanButton: {
-    alignSelf: 'flex-start',
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: "flex-start",
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: '#F4F0FF',
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   getPlan: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.primaryIndigo,
+    color: VD.accent,
     marginRight: 4,
   },
   planImage: {
-    width: 58,
-    height: 58,
+    width: 52,
+    height: 52,
     borderRadius: BORDER_RADIUS.large,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F7F3FF',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: VD.accentFaint,
     marginLeft: SPACING.md,
   },
 });

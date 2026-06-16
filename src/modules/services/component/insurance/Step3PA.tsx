@@ -33,7 +33,7 @@ import {
   fetchUserInfo,
   getAuthHeaders,
   isAuthenticated,
-} from "../../../ecommerce/api/AuthAPI";
+} from "../../../common/auth/api/AuthAPI";
 
 type FormData = {
   gender: string;
