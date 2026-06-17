@@ -286,8 +286,8 @@ function Profile() {
                                                 resizeMode="contain"
                                             />
                                         }
-                                        title={item.product_name || "Product"}
-                                        weight={item.brand_name || ""}
+                                        title={item.title || item.product_name || "Product"}
+                                        weight={item.brand || item.brand_name || ""}
                                         orderId={String(item.order_ref || item.order_id || "")}
                                     />
                                 </TouchableOpacity>

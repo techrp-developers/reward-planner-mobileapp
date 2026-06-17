@@ -72,7 +72,10 @@ type OrderDetailsResponse = {
         }>;
         timeline?: any[];
         expected_delivery_date?: string;
-        special_state?: any;
+        special_state?: {
+            type?: string;
+            message?: string;
+        } | null;
     }>;
     order_progress?: {
         current_step: number;
@@ -115,6 +118,11 @@ const toTitleCase = (value?: string) => {
         .filter(Boolean)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(" ");
+};
+
+const isTerminalStatus = (value?: string) => {
+    const normalized = value?.toLowerCase();
+    return normalized === "cancelled" || normalized === "rejected" || normalized === "delivered";
 };
 
 export default function OrderConfirmedScreen() {
@@ -174,6 +182,7 @@ export default function OrderConfirmedScreen() {
     }, []);
 
     const firstItem = orderData?.items?.[0];
+    const primaryShipment = orderData?.shipments?.[0];
 
     const productTitle = [firstItem?.brand_name, firstItem?.product_name]
         .filter(Boolean)
@@ -197,6 +206,23 @@ export default function OrderConfirmedScreen() {
         .join(", ");
 
     const orderStatuses: OrderStatusItem[] = useMemo(() => {
+        const orderStatus = orderData?.order?.status?.toLowerCase();
+        const shipmentSpecialState = orderData?.shipments?.find((shipment) => shipment.special_state)?.special_state;
+
+        if (shipmentSpecialState?.type || orderStatus === "cancelled" || orderStatus === "rejected") {
+            return [
+                {
+                    label: "Order placed",
+                    date: formatDisplayDate(orderData?.order?.created_at),
+                    completed: true,
+                },
+                {
+                    label: toTitleCase(shipmentSpecialState?.type || orderStatus),
+                    completed: true,
+                },
+            ];
+        }
+
         const progress = orderData?.order_progress;
         if (progress?.steps) {
             return progress.steps.map((step, index) => ({
@@ -245,7 +271,37 @@ export default function OrderConfirmedScreen() {
                 completed: completedIndex >= 4,
             },
         ];
-    }, [orderData?.order?.created_at, orderData?.order?.status, orderData?.order_progress]);
+    }, [orderData?.order?.created_at, orderData?.order?.status, orderData?.order_progress, orderData?.shipments]);
+
+    const journeyHeader = useMemo(() => {
+        const orderStatus = orderData?.order?.status;
+        const shipmentStatus = primaryShipment?.shipping_status || orderStatus;
+        const specialMessage = primaryShipment?.special_state?.message;
+
+        if (specialMessage) {
+            return specialMessage;
+        }
+
+        if (orderStatus?.toLowerCase() === "cancelled") {
+            return "Order cancelled";
+        }
+
+        if (orderStatus?.toLowerCase() === "rejected") {
+            return "Order rejected";
+        }
+
+        if (orderStatus?.toLowerCase() === "delivered") {
+            return "Order delivered";
+        }
+
+        if (primaryShipment?.expected_delivery_date) {
+            return `Arriving by ${formatDisplayDate(primaryShipment.expected_delivery_date)}`;
+        }
+
+        return `Status: ${toTitleCase(shipmentStatus)}`;
+    }, [orderData?.order?.status, primaryShipment]);
+
+    const canCancelOrder = !isTerminalStatus(orderData?.order?.status);
 
     const itemTotal = Number(orderData?.summary?.item_total ?? 0);
     const shippingTotal = Number(orderData?.summary?.shipping_total ?? 0);
@@ -316,9 +372,9 @@ export default function OrderConfirmedScreen() {
 
                 {/* Order Status Timeline */}
                 <OrderStatusJourney
-                    arrivingBy={toTitleCase(orderData.order.status)}
+                    headerText={journeyHeader}
                     statuses={orderStatuses}
-                    onCancelPress={() => setModalVisible(true)}
+                    onCancelPress={canCancelOrder ? () => setModalVisible(true) : undefined}
                 />
                 <DeliveryDetailsCard
                     addressType={orderData.address?.type?.toUpperCase() || "HOME"}
