@@ -21,7 +21,7 @@ import { prefetchService } from '../../utils/serviceCache';
 import { getServiceImageUrl } from '../../utils/serviceImage';
 import SkeletonBox from '../constant/SkeletonBox';
 
-type CardType = 'medium' | 'large';
+type CardType = 'small' | 'wide' | 'narrow';
 
 function ServiceHomeSkeleton() {
   const pulse = useRef(new Animated.Value(0)).current;
@@ -42,7 +42,7 @@ function ServiceHomeSkeleton() {
       {/* Row 1: three equal small cards */}
       <View style={styles.row}>
         {[0, 1, 2].map(i => (
-          <View key={i} style={[styles.card, styles.skeletonCard, styles.skeletonSmallCard]}>
+          <View key={i} style={[styles.card, styles.smallCard, styles.skeletonCard]}>
             <SkeletonBox pulse={pulse} width="65%" height={14} style={styles.skeletonTitle} />
             <SkeletonBox pulse={pulse} width={52} height={52} borderRadius={8} style={styles.skeletonImage} />
           </View>
@@ -50,11 +50,11 @@ function ServiceHomeSkeleton() {
       </View>
       {/* Row 2: wide card + narrow card */}
       <View style={styles.row}>
-        <View style={[styles.card, styles.skeletonCard, styles.skeletonWideCard]}>
+        <View style={[styles.card, styles.wideCard, styles.skeletonCard]}>
           <SkeletonBox pulse={pulse} width="55%" height={14} style={styles.skeletonTitle} />
           <SkeletonBox pulse={pulse} width={76} height={76} borderRadius={8} style={styles.skeletonImage} />
         </View>
-        <View style={[styles.card, styles.skeletonCard, styles.skeletonNarrowCard]}>
+        <View style={[styles.card, styles.narrowCard, styles.skeletonCard]}>
           <SkeletonBox pulse={pulse} width="70%" height={14} style={styles.skeletonTitle} />
           <SkeletonBox pulse={pulse} width={56} height={56} borderRadius={8} style={styles.skeletonImage} />
         </View>
@@ -74,17 +74,21 @@ const Card = ({
   type: CardType;
   onPress?: () => void;
 }) => {
+  const sizeStyle =
+    type === 'wide'
+      ? styles.wideCard
+      : type === 'narrow'
+        ? styles.narrowCard
+        : styles.smallCard;
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={[
-        styles.card,
-        type === 'large' ? styles.largeCard : styles.mediumCard,
-      ]}
+      style={[styles.card, sizeStyle]}
     >
       <LinearGradient
-        colors={['#F3F3F3', '#E3E4FF']}
+        colors={['#F7F7FF', '#E8E8F9']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -97,7 +101,10 @@ const Card = ({
       <View style={styles.imageWrap}>
         <Image
           source={{ uri: imageUrl }}
-          style={styles.cardImage}
+          style={[
+            styles.cardImage,
+            type === 'wide' ? styles.wideImage : styles.smallImage,
+          ]}
           resizeMode="contain"
         />
       </View>
@@ -194,11 +201,7 @@ export default function ServicesHome() {
       ) : (
         <View style={styles.row}>
           {categories.map((item, index) => {
-            let cardType: CardType = 'medium';
-
-            // Match existing design rules.
-            if (index === 0) cardType = 'large';
-            if (item.name === 'MSEB Name Change') cardType = 'large';
+            const cardType: CardType = index === 3 ? 'wide' : index === 4 ? 'narrow' : 'small';
 
             return (
               <Card
@@ -221,7 +224,7 @@ export default function ServicesHome() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
   },
 
   row: {
@@ -231,40 +234,52 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    borderRadius: 22,
+    borderRadius: 16,
     height: 120,
-    marginBottom: 12,
-    padding: 16,
+    marginBottom: 8,
+    padding: 12,
     overflow: 'hidden',
   },
 
   /* GRID SIZES */
-  mediumCard: {
-    width: '48%',
+  smallCard: {
+    width: '31.5%',
   },
 
-  largeCard: {
-    width: '100%',
+  wideCard: {
+    width: '65.5%',
     height: 120,
   },
 
+  narrowCard: {
+    width: '31.5%',
+  },
+
   title: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#374151',
-    lineHeight: 20,
-    maxWidth: '70%',
+    lineHeight: 18,
+    maxWidth: '88%',
   },
 
   imageWrap: {
     position: 'absolute',
-    right: 12,
-    bottom: 12,
+    right: 4,
+    bottom: 4,
   },
 
   cardImage: {
-    width: 80,
-    height: 80,
+    width: 72,
+    height: 72,
+  },
+  smallImage: {
+    width: 72,
+    height: 72,
+  },
+  wideImage: {
+    width: 150,
+    height: 86,
   },
   skeletonCard: {
     backgroundColor: '#F7F7FA',
@@ -276,15 +291,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     bottom: 12,
-  },
-  skeletonSmallCard: {
-    width: '32%',
-  },
-  skeletonWideCard: {
-    width: '60%',
-  },
-  skeletonNarrowCard: {
-    width: '37%',
   },
 });
 
