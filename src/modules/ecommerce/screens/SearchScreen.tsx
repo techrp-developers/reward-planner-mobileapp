@@ -18,6 +18,9 @@ type SearchSuggestion = {
 
 type SearchHistoryItem = string | { keyword?: string; title?: string; q?: string };
 
+const BRAND_PURPLE = "#852BAF";
+const BRAND_PURPLE_LIGHT = "#A654CD";
+
 function SearchScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     const [search, setSearch] = useState("");
@@ -135,12 +138,16 @@ function SearchScreen() {
 
             {showSuggest ? (
                 <View style={styles.suggestionWrapper}>
-                    <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.suggestionScrollContent}
+                    >
                         {loadingSuggest ? (
                             <View style={styles.loaderContainer}>
                                 {Array.from({ length: 4 }).map((_, index) => (
                                     <View key={`suggest-skeleton-${index}`} style={styles.searchSkeletonItem}>
-                                        <SkeletonBox pulse={pulse} width={42} height={42} borderRadius={8} />
+                                        <SkeletonBox pulse={pulse} width={46} height={46} borderRadius={14} />
                                         <View style={styles.searchSkeletonTextWrap}>
                                             <SkeletonBox pulse={pulse} width="82%" height={12} borderRadius={999} />
                                             <SkeletonBox pulse={pulse} width="42%" height={10} borderRadius={999} style={styles.searchSkeletonTag} />
@@ -149,30 +156,43 @@ function SearchScreen() {
                                 ))}
                             </View>
                         ) : suggestions.length === 0 ? (
-                            <Text style={styles.noResultText}>No product found</Text>
+                            <View style={styles.emptyStateWrap}>
+                                <View style={styles.emptyIconCircle}>
+                                    <MaterialCommunityIcons name="text-search" size={26} color={BRAND_PURPLE_LIGHT} />
+                                </View>
+                                <Text style={styles.noResultText}>No product found</Text>
+                                <Text style={styles.emptySubText}>Try a different keyword</Text>
+                            </View>
                         ) : (
-                            suggestions.map((item) => (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    activeOpacity={0.8}
-                                    style={styles.item}
-                                    onPress={() => handleSelectSuggestion(item)}
-                                >
-                                    <View style={styles.imageContainer}>
-                                        <Image
-                                            source={{ uri: getProductImageUrl(item.image) }}
-                                            style={styles.img}
-                                        />
-                                    </View>
-                                    <View style={styles.textContainer}>
-                                        <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
-                                        <Text style={styles.categoryTag}>
-                                            {String(item?.type || "product").trim().toLowerCase() === "category" ? "Category" : "Product"}
-                                        </Text>
-                                    </View>
-                                    <MaterialCommunityIcons name="arrow-top-left" size={20} color="#bbb" />
-                                </TouchableOpacity>
-                            ))
+                            suggestions.map((item) => {
+                                const isCategory = String(item?.type || "product").trim().toLowerCase() === "category";
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        activeOpacity={0.75}
+                                        style={styles.item}
+                                        onPress={() => handleSelectSuggestion(item)}
+                                    >
+                                        <View style={styles.imageContainer}>
+                                            <Image
+                                                source={{ uri: getProductImageUrl(item.image) }}
+                                                style={styles.img}
+                                            />
+                                        </View>
+                                        <View style={styles.textContainer}>
+                                            <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
+                                            <View style={[styles.tagPill, isCategory ? styles.tagPillCategory : styles.tagPillProduct]}>
+                                                <Text style={[styles.categoryTag, isCategory && styles.categoryTagCategory]}>
+                                                    {isCategory ? "Category" : "Product"}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.arrowCircle}>
+                                            <MaterialCommunityIcons name="arrow-top-left" size={16} color={BRAND_PURPLE_LIGHT} />
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })
                         )}
                     </ScrollView>
                 </View>
@@ -181,8 +201,8 @@ function SearchScreen() {
                     <View style={styles.historyHeader}>
                         <Text style={styles.historyTitle}>Past Searches</Text>
                         <View style={styles.historyActions}>
-                          <TouchableOpacity onPress={loadHistory} style={styles.actionButton}>
-                            <MaterialCommunityIcons name="refresh" size={18} color="#2874f0" />
+                          <TouchableOpacity onPress={loadHistory} style={styles.actionButton} activeOpacity={0.75}>
+                            <MaterialCommunityIcons name="refresh" size={17} color={BRAND_PURPLE_LIGHT} />
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={async () => {
@@ -199,9 +219,10 @@ function SearchScreen() {
                                 Alert.alert("Error", "Unable to clear search history. Please try again.");
                               }
                             }}
-                            style={styles.actionButton}
+                            style={[styles.actionButton, styles.actionButtonDanger]}
+                            activeOpacity={0.75}
                           >
-                            <MaterialCommunityIcons name="trash-can-outline" size={18} color="#EB5757" />
+                            <MaterialCommunityIcons name="trash-can-outline" size={17} color="#EB5757" />
                           </TouchableOpacity>
                         </View>
                     </View>
@@ -213,8 +234,8 @@ function SearchScreen() {
                                     key={`history-skeleton-${index}`}
                                     pulse={pulse}
                                     width={index % 2 === 0 ? 110 : 150}
-                                    height={34}
-                                    borderRadius={17}
+                                    height={36}
+                                    borderRadius={20}
                                     style={styles.historySkeletonChip}
                                 />
                             ))}
@@ -225,13 +246,19 @@ function SearchScreen() {
                                 <TouchableOpacity
                                     key={index}
                                     style={styles.chip}
+                                    activeOpacity={0.75}
                                     onPress={() => handleHistoryPress(item)}
                                 >
-                                    <MaterialCommunityIcons name="magnify" size={14} color="#555" />
+                                    <MaterialCommunityIcons name="magnify" size={14} color={BRAND_PURPLE_LIGHT} />
                                     <Text style={styles.chipText}>{item}</Text>
                                 </TouchableOpacity>
                             )) : (
-                                <Text style={styles.emptyText}>No recent searches</Text>
+                                <View style={styles.emptyStateWrap}>
+                                    <View style={styles.emptyIconCircle}>
+                                        <MaterialCommunityIcons name="clock-outline" size={26} color={BRAND_PURPLE_LIGHT} />
+                                    </View>
+                                    <Text style={styles.emptyText}>No recent searches</Text>
+                                </View>
                             )}
                         </View>
                     )}
@@ -244,35 +271,43 @@ function SearchScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8F7FB",
     },
     content: {
         paddingHorizontal: 20,
-        paddingTop: 0,
+        paddingTop: 18,
     },
     suggestionWrapper: {
         flex: 1,
-        backgroundColor: "#fff",
-        paddingTop: 0,
+        backgroundColor: "#F8F7FB",
+        paddingTop: 10,
+    },
+    suggestionScrollContent: {
+        paddingHorizontal: 14,
+        paddingBottom: 24,
     },
     item: {
         flexDirection: "row",
         alignItems: "center",
+        backgroundColor: "#FFFFFF",
         paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderBottomWidth: 0.5,
-        borderBottomColor: "#f0f0f0",
+        paddingHorizontal: 14,
+        borderRadius: 16,
+        marginBottom: 10,
+        shadowColor: "#5B1E7A",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 2,
     },
     imageContainer: {
-        width: 42,
-        height: 42,
-        borderRadius: 8,
-        backgroundColor: "#f7f7f7",
+        width: 46,
+        height: 46,
+        borderRadius: 14,
+        backgroundColor: "#F8F7FB",
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 15,
-        borderWidth: 1,
-        borderColor: "#eee"
+        marginRight: 14,
     },
     img: {
         width: 30,
@@ -284,25 +319,52 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 15,
-        color: "#1a1a1a",
-        fontWeight: "400",
+        color: "#1F1B24",
+        fontWeight: "600",
+    },
+    tagPill: {
+        alignSelf: "flex-start",
+        marginTop: 5,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    tagPillProduct: {
+        backgroundColor: "#F1F0F5",
+    },
+    tagPillCategory: {
+        backgroundColor: "#F3E9FB",
     },
     categoryTag: {
-        fontSize: 11,
-        color: "#999",
-        marginTop: 2,
+        fontSize: 10.5,
+        fontWeight: "700",
+        color: "#8A8694",
+        textTransform: "uppercase",
+        letterSpacing: 0.3,
+    },
+    categoryTagCategory: {
+        color: BRAND_PURPLE,
+    },
+    arrowCircle: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: "#F3E9FB",
+        alignItems: "center",
+        justifyContent: "center",
+        marginLeft: 8,
     },
     historyHeader: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 15,
+        marginBottom: 16,
     },
     historyTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#222",
-        letterSpacing: -0.5,
+        fontSize: 19,
+        fontWeight: "800",
+        color: "#1F1B24",
+        letterSpacing: -0.4,
     },
     historyActions: {
         flexDirection: "row",
@@ -310,9 +372,15 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     actionButton: {
-        padding: 6,
-        borderRadius: 6,
-        backgroundColor: "#F4F7FE",
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F3E9FB",
+    },
+    actionButtonDanger: {
+        backgroundColor: "#FDEDED",
     },
     chipWrap: {
         flexDirection: "row",
@@ -321,23 +389,28 @@ const styles = StyleSheet.create({
     chip: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#f1f3f6",
+        backgroundColor: "#FFFFFF",
         paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 25,
-        marginRight: 8,
+        paddingVertical: 9,
+        borderRadius: 22,
+        marginRight: 10,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: "#e0e0e0",
+        borderColor: "#EEEAF4",
+        shadowColor: "#5B1E7A",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 1,
     },
     chipText: {
-        marginLeft: 6,
+        marginLeft: 7,
         fontSize: 13,
-        color: "#444",
-        fontWeight: "500",
+        color: "#3F3A47",
+        fontWeight: "600",
     },
     loaderContainer: {
-        padding: 30,
+        padding: 24,
         alignItems: 'stretch',
     },
     msg: {
@@ -365,18 +438,37 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     historySkeletonChip: {
-        marginRight: 8,
+        marginRight: 10,
         marginBottom: 10,
     },
+    emptyStateWrap: {
+        alignItems: "center",
+        paddingVertical: 36,
+        width: "100%",
+    },
+    emptyIconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: "#F3E9FB",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+    },
     noResultText: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        color: "#7A7A7A",
+        color: "#3F3A47",
         fontSize: 14,
+        fontWeight: "700",
+    },
+    emptySubText: {
+        marginTop: 4,
+        color: "#A6A1AE",
+        fontSize: 12,
     },
     emptyText: {
-        color: "#bbb",
-        fontSize: 14,
+        color: "#A6A1AE",
+        fontSize: 13,
+        fontWeight: "500",
     }
 });
 

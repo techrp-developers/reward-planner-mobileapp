@@ -9,30 +9,31 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
+// import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../../constatnt/BBPSHead';
 import SkeletonBox from '../../../services/component/constant/SkeletonBox';
+import { useAuth } from '../../../common/auth/context/AuthContext';
 
-const RECHARGE_HISTORY = [
-  {
-    id: '1',
-    planType: 'Validity Plan',
-    amount: '219',
-    validity: '28 days',
-    data: '3GB/pack',
-    rechargedOn: '17 Jan',
-    badgeColor: '#E9ECF9',
-  },
-  {
-    id: '2',
-    planType: 'Data Plan',
-    amount: '33',
-    validity: '1 days',
-    data: '2GB/pack',
-    rechargedOn: '17 Jan',
-    badgeColor: '#E9ECF9',
-  },
-];
+// const RECHARGE_HISTORY = [
+//   {
+//     id: '1',
+//     planType: 'Validity Plan',
+//     amount: '219',
+//     validity: '28 days',
+//     data: '3GB/pack',
+//     rechargedOn: '17 Jan',
+//     badgeColor: '#E9ECF9',
+//   },
+//   {
+//     id: '2',
+//     planType: 'Data Plan',
+//     amount: '33',
+//     validity: '1 days',
+//     data: '2GB/pack',
+//     rechargedOn: '17 Jan',
+//     badgeColor: '#E9ECF9',
+//   },
+// ];
 
 const FILTER_CHIPS = ['2GB Data', '28 Days Validity', '2.5 GB/Data'];
 
@@ -43,6 +44,7 @@ const RECOMMENDED_PACKS = [
 ];
 
 function RechargeSection({ navigation }: any) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -67,8 +69,8 @@ function RechargeSection({ navigation }: any) {
     <ScrollView style={styles.mainContainer} stickyHeaderIndices={[0]}>
       <BBPSHead
         user={{
-          name: 'Mr Dipesh...',
-          number: '9175334410',
+          name: user?.name || 'User',
+          number: user?.phone || '',
           operatorLogo: require('../../assets/Sample/VI_Card.png'),
           type: 'Prepaid',
         }}
@@ -136,7 +138,7 @@ function RechargeSection({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            {RECHARGE_HISTORY.map((item) => (
+            {/* {RECHARGE_HISTORY.map((item) => (
               <View key={item.id} style={styles.cardWrapper}>
                 <View style={[styles.badge, { backgroundColor: item.badgeColor }]}>
                   <Text style={styles.badgeText}>{item.planType}</Text>
@@ -178,7 +180,7 @@ function RechargeSection({ navigation }: any) {
                   )}
                 </View>
               </View>
-            ))}
+            ))} */}
 
             <View style={styles.plansSection}>
               {/* Search and Filter Section */}

@@ -80,11 +80,14 @@ function Dashbord() {
   const handleTabPress = useCallback(
     (tab: TabKey) => {
       switch (tab) {
-        case 'Explore':
-          navigation.navigate('ExploreModule');
+        case 'Notes':
+          navigation.navigate('TodoList');
           break;
         case 'Cart':
           navigation.navigate('Cart');
+          break;
+        case 'Search':
+          navigation.navigate('GlobalSearchScreen');
           break;
         case 'Profile':
           navigation.navigate('Profile');
@@ -122,6 +125,7 @@ function Dashbord() {
         userImageUri={headerUserImage ?? undefined}
         companyLogoUri={headerCompanyLogo ?? undefined}
         onSearchActiveChange={setIsSearchOpen}
+        onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
       />
 
       <ScrollView

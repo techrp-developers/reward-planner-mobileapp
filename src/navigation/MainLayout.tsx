@@ -52,7 +52,7 @@ const shouldShowNavbar = (routeChain: string[]): boolean => {
   const leafRoute = routeChain[routeChain.length - 1];
 
   if (moduleRoute === "ProductModule") {
-    return ["ProductModule", "HomeTab", "Home", "Explore"].includes(leafRoute);
+    return ["ProductModule", "HomeTab", "Home", "Notes"].includes(leafRoute);
   }
 
   if (moduleRoute === "ServicesModule") {
@@ -102,9 +102,13 @@ function MainLayout() {
 
   const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
-    (tab: "Home" | "Search" | "Explore" | "Cart" | "Profile") => {
+    (tab: "Home" | "Search" | "Notes" | "Cart" | "Profile") => {
       if (tab === "Cart") {
-        navigation.navigate("Cart");
+        if (activeMode === "Services") {
+          navigation.navigate("ServicesModule", { screen: "CartScreen" });
+        } else {
+          navigation.navigate("Cart");
+        }
         return;
       }
 
@@ -128,6 +132,10 @@ function MainLayout() {
         if (tab === "Search") navigation.navigate("ServicesModule", { screen: "ServiceSearch" });
         return;
       }
+
+      // Product (ecommerce) mode
+      if (tab === "Home") navigation.navigate("Home");
+      if (tab === "Search") navigation.navigate("Search");
     },
     [activeMode, navigation]
   );

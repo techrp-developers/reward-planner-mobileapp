@@ -15,7 +15,7 @@ export const TAB_BAR_HEIGHT = 68;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-export type TabKey = "Home" | "Explore" | "Cart" | "Profile" | "Search";
+export type TabKey = "Home" | "Notes" | "Cart" | "Profile" | "Search";
 
 type Props = {
   activeMode?: AppMode;
@@ -46,6 +46,26 @@ type TabItemProps = {
 // Defined outside render — stable reference, no allocation per press.
 const HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 } as const;
 const NOOP = () => {};
+
+// Tab config is identical across modes — the parent's onTabPress handler
+// (MainLayout / Dashbord) decides where each generic tab key actually
+// navigates based on activeMode, so BottomTabs itself stays mode-agnostic.
+const TABS: TabConfig[] = [
+  { key: "Home", label: "Home", Icon: HomeIcon },
+  { key: "Search", label: "Search", Icon: SearchIcon },
+  { key: "Cart", label: "Cart", Icon: CartIcon },
+  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+];
+
+// On the Dashboard, the Cart slot is replaced with Explore — cart access
+// already lives elsewhere on that screen, and Explore gives quick access
+// to the to-do list from the bottom bar.
+const DASHBOARD_TABS: TabConfig[] = [
+  { key: "Home", label: "Home", Icon: HomeIcon },
+  { key: "Search", label: "Search", Icon: SearchIcon },
+  { key: "Notes", label: "Notes", Icon: ExploreIcon },
+  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+];
 
 const TabItem = React.memo(({ label, active, onPress, Icon, badgeCount }: TabItemProps) => {
   const iconColor = active ? "#111827" : "#8B8B8B";
@@ -100,7 +120,6 @@ const CenterButton = React.memo(function CenterButton({
 CenterButton.displayName = "CenterButton";
 
 function BottomTabs({
-  activeMode = "Product",
   onTabPress,
   isDashboard = false,
   activeTabKey,
@@ -125,30 +144,14 @@ function BottomTabs({
     [onTabPress], // no activeTab dep — ref handles the guard
   );
 
-  const isProductMode = activeMode === "Product";
-
-  // cartCount intentionally excluded — injected at render time per tab.key so
-  // a badge update only re-renders the Cart TabItem, not the full tabs array.
-  const tabs = useMemo<TabConfig[]>(
-    () => [
-      { key: "Home", label: "Home", Icon: HomeIcon },
-      {
-        key: isProductMode ? "Explore" : "Search",
-        label: isProductMode ? "Explore" : "Search",
-        Icon: isProductMode ? ExploreIcon : SearchIcon,
-      },
-      { key: "Cart", label: "Cart", Icon: CartIcon },
-      { key: "Profile", label: "Profile", Icon: ProfileIcon },
-    ],
-    [isProductMode],
-  );
+  const tabs = isDashboard ? DASHBOARD_TABS : TABS;
 
   // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,
   // not on every tab press. Passing these as onPress keeps TabItem React.memo effective.
   const pressHandlers = useMemo<Record<TabKey, () => void>>(
     () => ({
       Home: () => handlePress("Home"),
-      Explore: () => handlePress("Explore"),
+      Notes: () => handlePress("Notes"),
       Search: () => handlePress("Search"),
       Cart: () => handlePress("Cart"),
       Profile: () => handlePress("Profile"),

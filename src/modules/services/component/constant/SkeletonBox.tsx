@@ -8,6 +8,8 @@ type SkeletonBoxProps = {
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
   pulse: Animated.Value;
+  baseColor?: string;
+  highlightColor?: string;
 };
 
 /**
@@ -20,10 +22,12 @@ export default function SkeletonBox({
   borderRadius = 8,
   style,
   pulse,
+  baseColor = '#ECECEC',
+  highlightColor = '#D5D5D5',
 }: SkeletonBoxProps) {
   const bg = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#ECECEC', '#D5D5D5'],
+    outputRange: [baseColor, highlightColor],
   });
 
   return (

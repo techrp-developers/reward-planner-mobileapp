@@ -73,7 +73,7 @@ function HomePage() {
                             >
                                 <View style={styles.textOverlay}>
                                     <Text style={styles.spentLabel}>Spent this Month</Text>
-                                    <Text style={styles.amountText}>₹25,560.40</Text>
+                                    <Text style={styles.amountText}>₹0</Text>
                                 </View>
                             </ImageBackground>
                         </View>
