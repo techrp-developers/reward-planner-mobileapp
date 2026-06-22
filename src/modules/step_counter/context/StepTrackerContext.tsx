@@ -17,6 +17,7 @@ import {
   openHealthConnectDataManagement,
   readRecords,
   requestPermission,
+  SdkAvailabilityStatus,
 } from 'react-native-health-connect';
 import type { Permission } from 'react-native-health-connect';
 
@@ -226,8 +227,10 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       const sdkStatus = await getSdkStatus(HC_PACKAGE);
       setHealthConnectStatus(String(sdkStatus));
 
-      if (sdkStatus !== 2) {
-        const msg = sdkStatus === 0 ? 'Health Connect not installed' : 'Health Connect needs setup';
+      if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+        const msg = sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE
+          ? 'Health Connect not installed'
+          : 'Health Connect needs setup';
         setHealthConnectError(msg);
         setStepDataState('no_permission');
         setLoading(false);
@@ -311,10 +314,10 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   const openHealthConnect = useCallback(async () => {
     try {
-      let status = 0;
+      let status: number = SdkAvailabilityStatus.SDK_UNAVAILABLE;
       try { status = await getSdkStatus(HC_PACKAGE); } catch {}
 
-      if (status === 0) {
+      if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) {
         try {
           await Linking.openURL('market://details?id=com.google.android.apps.healthdata');
         } catch {

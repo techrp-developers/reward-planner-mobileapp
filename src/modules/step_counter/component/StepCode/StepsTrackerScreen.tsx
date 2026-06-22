@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SendIntentAndroid from 'react-native-send-intent';
+import { SdkAvailabilityStatus } from 'react-native-health-connect';
 
 import { useStepTracker } from './useStepTracker';
 import { BORDER_RADIUS, RESPONSIVE, SPACING } from '../../utils/theme';
@@ -172,9 +173,9 @@ export default function StepsTrackerScreen() {
   const [selectedOptional,         setSelectedOptional]         = useState<OptionalProvider | null>(null);
   const [guideOpen,                setGuideOpen]                = useState(false);
 
-  const isHCInstalled = healthConnectStatus !== '0';
+  const isHCInstalled = healthConnectStatus !== '0' && healthConnectStatus !== String(SdkAvailabilityStatus.SDK_UNAVAILABLE);
   const hasStepsPerm  = grantedPermissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
-  const isHCReady     = healthConnectStatus === '2' && hasStepsPerm;
+  const isHCReady     = healthConnectStatus === String(SdkAvailabilityStatus.SDK_AVAILABLE) && hasStepsPerm;
   const showGuide     = isHCInstalled && !hasStepsPerm;
   const canProceed    = isHCReady && selectedOptional !== null && totalSteps > 0;
 
@@ -196,7 +197,7 @@ export default function StepsTrackerScreen() {
     catch { await Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata'); }
   };
 
-  const handleHCPress = () => (healthConnectStatus === '0' ? installHC() : openHealthConnect());
+  const handleHCPress = () => (isHCInstalled ? openHealthConnect() : installHC());
 
   const handleOptional = async (provider: OptionalProvider) => {
     setSelectedOptional(provider);
