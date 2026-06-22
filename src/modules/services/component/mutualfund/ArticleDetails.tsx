@@ -6,12 +6,12 @@ import {
     ScrollView,
     TouchableOpacity,
     StyleSheet,
-    SafeAreaView,
     StatusBar,
     ActivityIndicator,
     Dimensions,
     Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -42,7 +42,7 @@ function ArticleDetails() {
     }, [articleId, sectionId]);
 
     return (
-        <SafeAreaView style={styles.safe}>
+        <SafeAreaView style={styles.safe} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
             <View style={styles.header}>

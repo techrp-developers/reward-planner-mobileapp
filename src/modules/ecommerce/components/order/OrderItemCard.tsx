@@ -22,6 +22,9 @@ type Props = {
   rating?: number;
   price: string | number;
   rewardEarned?: number;
+  orderRef?: string;
+  orderedOn?: string;
+  itemCount?: number;
   actionText: string;
   courierName?: string;
   awbNumber?: string;
@@ -38,6 +41,9 @@ export default function OrderItemCard({
   rating,
   price,
   rewardEarned,
+  orderRef,
+  orderedOn,
+  itemCount,
   actionText,
   courierName,
   awbNumber,
@@ -79,17 +85,33 @@ export default function OrderItemCard({
             </Text>
           </View>
 
-          {/* Rating */}
-          <View style={styles.ratingRow}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <MaterialIcons
-                key={i}
-                name={i < rating ? "star" : "star-border"}
-                size={16}
-                color="#EC4899"
-              />
-            ))}
-          </View>
+          {(orderRef || orderedOn || itemCount) ? (
+            <View style={styles.metaWrap}>
+              {orderRef ? (
+                <Text style={styles.metaText} numberOfLines={1}>
+                  Order ID: {orderRef}
+                </Text>
+              ) : null}
+              {(orderedOn || itemCount) ? (
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {[orderedOn, itemCount ? `${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""]
+                    .filter(Boolean)
+                    .join(" | ")}
+                </Text>
+              ) : null}
+            </View>
+          ) : rating ? (
+            <View style={styles.ratingRow}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <MaterialIcons
+                  key={i}
+                  name={i < rating ? "star" : "star-border"}
+                  size={16}
+                  color="#EC4899"
+                />
+              ))}
+            </View>
+          ) : null}
 
           <Text style={styles.action}>{actionText}</Text>
 
@@ -175,6 +197,17 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: "row",
     marginBottom: 4,
+  },
+
+  metaWrap: {
+    marginBottom: 4,
+    gap: 2,
+  },
+
+  metaText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
   },
 
   action: {

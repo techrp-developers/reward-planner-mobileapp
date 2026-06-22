@@ -45,6 +45,7 @@ export type AppStackParamList = {
   RewardStack: undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
+  GlobalSearchScreen: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: undefined;
@@ -224,6 +225,13 @@ function AppNavigator() {
           require("../modules/common/auth/screens/ChangePasswordScreen").default
         }
       />
+       <AppStack.Screen
+        name="GlobalSearchScreen"
+        getComponent={() =>
+          require("../modules/dashboard/dashboard/GlobalSearchScreen").default
+        }
+      />
+      
 
     </AppStack.Navigator>
     </StepTrackerProvider>

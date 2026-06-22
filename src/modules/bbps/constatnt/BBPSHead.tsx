@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useNavigation } from '@react-navigation/native';
 
 interface UserInfo {
   name: string;
@@ -20,6 +21,13 @@ interface Props {
 }
 
 const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onChangePress }) => {
+  const navigation = useNavigation<any>();
+
+  const handleHelpPress = useCallback(() => {
+    onHelpPress?.();
+    navigation.navigate('HelpForm');
+  }, [onHelpPress, navigation]);
+
   return (
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
@@ -54,7 +62,7 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
         </View>
 
         {/* Right Section: Help Button */}
-        <TouchableOpacity activeOpacity={0.8} onPress={onHelpPress} style={styles.helpButtonWrap}>
+        <TouchableOpacity activeOpacity={0.8} onPress={handleHelpPress} style={styles.helpButtonWrap}>
           <LinearGradient colors={['#A654CD', '#FC8BAD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradientBorder}>
             <View style={styles.helpInnerContainer}>
               <MaskedView style={styles.maskedView} maskElement={

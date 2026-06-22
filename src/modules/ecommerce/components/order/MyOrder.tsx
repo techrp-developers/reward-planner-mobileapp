@@ -21,19 +21,41 @@ import OrderBanner from "../../../../assets/order/order_banner.svg";
 import Coin from "../../../../assets/product/rewards.svg";
 import OrderItemCard from "./OrderItemCard";
 import FilterBottomSheet from "./FilterBottomSheet";
-import { fetchHistory, trackOrder, type OrderShipment } from "../../api/OrderApi";
+import { fetchHistory } from "../../api/OrderApi";
 import { getProductImageUrl } from "../../api/ProductApi";
 import { useAuth } from "../../../common/auth/context/AuthContext";
 
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
+const formatDisplayDate = (value?: string) => {
+    if (!value) return undefined;
+    const normalized = value.replace(" ", "T");
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    }).format(date);
+};
+
+const toTitleCase = (value?: string) => {
+    if (!value) return "Pending";
+    return value
+        .replace(/[_-]/g, " ")
+        .split(" ")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
+};
+
 export default function MyOrder() {
     const navigation = useNavigation<Nav>();
     const { isAuthenticated } = useAuth();
 
     const [orders, setOrders] = useState<any[]>([]);
-    const [trackingMap, setTrackingMap] = useState<Record<string, OrderShipment | null>>({});
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [timeFilter, setTimeFilter] = useState("30days");
@@ -83,38 +105,6 @@ export default function MyOrder() {
         const timer = setTimeout(loadOrders, 400); // debounce
         return () => clearTimeout(timer);
     }, [loadOrders]);
-
-    useEffect(() => {
-        const fetchTrackingForOrders = async () => {
-            if (!Array.isArray(orders) || orders.length === 0) {
-                setTrackingMap({});
-                return;
-            }
-
-            const entries = await Promise.all(
-                orders.map(async (order) => {
-                    const orderId = String(order?.order_id ?? "").trim();
-                    if (!orderId) {
-                        return ["", null] as const;
-                    }
-
-                    const data = await trackOrder(orderId);
-                    const shipment = Array.isArray(data?.shipments) ? data.shipments[0] ?? null : null;
-                    return [orderId, shipment] as const;
-                })
-            );
-
-            const nextMap: Record<string, OrderShipment | null> = {};
-            entries.forEach(([orderId, shipment]) => {
-                if (orderId) {
-                    nextMap[orderId] = shipment;
-                }
-            });
-            setTrackingMap(nextMap);
-        };
-
-        fetchTrackingForOrders();
-    }, [orders]);
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -182,13 +172,9 @@ export default function MyOrder() {
                 ) : (
                     orders.map((order) => (
                         (() => {
-                            const orderId = String(order?.order_id ?? "");
-                            const shipment = trackingMap[orderId] ?? null;
-                            const statusText =
-                                shipment?.status_label ||
-                                shipment?.shipping_status ||
-                                order?.status ||
-                                "pending";
+                            const statusText = toTitleCase(order?.status);
+                            const orderRef = String(order?.order_ref || order?.order_id || "");
+                            const itemCount = Number(order?.item_count || 0);
 
                             return (
                                 <OrderItemCard
@@ -198,17 +184,17 @@ export default function MyOrder() {
                                             ? getProductImageUrl(order.image)
                                             : "https://via.placeholder.com/300x300/F3F4F6/9CA3AF?text=Product"
                                     }
-                                    status={String(statusText)}
-                                    statusColor={getStatusColor(String(statusText))}
+                                    status={statusText}
+                                    statusColor={getStatusColor(String(order?.status || statusText))}
                                     brand={order.brand || "Brand"}
                                     title={order.title || "Product"}
                                     rating={0}
                                     price={order.price || 0}
                                     rewardEarned={order.reward?.earned}
+                                    orderRef={orderRef}
+                                    orderedOn={formatDisplayDate(order.created_at)}
+                                    itemCount={itemCount || undefined}
                                     actionText="View Order"
-                                    logisticsStatus={shipment?.status_label || shipment?.shipping_status || undefined}
-                                    courierName={shipment?.courier_name || undefined}
-                                    awbNumber={shipment?.awb_number || undefined}
                                     onPress={() =>
                                         navigation.navigate("OrderConfirmedScreen", {
                                             order_id: order.order_id,

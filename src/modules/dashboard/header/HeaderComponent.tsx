@@ -132,9 +132,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     const q = searchQuery.trim();
     if (!q) return;
     closeSearch();
+    // Navigation on submit is the caller's decision (GlobalSearchScreen keeps
+    // results inline; Dashboard navigates to GlobalSearchScreen) — don't
+    // force a route here, or it fights with onSearchSubmit's own behavior.
     onSearchSubmit?.(q);
-    navigation.navigate('Search', { query: q });
-  }, [searchQuery, closeSearch, onSearchSubmit, navigation]);
+  }, [searchQuery, closeSearch, onSearchSubmit]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
