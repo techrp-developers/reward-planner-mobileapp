@@ -31,6 +31,7 @@ import Home_Nav from "../assets/menu/Home_Nav.svg";
 import Services from "../assets/menu/Services.svg";
 import Payments from "../assets/menu/Payments.svg";
 import Dine_Out from "../assets/menu/Dine_Out.svg";
+import Reward from "../assets/product/rewards.svg";
 
 import type { RootStackParamList } from "@/navigation/types";
 
@@ -60,7 +61,7 @@ type NavStateLike = {
   routes: Array<{
     name: string;
     state?: NavStateLike;
-    params?: { moduleName?: string };
+    params?: { moduleName?: string; screen?: string };
   }>;
 };
 
@@ -233,6 +234,12 @@ export default function Navbar() {
   const { isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const [rewardPoints, setRewardPoints] = React.useState(0);
+  const rewardPointsLabel = React.useMemo(() => {
+    const points = Number(rewardPoints || 0);
+    if (points >= 100000) return `${Math.floor(points / 1000)}k`;
+    if (points >= 10000) return `${(points / 1000).toFixed(1)}k`;
+    return points.toLocaleString("en-IN");
+  }, [rewardPoints]);
   // ✅ Get full navigation state once and derive both deepest route and active module
   const navigationState = useNavigationState((state) => state);
 
@@ -522,6 +529,7 @@ export default function Navbar() {
           activeOpacity={0.85}
           style={styles.walletBox}
           onPress={() => navigateToScreen("WalletHistory")}
+          hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
         >
           <WalletSvg width={26} height={26} />
           <View
@@ -530,9 +538,13 @@ export default function Navbar() {
               { backgroundColor: activeThemeColor },
             ]}
           >
-            <Text style={styles.walletTagText}>
-              ₹{rewardPoints}
-            </Text>          </View>
+            <View style={styles.walletTagInner}>
+              <Reward width={11} height={11} />
+              <Text style={styles.walletTagText} numberOfLines={1}>
+                {rewardPointsLabel}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -686,25 +698,37 @@ const styles = StyleSheet.create({
     height: 48,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.10)",
+    overflow: "visible",
     ...shadow,
   },
 
   walletTag: {
     position: "absolute",
-    bottom: -15,
-    right: -10,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 7,
-    borderWidth: 1.5,
+    bottom: -7,
+    right: -6,
+    minWidth: 28,
+    height: 18,
+    borderRadius: 999,
+    borderWidth: 1.25,
     borderColor: "#fff",
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  walletTagInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
   },
 
   walletTagText: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 11,
-    width: 40,
+    fontSize: 10,
+    lineHeight: 12,
+    maxWidth: 34,
   },
 
   iconCircle: {
@@ -718,7 +742,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,0,0,0.10)",
     ...shadow,
   },
-
   badgeDot: {
     position: "absolute",
     top: 9,

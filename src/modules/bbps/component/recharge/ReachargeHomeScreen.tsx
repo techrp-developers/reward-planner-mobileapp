@@ -12,28 +12,42 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Material Vector Icon
 import BBPSHead from '../../constatnt/BBPSHead';
+import { useAuth } from '../../../common/auth/context/AuthContext';
 // Assets
 import jio from '../../assets/Sample/jio.png';
 import airtel from '../../assets/Sample/airtel.png';
 import vi from '../../assets/Sample/VI_Card.png';
 import SkeletonBox from '../../../services/component/constant/SkeletonBox';
 
-const RECHARGE_DATA = [
-  { id: '1', name: 'Mr Dipesh Premkumar...', number: '9175334410', status: 'Recharged ₹219 on 17 Jan', icon: vi, type: 'My Number' },
-  { id: '2', name: 'Mummy', number: '9175334410', status: 'Recharged ₹219 on 17 Jan', icon: jio, type: 'Recent' },
-  { id: '3', name: 'Pappaji', number: '9175334410', status: 'Recharged ₹219 on 17 Jan', icon: airtel, type: 'Recent' },
-  { id: '4', name: 'Shubham', number: '9175334410', status: 'Recharged ₹219 on 17 Jan', icon: vi, type: 'Recent' },
-];
-const CONTACTS = [
-  { id: '1', name: 'Kiran', number: '9175334410', color: '#E44321' },
-  { id: '2', name: 'Sneha', number: '9175334410', color: '#88B1F3' },
-  { id: '3', name: 'Aftab', number: '9175334410', color: '#FCE4EC' },
-];
+// No recharge-history or saved-contacts API is wired up yet — both lists
+// stay empty rather than showing placeholder/fake entries.
+const RECENT_RECHARGES: any[] = [];
+const CONTACTS: any[] = [];
 
 function ReachargeHomeScreen({ navigation }: any) {
-  const [mobileNumber, setMobileNumber] = useState('+91 - 91753 34410');
+  const { user } = useAuth();
+  const [mobileNumber, setMobileNumber] = useState(user?.phone ?? '');
   const [loading, setLoading] = useState(true);
   const pulse = useRef(new Animated.Value(0)).current;
+
+  // user loads asynchronously — sync once it's available in case this
+  // screen mounted before the profile fetch resolved.
+  useEffect(() => {
+    if (user?.phone) {
+      setMobileNumber(user.phone);
+    }
+  }, [user?.phone]);
+
+  const myNumberEntry = user?.phone
+    ? {
+        id: 'my-number',
+        name: user?.name || 'My Number',
+        number: user.phone,
+        status: 'Your registered number',
+        icon: vi,
+        type: 'My Number',
+      }
+    : null;
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -183,7 +197,7 @@ function ReachargeHomeScreen({ navigation }: any) {
               <Text style={styles.sectionTitle}>My Number</Text>
             </View>
             <View style={styles.listBackground}>
-              {RECHARGE_DATA.filter(x => x.type === 'My Number').map(renderItem)}
+              {myNumberEntry && renderItem(myNumberEntry)}
             </View>
 
             {/* My Recharges & Bill Section */}
@@ -191,7 +205,7 @@ function ReachargeHomeScreen({ navigation }: any) {
               <Text style={styles.sectionTitle}>My Recharges & Bill</Text>
             </View>
             <View style={styles.listBackground}>
-              {RECHARGE_DATA.filter(x => x.type === 'Recent').map((item, index, arr) => (
+              {RECENT_RECHARGES.map((item, index, arr) => (
                 <View key={item.id}>
                   {renderItem(item)}
                   {index < arr.length - 1 && <View style={styles.separator} />}

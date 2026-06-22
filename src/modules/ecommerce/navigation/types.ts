@@ -43,6 +43,8 @@ export type HomeStackParamList = {
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   TodoList: undefined;
+    Profile : undefined;
+
   AddAddressMap: { fromCart?: boolean } | undefined;
   AddressDetails:
     | undefined

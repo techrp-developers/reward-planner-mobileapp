@@ -256,8 +256,8 @@ function Profile() {
                         <MaterialIcons name="keyboard-arrow-right" size={22} color="#444" />
                     </TouchableOpacity>
                 </View>
-                <View style={styles.listWrap}>
-                    {ordersLoading ? (
+                {/* <View style={styles.listWrap}>
+                    {ordersLoading ? (SSSS
                         <View style={styles.loadingWrap}>
                             <ActivityIndicator size="small" color="#852BAF" />
                         </View>
@@ -290,7 +290,7 @@ function Profile() {
                             )}
                         />
                     )}
-                </View>
+                </View> */}
                 {/* Profile Menu Card */}
                 <View style={styles.menuCard}>
                     <MenuItem title="Your Notes" showArrow onPress={handleOpenNotes} />

@@ -38,6 +38,8 @@ export default function HomeStack() {
       <Stack.Screen name="TermsAndConditions" getComponent={() => require("../profile/TermsandCondition").default} />
       <Stack.Screen name="PrivacyPolicy" getComponent={() => require("../profile/PrivacyPolicy").default} />
       <Stack.Screen name="TodoList" getComponent={() => require("../profile/TodoList").default} />
+      <Stack.Screen name="Profile" getComponent={() => require("../profile/Profile").default} />
+
       <Stack.Screen
         name="AddressDetails"
         getComponent={() => require("../components/ItemCardAddress/NewAddressForm").default}

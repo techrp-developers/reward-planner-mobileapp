@@ -47,17 +47,16 @@ function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
             goTo("Cart");
             break;
 
-          case "Explore":
-            goTo("Explore");
+          case "Notes":
+            goTo("Notes");
             break;
 
           case "Profile":
-            const parentNav = navigation.getParent();
             if (isAuthenticated) {
-              parentNav?.navigate("Profile");
+              goTo("Profile");
             } else {
               // Fallback path (normally unreachable because app is auth-first).
-              parentNav?.getParent?.()?.navigate("AuthStack", {
+              navigation.getParent?.()?.getParent?.()?.navigate("AuthStack", {
                 screen: "Login",
               });
             }

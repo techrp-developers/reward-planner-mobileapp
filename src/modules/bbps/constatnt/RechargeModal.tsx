@@ -6,11 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  ImageBackground,
+  Image,
 } from 'react-native';
 
-import Remainder from '../assets/BBPS_Service/Bills Reminder.png';
-
+import Eko from '../assets/BBPS_Service/serviceorg-medium.png';
 
 interface RechargeModalProps {
   visible: boolean;
@@ -21,7 +20,6 @@ interface RechargeModalProps {
 const RechargeModal: React.FC<RechargeModalProps> = ({
   visible,
   onClose,
-  onRecharge,
 }) => {
   const scaleValue = useRef(new Animated.Value(0)).current;
 
@@ -53,59 +51,37 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
               { transform: [{ scale: scaleValue }] },
             ]}
           >
-            <ImageBackground
-              source={Remainder}
-              style={styles.modalContainer}
-              imageStyle={styles.modalBackgroundImage}
-              resizeMode="cover"
-            >
-              <Text style={styles.title}>Recharge Reminder</Text>
-
-              <View style={styles.iconCircle}>
-                <View style={styles.placeholderLogo}>
-                  <Text style={styles.logoText}>⚡</Text>
-                </View>
+            <View style={styles.modalContainer}>
+              <View style={styles.logoCircle}>
+                <Image source={Eko} style={styles.logoImage} resizeMode="contain" />
               </View>
 
-              <Text style={styles.detailsText}>
-                839283829382 -{'\n'}
-                Mahavitran - Maharashtra{'\n'}
-                (MSEDCL)
+              <Text style={styles.companyName}>
+                Eko India Financial Services Pvt. Ltd.
               </Text>
 
-              <View style={styles.infoContainer}>
-                <Text style={styles.infoLabel}>Last Recharged - ₹834</Text>
-                <Text style={styles.infoLabel}>Due on - 19/01/2026</Text>
-              </View>
+              <View style={styles.divider} />
 
-              <TouchableOpacity 
-                activeOpacity={0.8} 
-                style={styles.rechargeBtn}
-                onPress={() => {
-                  if (onRecharge) {
-                    onRecharge();
-                    return;
-                  }
-                  onClose();
-                }}
+              <Text style={styles.title}>Service Temporarily Unavailable</Text>
+
+              <Text style={styles.detailsText}>
+                BBPS (Eko) services are currently unavailable.{'\n'}
+                Please avoid initiating any transactions{'\n'}
+                until the service is restored.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.okBtn}
+                onPress={onClose}
               >
-                <Text style={styles.rechargeBtnText}>Recharge</Text>
+                <Text style={styles.okBtnText}>Okay, Got It</Text>
               </TouchableOpacity>
-
-              <View style={styles.footerBtns}>
-                <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.footerText}>Later</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.footerText}>Decline</Text>
-                </TouchableOpacity>
-              </View>
-            </ImageBackground>
+            </View>
           </Animated.View>
 
-          {/* Separate X Button below the card as per image */}
-          <TouchableOpacity 
-            style={styles.closeCircle} 
+          <TouchableOpacity
+            style={styles.closeCircle}
             onPress={onClose}
             activeOpacity={0.7}
           >
@@ -120,102 +96,86 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)', // Darker overlay to focus on popup
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
   contentGroup: {
     alignItems: 'center',
+    width: '100%',
   },
   modalWrapper: {
     width: '100%',
     borderRadius: 24,
-    // iOS Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
-    // Android Shadow
     elevation: 12,
   },
   modalContainer: {
     width: '100%',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    overflow: 'hidden',
     borderRadius: 24,
+    backgroundColor: '#FFFFFF',
   },
-  modalBackgroundImage: {
-    borderRadius: 24,
-    
+  logoCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#F3E9FB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
+  },
+  companyName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F1B24',
+    textAlign: 'center',
+  },
+  divider: {
+    width: 48,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#E31E24',
+    marginTop: 14,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 20,
-    letterSpacing: 0.5,
-  },
-  iconCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  placeholderLogo: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 32,
-    color: '#E31E24', // Electric Red
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#E31E24',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   detailsText: {
-    color: '#FFFFFF',
+    color: '#4A4550',
     textAlign: 'center',
-    fontSize: 17,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  infoContainer: {
-    marginTop: 15,
-    alignItems: 'center',
-  },
-  infoLabel: {
-    color: '#FFFFFF',
     fontSize: 14,
-    opacity: 0.9,
-    marginVertical: 2,
-  },
-  rechargeBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    width: '80%',
-    borderRadius: 15,
-    marginTop: 25,
-    alignItems: 'center',
-    paddingHorizontal: 48,
-  },
-  rechargeBtnText: {
-    color: '#9D62D9', 
-    fontWeight: '800',
-    fontSize: 18,
-  },
-  footerBtns: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '70%',
-    marginTop: 25,
-  },
-  footerText: {
-    color: '#FFFFFF',
-    textDecorationLine: 'underline',
-    fontSize: 15,
+    lineHeight: 21,
     fontWeight: '500',
+  },
+  okBtn: {
+    backgroundColor: '#9D62D9',
+    paddingVertical: 14,
+    width: '85%',
+    borderRadius: 15,
+    marginTop: 26,
+    alignItems: 'center',
+  },
+  okBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 16,
   },
   closeCircle: {
     marginTop: 20,

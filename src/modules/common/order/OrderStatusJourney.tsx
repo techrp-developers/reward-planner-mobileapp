@@ -9,21 +9,25 @@ export type OrderStatusItem = {
 };
 
 type Props = {
-  arrivingBy: string;
+  arrivingBy?: string;
+  headerText?: string;
   statuses: OrderStatusItem[];
   onCancelPress?: () => void;
 };
 
 export default function OrderStatusJourney({
   arrivingBy,
+  headerText,
   statuses,
   onCancelPress,
 }: Props) {
+  const title = headerText || (arrivingBy ? `Status: ${arrivingBy}` : "Order status");
+
   return (
     <View style={styles.card}>
       {/* Header */}
       <Text style={styles.arrivalText}>
-        Arriving by <Text style={styles.arrivalDate}>{arrivingBy}</Text>
+        {title}
       </Text>
 
       {/* Timeline */}
@@ -73,15 +77,18 @@ export default function OrderStatusJourney({
         })}
       </View>
 
-      {/* Cancel */}
-      <View style={styles.divider} />
+      {onCancelPress ? (
+        <>
+          <View style={styles.divider} />
 
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onCancelPress}
-      >
-        <Text style={styles.cancelText}>Cancel Order</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onCancelPress}
+          >
+            <Text style={styles.cancelText}>Cancel Order</Text>
+          </TouchableOpacity>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -100,10 +107,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#16A34A",
     marginBottom: 16,
-  },
-
-  arrivalDate: {
-    fontWeight: "700",
   },
 
   row: {
