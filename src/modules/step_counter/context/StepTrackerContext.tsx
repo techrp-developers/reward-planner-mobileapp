@@ -70,13 +70,23 @@ function hasStepsPerm(permissions: any[]): boolean {
   return permissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
 }
 
+// toISOString() returns the UTC date, which can be a day off from the
+// device's local "today" depending on timezone — format using local
+// getters instead so the synced date matches what the user actually sees.
+function localDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function buildPayload(steps: number) {
   return {
     steps,
     distance_km:    Number((steps * 0.0008).toFixed(2)),
     calories:       Math.round(steps * 0.04),
     active_minutes: Math.max(1, Math.floor(steps / 1000)),
-    date:           new Date().toISOString().split('T')[0],
+    date:           localDateString(new Date()),
   };
 }
 
