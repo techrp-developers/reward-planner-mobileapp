@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 13,
-    color: VD.accent,
+    color: VD.white,
     fontWeight: "700",
   },
   graphContainer: {

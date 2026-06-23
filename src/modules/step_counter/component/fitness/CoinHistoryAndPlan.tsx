@@ -101,7 +101,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={VD.accent}
+              color={VD.white}
             />
           </TouchableOpacity>
         </View>
@@ -187,7 +187,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={VD.accent}
+              color={VD.white}
             />
           </TouchableOpacity>
         </View>
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: VD.accent,
+    color: VD.white,
     marginRight: 4,
   },
   coinList: {
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   getPlan: {
     ...TYPOGRAPHY.caption,
-    color: VD.accent,
+    color: VD.white,
     marginRight: 4,
   },
   planImage: {
