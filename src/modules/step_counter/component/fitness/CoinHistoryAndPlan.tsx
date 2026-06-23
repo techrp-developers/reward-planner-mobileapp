@@ -181,7 +181,7 @@ const CoinHistoryAndPlan: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.86}
             style={styles.getPlanButton}
-            onPress={() => navigation.navigate('StepForm')}
+            onPress={() => navigation.navigate('BMICart')}
           >
             <Text style={styles.getPlan}>Get My Plan</Text>
             <MaterialCommunityIcons

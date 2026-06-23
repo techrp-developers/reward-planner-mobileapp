@@ -133,6 +133,9 @@ export type ProfilePlanResponse = {
   // matches fitness_reward_config.goal_daily, the actual syncSteps payout.
   daily_reward_coins: number;
   weekly_plan: WeeklyPlanItem[];
+  // The actually-saved goal, if any — distinct from the BMI recommendation
+  // above (these can differ if weight changed since the goal was last set).
+  current_goal: { daily_steps: number; start_date: string } | null;
 };
 
 export type SelectGoalPayload = {
