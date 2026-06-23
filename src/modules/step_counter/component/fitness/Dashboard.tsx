@@ -206,6 +206,23 @@ const StreakRow: React.FC<StreakProps> = ({ streak }) => {
   );
 };
 
+// Single tappable entry point into the achievements screen — kept as a plain
+// promo card rather than a multi-shield preview (Streak/Trail/Sunrise groups
+// were removed from the backend; with only "Walking" left, a 4-icon row
+// would look sparse), opens AchievementCard directly on tap.
+const AchievementsTeaser: React.FC<{ onPress: () => void }> = ({ onPress }) => (
+  <TouchableOpacity style={styles.achTeaserCard} onPress={onPress} activeOpacity={0.85}>
+    <View style={styles.achTeaserIconWrap}>
+      <MaterialCommunityIcons name="trophy-outline" size={26} color={VD.accent} />
+    </View>
+    <View style={styles.achTeaserCopy}>
+      <Text style={styles.achTeaserTitle}>Achievements</Text>
+      <Text style={styles.achTeaserSub}>See your unlocked milestones and rewards</Text>
+    </View>
+    <MaterialCommunityIcons name="chevron-right" size={22} color={VD.whiteLow} />
+  </TouchableOpacity>
+);
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
   const today = useMemo(() => new Date(), []);
@@ -444,6 +461,9 @@ const Dashboard: React.FC = () => {
 
                 {/* Streak */}
                 <StreakRow streak={streakCount} />
+
+                {/* Achievements entry point */}
+                <AchievementsTeaser onPress={() => navigation.navigate("AchievementCard")} />
 
                 {/* Divider label */}
                 <View style={styles.dividerRow}>
@@ -743,6 +763,27 @@ const styles = StyleSheet.create({
     color: VD.whiteLow,
     fontWeight: "700",
   },
+
+  // ── Achievements teaser ──
+  achTeaserCard: {
+    backgroundColor: VD.cardBg,
+    borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  achTeaserIconWrap: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: VD.accentFaint,
+    alignItems: "center", justifyContent: "center",
+  },
+  achTeaserCopy: { flex: 1 },
+  achTeaserTitle: { fontSize: 15, fontWeight: "700", color: VD.white },
+  achTeaserSub: { fontSize: 12, color: VD.whiteLow, marginTop: 2 },
 
   // ── Divider ──
   dividerRow: {
