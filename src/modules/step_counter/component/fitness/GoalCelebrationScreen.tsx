@@ -30,7 +30,14 @@ import icon_Sunrise_Strider from "../../assets/StepCount/Achivement_icon(1).svg"
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type AchievementCategory = "walking" | "streak" | "trail" | "sunrise";
 
-type Props = NativeStackScreenProps<FitnessStackParamList, "GoalCelebrationScreen">;
+// Dashboard renders this as a bare overlay (response + onDismiss) instead of
+// navigating to it as a registered screen, so route/navigation are never
+// injected in that mode — support both invocation styles.
+type NavProps = NativeStackScreenProps<FitnessStackParamList, "GoalCelebrationScreen">;
+type DirectProps = { response: GoalSyncData; onDismiss: () => void };
+type Props = NavProps | DirectProps;
+
+const isDirectProps = (props: Props): props is DirectProps => "onDismiss" in props;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -394,8 +401,17 @@ const AchievementCard: React.FC<{
 };
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-const GoalCelebrationScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { response } = route.params;
+const GoalCelebrationScreen: React.FC<Props> = (props) => {
+  const response = isDirectProps(props) ? props.response : props.route.params.response;
+
+  // When used as a real navigated screen, "dismiss" means go back to the
+  // dashboard via the navigator. When rendered as a Dashboard overlay,
+  // onDismiss already decides whether to chain into the next overlay
+  // (TodayGoalCompletedScreen) — see Dashboard's handleDismissCelebration.
+  const dismiss = useCallback(() => {
+    if (isDirectProps(props)) props.onDismiss();
+    else props.navigation.replace("Dashboard");
+  }, [props]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showBlast, setShowBlast] = useState(true);
@@ -432,17 +448,25 @@ const GoalCelebrationScreen: React.FC<Props> = ({ route, navigation }) => {
   }, [bgOpacity, animateIn]);
 
   const navigateForward = useCallback(() => {
+    if (isDirectProps(props)) {
+      // Dashboard's handleDismissCelebration already checks
+      // planOverview/overallSummary and shows TodayGoalCompletedScreen
+      // itself — this just signals "done with the celebration".
+      props.onDismiss();
+      return;
+    }
+
     if (response.planOverview && response.overallSummary) {
-      navigation.navigate("TodayGoalCompletedScreen", {
+      props.navigation.navigate("TodayGoalCompletedScreen", {
         planOverview:   response.planOverview,
         overallSummary: response.overallSummary,
         currentStreak:  response.currentStreak ?? 0,
         reward:         response.reward,
       });
     } else {
-      navigation.replace("Dashboard");
+      props.navigation.replace("Dashboard");
     }
-  }, [navigation, response]);
+  }, [props, response]);
 
   const handleNext = () => {
     if (currentIndex < total - 1) {
@@ -500,7 +524,7 @@ const GoalCelebrationScreen: React.FC<Props> = ({ route, navigation }) => {
           </Text>
         </View>
 
-        <TouchableOpacity onPress={() => navigation.replace("Dashboard")} style={styles.skipBtn}>
+        <TouchableOpacity onPress={dismiss} style={styles.skipBtn}>
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </ScrollView>

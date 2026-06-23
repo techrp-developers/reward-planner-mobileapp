@@ -84,10 +84,10 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
                     {
                       height: `${fillHeight}%`,
                       backgroundColor: item.done
-                        ? VD.accent
+                        ? VD.white
                         : isToday
-                        ? "#A78FFF"
-                        : VD.accentDim,
+                        ? "rgba(255,255,255,0.85)"
+                        : "rgba(255,255,255,0.25)",
                       borderWidth: isToday
                         ? 1
                         : 0,
