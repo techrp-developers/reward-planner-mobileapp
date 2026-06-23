@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   streakNumSub: {
     fontSize: 14,
     fontWeight: "500",
-    color: VD.whiteLow,
+    color: VD.white,
   },
   streakSub: {
     fontSize: 12,
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
   },
   streakDotText: {
     fontSize: 10,
-    color: VD.whiteLow,
+    color: VD.white,
     fontWeight: "700",
   },
 
@@ -857,26 +857,4 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1000,
   },
-  weekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  viewMoreButton: {
-    minHeight: 32,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: VD.accentFaint,
-    borderWidth: 1,
-    borderColor: VD.cardBorder,
-  },
-  viewMore: {
-    ...TYPOGRAPHY.caption,
-    color: VD.accent,
-    marginRight: 4,
-  },
-
 });

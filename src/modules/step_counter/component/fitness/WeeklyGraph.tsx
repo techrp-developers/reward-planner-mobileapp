@@ -56,7 +56,7 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
           <MaterialCommunityIcons
             name="arrow-right"
             size={16}
-            color={VD.accent}
+            color={VD.white}
           />
         </TouchableOpacity>
       </View>
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: VD.whiteLow,
+    color: VD.white,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
 
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: VD.accent,
+    color: VD.white,
     marginRight: 4,
   },
 

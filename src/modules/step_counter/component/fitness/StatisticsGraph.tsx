@@ -132,7 +132,7 @@ const StatisticsGraph: React.FC = () => {
                   width={BAR_WIDTH}
                   height={barHeight}
                   rx={3}
-                  fill={VD.accent}
+                  fill={VD.white}
                 />
               );
             })}
