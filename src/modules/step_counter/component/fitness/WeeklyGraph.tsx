@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal:
       SPACING.md,
+    marginRight: SPACING.xs,
     borderRadius:
       BORDER_RADIUS.pill,
     backgroundColor:

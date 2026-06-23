@@ -206,6 +206,7 @@ const StreakRow: React.FC<StreakProps> = ({ streak }) => {
   );
 };
 
+
 // Single tappable entry point into the achievements screen — kept as a plain
 // promo card rather than a multi-shield preview (Streak/Trail/Sunrise groups
 // were removed from the backend; with only "Walking" left, a 4-icon row
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   },
   ringGoalText: {
     fontSize: 13,
-    color: VD.whiteLow,
+    color: VD.white,
     marginTop: 10,
     fontWeight: "500",
   },
@@ -719,9 +720,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: VD.cardBorder,
     padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: SPACING.lg,
   },
   streakNum: {
@@ -742,7 +740,8 @@ const styles = StyleSheet.create({
   },
   streakDots: {
     flexDirection: "row",
-    gap: 5,
+    justifyContent: "space-between",
+    marginTop: SPACING.md,
   },
   streakDot: {
     width: 28,
