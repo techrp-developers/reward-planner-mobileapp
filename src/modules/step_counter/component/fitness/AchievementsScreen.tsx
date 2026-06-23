@@ -300,11 +300,11 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,,0.72)",
+    backgroundColor: "rgba(255,255,255,0.72)",
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: COLORS.vdWhite,
     textAlign: "center",
   },
   headerSpacer: {
