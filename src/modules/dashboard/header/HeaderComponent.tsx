@@ -22,6 +22,7 @@ import SearchDropdown from './SearchDropdown';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
+const SEARCH_DROPDOWN_SPACE = 480;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   return (
     // Outer wrapper: creates a stacking context so the dropdown overlays
     // dashboard content below without affecting the layout flow.
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, showDropdown && styles.wrapperWithDropdown]}>
 
       <View
         style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10 }]}
@@ -356,6 +357,9 @@ const styles = StyleSheet.create({
   // Outer wrapper creates a stacking context
   wrapper: {
     zIndex: 100,
+  },
+  wrapperWithDropdown: {
+    paddingBottom: SEARCH_DROPDOWN_SPACE,
   },
 
   headerSurface: {

@@ -278,9 +278,9 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   // ── Results ───────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.card, tk.card]}>
-      <Animated.View style={[styles.listWrap, { maxHeight: dropdownHeight }, animStyle]}>
+      <Animated.View style={[styles.listWrap, { height: dropdownHeight, maxHeight: dropdownHeight }, animStyle]}>
         <SectionList
-          style={[styles.list, { maxHeight: dropdownHeight }]}
+          style={[styles.list, { height: dropdownHeight, maxHeight: dropdownHeight }]}
           contentContainerStyle={styles.listContent}
           sections={sections}
           keyExtractor={(item) => `${item.type}-${item.id}`}
