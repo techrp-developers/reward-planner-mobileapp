@@ -18,7 +18,7 @@ import {
   type AchievementMilestone,
 } from "../../api/DashboardAPI";
 import { useAchievementsQuery } from "../../api/useFitnessQueries";
-import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from "../../utils/theme";
+import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "../../utils/theme";
 
 // UNACHIEVED GRAY SHIELD
 import UnAchievedShield from "../../assets/StepCount/UnAchievedShield.svg";
@@ -30,6 +30,20 @@ import Walking_Enthusiast from "../../assets/StepCount/Walking_Enthusiast.svg";
 import icon_Walking_Enthusiast from "../../assets/StepCount/Achivement_icon(2).svg";
 
 const { width } = Dimensions.get("window");
+
+const VD = {
+  bg: ["#070A16", "#111735", "#201A3F"],
+  ink: "#F6F7FF",
+  muted: "#A8AEC8",
+  softText: "#979EBC",
+  accent: "#8EA2FF",
+  accentDark: "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg: "rgba(255,255,255,0.075)",
+  cardSoft: "rgba(255,255,255,0.10)",
+  cardBorder: "rgba(174,188,255,0.16)",
+  shadow: "#02030A",
+};
 
 // Streak Keeper / Trailblazer / Sunrise Strider were removed from the
 // backend (fitness_achievements.sql) — the unlock logic never tracked
@@ -224,8 +238,8 @@ export default function AchievementsScreen() {
   }, [achievementsQuery.data]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient colors={COLORS.gradientScreen} style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* HEADER */}
           <View style={styles.header}>
@@ -237,7 +251,7 @@ export default function AchievementsScreen() {
               <MaterialCommunityIcons
                 name="chevron-left"
                 size={25}
-                color={COLORS.textDark}
+                color={VD.accentDark}
               />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Achievements</Text>
@@ -247,7 +261,7 @@ export default function AchievementsScreen() {
           {/* SECTIONS */}
           {loading ? (
             <View style={[styles.card, styles.stateCard]}>
-              <ActivityIndicator color={COLORS.primaryIndigo} />
+              <ActivityIndicator color={VD.accent} />
               <Text style={styles.stateText}>Loading achievements...</Text>
             </View>
           ) : errorMessage ? (
@@ -286,13 +300,20 @@ export default function AchievementsScreen() {
 
 /* ---------------- STYLES ---------------- */
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: VD.bg[0],
+  },
+  gradient: {
+    flex: 1,
+  },
   header: {
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     margin: 16,
-    marginBottom: 2,
+    marginBottom: SPACING.sm,
   },
   iconButton: {
     width: 42,
@@ -300,11 +321,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: VD.cardSoft,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.vdWhite,
+    color: VD.ink,
     textAlign: "center",
   },
   headerSpacer: {
@@ -313,21 +336,27 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: VD.cardBg,
     margin: 16,
     padding: 18,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
 
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#333",
+    color: VD.ink,
   },
   sectionDesc: {
     marginTop: 4,
-    color: "#333",
+    color: VD.muted,
     marginBottom: 14,
   },
 
@@ -374,7 +403,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -10,
     right: -5,
-    backgroundColor: "#fff",
+    backgroundColor: VD.cardSoft,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -382,7 +411,7 @@ const styles = StyleSheet.create({
   },
   stepsLeftText: {
     fontSize: 10,
-    color: "#444",
+    color: VD.ink,
     fontWeight: "600",
   },
   stateCard: {
@@ -392,7 +421,7 @@ const styles = StyleSheet.create({
   },
   stateText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
+    color: VD.muted,
     marginTop: SPACING.sm,
     textAlign: "center",
   },
@@ -401,11 +430,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.sm,
     borderRadius: 999,
-    backgroundColor: COLORS.primaryIndigo,
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   retryText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textWhite,
+    color: VD.accentDark,
   },
   smallIcon: {
     marginTop: 2,
