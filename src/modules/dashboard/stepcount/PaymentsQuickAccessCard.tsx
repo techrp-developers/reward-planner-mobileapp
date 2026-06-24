@@ -16,7 +16,6 @@ import { fs, rs } from "../../../utils/responsive";
 import { useAppTheme } from "../../../theme/ThemeContext";
 
 interface PaymentsQuickAccessCardProps {
-  onMenuPress?: () => void;
   onOpenPayments?: () => void;
   onOpenBills?: () => void;
   onOpenHistory?: () => void;
@@ -32,7 +31,6 @@ type QuickAction = {
 };
 
 const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
-  onMenuPress,
   onOpenPayments,
   onOpenBills,
   onOpenHistory,
@@ -85,7 +83,6 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
       } as ViewStyle,
       title: { color: theme.text } as TextStyle,
       subtitle: { color: theme.secondaryText } as TextStyle,
-      menuDots: { color: theme.secondaryText } as TextStyle,
       actionCard: {
         backgroundColor: isDark ? "rgba(124, 58, 237, 0.16)" : "#F5F3FF",
         borderColor: isDark ? "rgba(196, 181, 253, 0.14)" : "rgba(124, 58, 237, 0.12)",
@@ -131,9 +128,6 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
               Quick Access
             </Text>
           </View>
-          <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Text style={[styles.menuDots, t.menuDots]}>{"\u22EE"}</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.actionList}>
@@ -217,10 +211,6 @@ const styles = StyleSheet.create({
     fontSize: fs(10),
     marginTop: 1,
     letterSpacing: 0,
-  },
-  menuDots: {
-    fontSize: fs(20),
-    paddingLeft: rs(4),
   },
   actionList: {
     gap: rs(6),

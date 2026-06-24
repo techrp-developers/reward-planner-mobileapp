@@ -22,7 +22,6 @@ interface StepsCounterCardProps {
     goalSteps?: number;
     progressPercent?: number;
     stepsToday?: number;
-    onMenuPress?: () => void;
     onPress?: () => void;
     loading?: boolean;
     cardWidth?: number;
@@ -31,7 +30,7 @@ interface StepsCounterCardProps {
 // ── Daily activity sparkline ───────────────────────────────────────────────
 const DAILY_BARS = [0.3, 0.5, 0.4, 0.7, 0.6, 0.9, 0.5, 0.8, 0.65, 0.4, 0.75, 0.55];
 const ACTIVE_BAR_INDEX = DAILY_BARS.length - 3;
-const BAR_MAX = rs(20);
+const BAR_MAX = rs(26);
 
 const BAR_HEIGHTS = DAILY_BARS.map((h, i) => ({
     height: h * BAR_MAX,
@@ -45,7 +44,6 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     goalSteps = 7000,
     progressPercent,
     stepsToday = 320,
-    onMenuPress,
     onPress,
     loading: _loading = false,
     cardWidth,
@@ -123,9 +121,6 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                             <Text style={[styles.title, t.title]} numberOfLines={1}>Steps Counter</Text>
                             <Text style={[styles.subtitle, t.subtitle]}>Today's Progress</Text>
                         </View>
-                        <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                            <Text style={styles.menuDots}>⋮</Text>
-                        </TouchableOpacity>
                     </View>
 
                     {/* Body: ring, stats, activity */}
@@ -245,8 +240,6 @@ const styles = StyleSheet.create({
         letterSpacing: -0.2,
     },
     subtitle: { fontSize: fs(10), marginTop: 1 },  // color via t.subtitle
-    menuDots: { fontSize: fs(20), color: "#C4B5FD", paddingLeft: rs(4) },
-
     body: {
         alignItems: "center",
         gap: rs(8),
@@ -316,13 +309,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-end",
         alignSelf: "center",
-        height: rs(30),
+        height: rs(36),
         marginTop: rs(10),
         marginBottom: rs(5),
         gap: rs(3),
     },
     bar: {
-        width: rs(5),
+        width: rs(6),
         borderRadius: rs(20),
         minHeight: rs(4),
     },
