@@ -27,18 +27,19 @@ type Nav = NativeStackNavigationProp<FitnessStackParamList, "StepGoal">;
 // ─── Violet Dusk palette ──────────────────────────────────────────────────────
 
 const VD = {
-  accent:      "#C4A8FF",
-  accentFaint: "rgba(196,168,255,0.12)",
-  cardBg:      "rgba(255,255,255,0.09)",
-  cardBorder:  "rgba(196,168,255,0.18)",
+  accent:      "#8EA2FF",
+  accentDark:  "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.075)",
+  cardBorder:  "rgba(174,188,255,0.16)",
   white:       "#FFFFFF",
-  whiteMid:    "rgba(255,255,255,0.70)",
-  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteMid:    "#CDD2EA",
+  whiteLow:    "#979EBC",
   whiteGhost:  "rgba(255,255,255,0.10)",
-  warning:     "#FBBF24",
+  warning:     "#F8B84E",
 };
 
-const BG = ["#1A1040", "#3D2080", "#6B3FA0"];
+const BG = ["#070A16", "#111735", "#201A3F"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -106,14 +107,14 @@ const StepGoal: React.FC = () => {
     <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Back */}
           <TouchableOpacity style={ss.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accentDark} />
           </TouchableOpacity>
 
           <Text style={ss.eyebrow}>Activity target</Text>
@@ -161,7 +162,7 @@ const StepGoal: React.FC = () => {
                       <CoinIcon width={14} height={14} />
                       <Text style={ss.coinText}>{item.coins}</Text>
                     </View>
-                    {active && <MaterialCommunityIcons name="check-circle" size={18} color={VD.accent} />}
+                    {active && <MaterialCommunityIcons name="check-circle" size={18} color={VD.accentDark} />}
                   </View>
                 </TouchableOpacity>
               );
@@ -173,12 +174,12 @@ const StepGoal: React.FC = () => {
           {/* CTA */}
           <TouchableOpacity activeOpacity={0.9} onPress={handleSetGoal} disabled={disabled} style={ss.ctaWrap}>
             <LinearGradient
-              colors={disabled ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#9B6FFF", "#C4A8FF"]}
+              colors={disabled ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#8EA2FF", "#B9C4FF"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={ss.cta}
             >
               {submitting
-                ? <ActivityIndicator color={VD.accent} />
+                ? <ActivityIndicator color={VD.accentDark} />
                 : <Text style={[ss.ctaText, disabled && ss.ctaTextDim]}>Set Goal</Text>
               }
             </LinearGradient>
@@ -196,7 +197,7 @@ export default React.memo(StepGoal);
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const ss = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  safe:     { flex: 1, backgroundColor: "#070A16" },
   gradient: { flex: 1 },
   scroll:   { alignItems: "center", paddingTop: SPACING.xl },
 
@@ -212,13 +213,13 @@ const ss = StyleSheet.create({
 
   eyebrow: {
     width: "100%",
-    fontSize: 11, fontWeight: "700", letterSpacing: 1.2,
-    textTransform: "uppercase", color: VD.accent, marginBottom: 6,
+    fontSize: 11, fontWeight: "700", letterSpacing: 0,
+    textTransform: "uppercase", color: VD.accentDark, marginBottom: 6,
   },
   title: {
     width: "100%",
     fontSize: 28, fontWeight: "900", color: VD.white,
-    letterSpacing: -0.6, lineHeight: 34, marginBottom: SPACING.sm,
+    letterSpacing: 0, lineHeight: 34, marginBottom: SPACING.sm,
   },
   subtitle: {
     width: "100%",
@@ -236,7 +237,7 @@ const ss = StyleSheet.create({
   goalCardSelected: { borderColor: VD.accent, backgroundColor: VD.accentFaint },
   goalIconWrap: {
     width: 44, height: 44, borderRadius: 12,
-    backgroundColor: "rgba(252,139,173,0.15)",
+    backgroundColor: VD.accentFaint,
     alignItems: "center", justifyContent: "center",
     marginRight: SPACING.md,
   },
@@ -269,7 +270,7 @@ const ss = StyleSheet.create({
     backgroundColor: VD.accentFaint,
     borderWidth: 1, borderColor: VD.cardBorder,
   },
-  retryText: { fontSize: 13, fontWeight: "700", color: VD.accent },
+  retryText: { fontSize: 13, fontWeight: "700", color: VD.accentDark },
 
   footerText: {
     fontSize: 13, color: VD.whiteLow, textAlign: "center",
@@ -281,7 +282,7 @@ const ss = StyleSheet.create({
     height: 54, borderRadius: BORDER_RADIUS.large,
     alignItems: "center", justifyContent: "center",
   },
-  ctaText:    { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+  ctaText:    { fontSize: 16, fontWeight: "800", color: "#070A16", letterSpacing: 0 },
   ctaTextDim: { color: VD.whiteLow },
 
   bottomPad: { height: SPACING.xxl },
