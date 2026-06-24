@@ -38,10 +38,12 @@ const HighlightedText = memo(({
   text,
   query,
   titleColor,
+  accentColor,
 }: {
   text: string;
   query: string;
   titleColor: string;
+  accentColor: string;
 }) => {
   const trimmed = query.trim();
 
@@ -49,7 +51,7 @@ const HighlightedText = memo(({
 
   if (!trimmed || idx === -1) {
     return (
-      <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={2}>
+      <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={1}>
         {text}
       </Text>
     );
@@ -60,9 +62,9 @@ const HighlightedText = memo(({
   const after = text.slice(idx + trimmed.length);
 
   return (
-    <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={2}>
+    <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={1}>
       {before}
-      <Text style={styles.highlight}>{match}</Text>
+      <Text style={[styles.highlight, { color: accentColor }]}>{match}</Text>
       {after}
     </Text>
   );
@@ -113,12 +115,20 @@ const ResultItem = memo(({
         )}
       </View>
 
-      <HighlightedText text={item.title} query={query} titleColor={titleColor} />
-
-      <View style={[styles.badge, { backgroundColor: badgeColor + '18' }]}>
-        <MaterialCommunityIcons name={badgeIcon} size={11} color={badgeColor} />
-        <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
+      <View style={styles.resultTextWrap}>
+        <HighlightedText
+          text={item.title}
+          query={query}
+          titleColor={titleColor}
+          accentColor={badgeColor}
+        />
+        <View style={styles.resultMetaRow}>
+          <MaterialCommunityIcons name={badgeIcon} size={12} color={badgeColor} />
+          <Text style={[styles.resultMetaText, { color: badgeColor }]}>{badgeLabel}</Text>
+        </View>
       </View>
+
+      <MaterialCommunityIcons name="chevron-right" size={20} color={badgeColor} />
     </TouchableOpacity>
   );
 });
@@ -163,12 +173,12 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
     minCharHint: { color: isDark ? '#5A5A7E' : '#B0A8D8' } as TextStyle,
     emptyTitle: { color: isDark ? '#C4BCFF' : '#1A1A2E' } as TextStyle,
     emptyHint: { color: isDark ? '#5A5A7E' : '#9B8FCC' } as TextStyle,
-    sectionBg: isDark ? 'rgba(255,255,255,0.06)' : '#F8FAFC',
+    sectionBg: isDark ? 'rgba(255,255,255,0.05)' : '#F9FAFB',
     sectionText: isDark ? '#C4BCFF' : '#7C3AED',
     thumbBg: isDark ? '#2A2A3E' : '#EEF2FF',
     itemBg: isDark ? '#1E1E32' : '#FFFFFF',
     titleColor: isDark ? '#F8FAFC' : '#111827',
-    separatorColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+    separatorColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.06)',
     footerBorder: { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' } as ViewStyle,
     magnifyIcon: isDark ? '#3D3D5C' : '#D0CBFF',
   }), [isDark]);
@@ -324,7 +334,7 @@ export default memo(SearchDropdown);
 const styles = StyleSheet.create({
   // Outer card: shadow + border. NO overflow:'hidden' — that blocks Android scroll events.
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: 12 },
@@ -336,10 +346,10 @@ const styles = StyleSheet.create({
   // SectionList owns the scroll area — maxHeight lives here, not on the card.
   listWrap: {
     overflow: 'hidden',
-    borderRadius: 18,
+    borderRadius: 20,
   },
   list: {
-    borderRadius: 18,
+    borderRadius: 20,
   },
   listContent: {
     paddingBottom: 4,
@@ -347,13 +357,14 @@ const styles = StyleSheet.create({
 
   // Section header
   section: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   sectionText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    letterSpacing: 1.3,
   },
 
   // Result row
@@ -363,14 +374,14 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12.5,
+    gap: 13,
   },
   thumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -380,28 +391,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  itemTitle: {
+  resultTextWrap: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
+    minWidth: 0,
+  },
+  itemTitle: {
+    fontSize: 14.5,
+    fontWeight: '500',
     lineHeight: 19,
+    letterSpacing: 0,
   },
   highlight: {
     fontWeight: '800',
-    color: '#7C5CFC',
   },
-  badge: {
+  resultMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-    flexShrink: 0,
+    gap: 5,
+    marginTop: 5,
   },
-  badgeText: {
-    fontSize: 10,
+  resultMetaText: {
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
   // "See all results" footer
@@ -409,14 +421,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderTopWidth: 1,
   },
   viewAllText: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     color: '#7C5CFC',
   },
 
