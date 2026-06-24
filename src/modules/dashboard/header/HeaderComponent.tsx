@@ -149,7 +149,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         onLayout={handleHeaderLayout}
       >
         {/* ── Row 1 : Avatar | Greeting | Logo ── */}
-        <View style={styles.headerHighlight} />
         <View style={styles.topRow}>
 
           <TouchableOpacity
@@ -320,17 +319,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 34,
     overflow: 'hidden',
   },
-  headerHighlight: {
-    position: 'absolute',
-    top: -22,
-    right: -42,
-    bottom: -18,
-    width: 205,
-    borderTopLeftRadius: 96,
-    borderBottomLeftRadius: 96,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-
   // ── Row 1 ──
   topRow: {
     flexDirection: 'row',

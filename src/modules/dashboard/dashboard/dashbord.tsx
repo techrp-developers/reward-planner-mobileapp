@@ -122,14 +122,6 @@ function Dashbord() {
       end={{ x: 0, y: 1 }}
       style={styles.root}
     >
-      <HeaderComponent
-        userName={headerUserName}
-        userImageUri={headerUserImage ?? undefined}
-        companyLogoUri={headerCompanyLogo ?? undefined}
-        onSearchActiveChange={setIsSearchOpen}
-        onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-      />
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
@@ -137,6 +129,14 @@ function Dashbord() {
         scrollEnabled={!isSearchOpen}
         bounces
       >
+        <HeaderComponent
+          userName={headerUserName}
+          userImageUri={headerUserImage ?? undefined}
+          companyLogoUri={headerCompanyLogo ?? undefined}
+          onSearchActiveChange={setIsSearchOpen}
+          onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+        />
+
         {/* Motivational Quote Banner */}
         {hasBirthdays ? (
           <BirthdayCarousel birthdays={birthdays} />
