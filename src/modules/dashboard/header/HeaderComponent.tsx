@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -57,6 +57,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const dateFade    = useRef(new Animated.Value(1)).current;
   const searchFade  = useRef(new Animated.Value(0)).current;
   const searchSlide = useRef(new Animated.Value(28)).current;
+  const searchScale = useRef(new Animated.Value(0.94)).current;
+  const searchSweep = useRef(new Animated.Value(0)).current;
   const inputRef    = useRef<TextInput>(null);
 
   const insets  = useSafeAreaInsets();
@@ -80,7 +82,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
     iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
     iconTint:         '#FFFFFF',
-    searchBg:         isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.14)',
+    searchBg:         '#09090B',
     searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.22)',
     searchTextColor:  '#FFFFFF',
     placeholderColor: isDark ? '#A1A1AA'  : '#C7D2FE',
@@ -99,6 +101,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     setHeaderHeight(e.nativeEvent.layout.height);
   }, []);
 
+  useEffect(() => {
+    const sweepLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(searchSweep, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(searchSweep, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+
+    sweepLoop.start();
+    return () => sweepLoop.stop();
+  }, [searchSweep]);
+
   // ── Search animation ──────────────────────────────────────────────────────
 
   const openSearch = useCallback(() => {
@@ -108,8 +122,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 10 }),
     ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide, onSearchActiveChange]);
+  }, [dateFade, searchFade, searchSlide, searchScale, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
     inputRef.current?.blur();
@@ -118,12 +133,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 28, duration: 200, useNativeDriver: true }),
+      Animated.timing(searchScale, { toValue: 0.94, duration: 180, useNativeDriver: true }),
     ]).start(() => {
       setSearchActive(false);
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchFade, searchSlide, reset, onSearchActiveChange]);
+  }, [dateFade, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
 
   const handleQueryChange = useCallback((text: string) => {
     setSearchQuery(text);
@@ -138,6 +154,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     // force a route here, or it fights with onSearchSubmit's own behavior.
     onSearchSubmit?.(q);
   }, [searchQuery, closeSearch, onSearchSubmit]);
+
+  const sweepTranslateX = searchSweep.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-90, 360],
+  });
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -222,11 +243,23 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   backgroundColor: tk.searchBg,
                   borderColor:     tk.searchBorder,
                   opacity:         searchFade,
-                  transform: [{ translateX: searchSlide }],
+                  transform: [{ translateX: searchSlide }, { scale: searchScale }],
                 },
               ]}
               pointerEvents={searchActive ? 'auto' : 'none'}
             >
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.searchSweep,
+                  {
+                    transform: [
+                      { translateX: sweepTranslateX },
+                      { rotate: '16deg' },
+                    ],
+                  },
+                ]}
+              />
               <MaterialCommunityIcons
                 name="magnify"
                 size={16}
@@ -386,12 +419,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    height: 40,
+    height: 50,
   },
   flexZone: {
     flex: 1,
     position: 'relative',
-    height: 40,
+    height: 50,
   },
 
   // Date
@@ -413,18 +446,32 @@ const styles = StyleSheet.create({
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: 13,
-    height: 40,
-    gap: 7,
+    paddingHorizontal: 15,
+    height: 50,
+    gap: 9,
+    overflow: 'hidden',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  searchSweep: {
+    position: 'absolute',
+    top: -18,
+    bottom: -18,
+    left: 0,
+    width: 58,
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   searchIcon: {},
   searchInput: {
     flex: 1,
     fontSize: 13,
     paddingVertical: 0,
-    height: 40,
+    height: 50,
   },
 
   // Action buttons
