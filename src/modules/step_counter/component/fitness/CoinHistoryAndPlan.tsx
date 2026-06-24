@@ -21,15 +21,20 @@ import CoinIcon from '../../../../assets/product/rewards.svg';
 import HeartPlantIcon from '../../assets/StepCount/heartPlant.svg';
 
 const VD = {
-  accent:      "#C4A8FF",
-  accentFaint: "rgba(196,168,255,0.12)",
-  cardBg:      "rgba(255,255,255,0.09)",
-  cardBorder:  "rgba(196,168,255,0.18)",
+  accent:      "#8EA2FF",
+  accentDark:  "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.075)",
+  cardSoft:    "rgba(255,255,255,0.10)",
+  cardBorder:  "rgba(174,188,255,0.16)",
+  ink:         "#F6F7FF",
+  muted:       "#A8AEC8",
   white:       "#FFFFFF",
-  whiteMid:    "rgba(255,255,255,0.70)",
-  whiteLow:    "rgba(255,255,255,0.45)",
-  success:     "#4ADE80",
-  warning:     "#FBBF24",
+  whiteMid:    "#CDD2EA",
+  whiteLow:    "#979EBC",
+  success:     "#9AAEFF",
+  warning:     "#F8B84E",
+  shadow:      "#02030A",
 };
 
 type CoinHistoryNavProp = NativeStackNavigationProp<FitnessStackParamList>;
@@ -101,7 +106,7 @@ const CoinHistoryAndPlan: React.FC = () => {
             <MaterialCommunityIcons
               name="arrow-right"
               size={16}
-              color={VD.white}
+              color={VD.accentDark}
             />
           </TouchableOpacity>
         </View>
@@ -213,6 +218,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   headerRow: {
     flexDirection: "row",
@@ -222,7 +232,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: VD.white,
+    color: VD.ink,
   },
   viewMoreButton: {
     minHeight: 32,
@@ -236,7 +246,7 @@ const styles = StyleSheet.create({
   },
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: VD.white,
+    color: VD.accentDark,
     marginRight: 4,
   },
   coinList: {
@@ -245,7 +255,7 @@ const styles = StyleSheet.create({
   coinItem: {
     width: 96,
     minHeight: 118,
-    backgroundColor: VD.accentFaint,
+    backgroundColor: VD.cardSoft,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.sm,
     marginRight: SPACING.sm,
@@ -310,6 +320,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   planCopy: {
     flex: 1,
@@ -321,7 +336,7 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: VD.white,
+    color: VD.ink,
     flex: 1,
     paddingRight: SPACING.xs,
   },
@@ -337,9 +352,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: VD.accentFaint,
+    backgroundColor: VD.accent,
     borderWidth: 1,
-    borderColor: VD.cardBorder,
+    borderColor: VD.accent,
   },
   getPlan: {
     ...TYPOGRAPHY.caption,

@@ -42,22 +42,28 @@ import WeeklyGraph from "./WeeklyGraph";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 
-// Violet Dusk palette — all on-dark
+// Fresh active palette for the step dashboard.
 const VD = {
-  bg0: "#1A1040",
-  bg1: "#3D2080",
-  bg2: "#6B3FA0",
-  accent: "#C4A8FF",
-  accentDim: "rgba(196,168,255,0.25)",
-  accentFaint: "rgba(196,168,255,0.12)",
+  bg0: "#070A16",
+  bg1: "#111735",
+  bg2: "#201A3F",
+  ink: "#F6F7FF",
+  muted: "#A8AEC8",
+  softText: "#8188A6",
+  accent: "#8EA2FF",
+  accentDark: "#B9C4FF",
+  accentDim: "rgba(142,162,255,0.26)",
+  accentFaint: "rgba(142,162,255,0.12)",
   white: "#FFFFFF",
-  whiteMid: "rgba(255,255,255,0.70)",
-  whiteLow: "rgba(255,255,255,0.45)",
-  whiteGhost: "rgba(255,255,255,0.10)",
-  cardBg: "rgba(255,255,255,0.10)",
-  cardBorder: "rgba(196,168,255,0.18)",
-  success: "#4ADE80",
-  warning: "#FBBF24",
+  whiteMid: "#CDD2EA",
+  whiteLow: "#979EBC",
+  whiteGhost: "rgba(255,255,255,0.09)",
+  cardBg: "rgba(255,255,255,0.075)",
+  cardSoft: "rgba(255,255,255,0.10)",
+  cardBorder: "rgba(174,188,255,0.16)",
+  success: "#9AAEFF",
+  warning: "#F5B86B",
+  shadow: "#02030A",
 };
 
 // ─── Ring Progress ─────────────────────────────────────────────────────────────
@@ -191,7 +197,7 @@ const StreakRow: React.FC<StreakProps> = ({ streak }) => {
               <Text
                 style={[
                   styles.streakDotText,
-                  done && { color: VD.accent },
+                  done && { color: VD.white },
                 ]}
               >
                 {done ? "✓" : d}
@@ -212,13 +218,13 @@ const StreakRow: React.FC<StreakProps> = ({ streak }) => {
 const AchievementsTeaser: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <TouchableOpacity style={styles.achTeaserCard} onPress={onPress} activeOpacity={0.85}>
     <View style={styles.achTeaserIconWrap}>
-      <MaterialCommunityIcons name="trophy-outline" size={26} color={VD.accent} />
+      <MaterialCommunityIcons name="trophy-outline" size={26} color={VD.accentDark} />
     </View>
     <View style={styles.achTeaserCopy}>
       <Text style={styles.achTeaserTitle}>Achievements</Text>
       <Text style={styles.achTeaserSub}>See your unlocked milestones and rewards</Text>
     </View>
-    <MaterialCommunityIcons name="chevron-right" size={22} color={VD.whiteLow} />
+    <MaterialCommunityIcons name="chevron-right" size={22} color={VD.softText} />
   </TouchableOpacity>
 );
 
@@ -391,7 +397,7 @@ const Dashboard: React.FC = () => {
         colors={[VD.bg0, VD.bg1, VD.bg2]}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0.3, y: 1 }}
+        end={{ x: 1, y: 1 }}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -417,7 +423,7 @@ const Dashboard: React.FC = () => {
                 <MaterialCommunityIcons
                   name="home-variant-outline"
                   size={22}
-                  color={VD.accent}
+                  color={VD.accentDark}
                 />
               </TouchableOpacity>
             </View>
@@ -575,7 +581,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   headerLeft: {
     flex: 1,
@@ -583,21 +589,21 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.9,
+    fontWeight: "800",
+    letterSpacing: 0,
     textTransform: "uppercase",
-    color: VD.accent,
+    color: VD.accentDark,
     marginBottom: 4,
   },
   greetingTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: VD.white,
+    color: VD.ink,
     lineHeight: 32,
   },
   subText: {
     fontSize: 13,
-    color: VD.whiteLow,
+    color: VD.muted,
     marginTop: 2,
     fontWeight: "500",
   },
@@ -605,18 +611,33 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: VD.whiteGhost,
+    backgroundColor: VD.white,
     borderWidth: 1,
     borderColor: VD.cardBorder,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
 
   // ── Ring ──
   ringWrap: {
     alignItems: "center",
+    backgroundColor: VD.cardBg,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingVertical: SPACING.xl,
     marginBottom: SPACING.lg,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
   ringCenter: {
     position: "absolute",
@@ -630,15 +651,15 @@ const styles = StyleSheet.create({
   ringSteps: {
     fontSize: 36,
     fontWeight: "900",
-    color: VD.white,
-    letterSpacing: -1,
+    color: VD.ink,
+    letterSpacing: 0,
     lineHeight: 42,
   },
   ringLabel: {
     fontSize: 11,
-    color: VD.whiteLow,
+    color: VD.softText,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     fontWeight: "600",
     marginTop: 2,
   },
@@ -658,7 +679,7 @@ const styles = StyleSheet.create({
   },
   ringGoalText: {
     fontSize: 13,
-    color: VD.white,
+    color: VD.muted,
     marginTop: 10,
     fontWeight: "500",
   },
@@ -677,6 +698,11 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
     paddingVertical: SPACING.md,
     alignItems: "center",
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   statIconBubble: {
     width: 42,
@@ -689,12 +715,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "800",
-    color: VD.white,
+    color: VD.ink,
     lineHeight: 22,
   },
   statLabel: {
     fontSize: 11,
-    color: VD.whiteLow,
+    color: VD.muted,
     fontWeight: "500",
     marginTop: 2,
   },
@@ -711,9 +737,9 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: VD.whiteLow,
+    color: VD.muted,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: SPACING.sm,
   },
   barsRow: {
@@ -731,7 +757,7 @@ const styles = StyleSheet.create({
   barBg: {
     flex: 1,
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: VD.whiteGhost,
     borderRadius: 4,
     justifyContent: "flex-end",
     overflow: "hidden",
@@ -742,7 +768,7 @@ const styles = StyleSheet.create({
   },
   barDay: {
     fontSize: 9,
-    color: VD.whiteLow,
+    color: VD.muted,
     fontWeight: "500",
   },
 
@@ -754,20 +780,25 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   streakNum: {
     fontSize: 24,
     fontWeight: "900",
-    color: VD.white,
+    color: VD.ink,
   },
   streakNumSub: {
     fontSize: 14,
     fontWeight: "500",
-    color: VD.white,
+    color: VD.muted,
   },
   streakSub: {
     fontSize: 12,
-    color: VD.whiteLow,
+    color: VD.muted,
     marginTop: 2,
     fontWeight: "500",
   },
@@ -780,19 +811,19 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: VD.cardSoft,
     borderWidth: 1,
-    borderColor: "rgba(196,168,255,0.2)",
+    borderColor: VD.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   streakDotDone: {
-    backgroundColor: "rgba(196,168,255,0.22)",
+    backgroundColor: VD.accent,
     borderColor: VD.accent,
   },
   streakDotText: {
     fontSize: 10,
-    color: VD.white,
+    color: VD.muted,
     fontWeight: "700",
   },
 
@@ -807,6 +838,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   achTeaserIconWrap: {
     width: 44, height: 44, borderRadius: 12,
@@ -814,8 +850,8 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   achTeaserCopy: { flex: 1 },
-  achTeaserTitle: { fontSize: 15, fontWeight: "700", color: VD.white },
-  achTeaserSub: { fontSize: 12, color: VD.whiteLow, marginTop: 2 },
+  achTeaserTitle: { fontSize: 15, fontWeight: "700", color: VD.ink },
+  achTeaserSub: { fontSize: 12, color: VD.muted, marginTop: 2 },
 
   // ── Divider ──
   dividerRow: {
@@ -827,14 +863,14 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 0.5,
-    backgroundColor: "rgba(196,168,255,0.2)",
+    backgroundColor: VD.cardBorder,
   },
   dividerLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: VD.whiteLow,
+    color: VD.muted,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
 
   // ── Glass card wrapper for existing components ──
@@ -845,6 +881,11 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
     overflow: "hidden",
     marginBottom: SPACING.lg,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
 
   // ── State boxes ──
@@ -861,7 +902,7 @@ const styles = StyleSheet.create({
   },
   stateText: {
     fontSize: 14,
-    color: VD.whiteLow,
+    color: VD.muted,
     textAlign: "center",
     marginTop: SPACING.sm,
     fontWeight: "500",
