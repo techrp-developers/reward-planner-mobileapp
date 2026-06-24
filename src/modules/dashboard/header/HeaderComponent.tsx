@@ -12,7 +12,6 @@ import {
   type ImageStyle,
   type LayoutChangeEvent,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -71,18 +70,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Theme tokens ──────────────────────────────────────────────────────────
 
   const tk = useMemo(() => ({
-    headerGradient:   isDark ? ['#09090B', '#18181B', '#27233A'] : ['#FFFFFF', '#F8FAFC', '#EEF2FF'],
-    helloColor:       isDark ? '#A1A1AA' : '#64748B',
-    nameColor:        isDark ? '#FFFFFF'  : '#0F172A',
-    logoPillBg:       isDark ? 'rgba(255,255,255,0.08)'  : '#FFFFFF',
-    avatarRingBg:     isDark ? 'rgba(79,70,229,0.20)'  : '#EEF2FF',
-    dateColor:        isDark ? '#C7D2FE'  : '#334155',
-    iconBg:           isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-    iconTint:         isDark ? '#C7D2FE'  : '#1E293B',
-    searchBg:         isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-    searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : '#E2E8F0',
-    searchTextColor:  isDark ? '#FFFFFF'  : '#0F172A',
-    placeholderColor: isDark ? '#71717A'  : '#94A3B8',
+    headerBg:         '#111827',
+    helloColor:       isDark ? '#A1A1AA' : '#C7D2FE',
+    nameColor:        '#FFFFFF',
+    logoPillBg:       isDark ? 'rgba(255,255,255,0.08)'  : 'rgba(255,255,255,0.14)',
+    avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
+    dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
+    iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
+    iconTint:         '#FFFFFF',
+    searchBg:         isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.14)',
+    searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.22)',
+    searchTextColor:  '#FFFFFF',
+    placeholderColor: isDark ? '#A1A1AA'  : '#C7D2FE',
   }), [isDark]);
 
   const formattedDate = useMemo(() => {
@@ -145,14 +144,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     // dashboard content below without affecting the layout flow.
     <View style={styles.wrapper}>
 
-      <LinearGradient
-        colors={tk.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[styles.gradient, { paddingTop: safeTop + 10 }]}
+      <View
+        style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10 }]}
         onLayout={handleHeaderLayout}
       >
         {/* ── Row 1 : Avatar | Greeting | Logo ── */}
+        <View style={styles.headerHighlight} />
         <View style={styles.topRow}>
 
           <TouchableOpacity
@@ -167,7 +164,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   resizeMode="cover"
                 />
               ) : (
-                <MaterialCommunityIcons name="account-circle" size={32} color="#7C5CFC" />
+                <MaterialCommunityIcons name="account-circle" size={32} color="#FFFFFF" />
               )}
             </View>
           </TouchableOpacity>
@@ -284,7 +281,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           </View>
 
         </View>
-      </LinearGradient>
+      </View>
 
       {/* ── Search Dropdown ─────────────────────────────────────────────────
        *  Absolutely positioned below the gradient so it overlays page content
@@ -316,29 +313,45 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 
-  gradient: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
+  headerSurface: {
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
+    overflow: 'hidden',
+  },
+  headerHighlight: {
+    position: 'absolute',
+    top: -22,
+    right: -42,
+    bottom: -18,
+    width: 205,
+    borderTopLeftRadius: 96,
+    borderBottomLeftRadius: 96,
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
 
   // ── Row 1 ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
+    gap: 13,
+    marginBottom: 16,
   },
   avatarRing: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     borderWidth: 2,
-    borderColor: '#6366F1',
+    borderColor: 'rgba(255,255,255,0.78)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
   },
   avatarImg: {
     width: '100%',
@@ -349,33 +362,33 @@ const styles = StyleSheet.create({
   },
   helloText: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '600',
     lineHeight: 17,
     letterSpacing: 0.2,
   },
   nameText: {
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 23,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 24,
+    letterSpacing: 0,
   },
   logoPill: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 100,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minWidth: 112,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    shadowColor: '#0F172A',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 4,
   },
   logoImage: {
-    width: 90,
-    height: 32,
+    width: 100,
+    height: 34,
   },
 
   // ── Row 2 ──
@@ -411,10 +424,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 20,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    paddingHorizontal: 13,
     height: 40,
-    gap: 6,
+    gap: 7,
   },
   searchIcon: {},
   searchInput: {
@@ -438,7 +451,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.20)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
 
   // Dropdown container — absolute, overlays content below header
