@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Pressable,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -40,6 +41,7 @@ function Dashbord() {
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
   const [thought, setThought] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchDismissSignal, setSearchDismissSignal] = useState(0);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
   const hasBirthdays = birthdays.length > 0;
 
@@ -102,6 +104,11 @@ function Dashbord() {
     navigation.navigate('Dashboard');
   }, [navigation]);
 
+  const dismissSearch = useCallback(() => {
+    if (!isSearchOpen) return;
+    setSearchDismissSignal((value) => value + 1);
+  }, [isSearchOpen]);
+
   const quoteBannerGradient: string[] = isDark
     ? ['#18181B', '#27233A', '#4338CA']
     : ['#111827', '#312E81', '#4F46E5'];
@@ -130,7 +137,9 @@ function Dashbord() {
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!isSearchOpen}
+        scrollEnabled
+        onScrollBeginDrag={dismissSearch}
+        keyboardShouldPersistTaps="handled"
         bounces
       >
         <LinearGradient
@@ -144,44 +153,49 @@ function Dashbord() {
             userImageUri={headerUserImage ?? undefined}
             companyLogoUri={headerCompanyLogo ?? undefined}
             surface="transparent"
+            dismissSignal={searchDismissSignal}
             onSearchActiveChange={setIsSearchOpen}
             onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
           />
 
           {/* Motivational Quote Banner */}
-          {hasBirthdays ? (
-            <BirthdayCarousel birthdays={birthdays} />
-          ) : (
-            <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
-              <LinearGradient
-                colors={quoteBannerGradient}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.card, t.card]}
-              >
-                <View style={styles.quoteHighlight} />
+          <Pressable onPress={dismissSearch}>
+            {hasBirthdays ? (
+              <BirthdayCarousel birthdays={birthdays} />
+            ) : (
+              <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
+                <LinearGradient
+                  colors={quoteBannerGradient}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={[styles.card, t.card]}
+                >
+                  <View style={styles.quoteHighlight} />
 
-                <View style={[styles.iconContainer, t.iconContainer]}>
-                  <MaterialCommunityIcons
-                    name="lightbulb-on-outline"
-                    size={iconSize}
-                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
-                  />
-                </View>
+                  <View style={[styles.iconContainer, t.iconContainer]}>
+                    <MaterialCommunityIcons
+                      name="lightbulb-on-outline"
+                      size={iconSize}
+                      color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                    />
+                  </View>
 
-                <Text style={styles.quote}>
-                  {thought
-                    ? `"${thought}"`
-                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                </Text>
-              </LinearGradient>
-            </View>
-          )}
+                  <Text style={styles.quote}>
+                    {thought
+                      ? `"${thought}"`
+                      : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                  </Text>
+                </LinearGradient>
+              </View>
+            )}
+          </Pressable>
         </LinearGradient>
-        <Home_Chart />
-        <ServicesModule />
-        <ModuleBanner />
-        <RewardsOverview />
+        <Pressable onPress={dismissSearch}>
+          <Home_Chart />
+          <ServicesModule />
+          <ModuleBanner />
+          <RewardsOverview />
+        </Pressable>
       </ScrollView>
 
       <BottomTabs

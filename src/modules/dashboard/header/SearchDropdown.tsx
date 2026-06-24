@@ -272,13 +272,13 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   // ── Results ───────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.card, tk.card]}>
-      <Animated.View style={animStyle}>
+      <Animated.View style={[styles.listWrap, animStyle]}>
         <SectionList
           style={styles.list}
           sections={sections}
           keyExtractor={(item) => `${item.type}-${item.id}`}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator
           scrollEnabled={true}
           nestedScrollEnabled={true}
           bounces={false}
@@ -325,8 +325,13 @@ const styles = StyleSheet.create({
   },
 
   // SectionList owns the scroll area — maxHeight lives here, not on the card.
+  listWrap: {
+    maxHeight: 340,
+    overflow: 'hidden',
+    borderRadius: 18,
+  },
   list: {
-    maxHeight: 420,
+    maxHeight: 340,
     borderRadius: 18,
   },
 

@@ -30,6 +30,7 @@ interface HeaderProps {
   userImageUri?:          string;
   companyLogoUri?:        string;
   surface?:               'solid' | 'transparent';
+  dismissSignal?:         number;
   onNotificationPress?:   () => void;
   onAIToggle?:            (value: boolean) => void;
   onSearchSubmit?:        (query: string) => void;
@@ -43,6 +44,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   userImageUri,
   companyLogoUri,
   surface = 'solid',
+  dismissSignal = 0,
   onNotificationPress,
   onSearchSubmit,
   onSearchActiveChange,
@@ -59,6 +61,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const searchSlide = useRef(new Animated.Value(28)).current;
   const searchScale = useRef(new Animated.Value(0.94)).current;
   const searchSweep = useRef(new Animated.Value(0)).current;
+  const lastDismissSignal = useRef(dismissSignal);
   const inputRef    = useRef<TextInput>(null);
 
   const insets  = useSafeAreaInsets();
@@ -127,6 +130,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   }, [dateFade, searchFade, searchSlide, searchScale, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
+    if (!searchActive) return;
     inputRef.current?.blur();
     onSearchActiveChange?.(false);
     Animated.parallel([
@@ -139,7 +143,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
+  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
+
+  useEffect(() => {
+    if (dismissSignal !== lastDismissSignal.current) {
+      lastDismissSignal.current = dismissSignal;
+      closeSearch();
+    }
+  }, [dismissSignal, closeSearch]);
 
   const handleQueryChange = useCallback((text: string) => {
     setSearchQuery(text);
