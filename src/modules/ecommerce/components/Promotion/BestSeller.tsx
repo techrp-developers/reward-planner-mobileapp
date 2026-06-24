@@ -10,22 +10,28 @@ import { fetchBestSellers } from "../../api/PromotionalApi";
 import HorizontalProductList from "../common/HorizontalProductList";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import { queryClient } from "../../../../query/queryClient";
+import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+  PROMO_CARD_WIDTH,
+  PROMO_CARD_GAP,
+  PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 
-const CARD_WIDTH = 136;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const BEST_SELLER_QUERY_KEY = ["ecommerce", "promotion", "best-seller"] as const;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 const normalizeBestSeller = (rawList: any[]) =>
-  rawList.map((item: any, index: number) => ({
-    ...item,
-    id: item?.product_id ?? item?.id ?? `best-seller-${index}`,
-    title: item?.product_name ?? item?.title ?? "Product",
-    brand: item?.brand_name ?? item?.brand ?? "",
-    image: item?.image,
-    oldPrice: item?.old_price ?? item?.original_price,
-  }));
+  rawList.map((item: any, index: number) => {
+    const normalized = normalizeProduct(item);
+
+    return {
+      ...normalized,
+      id: item?.product_id ?? item?.id ?? `best-seller-${index}`,
+      image: item?.image,
+    };
+  });
 
 const fetchBestSellerData = async () => {
   const res = await fetchBestSellers();
@@ -77,7 +83,7 @@ function BestSeller() {
 
   const renderCard = useCallback(
     ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-      <ProductCard item={item} cardWidth={CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
+      <ProductCard item={item} cardWidth={PROMO_CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
     ),
     []
   );
@@ -111,9 +117,9 @@ function BestSeller() {
 
       <HorizontalProductList
         data={products}
-        itemWidth={CARD_WIDTH}
-        gap={16}
-        estimatedItemSize={CARD_WIDTH + 16}
+        itemWidth={PROMO_CARD_WIDTH}
+        gap={PROMO_CARD_GAP}
+        estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
         keyExtractor={(item) => String(item.id)}
         renderCard={renderCard}
       />

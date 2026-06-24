@@ -4,7 +4,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -18,9 +17,12 @@ import HorizontalProductList from "../common/HorizontalProductList";
 import { getProductImageUrl } from "../../api/ProductApi";
 import { queryClient } from "../../../../query/queryClient";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+  PROMO_CARD_WIDTH,
+  PROMO_CARD_GAP,
+  PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.42;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const NEW_ARRIVALS_QUERY_KEY = ["ecommerce", "promotion", "new-arrivals"] as const;
 
@@ -88,7 +90,7 @@ function NewArrivals() {
 
   const renderCard = useCallback(
     ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-      <ProductCard item={item} cardWidth={CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
+      <ProductCard item={item} cardWidth={PROMO_CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
     ),
     []
   );
@@ -123,9 +125,9 @@ function NewArrivals() {
 
       <HorizontalProductList
         data={products}
-        itemWidth={CARD_WIDTH}
-        gap={16}
-        estimatedItemSize={CARD_WIDTH + 16}
+        itemWidth={PROMO_CARD_WIDTH}
+        gap={PROMO_CARD_GAP}
+        estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
         keyExtractor={(item) => String(item.id)}
         renderCard={renderCard}
       />

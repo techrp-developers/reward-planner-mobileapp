@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet, Animated, InteractionManager } from 'react-
 // import Home_Chart from '../components/home/home_chart';
 import CategoriesSection from '../components/home/categories_section';
 import FeaturesProduct from '../components/home/featuresProduct';
-import ProductCategory from '../components/home/productcate';
+import ProductCategory from './ProductCategoriesScreen';
 import HomeBanner from '../components/home/HomeBanner';
 import OfferHome from '../components/home/OfferHome';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';

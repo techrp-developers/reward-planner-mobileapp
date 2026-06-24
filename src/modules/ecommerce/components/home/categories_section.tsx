@@ -30,6 +30,18 @@ type CategoryListItem = Category & {
   __placeholderKey?: string;
 };
 
+const getCategoryList = (payload: any): Category[] => {
+  const candidates = [
+    payload?.data,
+    payload?.categories,
+    payload?.items,
+    payload?.data?.categories,
+    payload?.data?.items,
+  ];
+
+  return candidates.find(Array.isArray) ?? [];
+};
+
 export default function CategoriesSection() {
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
@@ -38,14 +50,11 @@ export default function CategoriesSection() {
     queryKey: ["ecommerce", "home", "categories-section"],
     queryFn: async () => {
       const res = await fetchAllCategories();
-      if (!res?.success || !Array.isArray(res?.data)) {
-        return [];
-      }
-
-      return res.data;
+      return getCategoryList(res);
     },
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 
   const layout = React.useMemo(() => {
@@ -61,6 +70,7 @@ export default function CategoriesSection() {
 
     return {
       horizontalPadding,
+      gap,
       numColumns,
       cardSize,
       imageSize,
@@ -198,7 +208,7 @@ export default function CategoriesSection() {
           styles.listContent,
           { paddingHorizontal: layout.horizontalPadding },
         ]}
-        columnWrapperStyle={styles.columnWrapper}
+        columnWrapperStyle={[styles.columnWrapper, { columnGap: layout.gap }]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={false}
         removeClippedSubviews={true}
@@ -214,13 +224,11 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 10,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
   },
   listContent: {
     paddingBottom: 4,
   },
   columnWrapper: {
-    justifyContent: "space-between",
     marginBottom: 6,
   },
   categoryCard: {

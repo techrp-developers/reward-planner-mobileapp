@@ -23,8 +23,17 @@ const appendImageOptimizationParams = (url: string, width: number, quality: numb
   return `${url}${separator}width=${safeWidth}&quality=${safeQuality}`;
 };
 
-export const fetchAllProducts = async () => {
-    const res = await axios.get(`${API_BASE_URL}/v1/product/all-products`);
+export type FetchAllProductsParams = {
+  page?: number;
+  pageSize?: number;
+};
+
+export const fetchAllProducts = async (params?: FetchAllProductsParams) => {
+    const res = await axios.get(`${API_BASE_URL}/v1/product/all-products`, {
+      params: params?.page
+        ? { page: params.page, pageSize: params.pageSize }
+        : undefined,
+    });
     return res.data;
 };
 

@@ -11,10 +11,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import { fetchAllCategories, fetchCategoriesByID, getProductImageUrl } from "../../api/ProductApi";
-import SkeletonBox from "../../../services/component/constant/SkeletonBox";
-import ProductGrid from "./productgrid";
-import { normalizeProduct } from "../../utils/normalizeProduct";
+import { fetchAllCategories, fetchCategoriesByID, getProductImageUrl } from "../api/ProductApi";
+import SkeletonBox from "../../services/component/constant/SkeletonBox";
+import ProductGrid from "../components/home/productgrid";
+import { normalizeProduct } from "../utils/normalizeProduct";
 
 type Category = {
   id: number;

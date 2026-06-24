@@ -1,58 +1,80 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, View, Platform } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
 type Props = {
-  value: string | number;   // discount text, e.g. "20% OFF" or "₹1215"
-  cardWidth?: number;       // width of the product card (used for scaling)
+  value: string | number;
+  cardWidth?: number;
 };
 
-const RPpriceBadge: React.FC<Props> = ({ value, cardWidth }) => {
+const RPpriceBadge: React.FC<Props> = ({ value }) => {
   if (!value) return null;
 
-  // Format the value - if it doesn't have ₹ symbol, add it
-  const formattedValue = String(value).includes('₹') || String(value).includes('Rs') || String(value).includes('RS')
-    ? value
+  const formattedValue = String(value).includes('₹') ||
+    String(value).includes('Rs') ||
+    String(value).includes('RS')
+    ? String(value)
     : `₹${value}`;
 
-  // Responsive sizes based on card width (fallback to default 110)
-  const base = cardWidth ?? 110;
-  const width = Math.max(40, Math.min(65, base * 0.15));
-  const fontSize = Math.max(7, Math.min(10, base * 0.022));
-  const paddingVertical = Math.max(2, base * 0.015);
-  const borderRadius = Math.max(8, base * 0.035);
-
   return (
-    <LinearGradient
+    <View style={styles.shadowWrap}>
+      <LinearGradient
       colors={['#FEB014', '#FFE486', '#F5B924']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={[
-        styles.badge,
-        {
-          width,
-          paddingVertical,
-          borderRadius,
-        },
-      ]}
-    >
-      <Text style={[styles.text, { fontSize }]} numberOfLines={1}>
-        RP {formattedValue}
-      </Text>
-    </LinearGradient>
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.badge}
+      >
+        <Text style={styles.label} numberOfLines={1}>
+          RP
+        </Text>
+        <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
+          {formattedValue}
+        </Text>
+      </LinearGradient>
+    </View>
   );
 };
 
 export default RPpriceBadge;
 
 const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+  shadowWrap: {
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#92660A',
+        shadowOpacity: 0.35,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  text: {
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#7C4A03',
+    marginRight: 3,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  value: {
+    fontSize: 11,
     fontWeight: '800',
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

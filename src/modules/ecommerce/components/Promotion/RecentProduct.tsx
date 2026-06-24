@@ -1,10 +1,9 @@
 import React from "react";
-import { 
-    StyleSheet, 
-    Text, 
-    View, 
+import {
+    StyleSheet,
+    Text,
+    View,
     TouchableOpacity,
-    Dimensions,
     // Platform
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -17,16 +16,15 @@ import { useAuth } from "../../../common/auth/context/AuthContext";
 import type { HomeStackParamList } from "../../navigation/types";
 import LinearGradient from "react-native-linear-gradient";
 import { getRecentProducts } from "../../api/PromotionalApi";
+import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+    PROMO_CARD_WIDTH,
+    PROMO_CARD_GAP,
+    PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 // import { queryClient } from "../../../../query/queryClient";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
-
-// RESPONSIVE MEASUREMENTS
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const PADDING = 2;
-const GAP = 10;
-// Calculate width for 3-column layout dynamically
-const CARD_WIDTH = (SCREEN_WIDTH - (PADDING * 2) - (GAP * 2)) / 3; 
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -35,19 +33,15 @@ const fetchRecentProductsData = async () => {
     const rawData = res?.data?.products ?? res?.products ?? res?.data ?? [];
     if (!Array.isArray(rawData)) return [];
 
-    return rawData.map((item: any, index: number) => ({
-        ...item,
-        id: String(item?.product_id ?? item?.id ?? `prod-${index}`),
-        // Ensure data mapping matches your ProductCard's requirements
-        image: getProductImageUrl(item?.image, "thumbnail", 40),
-        title: item?.product_name ?? item?.title ?? "Product",
-        brand: item?.brand_name ?? item?.brand ?? "",
-        rp_price: item?.rp_price ?? "",
-        price: item?.price ?? "",
-        originalPrice: item?.originalPrice ?? "",
-        discount: item?.discount ?? "",
-        redeem_coins: item?.redeem_coins ?? 0,
-    }));
+    return rawData.map((item: any, index: number) => {
+        const normalized = normalizeProduct(item);
+
+        return {
+            ...normalized,
+            id: String(item?.product_id ?? item?.id ?? `prod-${index}`),
+            image: getProductImageUrl(item?.image, "thumbnail", 40),
+        };
+    });
 };
 
 const RecentProduct = () => {
@@ -69,10 +63,10 @@ const RecentProduct = () => {
 
     const renderCard = React.useCallback(
         ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-            <ProductCard 
-                item={item} 
-                cardWidth={CARD_WIDTH} 
-                shouldLoadImage={shouldLoadImage} 
+            <ProductCard
+                item={item}
+                cardWidth={PROMO_CARD_WIDTH}
+                shouldLoadImage={shouldLoadImage}
             />
         ),
         []
@@ -97,9 +91,9 @@ const RecentProduct = () => {
 
                 <HorizontalProductList
                     data={products}
-                    itemWidth={CARD_WIDTH}
-                    gap={GAP}
-                    estimatedItemSize={CARD_WIDTH + GAP}
+                    itemWidth={PROMO_CARD_WIDTH}
+                    gap={PROMO_CARD_GAP}
+                    estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
                     keyExtractor={(item) => String(item.id)}
                     renderCard={renderCard}
                     contentContainerStyle={styles.listPadding}

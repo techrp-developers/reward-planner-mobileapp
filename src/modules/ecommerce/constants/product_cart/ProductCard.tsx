@@ -41,6 +41,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
 
   const usedCardWidth = cardWidth ?? CARD_WIDTH;
+  const normalizedProduct = useMemo(() => normalizeProduct(item), [item]);
 
   const productId = item?.id ?? item?.product_id ?? item?.productId;
   const variantId =
@@ -59,7 +60,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
     fontSizeReview: Math.max(9, Math.round(usedCardWidth * 0.066)),
     fontSizePrice: Math.max(12, Math.round(usedCardWidth * 0.096)),
     fontSizeOriginal: Math.max(9, Math.round(usedCardWidth * 0.065)),
-    fontSizeDiscount: Math.max(9, Math.round(usedCardWidth * 0.07)), // 👈 discount text size
+    fontSizeDiscount: Math.max(9, Math.round(usedCardWidth * 0.07)),
   }), [usedCardWidth]);
 
   const goToDetails = useCallback(() => {
@@ -131,22 +132,20 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
-    const normalized = normalizeProduct(item);
-
     return {
       starCount: Math.round(safeRating),
       reviewText: item?.reviews ? `(${item.reviews})` : "",
       productTitle: [item?.product_name || item?.title, item?.brand || item?.brand_name]
         .filter(Boolean)
         .join(" "),
-      priceText: String(item?.price ?? ""),
-      originalPriceText: String(item?.originalPrice ?? ""),
-      rewardCoins: normalized.rewardCoins,
-      redeemCoins: normalized.redeem_coins,
-      rp_price: item?.rp_price ?? "",
-      discount: item?.discount ?? item?.off_percent ?? "",
+      priceText: String(normalizedProduct.price ?? ""),
+      originalPriceText: String(normalizedProduct.originalPrice ?? ""),
+      rewardCoins: normalizedProduct.rewardCoins,
+      redeemCoins: normalizedProduct.redeem_coins,
+      rp_price: normalizedProduct.rp_price ?? "",
+      discount: normalizedProduct.discount ?? "",
     };
-  }, [item]);
+  }, [item, normalizedProduct]);
 
   return (
     <View
