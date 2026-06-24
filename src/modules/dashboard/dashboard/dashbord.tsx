@@ -160,36 +160,37 @@ function Dashbord() {
 
           {/* Motivational Quote Banner */}
           <Pressable onPress={dismissSearch}>
-            {hasBirthdays ? (
-              <BirthdayCarousel birthdays={birthdays} />
-            ) : (
-              <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
-                <LinearGradient
-                  colors={quoteBannerGradient}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={[styles.card, t.card]}
-                >
-                  <View style={styles.quoteHighlight} />
+            <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
+              <LinearGradient
+                colors={quoteBannerGradient}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.card, t.card]}
+              >
+                <View style={styles.quoteHighlight} />
 
-                  <View style={[styles.iconContainer, t.iconContainer]}>
-                    <MaterialCommunityIcons
-                      name="lightbulb-on-outline"
-                      size={iconSize}
-                      color={isDark ? '#FFFFFF' : '#9B3DD8'}
-                    />
-                  </View>
+                <View style={[styles.iconContainer, t.iconContainer]}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on-outline"
+                    size={iconSize}
+                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                  />
+                </View>
 
-                  <Text style={styles.quote}>
-                    {thought
-                      ? `"${thought}"`
-                      : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                  </Text>
-                </LinearGradient>
-              </View>
-            )}
+                <Text style={styles.quote}>
+                  {thought
+                    ? `"${thought}"`
+                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                </Text>
+              </LinearGradient>
+            </View>
           </Pressable>
         </LinearGradient>
+        {hasBirthdays && (
+          <Pressable onPress={dismissSearch}>
+            <BirthdayCarousel birthdays={birthdays} />
+          </Pressable>
+        )}
         <Pressable onPress={dismissSearch}>
           <Home_Chart />
           <ServicesModule />
