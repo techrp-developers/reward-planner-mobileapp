@@ -34,15 +34,6 @@ import StepIcon from "../../assets/StepCount/step_icon.svg";
 import FireIcon from "../../assets/StepCount/lightning.svg";
 import LocationIcon from "../../assets/StepCount/location.svg";
 import ClockIcon from "../../assets/StepCount/clock_icon.svg";
-import WalkingShield from "../../assets/StepCount/Walking_Enthusiast.svg";
-import StreakShield from "../../assets/StepCount/Streak_Keeper.svg";
-import TrailShield from "../../assets/StepCount/Trailblazer.svg";
-import SunriseShield from "../../assets/StepCount/Sunrise_Strider.svg";
-
-import WalkSmall from "../../assets/StepCount/Achivement_icon(2).svg";
-import StreakSmall from "../../assets/StepCount/Achivement_icon(3).svg";
-import TrailSmall from "../../assets/StepCount/Achivement_icon(4).svg";
-import SunriseSmall from "../../assets/StepCount/Achivement_icon(1).svg";
 
 
 type ProgressNav = NativeStackNavigationProp<FitnessStackParamList, "PlanProcess">;
@@ -68,14 +59,7 @@ const selectedDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
 });
 
-const achievements = [
-  { key: "walk", label: "Walking", Shield: WalkingShield, Icon: WalkSmall },
-  { key: "streak", label: "Streak", Shield: StreakShield, Icon: StreakSmall },
-  { key: "trail", label: "Trailblazer", Shield: TrailShield, Icon: TrailSmall },
-  { key: "sun", label: "Sunrise Strider", Shield: SunriseShield, Icon: SunriseSmall },
-];
-
-const pad2 = (value: number) => String(value).padStart(2, "0");
+const pad2 =(value: number) => String(value).padStart(2, "0");
 const toMonthKey = (date: Date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 const toIsoDate = (year: number, monthIndex: number, day: number) =>
   `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`;
@@ -197,10 +181,6 @@ const ProgressScreen: React.FC = () => {
     calendarQuery.refetch();
   }, [calendarQuery]);
 
-  const handleViewAchievements = useCallback(() => {
-    navigation.navigate("AchievementCard");
-  }, [navigation]);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient colors={COLORS.gradientScreen} style={styles.gradient}>
@@ -313,37 +293,6 @@ const ProgressScreen: React.FC = () => {
                 </View>
               </View>
             ) : null}
-
-            {/* ACHIEVEMENTS */}
-            <View style={styles.card}>
-              <View style={styles.achHeader}>
-                <Text style={styles.achTitle}>Achievements</Text>
-                <TouchableOpacity
-                  style={styles.viewMoreRow}
-                  onPress={handleViewAchievements}
-                  activeOpacity={0.82}
-                >
-                  <Text style={styles.viewMoreText}>View More</Text>
-                  <MaterialCommunityIcons
-                    name="arrow-right"
-                    size={16}
-                    color={COLORS.primaryIndigo}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.achRow}>
-                {achievements.map((a) => (
-                  <View key={a.key} style={styles.achItem}>
-                    <View style={styles.shieldWrap}>
-                      <a.Shield width={68} height={68} />
-                      <a.Icon width={28} height={28} style={styles.smallIcon} />
-                    </View>
-                    <Text style={styles.achLabel}>{a.label}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -472,7 +421,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: COLORS.vdWhite,
     textAlign: "center",
   },
   headerSpacer: {
@@ -505,12 +454,12 @@ const styles = StyleSheet.create({
   },
   subText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
+    color: COLORS.vdWhiteMid,
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,
   },
   subTextStrong: {
-    color: COLORS.textDark,
+    color: COLORS.vdWhite,
     fontWeight: "800",
   },
   card: {
@@ -667,32 +616,5 @@ const styles = StyleSheet.create({
   retryText: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.textWhite,
-  },
-
-  achHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  achTitle: { fontSize: 18, fontWeight: '700' },
-  viewMore: { color: '#4F46E5', fontWeight: '600' },
-
-  achRow: { flexDirection: 'row' },
-  achItem: { alignItems: 'center', flex: 1 },
-
-  shieldWrap: { position: 'relative', alignItems: 'center' },
-  smallIcon: { position: 'absolute', bottom: 20 },
-  achLabel: { marginTop: 6, fontSize: 12, fontWeight: '600' },
-  viewMoreRow: {
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: '#F4F0FF',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  viewMoreText: {
-    color: '#3B6BFF',
-    fontSize: 12,
-    fontWeight: '700',
-    marginRight: 6,
   },
 });

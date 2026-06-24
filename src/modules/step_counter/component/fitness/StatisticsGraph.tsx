@@ -132,7 +132,7 @@ const StatisticsGraph: React.FC = () => {
                   width={BAR_WIDTH}
                   height={barHeight}
                   rx={3}
-                  fill={VD.accent}
+                  fill={VD.white}
                 />
               );
             })}
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 13,
-    color: VD.accent,
+    color: VD.white,
     fontWeight: "700",
   },
   graphContainer: {

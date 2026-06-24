@@ -56,7 +56,7 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
           <MaterialCommunityIcons
             name="arrow-right"
             size={16}
-            color={VD.accent}
+            color={VD.white}
           />
         </TouchableOpacity>
       </View>
@@ -84,10 +84,10 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
                     {
                       height: `${fillHeight}%`,
                       backgroundColor: item.done
-                        ? VD.accent
+                        ? VD.white
                         : isToday
-                        ? "#A78FFF"
-                        : VD.accentDim,
+                        ? "rgba(255,255,255,0.85)"
+                        : "rgba(255,255,255,0.25)",
                       borderWidth: isToday
                         ? 1
                         : 0,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: VD.whiteLow,
+    color: VD.white,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal:
       SPACING.md,
+    marginRight: SPACING.xs,
     borderRadius:
       BORDER_RADIUS.pill,
     backgroundColor:
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
 
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: VD.accent,
+    color: VD.white,
     marginRight: 4,
   },
 

@@ -25,26 +25,22 @@ import UnAchievedShield from "../../assets/StepCount/UnAchievedShield.svg";
 
 // COLORED SHIELDS
 import Walking_Enthusiast from "../../assets/StepCount/Walking_Enthusiast.svg";
-import Streak_Keeper from "../../assets/StepCount/Streak_Keeper.svg";
-import Trailblazer from "../../assets/StepCount/Trailblazer.svg";
-import Sunrise_Strider from "../../assets/StepCount/Sunrise_Strider.svg";
 
 // SMALL ICONS INSIDE SHIELD
 import icon_Walking_Enthusiast from "../../assets/StepCount/Achivement_icon(2).svg";
-import icon_Streak_Keeper from "../../assets/StepCount/Achivement_icon(3).svg";
-import icon_Trailblazer from "../../assets/StepCount/Achivement_icon(4).svg";
-import icon_Sunrise_Strider from "../../assets/StepCount/Achivement_icon(1).svg";
 
 const { width } = Dimensions.get("window");
 
-type AchievementCategory = "walking" | "streak" | "trail" | "sunrise";
+// Streak Keeper / Trailblazer / Sunrise Strider were removed from the
+// backend (fitness_achievements.sql) — the unlock logic never tracked
+// outdoor walks or pre-7AM steps, and streak milestones are now handled by
+// fitness_streak_bonus_config instead. Only the lifetime-steps group remains.
+type AchievementCategory = "walking";
 
 type BadgeData = {
   achievement_id: number;
   label: string;
   achieved: boolean;
-  days?: string;
-  units?: string;
   stepsLeft?: string;
   reward_coins: number;
   progress?: number;
@@ -72,27 +68,13 @@ const SECTION_ORDER: Array<{
     title: "Walking Enthusiast",
     description: "You've taken your first step toward a healthier lifestyle!",
   },
-  {
-    groupKey: "streak_keeper",
-    category: "streak",
-    title: "Streak Keeper",
-    description: "Complete your daily step goal for consecutive days.",
-  },
-  {
-    groupKey: "trailblazer",
-    category: "trail",
-    title: "Trailblazer",
-    description: "Walk in parks and natural trails.",
-  },
-  {
-    groupKey: "sunrise_strider",
-    category: "sunrise",
-    title: "Sunrise Strider",
-    description: "Take steps before 7 AM.",
-  },
 ];
 
 const formatStepLabel = (value: number) => {
+  if (value >= 1000000 && value % 1000000 === 0) {
+    return `${value / 1000000}M`;
+  }
+
   if (value >= 1000 && value % 1000 === 0) {
     return `${value / 1000}K`;
   }
@@ -118,18 +100,9 @@ const mapMilestoneToBadge = (milestone: AchievementMilestone): BadgeData => {
     };
   }
 
-  if (milestone.type === "streak") {
-    return {
-      ...baseBadge,
-      label: String(targetValue),
-      days: "Day Streak",
-    };
-  }
-
   return {
     ...baseBadge,
     label: String(targetValue),
-    units: "-Walk",
   };
 };
 
@@ -138,12 +111,6 @@ const getSmallIcon = (category: AchievementCategory) => {
   switch (category) {
     case "walking":
       return icon_Walking_Enthusiast;
-    case "streak":
-      return icon_Streak_Keeper;
-    case "trail":
-      return icon_Trailblazer;
-    case "sunrise":
-      return icon_Sunrise_Strider;
     default:
       return icon_Walking_Enthusiast;
   }
@@ -154,12 +121,6 @@ const getColoredShield = (category: AchievementCategory) => {
   switch (category) {
     case "walking":
       return Walking_Enthusiast;
-    case "streak":
-      return Streak_Keeper;
-    case "trail":
-      return Trailblazer;
-    case "sunrise":
-      return Sunrise_Strider;
     default:
       return Walking_Enthusiast;
   }
@@ -339,11 +300,11 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,,0.72)",
+    backgroundColor: "rgba(255,255,255,0.72)",
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: COLORS.vdWhite,
     textAlign: "center",
   },
   headerSpacer: {

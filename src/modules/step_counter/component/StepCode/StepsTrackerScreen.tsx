@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SendIntentAndroid from 'react-native-send-intent';
+import { SdkAvailabilityStatus } from 'react-native-health-connect';
 
 import { useStepTracker } from './useStepTracker';
 import { BORDER_RADIUS, RESPONSIVE, SPACING } from '../../utils/theme';
@@ -51,7 +52,9 @@ type OptionalProvider = 'Samsung Health' | 'Google Fit';
 
 // ─── Permission guide (animated accordion) ────────────────────────────────────
 
-const STEPS = [
+type GuideStep = { icon: string; title: string; desc: string };
+
+const STEPS: GuideStep[] = [
   { icon: 'numeric-1-circle-outline', title: 'Open Health Connect',  desc: 'Tap the Health Connect row above to open or install it.' },
   { icon: 'numeric-2-circle-outline', title: 'App Permissions',      desc: 'Inside Health Connect, tap "App permissions" from the home screen.' },
   { icon: 'numeric-3-circle-outline', title: 'Find this app',        desc: 'Scroll to Rewards Planners and tap it.' },
@@ -59,7 +62,20 @@ const STEPS = [
   { icon: 'numeric-5-circle-outline', title: 'Come back here',       desc: 'Return to this screen — the status refreshes automatically.' },
 ];
 
-const PermissionGuide = ({ visible }: { visible: boolean }) => {
+// Alternate path for users who already have Health Connect / Google Fit installed
+// and granted permission once, but the app's own system permission was revoked or
+// never enabled — fixable via the OS app-info screen instead of Health Connect.
+const STEPS_ALREADY_INSTALLED: GuideStep[] = [
+  { icon: 'numeric-1-circle-outline', title: 'Open phone Settings',  desc: 'Go to your phone\'s Settings app.' },
+  { icon: 'numeric-2-circle-outline', title: 'Go to Apps',           desc: 'Tap "Apps" (or "Apps & notifications").' },
+  { icon: 'numeric-3-circle-outline', title: 'Find Reward Planners', desc: 'Search for and tap "Reward Planners" in the app list.' },
+  { icon: 'numeric-4-circle-outline', title: 'Open Permissions',     desc: 'Tap "Permissions" on the app info screen.' },
+  { icon: 'numeric-5-circle-outline', title: 'Allow the toggles',    desc: 'Turn on "Physical activity" and "Health Connect", then come back here.' },
+];
+
+const PermissionGuide = ({
+  visible, steps, headerText,
+}: { visible: boolean; steps: GuideStep[]; headerText: string }) => {
   const hRef  = useRef(new Animated.Value(0));
   const opRef = useRef(new Animated.Value(0));
   const h  = hRef.current;
@@ -77,13 +93,13 @@ const PermissionGuide = ({ visible }: { visible: boolean }) => {
       <View style={ss.guide}>
         <View style={ss.guideHeader}>
           <MaterialCommunityIcons name="shield-key-outline" size={14} color={VD.warning} />
-          <Text style={ss.guideHeaderText}>How to grant Steps permission</Text>
+          <Text style={ss.guideHeaderText}>{headerText}</Text>
         </View>
-        {STEPS.map((s, i) => (
+        {steps.map((s, i) => (
           <View key={i} style={ss.guideStep}>
             <View style={ss.guideStepLeft}>
               <MaterialCommunityIcons name={s.icon} size={22} color={VD.accent} />
-              {i < STEPS.length - 1 && <View style={ss.guideLine} />}
+              {i < steps.length - 1 && <View style={ss.guideLine} />}
             </View>
             <View style={ss.guideStepRight}>
               <Text style={ss.guideStepTitle}>{s.title}</Text>
@@ -171,10 +187,11 @@ export default function StepsTrackerScreen() {
   const [isSamsungHealthInstalled, setIsSamsungHealthInstalled] = useState(false);
   const [selectedOptional,         setSelectedOptional]         = useState<OptionalProvider | null>(null);
   const [guideOpen,                setGuideOpen]                = useState(false);
+  const [altGuideOpen,             setAltGuideOpen]              = useState(false);
 
-  const isHCInstalled = healthConnectStatus !== '0';
+  const isHCInstalled = healthConnectStatus !== '0' && healthConnectStatus !== String(SdkAvailabilityStatus.SDK_UNAVAILABLE);
   const hasStepsPerm  = grantedPermissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
-  const isHCReady     = healthConnectStatus === '2' && hasStepsPerm;
+  const isHCReady     = healthConnectStatus === String(SdkAvailabilityStatus.SDK_AVAILABLE) && hasStepsPerm;
   const showGuide     = isHCInstalled && !hasStepsPerm;
   const canProceed    = isHCReady && selectedOptional !== null && totalSteps > 0;
 
@@ -196,7 +213,9 @@ export default function StepsTrackerScreen() {
     catch { await Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata'); }
   };
 
-  const handleHCPress = () => (healthConnectStatus === '0' ? installHC() : openHealthConnect());
+  const handleHCPress = () => (isHCInstalled ? openHealthConnect() : installHC());
+
+  const openAppSettings = () => Linking.openSettings();
 
   const handleOptional = async (provider: OptionalProvider) => {
     setSelectedOptional(provider);
@@ -273,7 +292,29 @@ export default function StepsTrackerScreen() {
             </Text>
           </TouchableOpacity>
 
-          <PermissionGuide visible={guideOpen} />
+          <PermissionGuide visible={guideOpen} steps={STEPS} headerText="How to grant Steps permission" />
+
+          {(isHCInstalled || isGoogleFitInstalled) && !hasStepsPerm && (
+            <>
+              <TouchableOpacity style={ss.guideToggle} onPress={() => setAltGuideOpen(v => !v)} activeOpacity={0.7}>
+                <MaterialCommunityIcons name={altGuideOpen ? 'chevron-up' : 'cog-outline'} size={14} color={VD.warning} />
+                <Text style={ss.guideToggleText}>Already installed? Try this instead</Text>
+              </TouchableOpacity>
+
+              <PermissionGuide
+                visible={altGuideOpen}
+                steps={STEPS_ALREADY_INSTALLED}
+                headerText="Fix permission from phone Settings"
+              />
+
+              {altGuideOpen && (
+                <TouchableOpacity style={ss.settingsBtn} onPress={openAppSettings} activeOpacity={0.78}>
+                  <MaterialCommunityIcons name="cog-outline" size={16} color={VD.accent} />
+                  <Text style={ss.settingsBtnText}>Open App Settings</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
 
           {/* Choose one */}
           <Text style={[ss.sectionLabel, ss.sectionLabelGap]}>Choose Your Fitness App</Text>
@@ -382,6 +423,15 @@ const ss = StyleSheet.create({
   // Guide toggle
   guideToggle: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: SPACING.xs, marginBottom: SPACING.xs },
   guideToggleText: { fontSize: 12, color: VD.warning, fontWeight: '600' },
+
+  // Settings shortcut button
+  settingsBtn: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: VD.accentFaint, borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    paddingVertical: SPACING.sm, marginBottom: SPACING.md,
+  },
+  settingsBtnText: { fontSize: 13, fontWeight: '700', color: VD.accent },
 
   // Guide accordion
   accordion: { overflow: 'hidden', width: '100%' },

@@ -224,6 +224,8 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 10,
     backgroundColor: "#fff",
+        paddingHorizontal:20,
+
   },
   listContent: {
     paddingBottom: 4,
@@ -235,6 +237,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexGrow: 0,
     flexShrink: 0,
+    
   },
   placeholderCard: {
     opacity: 0,
@@ -267,7 +270,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerRow: {
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
