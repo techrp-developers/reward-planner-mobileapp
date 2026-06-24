@@ -24,28 +24,29 @@ import { useAlert } from '../../../../modules/ecommerce/components/alerts';
 // ─── Violet Dusk palette ──────────────────────────────────────────────────────
 
 const VD = {
-  accent:      '#C4A8FF',
-  accentFaint: 'rgba(196,168,255,0.12)',
-  accentDim:   'rgba(196,168,255,0.25)',
-  cardBg:      'rgba(255,255,255,0.09)',
-  cardBorder:  'rgba(196,168,255,0.18)',
+  accent:      '#8EA2FF',
+  accentDark:  '#B9C4FF',
+  accentFaint: 'rgba(142,162,255,0.12)',
+  accentDim:   'rgba(142,162,255,0.26)',
+  cardBg:      'rgba(255,255,255,0.075)',
+  cardBorder:  'rgba(174,188,255,0.16)',
   white:       '#FFFFFF',
-  whiteMid:    'rgba(255,255,255,0.70)',
-  whiteLow:    'rgba(255,255,255,0.45)',
+  whiteMid:    '#CDD2EA',
+  whiteLow:    '#979EBC',
   whiteGhost:  'rgba(255,255,255,0.10)',
-  success:     '#4ADE80',
-  warning:     '#FBBF24',
-  error:       '#F87171',
+  success:     '#9AAEFF',
+  warning:     '#F8B84E',
+  error:       '#F38C9A',
 };
 
-const BG = ['#1A1040', '#3D2080', '#6B3FA0'];
+const BG = ['#070A16', '#111735', '#201A3F'];
 
 // ─── Brand colours (on-dark) ──────────────────────────────────────────────────
 
 const BRAND = {
   hc:      { icon: 'heart-pulse', bg: 'rgba(230,57,70,0.18)',  tint: '#FF6B7A' },
   samsung: { icon: 'cellphone',   bg: 'rgba(20,40,160,0.22)', tint: '#7B9FFF' },
-  google:  { icon: 'google-fit',  bg: 'rgba(52,168,83,0.18)', tint: '#4ADE80' },
+  google:  { icon: 'google-fit',  bg: 'rgba(52,168,83,0.18)', tint: '#62D985' },
 };
 
 type OptionalProvider = 'Samsung Health' | 'Google Fit';
@@ -98,7 +99,7 @@ const PermissionGuide = ({
         {steps.map((s, i) => (
           <View key={i} style={ss.guideStep}>
             <View style={ss.guideStepLeft}>
-              <MaterialCommunityIcons name={s.icon} size={22} color={VD.accent} />
+              <MaterialCommunityIcons name={s.icon} size={22} color={VD.accentDark} />
               {i < steps.length - 1 && <View style={ss.guideLine} />}
             </View>
             <View style={ss.guideStepRight}>
@@ -132,7 +133,7 @@ const ProviderCard = ({
   installed, connected, mandatory, selected, onPress,
 }: ProviderCardProps) => {
   const statusLabel = connected ? 'Connected' : installed ? 'Open' : 'Install';
-  const statusColor = connected ? VD.success : installed ? VD.accent : VD.warning;
+  const statusColor = connected ? VD.success : installed ? VD.accentDark : VD.warning;
 
   return (
     <TouchableOpacity
@@ -258,13 +259,13 @@ export default function StepsTrackerScreen() {
     <SafeAreaView style={ss.safe} edges={['top', 'bottom']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity style={ss.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.78}>
-            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accentDark} />
           </TouchableOpacity>
 
           <View style={ss.headingGroup}>
@@ -309,7 +310,7 @@ export default function StepsTrackerScreen() {
 
               {altGuideOpen && (
                 <TouchableOpacity style={ss.settingsBtn} onPress={openAppSettings} activeOpacity={0.78}>
-                  <MaterialCommunityIcons name="cog-outline" size={16} color={VD.accent} />
+                  <MaterialCommunityIcons name="cog-outline" size={16} color={VD.accentDark} />
                   <Text style={ss.settingsBtnText}>Open App Settings</Text>
                 </TouchableOpacity>
               )}
@@ -340,7 +341,7 @@ export default function StepsTrackerScreen() {
           />
 
           <View style={ss.appTip}>
-            <MaterialCommunityIcons name="lightbulb-outline" size={13} color={VD.accent} />
+            <MaterialCommunityIcons name="lightbulb-outline" size={13} color={VD.accentDark} />
             <Text style={ss.appTipText}>
               After selecting, open the app → Settings → Manage connected apps → Enable Health Connect.
             </Text>
@@ -356,12 +357,12 @@ export default function StepsTrackerScreen() {
           {/* CTA */}
           <TouchableOpacity activeOpacity={0.9} onPress={handleContinue} style={ss.ctaWrap}>
             <LinearGradient
-              colors={canProceed ? ['#9B6FFF', '#C4A8FF'] : ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.10)']}
+              colors={canProceed ? ['#8EA2FF', '#B9C4FF'] : ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.10)']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={ss.cta}
             >
               <Text style={[ss.ctaText, !canProceed && ss.ctaTextDim]}>Continue</Text>
-              <MaterialCommunityIcons name="arrow-right" size={18} color={canProceed ? '#1A1040' : VD.whiteLow} />
+              <MaterialCommunityIcons name="arrow-right" size={18} color={canProceed ? '#070A16' : VD.whiteLow} />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -375,7 +376,7 @@ export default function StepsTrackerScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const ss = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: '#1A1040' },
+  safe:     { flex: 1, backgroundColor: '#070A16' },
   gradient: { flex: 1 },
   scroll:   { alignItems: 'center', paddingTop: SPACING.xl },
 
@@ -390,11 +391,11 @@ const ss = StyleSheet.create({
   },
 
   headingGroup: { width: '100%', marginBottom: SPACING.xl },
-  eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: VD.accent, marginBottom: 6 },
-  title:   { fontSize: 24, fontWeight: '800', color: VD.white, letterSpacing: -0.5, lineHeight: 30, marginBottom: 8 },
+  eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 0, textTransform: 'uppercase', color: VD.accentDark, marginBottom: 6 },
+  title:   { fontSize: 24, fontWeight: '800', color: VD.white, letterSpacing: 0, lineHeight: 30, marginBottom: 8 },
   description: { fontSize: 14, color: VD.whiteMid, lineHeight: 21 },
 
-  sectionLabel:    { width: '100%', fontSize: 11, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: VD.whiteLow, marginBottom: SPACING.sm },
+  sectionLabel:    { width: '100%', fontSize: 11, fontWeight: '700', letterSpacing: 0, textTransform: 'uppercase', color: VD.whiteLow, marginBottom: SPACING.sm },
   sectionLabelGap: { marginTop: SPACING.lg },
   sectionHint:     { width: '100%', fontSize: 12, color: VD.whiteLow, lineHeight: 18, marginBottom: SPACING.sm, marginTop: -SPACING.xs },
 
@@ -417,8 +418,8 @@ const ss = StyleSheet.create({
   statusPill:      { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
   statusText:      { fontSize: 11, fontWeight: '700' },
   radio:           { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: VD.whiteLow, alignItems: 'center', justifyContent: 'center' },
-  radioSelected:   { borderColor: VD.accent },
-  radioDot:        { width: 10, height: 10, borderRadius: 5, backgroundColor: VD.accent },
+  radioSelected:   { borderColor: VD.accentDark },
+  radioDot:        { width: 10, height: 10, borderRadius: 5, backgroundColor: VD.accentDark },
 
   // Guide toggle
   guideToggle: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: SPACING.xs, marginBottom: SPACING.xs },
@@ -431,7 +432,7 @@ const ss = StyleSheet.create({
     borderWidth: 1, borderColor: VD.cardBorder,
     paddingVertical: SPACING.sm, marginBottom: SPACING.md,
   },
-  settingsBtnText: { fontSize: 13, fontWeight: '700', color: VD.accent },
+  settingsBtnText: { fontSize: 13, fontWeight: '700', color: VD.accentDark },
 
   // Guide accordion
   accordion: { overflow: 'hidden', width: '100%' },
@@ -469,7 +470,7 @@ const ss = StyleSheet.create({
     height: 54, borderRadius: BORDER_RADIUS.large,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  ctaText:    { fontSize: 16, fontWeight: '800', color: '#1A1040', letterSpacing: 0.2 },
+  ctaText:    { fontSize: 16, fontWeight: '800', color: '#070A16', letterSpacing: 0 },
   ctaTextDim: { color: VD.whiteLow },
 
   bottomPad: { height: SPACING.xxl },

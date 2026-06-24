@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
+  Modal,
+  Pressable,
   type ImageStyle,
   type LayoutChangeEvent,
 } from 'react-native';
@@ -22,7 +24,6 @@ import SearchDropdown from './SearchDropdown';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
-const SEARCH_DROPDOWN_SPACE = 480;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -177,7 +178,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   return (
     // Outer wrapper: creates a stacking context so the dropdown overlays
     // dashboard content below without affecting the layout flow.
-    <View style={[styles.wrapper, showDropdown && styles.wrapperWithDropdown]}>
+    <View style={styles.wrapper}>
 
       <View
         style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10 }]}
@@ -334,17 +335,29 @@ const HeaderComponent: React.FC<HeaderProps> = ({
        *  without affecting the layout flow of the dashboard.
        */}
       {showDropdown && headerHeight > 0 && (
-        <View
-          style={[styles.dropdownWrap, { top: headerHeight }]}
+        <Modal
+          visible
+          transparent
+          animationType="none"
+          statusBarTranslucent
+          onRequestClose={closeSearch}
         >
-          <SearchDropdown
-            query={searchQuery}
-            results={results}
-            loading={loading}
-            isEmpty={isEmpty}
-            onClose={closeSearch}
-          />
-        </View>
+          <View style={styles.dropdownOverlay} pointerEvents="box-none">
+            <Pressable
+              style={[styles.dropdownDismissArea, { top: headerHeight }]}
+              onPress={closeSearch}
+            />
+            <View style={[styles.dropdownWrap, { top: headerHeight }]}>
+              <SearchDropdown
+                query={searchQuery}
+                results={results}
+                loading={loading}
+                isEmpty={isEmpty}
+                onClose={closeSearch}
+              />
+            </View>
+          </View>
+        </Modal>
       )}
 
     </View>
@@ -357,9 +370,6 @@ const styles = StyleSheet.create({
   // Outer wrapper creates a stacking context
   wrapper: {
     zIndex: 100,
-  },
-  wrapperWithDropdown: {
-    paddingBottom: SEARCH_DROPDOWN_SPACE,
   },
 
   headerSurface: {
@@ -507,6 +517,15 @@ const styles = StyleSheet.create({
   },
 
   // Dropdown container — absolute, overlays content below header
+  dropdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  dropdownDismissArea: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   dropdownWrap: {
     position: 'absolute',
     left: 12,
