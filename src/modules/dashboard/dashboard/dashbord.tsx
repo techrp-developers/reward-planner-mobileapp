@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     paddingBottom: rs(16),
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
-    overflow: 'hidden',
+    zIndex: 20,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: rs(12) },
     shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
