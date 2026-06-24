@@ -68,6 +68,18 @@ class FitnessModel {
     return rows[0];
   }
 
+  // Most recent fitness_steps row among a set of candidate dates (used to
+  // resolve "today" tolerantly across a device/server timezone mismatch —
+  // see resolveEffectiveDate in fitnessService.js).
+  async getLatestStepsForDates(customerId, dates, conn = db) {
+    const placeholders = dates.map(() => "?").join(", ");
+    const [rows] = await conn.execute(
+      `SELECT * FROM fitness_steps WHERE user_id = ? AND step_date IN (${placeholders}) ORDER BY step_date DESC LIMIT 1`,
+      [customerId, ...dates],
+    );
+    return rows[0];
+  }
+
   async getGoal(customerId) {
     const [rows] = await db.execute(
       `SELECT * FROM fitness_goals WHERE user_id = ? ORDER BY goal_id DESC LIMIT 1`,

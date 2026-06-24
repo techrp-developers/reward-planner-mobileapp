@@ -6,6 +6,32 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString("en-CA"); // YYYY-MM-DD
 };
 
+// [yesterday, today, tomorrow] (server-local) — any two real-world timezones
+// can differ by at most one calendar day, so this is the tolerance window
+// used both when accepting a sync's date and when resolving which date a
+// "today" read should actually look at (see resolveEffectiveDate below).
+const getDateWindow = () => {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  return [yesterday, now, tomorrow].map(formatDate);
+};
+
+// "Today" reads (dashboard, summary, hourly stats) used to hard-code the
+// server's exact today — but syncSteps accepts a 3-day tolerance window for
+// device/server timezone differences, so a sync could save steps under
+// "tomorrow" (server-local) while these reads only ever looked at "today",
+// showing 0 even though the sync succeeded. Resolve to whichever date in the
+// tolerance window actually has the user's most recent data, falling back to
+// the server's literal today if nothing has synced yet.
+const resolveEffectiveDate = async (customerId, conn) => {
+  const candidates = getDateWindow();
+  const row = await FitnessModel.getLatestStepsForDates(customerId, candidates, conn);
+  return row ? formatDate(row.step_date) : candidates[1];
+};
+
 // 0-23 -> "12AM", "6AM", "12PM", "3PM", etc. — matches the format the
 // frontend's StatisticsGraph already parses (^(\d{1,2})(AM|PM)$).
 const formatHourLabel = (hour) => {
@@ -118,13 +144,7 @@ class FitnessService {
     // device/server timezone mismatch instead of rejecting legitimate syncs
     // made near midnight.
     const now = new Date();
-    const serverYesterday = new Date(now);
-    serverYesterday.setDate(now.getDate() - 1);
-    const serverTomorrow = new Date(now);
-    serverTomorrow.setDate(now.getDate() + 1);
-
-    const allowedDates = [serverYesterday, now, serverTomorrow].map(formatDate);
-    if (!date || !allowedDates.includes(date)) {
+    if (!date || !getDateWindow().includes(date)) {
       throw new Error("Only today's steps can be synced");
     }
 
@@ -606,9 +626,9 @@ class FitnessService {
 
   // Dashboard
   async getDashboard(customerId) {
-    const today = formatDate(new Date());
+    const effectiveDate = await resolveEffectiveDate(customerId);
 
-    const steps = await FitnessModel.getTodaySteps(customerId, today);
+    const steps = await FitnessModel.getTodaySteps(customerId, effectiveDate);
     const goal = await FitnessModel.getGoal(customerId);
 
     return {
@@ -1103,9 +1123,9 @@ class FitnessService {
 
   // Get todays summary (for dashboard)
   async getTodaySummary(customerId) {
-    const today = formatDate(new Date());
+    const effectiveDate = await resolveEffectiveDate(customerId);
 
-    const stepsData = await FitnessModel.getStepsByDate(customerId, today);
+    const stepsData = await FitnessModel.getStepsByDate(customerId, effectiveDate);
     const goal = await FitnessModel.getGoal(customerId);
 
     const steps = stepsData?.steps || 0;
@@ -1210,9 +1230,9 @@ class FitnessService {
   }
 
   async getTodayHourlyStats(customerId) {
-    const today = formatDate(new Date());
+    const effectiveDate = await resolveEffectiveDate(customerId);
 
-    const rows = await FitnessModel.getHourlySteps(customerId, today);
+    const rows = await FitnessModel.getHourlySteps(customerId, effectiveDate);
 
     return rows.map((r) => ({
       time: formatHourLabel(r.hour),
