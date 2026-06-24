@@ -312,7 +312,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: SPACING.xl,
     marginBottom: SPACING.sm,
   },
   iconButton: {
