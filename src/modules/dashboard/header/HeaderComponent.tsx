@@ -9,8 +9,6 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
-  Modal,
-  Pressable,
   type ImageStyle,
   type LayoutChangeEvent,
 } from 'react-native';
@@ -20,10 +18,20 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import Logo from '../../../assets/menu/logo.png';
 import { useGlobalSearch } from './useGlobalSearch';
-import SearchDropdown from './SearchDropdown';
+import type { SearchData } from '../api/GlobalSearchAPI';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
+
+export type SearchOverlayState = {
+  visible: boolean;
+  top: number;
+  query: string;
+  results: SearchData | null;
+  loading: boolean;
+  isEmpty: boolean;
+  onClose: () => void;
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +45,8 @@ interface HeaderProps {
   onAIToggle?:            (value: boolean) => void;
   onSearchSubmit?:        (query: string) => void;
   onSearchActiveChange?:  (active: boolean) => void;
+  onSearchDropdownChange?: (active: boolean) => void;
+  onSearchOverlayChange?: (state: SearchOverlayState) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -50,6 +60,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onNotificationPress,
   onSearchSubmit,
   onSearchActiveChange,
+  onSearchDropdownChange,
+  onSearchOverlayChange,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -82,7 +94,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     headerBg:         surface === 'transparent' ? 'transparent' : '#111827',
     helloColor:       isDark ? '#A1A1AA' : '#C7D2FE',
     nameColor:        '#FFFFFF',
-    logoPillBg:       isDark ? 'rgba(255,255,255,0.08)'  : 'rgba(255,255,255,0.14)',
+    logoPillBg:       'rgba(255,255,255,0.92)',
     avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
     dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
     iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
@@ -146,6 +158,29 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       reset();
     });
   }, [dateFade, searchActive, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
+
+  useEffect(() => {
+    onSearchDropdownChange?.(showDropdown);
+    onSearchOverlayChange?.({
+      visible: showDropdown && headerHeight > 0,
+      top: headerHeight,
+      query: searchQuery,
+      results,
+      loading,
+      isEmpty,
+      onClose: closeSearch,
+    });
+  }, [
+    closeSearch,
+    headerHeight,
+    isEmpty,
+    loading,
+    onSearchDropdownChange,
+    onSearchOverlayChange,
+    results,
+    searchQuery,
+    showDropdown,
+  ]);
 
   useEffect(() => {
     if (dismissSignal !== lastDismissSignal.current) {
@@ -212,11 +247,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           </View>
 
           <View style={[styles.logoPill, { backgroundColor: tk.logoPillBg }]}>
-            <Image
-              source={companyLogoUri ? { uri: companyLogoUri } : Logo}
-              style={styles.logoImage as ImageStyle}
-              resizeMode="contain"
-            />
+            <View style={styles.logoImageWrap}>
+              <Image
+                source={companyLogoUri ? { uri: companyLogoUri } : Logo}
+                style={styles.logoImage as ImageStyle}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
         </View>
@@ -334,32 +371,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
        *  Absolutely positioned below the gradient so it overlays page content
        *  without affecting the layout flow of the dashboard.
        */}
-      {showDropdown && headerHeight > 0 && (
-        <Modal
-          visible
-          transparent
-          animationType="none"
-          statusBarTranslucent
-          onRequestClose={closeSearch}
-        >
-          <View style={styles.dropdownOverlay} pointerEvents="box-none">
-            <Pressable
-              style={[styles.dropdownDismissArea, { top: headerHeight }]}
-              onPress={closeSearch}
-            />
-            <View style={[styles.dropdownWrap, { top: headerHeight }]}>
-              <SearchDropdown
-                query={searchQuery}
-                results={results}
-                loading={loading}
-                isEmpty={isEmpty}
-                onClose={closeSearch}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
-
     </View>
   );
 };
@@ -421,22 +432,33 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   logoPill: {
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    minWidth: 112,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 128,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.75)',
+  },
+  logoImageWrap: {
+    width: 110,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
   logoImage: {
-    width: 100,
-    height: 34,
+    width: 102,
+    height: 36,
   },
 
   // ── Row 2 ──
@@ -517,23 +539,6 @@ const styles = StyleSheet.create({
   },
 
   // Dropdown container — absolute, overlays content below header
-  dropdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  dropdownDismissArea: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dropdownWrap: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    zIndex: 200,
-    elevation: 20,
-  },
-
 });
 
 export default HeaderComponent;

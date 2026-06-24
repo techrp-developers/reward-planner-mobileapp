@@ -11,7 +11,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
-import HeaderComponent from '../header/HeaderComponent';
+import HeaderComponent, { type SearchOverlayState } from '../header/HeaderComponent';
+import SearchDropdown from '../header/SearchDropdown';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
@@ -41,6 +42,7 @@ function Dashbord() {
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
   const [thought, setThought] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
   const hasBirthdays = birthdays.length > 0;
@@ -155,6 +157,7 @@ function Dashbord() {
             surface="transparent"
             dismissSignal={searchDismissSignal}
             onSearchActiveChange={setIsSearchOpen}
+            onSearchOverlayChange={setSearchOverlay}
             onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
           />
 
@@ -199,6 +202,24 @@ function Dashbord() {
         </Pressable>
       </ScrollView>
 
+      {searchOverlay?.visible && (
+        <View style={styles.searchOverlay} pointerEvents="box-none">
+          <Pressable
+            style={[styles.searchDismissLayer, { top: searchOverlay.top }]}
+            onPress={searchOverlay.onClose}
+          />
+          <View style={[styles.searchDropdownOverlay, { top: searchOverlay.top }]}>
+            <SearchDropdown
+              query={searchOverlay.query}
+              results={searchOverlay.results}
+              loading={searchOverlay.loading}
+              isEmpty={searchOverlay.isEmpty}
+              onClose={searchOverlay.onClose}
+            />
+          </View>
+        </View>
+      )}
+
       <BottomTabs
         isDashboard
         activeTabKey="Home"
@@ -241,6 +262,24 @@ const styles = StyleSheet.create({
 
   bannerOuter: {
     // paddingHorizontal and paddingTop set inline
+  },
+  searchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 250,
+    elevation: 30,
+  },
+  searchDismissLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  searchDropdownOverlay: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    zIndex: 260,
+    elevation: 32,
   },
 
   card: {
