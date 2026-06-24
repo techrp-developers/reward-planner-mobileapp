@@ -137,7 +137,7 @@ function Dashbord() {
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled
+        scrollEnabled={!isSearchOpen}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
         bounces

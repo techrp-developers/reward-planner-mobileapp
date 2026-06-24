@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type TextStyle,
   type ViewStyle,
@@ -149,6 +150,8 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
 }) => {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
+  const { height: windowHeight } = useWindowDimensions();
+  const dropdownHeight = Math.min(Math.max(windowHeight * 0.42, 320), 460);
 
   // ── Theme tokens ──────────────────────────────────────────────────────────────
   const tk = useMemo(() => ({
@@ -275,13 +278,15 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   // ── Results ───────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.card, tk.card]}>
-      <Animated.View style={[styles.listWrap, animStyle]}>
+      <Animated.View style={[styles.listWrap, { maxHeight: dropdownHeight }, animStyle]}>
         <SectionList
-          style={styles.list}
+          style={[styles.list, { maxHeight: dropdownHeight }]}
+          contentContainerStyle={styles.listContent}
           sections={sections}
           keyExtractor={(item) => `${item.type}-${item.id}`}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
+          persistentScrollbar
           scrollEnabled={true}
           nestedScrollEnabled={true}
           bounces={false}
@@ -330,13 +335,14 @@ const styles = StyleSheet.create({
 
   // SectionList owns the scroll area — maxHeight lives here, not on the card.
   listWrap: {
-    maxHeight: 300,
     overflow: 'hidden',
     borderRadius: 18,
   },
   list: {
-    maxHeight: 300,
     borderRadius: 18,
+  },
+  listContent: {
+    paddingBottom: 4,
   },
 
   // Section header
