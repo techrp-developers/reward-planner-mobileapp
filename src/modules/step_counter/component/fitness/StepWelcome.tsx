@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -52,9 +54,24 @@ const Feature = ({ icon, text }: { icon: string; text: string }) => (
 const StepWelcome = () => {
   const navigation      = useNavigation<Nav>();
   const [checking, setChecking] = useState(true);
+  const heroMotion = useRef(new Animated.Value(0)).current;
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
   const handleNext = useCallback(() => navigation.navigate("StepsTrackerScreen"), [navigation]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(heroMotion, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [heroMotion]);
 
   useEffect(() => {
     let mounted = true;
@@ -73,6 +90,39 @@ const StepWelcome = () => {
     return () => { mounted = false; };
   }, [navigation]);
 
+  const runnerTranslateY = heroMotion.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, -8, 0, -5, 0],
+  });
+  const runnerTranslateX = heroMotion.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [-3, 4, -3],
+  });
+  const runnerRotate = heroMotion.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ["-4deg", "5deg", "-4deg"],
+  });
+  const runnerScale = heroMotion.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [1, 1.035, 0.99, 1.025, 1],
+  });
+  const glowScale = heroMotion.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.94, 1.06, 0.94],
+  });
+  const glowOpacity = heroMotion.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.55, 0.9, 0.55],
+  });
+  const shadowScaleX = heroMotion.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [1, 0.72, 1, 0.82, 1],
+  });
+  const shadowOpacity = heroMotion.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0.22, 0.1, 0.2, 0.13, 0.22],
+  });
+
   return (
     <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -89,8 +139,33 @@ const StepWelcome = () => {
 
           {/* Hero illustration */}
           <View style={ss.heroBox}>
-            <View style={ss.heroGlow} />
-            <RunningIcon width={130} height={130} />
+            <Animated.View
+              style={[
+                ss.heroGlow,
+                { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+              ]}
+            />
+            <Animated.View
+              style={[
+                ss.runnerWrap,
+                {
+                  transform: [
+                    { translateX: runnerTranslateX },
+                    { translateY: runnerTranslateY },
+                    { rotate: runnerRotate },
+                    { scale: runnerScale },
+                  ],
+                },
+              ]}
+            >
+              <RunningIcon width={130} height={130} />
+            </Animated.View>
+            <Animated.View
+              style={[
+                ss.heroShadow,
+                { opacity: shadowOpacity, transform: [{ scaleX: shadowScaleX }] },
+              ]}
+            />
           </View>
 
           {/* Copy */}
@@ -156,12 +231,25 @@ const ss = StyleSheet.create({
 
   heroBox: {
     alignItems: "center", justifyContent: "center",
+    width: 190, height: 170,
     marginBottom: SPACING.xl, position: "relative",
   },
   heroGlow: {
     position: "absolute",
     width: 180, height: 180, borderRadius: 90,
     backgroundColor: "rgba(196,168,255,0.15)",
+  },
+  runnerWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroShadow: {
+    position: "absolute",
+    bottom: 10,
+    width: 86,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
   eyebrow: {
