@@ -11,6 +11,7 @@ import { AppState, type AppStateStatus, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  aggregateRecord,
   getGrantedPermissions,
   getSdkStatus,
   initialize,
@@ -90,6 +91,18 @@ function buildPayload(steps: number) {
   };
 }
 
+function sumStepRecords(records: any[]): number {
+  const originOf = (record: any) => String(record.metadata?.dataOrigin ?? '').toLowerCase();
+  const googleRecords = records.filter(record => originOf(record).includes('fit') || originOf(record).includes('google'));
+  const samsungRecords = records.filter(record => originOf(record).includes('samsung') || originOf(record).includes('shealth'));
+  const selectedRecords =
+    googleRecords.length > 0 ? googleRecords :
+    samsungRecords.length > 0 ? samsungRecords :
+    records;
+
+  return selectedRecords.reduce((sum, record) => sum + (Number(record.count) || 0), 0);
+}
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const StepTrackerContext = createContext<StepTrackerContextValue | null>(null);
@@ -103,6 +116,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   const initialized     = useRef(false);
   const isSyncing       = useRef(false);  // sync lock — prevents concurrent API calls
   const lastSyncedSteps = useRef(-1);     // -1 = never synced this session
+  const lastSyncedDate  = useRef<string | null>(null);
   const lastSyncTime    = useRef(0);
   const stepsRef        = useRef(0);      // mirror of steps state for closures
 
@@ -123,16 +137,33 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(pairs => {
       const [lastSyncPair, setupPair] = pairs;
-      const n = Number(lastSyncPair[1]);
-      if (Number.isFinite(n) && n > 0) lastSyncedSteps.current = n;
+      const today = localDateString(new Date());
+      const rawLastSync = lastSyncPair[1];
+
+      if (rawLastSync) {
+        try {
+          const parsed = JSON.parse(rawLastSync);
+          const n = Number(parsed?.steps);
+          const date = typeof parsed?.date === 'string' ? parsed.date : null;
+          if (date === today && Number.isFinite(n) && n > 0) {
+            lastSyncedDate.current = date;
+            lastSyncedSteps.current = n;
+          }
+        } catch {
+          lastSyncedDate.current = null;
+          lastSyncedSteps.current = -1;
+        }
+      }
       if (setupPair[1] === 'true') setIsSetupComplete(true);
     }).catch(() => {});
   }, []);
 
   // ── Sync gate — only reads refs, safe to call anywhere ───────────────────
   const shouldSync = (count: number): boolean => {
+    const today = localDateString(new Date());
     if (count <= 0) return false;
     if (isSyncing.current) return false;                              // already in flight
+    if (lastSyncedDate.current !== today) return true;                // first sync today
     if (lastSyncedSteps.current === -1) return true;                  // first sync ever
     if (count <= lastSyncedSteps.current) return false;               // no increase
     if (count - lastSyncedSteps.current < MIN_STEP_DIFF) return false; // < 100 new steps
@@ -146,12 +177,14 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
     isSyncing.current = true;
     try {
-      const res = await syncStepsToServer(buildPayload(count));
+      const payload = buildPayload(count);
+      const res = await syncStepsToServer(payload);
       if (!res.success) throw new Error(res.message || 'Sync failed');
 
+      lastSyncedDate.current  = payload.date;
       lastSyncedSteps.current = count;
       lastSyncTime.current    = Date.now();
-      await AsyncStorage.setItem(STORAGE_LAST_SYNC, String(count));
+      await AsyncStorage.setItem(STORAGE_LAST_SYNC, JSON.stringify({ date: payload.date, steps: count }));
 
       // Show the celebration for either a completed daily goal OR a newly
       // unlocked lifetime achievement — these are now independent (the
@@ -177,29 +210,34 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       const now   = new Date();
       const start = new Date(); start.setHours(0, 0, 0, 0);
 
-      const result = await readRecords('Steps', {
-        timeRangeFilter: {
-          operator:  'between',
-          startTime: start.toISOString(),
-          endTime:   now.toISOString(),
-        },
-      });
-
-      const records   = result.records;
-      const originOf  = (r: any) => (r.metadata?.dataOrigin ?? '').toLowerCase();
-      const googleRec = records.filter(r => originOf(r).includes('fit') || originOf(r).includes('google'));
-      const samsungRec = records.filter(r => originOf(r).includes('samsung') || originOf(r).includes('shealth'));
+      const timeRangeFilter = {
+        operator:  'between' as const,
+        startTime: start.toISOString(),
+        endTime:   now.toISOString(),
+      };
 
       let total = 0;
-      if (googleRec.length > 0) {
-        total = googleRec.reduce((s, r) => s + (r.count ?? 0), 0);
-      } else if (samsungRec.length > 0) {
-        total = samsungRec.reduce((s, r) => s + (r.count ?? 0), 0);
-      } else {
-        total = records.reduce((s, r) => s + (r.count ?? 0), 0);
+      let records: any[] = [];
+
+      try {
+        const aggregate = await aggregateRecord({
+          recordType: 'Steps',
+          timeRangeFilter,
+        });
+        total = Number(aggregate.COUNT_TOTAL) || 0;
+        console.log(
+          `[Steps] Aggregated ${total} steps today from origins: ${JSON.stringify(aggregate.dataOrigins || [])}`,
+        );
+      } catch (aggregateError: any) {
+        console.warn('[Steps] Aggregate read failed, falling back to records:', aggregateError?.message);
       }
 
-      console.log(`[Steps] Read ${total} steps today (${records.length} records)`);
+      if (total <= 0) {
+        const result = await readRecords('Steps', { timeRangeFilter });
+        records = Array.isArray(result.records) ? result.records : [];
+        total = sumStepRecords(records);
+        console.log(`[Steps] Raw read ${total} steps today (${records.length} records)`);
+      }
 
       if (total <= 0) {
         let hasHistory = false;

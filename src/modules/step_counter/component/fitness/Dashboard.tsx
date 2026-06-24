@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-  Dimensions,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -25,7 +24,6 @@ import {
   BORDER_RADIUS,
   RESPONSIVE,
   SPACING,
-  TYPOGRAPHY,
 } from "../../utils/theme";
 import { fetchUserInfo } from "../../../common/auth/api/AuthAPI";
 import {
@@ -42,7 +40,6 @@ import type { GoalSyncData } from "../../api/Stepsapi";
 import WeeklyGraph from "./WeeklyGraph";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const { width: SCREEN_WIDTH } = Dimensions.get("screen");
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 
 // Violet Dusk palette — all on-dark
@@ -87,7 +84,7 @@ const StepRing: React.FC<RingProps> = ({
   const pct = Math.round(progress * 100);
 
   return (
-    <View style={{ alignItems: "center", marginBottom: SPACING.lg }}>
+    <View style={styles.ringWrap}>
       <View style={{ width: size, height: size }}>
         <Svg width={size} height={size}>
           {/* Track */}
@@ -252,7 +249,13 @@ const Dashboard: React.FC = () => {
     retry: 1,
   });
 
-  const { celebrationData, dismissCelebration } = useStepTracker();
+  const {
+    steps: liveSteps,
+    loading: stepsLoading,
+    celebrationData,
+    dismissCelebration,
+    refreshSteps,
+  } = useStepTracker();
   // Goal completion shows two overlays in sequence: GoalReachedScreen (quick
   // "Target Reached!" recap) first, then Continue advances to the fuller
   // TodayGoalCompletedScreen (Plan Overview + full summary).
@@ -322,25 +325,28 @@ const Dashboard: React.FC = () => {
   }, [dashboardSteps.goalSteps, summary.goal_steps, weeklyQuery.data]);
 
   const stepStats: StepStats = useMemo(() => {
-    const currentSteps = summary.steps || dashboardSteps.todaySteps;
+    const currentSteps = liveSteps || summary.steps || dashboardSteps.todaySteps;
     const goalSteps = summary.goal_steps || dashboardSteps.goalSteps || 1;
+    const distanceKm = liveSteps ? Number((liveSteps * 0.0008).toFixed(2)) : summary.distance_km;
+    const calories = liveSteps ? Math.round(liveSteps * 0.04) : summary.calories;
+    const activeMinutes = liveSteps ? Math.max(1, Math.floor(liveSteps / 1000)) : summary.active_minutes;
+
     return {
       currentSteps,
       goalSteps,
-      distance_km: summary.distance_km || 0,
-      active_minutes: summary.active_minutes || 0,
-      calories: summary.calories || 0,
+      distance_km: distanceKm || 0,
+      active_minutes: activeMinutes || 0,
+      calories: calories || 0,
     };
-  }, [dashboardSteps, summary]);
+  }, [dashboardSteps, liveSteps, summary]);
 
   const streakCount: number =
     (streakQuery.data?.data as any)?.current_streak ?? 0;
 
   const isLoading =
-    dashboardQuery.isLoading ||
-    summaryQuery.isLoading ||
-    weeklyQuery.isLoading ||
-    streakQuery.isLoading;
+    (stepsLoading && !liveSteps && !summary.steps && !dashboardSteps.todaySteps) ||
+    (dashboardQuery.isLoading && !dashboardSteps.todaySteps) ||
+    (summaryQuery.isLoading && !summary.steps);
 
   const errorMsg =
     dashboardQuery.data?.message ||
@@ -355,11 +361,12 @@ const Dashboard: React.FC = () => {
       : "");
 
   const handleRetry = useCallback(() => {
+    refreshSteps();
     dashboardQuery.refetch();
     summaryQuery.refetch();
     weeklyQuery.refetch();
     streakQuery.refetch();
-  }, [dashboardQuery, summaryQuery, weeklyQuery, streakQuery]);
+  }, [dashboardQuery, refreshSteps, summaryQuery, weeklyQuery, streakQuery]);
 
   const dateLabel = useMemo(
     () =>
@@ -423,7 +430,7 @@ const Dashboard: React.FC = () => {
                   Loading your movement...
                 </Text>
               </View>
-            ) : errorMsg ? (
+            ) : errorMsg && !stepStats.currentSteps ? (
               <View style={styles.stateBox}>
                 <Text style={styles.stateText}>{errorMsg}</Text>
                 <TouchableOpacity onPress={handleRetry} style={styles.retryBtn}>
@@ -607,6 +614,10 @@ const styles = StyleSheet.create({
   },
 
   // ── Ring ──
+  ringWrap: {
+    alignItems: "center",
+    marginBottom: SPACING.lg,
+  },
   ringCenter: {
     position: "absolute",
     top: 0,

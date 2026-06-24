@@ -19,17 +19,29 @@ const getDateWindow = () => {
   return [yesterday, now, tomorrow].map(formatDate);
 };
 
+const ADJACENT_DATE_FALLBACK_MINUTES = 120;
+
 // "Today" reads (dashboard, summary, hourly stats) used to hard-code the
 // server's exact today — but syncSteps accepts a 3-day tolerance window for
 // device/server timezone differences, so a sync could save steps under
 // "tomorrow" (server-local) while these reads only ever looked at "today",
-// showing 0 even though the sync succeeded. Resolve to whichever date in the
-// tolerance window actually has the user's most recent data, falling back to
-// the server's literal today if nothing has synced yet.
+// showing 0 even though the sync succeeded. Server-local today wins first.
+// Yesterday/tomorrow are only used when touched recently, which covers real
+// timezone drift without showing stale yesterday data as today's movement.
 const resolveEffectiveDate = async (customerId, conn) => {
   const candidates = getDateWindow();
-  const row = await FitnessModel.getLatestStepsForDates(customerId, candidates, conn);
-  return row ? formatDate(row.step_date) : candidates[1];
+  const [yesterday, today, tomorrow] = candidates;
+  const todayRow = await FitnessModel.getTodaySteps(customerId, today);
+  if (todayRow) return today;
+
+  const adjacentRow = await FitnessModel.getRecentlyUpdatedStepsForDates(
+    customerId,
+    [yesterday, tomorrow],
+    ADJACENT_DATE_FALLBACK_MINUTES,
+    conn,
+  );
+
+  return adjacentRow ? formatDate(adjacentRow.step_date) : today;
 };
 
 // 0-23 -> "12AM", "6AM", "12PM", "3PM", etc. — matches the format the
