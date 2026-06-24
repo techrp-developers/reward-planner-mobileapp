@@ -47,7 +47,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     stepsToday = 320,
     onMenuPress,
     onPress,
-    loading = false,
+    loading: _loading = false,
     cardWidth,
 }) => {
     const { isDark, theme } = useAppTheme();
@@ -61,7 +61,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     }, [steps, goalSteps, progressPercent]);
 
     // Ring geometry
-    const ringSize = Math.min(cWidth * 0.54, rs(60));
+    const ringSize = Math.min(cWidth * 0.64, rs(72));
     const strokeWidth = ringSize * 0.1;
     const radius = (ringSize - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -128,7 +128,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                         </TouchableOpacity>
                     </View>
 
-                    {/* Body: ring + stats */}
+                    {/* Body: ring, stats, activity */}
                     <View style={styles.body}>
                         <View style={[styles.ringWrapper, { width: ringSize, height: ringSize }]}>
                             <Svg width={ringSize} height={ringSize}>
@@ -159,9 +159,8 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                             </View>
                         </View>
 
-                        {/* Right stats */}
                         <View style={styles.statsColumn}>
-                            <View style={styles.stepsUpRow}>
+                            <View style={styles.statItem}>
                                 <View style={[styles.arrowBubble, t.arrowBubble]}>
                                     <Text style={styles.arrowText}>↑</Text>
                                 </View>
@@ -170,8 +169,14 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                                     <Text style={[styles.stepsUpSub, t.stepsUpSub]}>steps today</Text>
                                 </View>
                             </View>
-                            <View style={[styles.goalBadge, t.goalBadge]}>
-                                <Text style={styles.goalBadgeText}>{goalPercent}% of goal</Text>
+                            <View style={[styles.statItem, styles.goalStatItem]}>
+                                <View style={[styles.goalBubble, t.goalBadge]}>
+                                    <Text style={styles.goalBubbleText}>%</Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.goalValue}>{goalPercent}%</Text>
+                                    <Text style={[styles.stepsUpSub, t.stepsUpSub]}>of goal</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -243,7 +248,6 @@ const styles = StyleSheet.create({
     menuDots: { fontSize: fs(20), color: "#C4B5FD", paddingLeft: rs(4) },
 
     body: {
-        flexDirection: "row",
         alignItems: "center",
         gap: rs(8),
     },
@@ -268,14 +272,21 @@ const styles = StyleSheet.create({
     stepsWord: { fontSize: fs(10), color: "#A855F7", fontWeight: "600", marginTop: 1 },
 
     statsColumn: {
-        flex: 1,
-        alignItems: "flex-start",
-        gap: rs(5),
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: rs(6),
     },
-    stepsUpRow: {
+    statItem: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         gap: rs(5),
+        flexShrink: 1,
+    },
+    goalStatItem: {
+        justifyContent: "flex-end",
     },
     arrowBubble: {
         width: rs(20),
@@ -289,22 +300,24 @@ const styles = StyleSheet.create({
     stepsUpValue: { fontSize: fs(12), fontWeight: "700", color: "#F0429F" },
     stepsUpSub:   { fontSize: fs(9) },  // color via t.stepsUpSub
 
-    goalBadge: {
-        // backgroundColor via t.goalBadge
-        borderRadius: rs(20),
-        paddingHorizontal: rs(8),
-        paddingVertical: rs(3),
+    goalBubble: {
+        width: rs(20),
+        height: rs(20),
+        borderRadius: rs(10),
         borderWidth: 1,
         borderColor: "rgba(240, 66, 159, 0.14)",
+        alignItems: "center",
+        justifyContent: "center",
     },
-    goalBadgeText: { fontSize: fs(10), fontWeight: "700", color: "#E0348A" },
+    goalBubbleText: { fontSize: fs(10), fontWeight: "800", color: "#E0348A" },
+    goalValue: { fontSize: fs(12), fontWeight: "700", color: "#E0348A" },
 
     barsWrapper: {
         flexDirection: "row",
         alignItems: "flex-end",
         alignSelf: "center",
         height: rs(30),
-        marginTop: rs(14),
+        marginTop: rs(10),
         marginBottom: rs(5),
         gap: rs(3),
     },
