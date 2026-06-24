@@ -29,6 +29,7 @@ interface HeaderProps {
   userName?:              string;
   userImageUri?:          string;
   companyLogoUri?:        string;
+  surface?:               'solid' | 'transparent';
   onNotificationPress?:   () => void;
   onAIToggle?:            (value: boolean) => void;
   onSearchSubmit?:        (query: string) => void;
@@ -41,6 +42,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   userName = 'User',
   userImageUri,
   companyLogoUri,
+  surface = 'solid',
   onNotificationPress,
   onSearchSubmit,
   onSearchActiveChange,
@@ -70,7 +72,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Theme tokens ──────────────────────────────────────────────────────────
 
   const tk = useMemo(() => ({
-    headerBg:         '#111827',
+    headerBg:         surface === 'transparent' ? 'transparent' : '#111827',
     helloColor:       isDark ? '#A1A1AA' : '#C7D2FE',
     nameColor:        '#FFFFFF',
     logoPillBg:       isDark ? 'rgba(255,255,255,0.08)'  : 'rgba(255,255,255,0.14)',
@@ -82,7 +84,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.22)',
     searchTextColor:  '#FFFFFF',
     placeholderColor: isDark ? '#A1A1AA'  : '#C7D2FE',
-  }), [isDark]);
+  }), [isDark, surface]);
 
   const formattedDate = useMemo(() => {
     const n = new Date();

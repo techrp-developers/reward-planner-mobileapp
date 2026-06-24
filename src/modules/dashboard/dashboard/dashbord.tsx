@@ -106,6 +106,10 @@ function Dashbord() {
     ? ['#18181B', '#27233A', '#4338CA']
     : ['#111827', '#312E81', '#4F46E5'];
 
+  const topSectionGradient: string[] = isDark
+    ? ['#09090B', '#111827', '#18181B']
+    : ['#111827', '#1E1B4B', '#312E81'];
+
   const rootGradient = isDark
     ? ['#09090B', '#111827', '#151526']
     : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
@@ -129,44 +133,51 @@ function Dashbord() {
         scrollEnabled={!isSearchOpen}
         bounces
       >
-        <HeaderComponent
-          userName={headerUserName}
-          userImageUri={headerUserImage ?? undefined}
-          companyLogoUri={headerCompanyLogo ?? undefined}
-          onSearchActiveChange={setIsSearchOpen}
-          onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-        />
+        <LinearGradient
+          colors={topSectionGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topSection}
+        >
+          <HeaderComponent
+            userName={headerUserName}
+            userImageUri={headerUserImage ?? undefined}
+            companyLogoUri={headerCompanyLogo ?? undefined}
+            surface="transparent"
+            onSearchActiveChange={setIsSearchOpen}
+            onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+          />
 
-        {/* Motivational Quote Banner */}
-        {hasBirthdays ? (
-          <BirthdayCarousel birthdays={birthdays} />
-        ) : (
-          <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(14) }]}>
-            <LinearGradient
-              colors={quoteBannerGradient}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={[styles.card, t.card]}
-            >
-              <View style={styles.quoteHighlight} />
+          {/* Motivational Quote Banner */}
+          {hasBirthdays ? (
+            <BirthdayCarousel birthdays={birthdays} />
+          ) : (
+            <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
+              <LinearGradient
+                colors={quoteBannerGradient}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.card, t.card]}
+              >
+                <View style={styles.quoteHighlight} />
 
-              <View style={[styles.iconContainer, t.iconContainer]}>
-                <MaterialCommunityIcons
-                  name="lightbulb-on-outline"
-                  size={iconSize}
-                  color={isDark ? '#FFFFFF' : '#9B3DD8'}
-                />
-              </View>
+                <View style={[styles.iconContainer, t.iconContainer]}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on-outline"
+                    size={iconSize}
+                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                  />
+                </View>
 
-              <Text style={styles.quote}>
-                {thought
-                  ? `"${thought}"`
-                  : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-              </Text>
-            </LinearGradient>
-            
-          </View>
-        )}
+                <Text style={styles.quote}>
+                  {thought
+                    ? `"${thought}"`
+                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                </Text>
+              </LinearGradient>
+            </View>
+          )}
+        </LinearGradient>
         <Home_Chart />
         <ServicesModule />
         <ModuleBanner />
@@ -199,6 +210,18 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     // paddingBottom set inline so it scales with rs() and TAB_BAR_HEIGHT
+  },
+
+  topSection: {
+    paddingBottom: rs(16),
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
+    overflow: 'hidden',
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: rs(12) },
+    shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
+    shadowRadius: rs(18),
+    elevation: 8,
   },
 
   bannerOuter: {
