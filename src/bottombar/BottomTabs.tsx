@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { Animated, View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 
 import ProfileIcon from "../assets/menu/profile.svg";
@@ -46,6 +47,8 @@ type TabItemProps = {
 // Defined outside render — stable reference, no allocation per press.
 const HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 } as const;
 const NOOP = () => {};
+const DASHBOARD_SLOT_WIDTH = 62;
+const DASHBOARD_INDICATOR_LEFT = 9;
 
 // Tab config is identical across modes — the parent's onTabPress handler
 // (MainLayout / Dashbord) decides where each generic tab key actually
@@ -108,7 +111,7 @@ const CenterButton = React.memo(function CenterButton({
     >
       <View style={styles.diamond}>
         {isDashboard ? (
-          <Image source={dashbord_menu} style={{ width: 90, height: 90 }} resizeMode="contain" />
+          <Image source={dashbord_menu} style={styles.centerDashboardImage} resizeMode="contain" />
         ) : (
           <CenterIcon width={90} height={90} />
         )}
@@ -132,6 +135,7 @@ function BottomTabs({
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
   // Without this, every tab press invalidates handlePress → pressHandlers → all TabItem memos.
   const activeTabRef = useRef<TabKey>("Home");
+  const dashboardIndicatorX = useRef(new Animated.Value(DASHBOARD_SLOT_WIDTH)).current;
   const [activeTab, setActiveTab] = useState<TabKey>("Home");
 
   const handlePress = useCallback(
@@ -145,6 +149,32 @@ function BottomTabs({
   );
 
   const tabs = isDashboard ? DASHBOARD_TABS : TABS;
+
+  const animateDashboardIndicator = useCallback((index: number, after?: () => void) => {
+    Animated.spring(dashboardIndicatorX, {
+      toValue: index * DASHBOARD_SLOT_WIDTH,
+      useNativeDriver: true,
+      tension: 120,
+      friction: 13,
+    }).start(({ finished }) => {
+      if (finished) {
+        after?.();
+      }
+    });
+  }, [dashboardIndicatorX]);
+
+  const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Profile") => {
+    const index = tab === "Notes" ? 0 : tab === "Home" ? 1 : 2;
+    activeTabRef.current = tab;
+    setActiveTab(tab);
+    animateDashboardIndicator(index, () => {
+      if (tab === "Home") {
+        onCenterPress?.();
+        return;
+      }
+      onTabPress?.(tab);
+    });
+  }, [animateDashboardIndicator, onCenterPress, onTabPress]);
 
   // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,
   // not on every tab press. Passing these as onPress keeps TabItem React.memo effective.
@@ -166,6 +196,60 @@ function BottomTabs({
       setActiveTab(activeTabKey);
     }
   }, [activeTabKey]);
+
+  if (isDashboard) {
+    return (
+      <View style={[styles.dashboardWrap, { paddingBottom: bottomInset }]}>
+        <View style={styles.dashboardPill}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.dashboardIndicator,
+              { transform: [{ translateX: dashboardIndicatorX }] },
+            ]}
+          />
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => handleDashboardPress("Notes")}
+            style={styles.dashboardSideBtn}
+            hitSlop={HIT_SLOP}
+          >
+            <MaterialCommunityIcons
+              name="note-text-outline"
+              size={23}
+              color={activeTab === "Notes" ? "#111827" : "#E5E7EB"}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => handleDashboardPress("Home")}
+            style={styles.dashboardSideBtn}
+            hitSlop={HIT_SLOP}
+          >
+            <MaterialCommunityIcons
+              name="home"
+              size={24}
+              color={activeTab === "Home" ? "#111827" : "#E5E7EB"}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => handleDashboardPress("Profile")}
+            style={styles.dashboardSideBtn}
+            hitSlop={HIT_SLOP}
+          >
+            <MaterialCommunityIcons
+              name="account-circle-outline"
+              size={24}
+              color={activeTab === "Profile" ? "#111827" : "#E5E7EB"}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
@@ -215,6 +299,54 @@ function BottomTabs({
 export default React.memo(BottomTabs);
 
 const styles = StyleSheet.create({
+  dashboardWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+  },
+  dashboardPill: {
+    height: 58,
+    minWidth: 204,
+    paddingHorizontal: 9,
+    borderRadius: 31,
+    backgroundColor: "#151515",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 0,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  dashboardSideBtn: {
+    width: DASHBOARD_SLOT_WIDTH,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  dashboardIndicator: {
+    position: "absolute",
+    left: DASHBOARD_INDICATOR_LEFT,
+    width: DASHBOARD_SLOT_WIDTH,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+    shadowColor: "#FFFFFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   wrap: {
     position: "absolute",
     left: 0,
@@ -263,6 +395,10 @@ const styles = StyleSheet.create({
     height: 95,
     alignItems: "center",
     justifyContent: "center",
+  },
+  centerDashboardImage: {
+    width: 90,
+    height: 90,
   },
   badge: {
     position: "absolute",
