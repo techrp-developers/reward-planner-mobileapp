@@ -102,15 +102,17 @@ function Dashbord() {
     navigation.navigate('Dashboard');
   }, [navigation]);
 
-  const quoteBannerGradient: string[] = ['#7928CA', '#9C3BE0', '#B84EFF'];
+  const quoteBannerGradient: string[] = isDark
+    ? ['#18181B', '#27233A', '#4338CA']
+    : ['#111827', '#312E81', '#4F46E5'];
 
   const rootGradient = isDark
-    ? ['#0E0E1C', '#1A1A2E']
-    : ['#F0EDFF', '#FFFFFF'];
+    ? ['#09090B', '#111827', '#151526']
+    : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
 
   const t = useMemo(() => StyleSheet.create({
-    iconContainer: { backgroundColor: isDark ? '#2D2D44' : '#FFFFFF' },
-    card: { shadowColor: isDark ? '#000000' : '#7928CA' },
+    iconContainer: { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.16)' },
+    card: { shadowColor: isDark ? '#000000' : '#312E81' },
   }), [isDark]);
 
   return (
@@ -146,8 +148,7 @@ function Dashbord() {
               end={{ x: 1, y: 0.5 }}
               style={[styles.card, t.card]}
             >
-              <View style={styles.glowTop} />
-              <View style={styles.glowBottom} />
+              <View style={styles.quoteHighlight} />
 
               <View style={[styles.iconContainer, t.iconContainer]}>
                 <MaterialCommunityIcons
@@ -205,47 +206,38 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    borderRadius: rs(24),
-    paddingVertical: rs(12),
-    paddingHorizontal: rs(12),
+    borderRadius: rs(20),
+    paddingVertical: rs(13),
+    paddingHorizontal: rs(14),
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
     // shadowColor via t.card
-    shadowOffset: { width: 0, height: rs(8) },
-    shadowOpacity: Platform.OS === 'ios' ? 0.38 : 0.45,
-    shadowRadius: rs(20),
-    elevation: 12,
+    shadowOffset: { width: 0, height: rs(10) },
+    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
+    shadowRadius: rs(18),
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
 
-  glowTop: {
+  quoteHighlight: {
     position: 'absolute',
-    top: -50,
-    right: -10,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-
-  glowBottom: {
-    position: 'absolute',
-    bottom: -40,
-    left: -20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: rs(92),
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
 
   iconContainer: {
-    width: rs(58),
-    height: rs(58),
-    borderRadius: rs(18),
+    width: rs(48),
+    height: rs(48),
+    borderRadius: rs(14),
     // backgroundColor via t.iconContainer
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: rs(16),
+    marginRight: rs(13),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -256,10 +248,10 @@ const styles = StyleSheet.create({
   quote: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: fs(14),
-    lineHeight: rs(22),
+    fontSize: fs(13.5),
+    lineHeight: rs(20),
     fontStyle: 'italic',
-    fontWeight: '500',
-    letterSpacing: 0.1,
+    fontWeight: '600',
+    letterSpacing: 0,
   },
 });

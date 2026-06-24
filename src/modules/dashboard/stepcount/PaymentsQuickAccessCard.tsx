@@ -74,14 +74,14 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
   const t = useMemo(
     () => ({
       card: {
-        backgroundColor: theme.card,
-        shadowColor: isDark ? "#000000" : "#2563EB",
+        backgroundColor: isDark ? "#18181B" : "#FFFFFF",
+        shadowColor: isDark ? "#000000" : "#64748B",
       } as ViewStyle,
       title: { color: theme.text } as TextStyle,
       subtitle: { color: theme.secondaryText } as TextStyle,
       actionCard: {
-        backgroundColor: isDark ? "rgba(124, 58, 237, 0.16)" : "#F5F3FF",
-        borderColor: isDark ? "rgba(196, 181, 253, 0.14)" : "rgba(124, 58, 237, 0.12)",
+        backgroundColor: isDark ? "rgba(99, 102, 241, 0.12)" : "#F8FAFC",
+        borderColor: isDark ? "rgba(199, 210, 254, 0.14)" : "rgba(148, 163, 184, 0.18)",
       } as ViewStyle,
       actionTitle: { color: theme.text } as TextStyle,
     }),
@@ -108,7 +108,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
       <View style={[styles.card, t.card]}>
         <View style={styles.header}>
           <LinearGradient
-            colors={["#2563EB", "#7C3AED"]}
+            colors={["#111827", "#4F46E5"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.iconBubble}
@@ -149,7 +149,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
 
         <TouchableOpacity onPress={onOpenPayments} activeOpacity={0.88}>
           <LinearGradient
-            colors={["#2563EB", "#3B5BFF"]}
+            colors={["#111827", "#4F46E5"]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={styles.cta}
@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
   cardWrapper: { flex: 1 },
   card: {
     flex: 1,
-    borderRadius: rs(22),
+    borderRadius: rs(18),
     padding: rs(10),
-    shadowOffset: { width: 0, height: rs(6) },
-    shadowOpacity: Platform.OS === "ios" ? 0.2 : 0.28,
-    shadowRadius: rs(16),
-    elevation: 8,
+    shadowOffset: { width: 0, height: rs(8) },
+    shadowOpacity: Platform.OS === "ios" ? 0.12 : 0.18,
+    shadowRadius: rs(14),
+    elevation: 5,
     borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.16)",
+    borderColor: "rgba(148, 163, 184, 0.18)",
   },
   header: {
     flexDirection: "row",
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   iconBubble: {
     width: rs(34),
     height: rs(34),
-    borderRadius: rs(10),
+    borderRadius: rs(9),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     minHeight: rs(31),
-    borderRadius: rs(12),
+    borderRadius: rs(10),
     borderWidth: 1,
     paddingHorizontal: rs(9),
     paddingVertical: rs(5),

@@ -71,18 +71,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Theme tokens ──────────────────────────────────────────────────────────
 
   const tk = useMemo(() => ({
-    headerGradient:   isDark ? ['#1A1A2E', '#2D2D44'] : ['#C8B9FF', '#F0EDFF'],
-    helloColor:       isDark ? '#A89FD8' : '#6B5BA8',
-    nameColor:        isDark ? '#FFFFFF'  : '#1A1A2E',
-    logoPillBg:       isDark ? '#2D2D44'  : '#FFFFFF',
-    avatarRingBg:     isDark ? '#2D1F6E'  : '#E9E4FF',
-    dateColor:        isDark ? '#C4BCFF'  : '#4A3A82',
-    iconBg:           isDark ? 'rgba(255,255,255,0.10)' : 'rgba(124,92,252,0.12)',
-    iconTint:         isDark ? '#D0CBFF'  : '#7C5CFC',
-    searchBg:         isDark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.80)',
-    searchBorder:     isDark ? 'rgba(255,255,255,0.15)' : 'rgba(124,92,252,0.25)',
-    searchTextColor:  isDark ? '#FFFFFF'  : '#1A1A2E',
-    placeholderColor: isDark ? '#6A6A8E'  : '#9B8FCC',
+    headerGradient:   isDark ? ['#09090B', '#18181B', '#27233A'] : ['#FFFFFF', '#F8FAFC', '#EEF2FF'],
+    helloColor:       isDark ? '#A1A1AA' : '#64748B',
+    nameColor:        isDark ? '#FFFFFF'  : '#0F172A',
+    logoPillBg:       isDark ? 'rgba(255,255,255,0.08)'  : '#FFFFFF',
+    avatarRingBg:     isDark ? 'rgba(79,70,229,0.20)'  : '#EEF2FF',
+    dateColor:        isDark ? '#C7D2FE'  : '#334155',
+    iconBg:           isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+    iconTint:         isDark ? '#C7D2FE'  : '#1E293B',
+    searchBg:         isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+    searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : '#E2E8F0',
+    searchTextColor:  isDark ? '#FFFFFF'  : '#0F172A',
+    placeholderColor: isDark ? '#71717A'  : '#94A3B8',
   }), [isDark]);
 
   const formattedDate = useMemo(() => {
@@ -318,7 +318,9 @@ const styles = StyleSheet.create({
 
   gradient: {
     paddingHorizontal: 20,
-    paddingBottom: 18,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
   },
 
   // ── Row 1 ──
@@ -326,14 +328,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   avatarRing: {
     width: 46,
     height: 46,
     borderRadius: 23,
     borderWidth: 2,
-    borderColor: '#7C5CFC',
+    borderColor: '#6366F1',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -358,18 +360,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   logoPill: {
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minWidth: 100,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    shadowColor: '#7C5CFC',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   logoImage: {
     width: 90,
@@ -435,6 +437,8 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.20)',
   },
 
   // Dropdown container — absolute, overlays content below header
