@@ -33,6 +33,59 @@ const buildWeeklyPlan = (recommendedSteps) => {
   return steps.map((value, i) => ({ week: i + 1, steps: value }));
 };
 
+// Shared by both syncSteps return paths (goal achieved or not) — lifetime
+// achievement coins must be credited even when the daily goal wasn't hit.
+const creditWalletCoins = async (customerId, coins, conn) => {
+  if (coins <= 0) return;
+
+  await conn.execute(
+    `INSERT INTO customer_wallet (user_id, balance)
+      VALUES (?, 0)
+      ON DUPLICATE KEY UPDATE user_id = user_id`,
+    [customerId],
+  );
+
+  await conn.execute(
+    `UPDATE customer_wallet
+     SET balance = balance + ?
+     WHERE user_id = ?`,
+    [coins, customerId],
+  );
+
+  const EXPIRY_MONTHS = parseInt(process.env.WALLET_EXPIRY_MONTHS || "3", 10);
+  const expiryDate = new Date();
+  expiryDate.setMonth(expiryDate.getMonth() + EXPIRY_MONTHS);
+
+  await conn.execute(
+    `
+      INSERT INTO wallet_transactions
+      (
+        user_id,
+        title,
+        description,
+        transaction_type,
+        coins,
+        balance_after,
+        category,
+        expiry_date,
+        reason_code
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+    [
+      customerId,
+      "Coins Credited",
+      "Fitness Goal Reward",
+      "credit",
+      coins,
+      null,
+      "steps",
+      expiryDate,
+      "ORDER_REWARD",
+    ],
+  );
+};
+
 const toFiniteNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
@@ -191,6 +244,56 @@ class FitnessService {
       await FitnessModel.accumulateHourlySteps(customerId, date, now.getHours(), stepDiff, conn);
 
       // -------------------------------
+      // LIFETIME ACHIEVEMENTS — checked unconditionally, regardless of
+      // whether today's goal is hit. Lifetime step totals don't care about
+      // today's specific target, so these must unlock independent of the
+      // goalAchieved gate below (previously they were only ever checked
+      // inside that branch, meaning a milestone like "10K Lifetime Steps"
+      // couldn't unlock unless the user ALSO hit their full daily goal
+      // that same sync).
+      // -------------------------------
+      let totalReward = 0;
+      let unlockedAchievements = [];
+
+      const totalSteps = await FitnessModel.getLifetimeSteps(customerId, conn);
+      const allAchievements = await FitnessModel.getAllAchievements(conn);
+      const userAchievements = await FitnessModel.getUserAchievements(customerId, conn);
+
+      for (const achievement of allAchievements) {
+        if (userAchievements.includes(Number(achievement.achievement_id))) continue;
+        if (achievement.type !== "steps") continue; // streak-type checked below, once currentStreak is known
+        if (totalSteps < achievement.target_value) continue;
+
+        const alreadyGiven = await FitnessModel.hasReward(
+          customerId,
+          date,
+          "achievement",
+          achievement.achievement_id,
+          conn,
+        );
+        if (alreadyGiven) continue;
+
+        await FitnessModel.unlockAchievement(customerId, achievement.achievement_id, conn);
+        await FitnessModel.insertRewardLog(
+          customerId,
+          date,
+          "achievement",
+          achievement.achievement_id,
+          achievement.reward_coins,
+          conn,
+        );
+
+        totalReward += achievement.reward_coins || 0;
+        unlockedAchievements.push({
+          id: achievement.achievement_id,
+          title: achievement.title,
+          reward_coins: achievement.reward_coins,
+          type: achievement.type,
+          description: achievement.description,
+        });
+      }
+
+      // -------------------------------
       // CHECK GOAL (AFTER SAVE)
       // -------------------------------
       let goalAchieved = false;
@@ -198,11 +301,57 @@ class FitnessService {
       if (steps >= goal.daily_steps) {
         goalAchieved = true;
       } else {
+        await creditWalletCoins(customerId, totalReward, conn);
         await conn.commit();
+
+        if (totalReward > 0) {
+          notifyUser(
+            {
+              userId: customerId,
+              module: "fitness",
+              type: "fitness_reward_earned",
+              title: "Fitness reward earned",
+              message: `You earned ${totalReward} coins from your fitness progress.`,
+              icon: "footprints",
+              reference_type: "fitness_reward",
+              reference_id: date,
+              action_url: "/fitness/wallet",
+              metadata: {
+                coins: totalReward,
+                goal_achieved: false,
+                achievements: unlockedAchievements.map((item) => item.id),
+              },
+            },
+            "fitness reward notification",
+          );
+        }
+
+        for (const achievement of unlockedAchievements) {
+          notifyUser(
+            {
+              userId: customerId,
+              module: "fitness",
+              type: "fitness_achievement_unlocked",
+              title: "Achievement unlocked",
+              message: `You unlocked ${achievement.title}.`,
+              icon: "trophy",
+              reference_type: "fitness_achievement",
+              reference_id: achievement.id,
+              action_url: "/fitness/achievements",
+              metadata: {
+                reward_coins: achievement.reward_coins,
+                achievement_type: achievement.type,
+              },
+            },
+            "fitness achievement notification",
+          );
+        }
+
         return {
           message: "Steps synced",
           goalAchieved: false,
-          reward: 0,
+          reward: totalReward,
+          unlockedAchievements,
         };
       }
 
@@ -234,9 +383,6 @@ class FitnessService {
 
         longestStreak = Math.max(streakData.longest_streak, currentStreak);
       }
-
-      let totalReward = 0;
-      let unlockedAchievements = [];
 
       // -------------------------------
       // Update streak INSIDE TX
@@ -327,140 +473,51 @@ class FitnessService {
       }
 
       // -------------------------------
-      // ACHIEVEMENTS
+      // STREAK ACHIEVEMENTS — "steps"-type achievements were already
+      // checked unconditionally above (before the goal gate); this pass
+      // only covers "streak"-type achievements, which genuinely do depend
+      // on currentStreak and so can only be evaluated here. Currently a
+      // no-op (no streak-type rows exist — superseded by
+      // fitness_streak_bonus_config), kept for forward-compatibility.
       // -------------------------------
-      // Total lifetime steps
-      const totalSteps = await FitnessModel.getLifetimeSteps(customerId, conn);
-
-      const allAchievements = await FitnessModel.getAllAchievements(conn);
-
-      const userAchievements =
-        await FitnessModel.getUserAchievements(customerId, conn);
-
       for (const achievement of allAchievements) {
-        // already unlocked
-        if (userAchievements.includes(Number(achievement.achievement_id))) {
-          continue;
-        }
+        if (userAchievements.includes(Number(achievement.achievement_id))) continue;
+        if (achievement.type !== "streak") continue;
+        if (currentStreak < achievement.target_value) continue;
 
-        let unlock = false;
+        const alreadyGiven = await FitnessModel.hasReward(
+          customerId,
+          date,
+          "achievement",
+          achievement.achievement_id,
+          conn,
+        );
+        if (alreadyGiven) continue;
 
-        // -------------------------------
-        // Lifetime walking achievements
-        // -------------------------------
-        if (
-          achievement.type === "steps" &&
-          totalSteps >= achievement.target_value
-        ) {
-          unlock = true;
-        }
+        await FitnessModel.unlockAchievement(customerId, achievement.achievement_id, conn);
+        await FitnessModel.insertRewardLog(
+          customerId,
+          date,
+          "achievement",
+          achievement.achievement_id,
+          achievement.reward_coins,
+          conn,
+        );
 
-        // -------------------------------
-        // Streak achievements
-        // -------------------------------
-        if (
-          achievement.type === "streak" &&
-          currentStreak >= achievement.target_value
-        ) {
-          unlock = true;
-        }
-
-        // -------------------------------
-        // Unlock achievement
-        // -------------------------------
-        if (unlock) {
-          const alreadyGiven = await FitnessModel.hasReward(
-            customerId,
-            date,
-            "achievement",
-            achievement.achievement_id,
-            conn,
-          );
-
-          if (!alreadyGiven) {
-            await FitnessModel.unlockAchievement(
-              customerId,
-              achievement.achievement_id,
-              conn,
-            );
-
-            await FitnessModel.insertRewardLog(
-              customerId,
-              date,
-              "achievement",
-              achievement.achievement_id,
-              achievement.reward_coins,
-              conn,
-            );
-
-            totalReward += achievement.reward_coins || 0;
-
-            unlockedAchievements.push({
-              id: achievement.achievement_id,
-              title: achievement.title,
-              reward_coins: achievement.reward_coins,
-              type: achievement.type,
-              description: achievement.description,
-            });
-          }
-        }
+        totalReward += achievement.reward_coins || 0;
+        unlockedAchievements.push({
+          id: achievement.achievement_id,
+          title: achievement.title,
+          reward_coins: achievement.reward_coins,
+          type: achievement.type,
+          description: achievement.description,
+        });
       }
 
       // -------------------------------
       // WALLET UPDATE
       // -------------------------------
-      if (totalReward > 0) {
-        await conn.execute(
-          `INSERT INTO customer_wallet (user_id, balance)
-            VALUES (?, 0)
-            ON DUPLICATE KEY UPDATE user_id = user_id`,
-          [customerId],
-        );
-
-        await conn.execute(
-          `UPDATE customer_wallet
-         SET balance = balance + ?
-         WHERE user_id = ?`,
-          [totalReward, customerId],
-        );
-
-        const EXPIRY_MONTHS = parseInt(
-          process.env.WALLET_EXPIRY_MONTHS || "3",
-          10,
-        );
-
-        const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + EXPIRY_MONTHS);
-
-        await conn.execute(
-          `
-            INSERT INTO wallet_transactions
-            (
-              user_id,
-              title,
-              description,
-              transaction_type,
-              coins,
-              balance_after,
-              category,
-              expiry_date,
-              reason_code
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-          [
-            customerId,
-            "Coins Credited",
-            "Fitness Goal Reward",
-            "credit",
-            totalReward,
-            null,
-            "steps",
-            expiryDate,
-            "ORDER_REWARD",
-          ],
-        );
-      }
+      await creditWalletCoins(customerId, totalReward, conn);
 
       // -------------------------------
       // COMMIT

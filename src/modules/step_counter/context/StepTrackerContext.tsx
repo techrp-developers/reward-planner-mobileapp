@@ -153,7 +153,12 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       lastSyncTime.current    = Date.now();
       await AsyncStorage.setItem(STORAGE_LAST_SYNC, String(count));
 
-      if (res.data?.goalAchieved) setCelebrationData(res.data);
+      // Show the celebration for either a completed daily goal OR a newly
+      // unlocked lifetime achievement — these are now independent (the
+      // backend checks lifetime achievements regardless of goalAchieved).
+      if (res.data?.goalAchieved || (res.data?.unlockedAchievements?.length ?? 0) > 0) {
+        setCelebrationData(res.data);
+      }
 
       queryClient.invalidateQueries({ queryKey: fitnessQueryKeys.all });
       console.log(`[Steps] Synced ${count} steps ✓`);

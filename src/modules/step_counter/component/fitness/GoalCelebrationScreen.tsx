@@ -355,12 +355,20 @@ const AchievementCard: React.FC<{
 
       <Text style={styles.headline}>{headline}</Text>
 
-      {config.subtext(steps) !== "" && (
-        <Text style={styles.subtext}>
-          You've walked{" "}
-          <Text style={styles.subtextHighlight}>{steps.toLocaleString()} steps.</Text>
-        </Text>
-      )}
+      {response.overallSummary ? (
+        config.subtext(steps) !== "" && (
+          <Text style={styles.subtext}>
+            You've walked{" "}
+            <Text style={styles.subtextHighlight}>{steps.toLocaleString()} steps.</Text>
+          </Text>
+        )
+      ) : achievement?.description ? (
+        // No overallSummary when the celebration is for a lifetime
+        // achievement unlocked without also hitting today's goal — show
+        // the achievement's own description instead of a misleading
+        // "0 steps" derived from the (absent) daily summary.
+        <Text style={styles.subtext}>{achievement.description}</Text>
+      ) : null}
 
       {achievement && (
         <View style={styles.rewardBadge}>
