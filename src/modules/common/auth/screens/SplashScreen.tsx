@@ -208,9 +208,9 @@ export default function SplashScreen() {
 
   return (
     <LinearGradient
-      colors={["#FFF8E7", "#FFFFFF", "#EEF7FF"]}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
+      colors={["#050716", "#0B1027", "#17102F"]}
+      start={{ x: 0.05, y: 0 }}
+      end={{ x: 0.95, y: 1 }}
       style={styles.container}
     >
       <Animated.View
@@ -296,18 +296,18 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   shapeTop: {
-    top: 86,
-    right: -44,
-    width: 156,
-    height: 156,
-    backgroundColor: "#FFD166",
+    top: 74,
+    right: -58,
+    width: 184,
+    height: 184,
+    backgroundColor: "#EC4899",
   },
   shapeBottom: {
-    left: -58,
-    bottom: 92,
-    width: 190,
-    height: 190,
-    backgroundColor: "#2EC4B6",
+    left: -72,
+    bottom: 78,
+    width: 218,
+    height: 218,
+    backgroundColor: "#7C3AED",
   },
   logoStage: {
     width: 188,
@@ -321,9 +321,10 @@ const styles = StyleSheet.create({
     height: 172,
     borderRadius: 86,
     borderWidth: 5,
-    borderColor: "rgba(255, 184, 28, 0.18)",
-    borderTopColor: "#FFB81C",
-    borderRightColor: "#11A6A6",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderTopColor: "#EC4899",
+    borderRightColor: "#A855F7",
+    borderBottomColor: "rgba(168, 85, 247, 0.28)",
   },
   logoCard: {
     width: 126,
@@ -331,12 +332,14 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#0F172A",
+    backgroundColor: "#FDF7FF",
+    borderWidth: 1,
+    borderColor: "rgba(244, 114, 182, 0.42)",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.16,
-    shadowRadius: 22,
-    elevation: 8,
+    shadowOpacity: 0.32,
+    shadowRadius: 26,
+    elevation: 10,
   },
   logo: {
     width: 88,
@@ -348,13 +351,13 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   title: {
-    color: "#17213A",
+    color: "#FFFFFF",
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: 0,
   },
   subtitle: {
-    color: "#687083",
+    color: "rgba(226, 232, 240, 0.78)",
     fontSize: 15,
     fontWeight: "600",
     letterSpacing: 0,
@@ -371,13 +374,15 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: "rgba(15, 23, 42, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
   },
   progressShimmer: {
     width: 120,
     height: 8,
     borderRadius: 8,
-    backgroundColor: "#FFB81C",
+    backgroundColor: "#EC4899",
   },
   dots: {
     flexDirection: "row",
@@ -391,6 +396,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#11A6A6",
+    backgroundColor: "#A855F7",
   },
 });
