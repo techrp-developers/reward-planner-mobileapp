@@ -36,6 +36,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
 }) => {
   const { isDark, theme } = useAppTheme();
   const mountAnim = useRef(new Animated.Value(0)).current;
+  const actionIconColor = isDark ? "#FFFFFF" : "#111827";
 
   useEffect(() => {
     const anim = Animated.timing(mountAnim, {
@@ -140,7 +141,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
               {action.label ? (
                 <Text style={styles.actionLabel}>{action.label}</Text>
               ) : (
-                <MaterialCommunityIcons name={action.icon} size={rs(23)} color="#FFFFFF" />
+                <MaterialCommunityIcons name={action.icon} size={rs(23)} color={actionIconColor} />
               )}
             </TouchableOpacity>
           ))}
