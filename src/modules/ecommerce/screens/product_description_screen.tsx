@@ -127,13 +127,14 @@ export default function
     let isMounted = true;
 
     const applyProductState = (p: any) => {
+      const variants = Array.isArray(p?.variants) ? p.variants : [];
       const defaultVariant =
-        p.variants.find(
+        variants.find(
           (v: any) => v.is_visible === 1 && v.sale_price && v.stock > 0
-        ) || p.variants[0];
+        ) || variants[0] || null;
 
       unstable_batchedUpdates(() => {
-        setProduct(p);
+        setProduct({ ...p, variants });
         setSelectedVariant(defaultVariant);
         setSelectedAttrs(defaultVariant?.variant_attributes ?? {});
         setWishlisted(Boolean(p?.is_wishlisted));
@@ -152,6 +153,10 @@ export default function
       try {
         const raw = await fetchProductDetailsByID(productId);
 
+        if (!raw || typeof raw !== "object") {
+          throw new Error("Product details response is empty");
+        }
+
         const normalizeVariant = (v: any) => ({
           ...v,
           rewardCoins:
@@ -163,7 +168,7 @@ export default function
 
         const p = {
           ...raw,
-          variants: raw?.variants?.map(normalizeVariant) ?? [],
+          variants: Array.isArray(raw?.variants) ? raw.variants.map(normalizeVariant) : [],
         };
         queryClient.setQueryData(productDetailsQueryKey(productId), p);
 
@@ -194,9 +199,11 @@ export default function
   const resolvedVariant = useMemo(() => {
     if (!product) return null;
 
-    return product.variants.find((v: any) =>
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+
+    return variants.find((v: any) =>
       Object.entries(selectedAttrs).every(
-        ([key, val]) => v.variant_attributes[key] === val
+        ([key, val]) => v?.variant_attributes?.[key] === val
       )
     );
   }, [product, selectedAttrs]);
@@ -434,8 +441,8 @@ export default function
 
 
         <MemoProductVariants
-          attributes={product.attributes}
-          variants={product.variants}
+          attributes={product.attributes ?? {}}
+          variants={Array.isArray(product.variants) ? product.variants : []}
           selectedAttrs={selectedAttrs}
           onChange={(key, value) =>
             setSelectedAttrs(prev => ({ ...prev, [key]: value }))

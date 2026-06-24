@@ -17,6 +17,7 @@ import ProductCard from "../../constants/product_cart/ProductCard";
 import HorizontalProductList from "../common/HorizontalProductList";
 import { getProductImageUrl } from "../../api/ProductApi";
 import { queryClient } from "../../../../query/queryClient";
+import { normalizeProduct } from "../../utils/normalizeProduct";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.42;
@@ -57,15 +58,18 @@ const fetchNewArrivalsData = async () => {
     (Array.isArray(res?.data) && res.data) ||
     [];
 
-  return rawList.map((item: any, index: number) => ({
-    ...item,
-    id: item?.product_id ?? item?.id ?? `new-${index}`,
-    title: item?.product_name ?? item?.title ?? "Product",
-    brand: item?.brand_name ?? item?.brand ?? "",
-    image: resolveImageUrl(item),
-    price: item?.price ?? item?.selling_price ?? "",
-    oldPrice: item?.old_price ?? item?.original_price ?? undefined,
-  }));
+  return rawList.map((item: any, index: number) => {
+    const normalized = normalizeProduct(item);
+
+    return {
+      ...normalized,
+      id: item?.product_id ?? item?.id ?? `new-${index}`,
+      title: item?.product_name ?? item?.title ?? "Product",
+      brand: item?.brand_name ?? item?.brand ?? "",
+      image: resolveImageUrl(item),
+      oldPrice: item?.old_price ?? item?.original_price ?? undefined,
+    };
+  });
 };
 
 function NewArrivals() {

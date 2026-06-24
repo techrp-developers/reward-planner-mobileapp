@@ -1,5 +1,6 @@
   import axios from "axios";
   import AsyncStorage from "@react-native-async-storage/async-storage";
+  import api from "./axios";
 
   const API_BASE_URL = "https://rewardplanners.com/api/crm";
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
@@ -197,12 +198,7 @@
         return null;
       }
 
-      const res = await axios.get(
-        `${API_BASE_URL}/v1/auth/user-info`,
-        {
-          headers,
-        }
-      );
+      const res = await api.get("/v1/auth/user-info", { headers });
 
       const responseData = res?.data || {};
       const user =

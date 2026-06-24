@@ -389,6 +389,14 @@ export const fetchOrderInvoice = async (
       };
     }
 
+    if (status >= 500) {
+      return {
+        success: false,
+        status,
+        message: "Invoice could not be generated right now. Please try again later.",
+      };
+    }
+
     console.error("Order invoice error", error);
     return {
       success: false,

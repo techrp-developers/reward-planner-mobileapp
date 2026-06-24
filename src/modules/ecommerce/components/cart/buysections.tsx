@@ -15,7 +15,7 @@ type Props = {
   offPercent: string;
   price: string;          // sale price
   mrp: string;
-  pointsPrice: string;    
+  pointsPrice?: string | number;    
   points: number;
   qty: number;
   stock: number | null;
@@ -27,11 +27,10 @@ type Props = {
 };
 
 export default function BuySection({
-    // pointsPrice, 
     offPercent,
     price,
     mrp,
-    // points,
+    points,
     qty,
     stock,
     inStock,
@@ -172,9 +171,7 @@ export default function BuySection({
           >
             <View style={styles.row}>
               <Text style={styles.buyNowText}>Buy Now</Text>
-              {/* <Text style={styles.buttonPriceText}>{pointsPrice}</Text> */}
-              {/* <RewardIcon width={14} height={18} />
-              <Text style={styles.pointsText}>+{points}</Text> */}
+              {points > 0 ? <Text style={styles.pointsText}>+{points}</Text> : null}
             </View>
           </LinearGradient>
         </TouchableOpacity>

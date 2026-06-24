@@ -78,8 +78,13 @@ export const getProductImageUrl = (
   return appendImageOptimizationParams(fullUrl, width, quality);
 };
 export const fetchProductDetailsByID = async (productId: string | number) => {
+  if (!productId) {
+    throw new Error("Missing product id");
+  }
+
   const res = await api.get(`/v1/product/product-details/${productId}`);
-  return res.data.product;
+  const payload = res?.data;
+  return payload?.product ?? payload?.data?.product ?? payload?.data ?? null;
 };
 // v1/cart/cart-items/check-stock/:variantId
 

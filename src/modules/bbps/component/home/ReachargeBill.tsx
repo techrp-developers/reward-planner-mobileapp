@@ -23,6 +23,7 @@ import Housing from '../../assets/BBPS_Service/Housing_Socity.png';
 import Municipal from '../../assets/BBPS_Service/Munsiple_taxes.png';
 import Education from '../../assets/BBPS_Service/Education.png';
 import Hospital from '../../assets/BBPS_Service/Hospital_bill.png';
+import Balance from '../../assets/BBPS_Service/Balance.png';
 import { BillCategory, fetchBillsCategories } from '../../api/BillsAPI';
 
 const ServiceItem = ({ icon, label, onPress }: { icon: any; label: string; onPress?: () => void }) => (
@@ -48,6 +49,7 @@ const SECTION_ORDER = [
   'UTILITIES',
   'FINANCIAL SERVICES',
   'HOUSING, EDUCATION & HEALTH',
+  'OTHER SERVICES',
 ] as const;
 
 type SectionName = (typeof SECTION_ORDER)[number];
@@ -65,6 +67,16 @@ const CATEGORY_DISPLAY_ORDER: Record<SectionName, string[]> = {
   ],
   'FINANCIAL SERVICES': ['Credit Card', 'Loan', 'Insurance', 'Tax'],
   'HOUSING, EDUCATION & HEALTH': ['Housing Society', 'Municipal Taxes', 'Education', 'Hospital'],
+  'OTHER SERVICES': [
+    'Clubs and Associations',
+    'Cable TV',
+    'Municipal Services',
+    'Rental Payment',
+    'eChallan',
+    'Agent Collection',
+    'Fleet Card Recharge',
+    'EV Recharge',
+  ],
 };
 
 const CATEGORY_GROUPS: Record<string, SectionName> = Object.entries(CATEGORY_DISPLAY_ORDER).reduce(
@@ -81,6 +93,7 @@ const ICON_MAP: Record<string, any> = {
   'Mobile Prepaid': Recharge,
   DTH,
   Subscription: Subscriptions,
+  Subscriptions,
   FASTag: FASTagRecharge,
   'Fleet Card Recharge': FASTagRecharge,
   'EV Recharge': FASTagRecharge,
@@ -104,10 +117,74 @@ const ICON_MAP: Record<string, any> = {
   Education,
   Hospital,
   'Municipal Taxes': Municipal,
-
+  'Municipal Services': Municipal,
+  'Rental Payment': Housing,
+  eChallan: Tax,
+  'Agent Collection': Balance,
+  'Clubs and Associations': Subscriptions,
 };
 
 const FALLBACK_ICON = Recharge;
+
+const normalizeCategoryName = (name?: string) => String(name || '').trim();
+
+const getCategorySection = (name: string): SectionName => {
+  const knownSection = CATEGORY_GROUPS[name];
+  if (knownSection) {
+    return knownSection;
+  }
+
+  const lower = name.toLowerCase();
+
+  if (
+    lower.includes('mobile') ||
+    lower.includes('dth') ||
+    lower.includes('fastag') ||
+    lower.includes('recharge') ||
+    lower.includes('cable') ||
+    lower.includes('subscription')
+  ) {
+    return 'RECHARGES';
+  }
+
+  if (
+    lower.includes('electric') ||
+    lower.includes('water') ||
+    lower.includes('gas') ||
+    lower.includes('landline') ||
+    lower.includes('broadband') ||
+    lower.includes('lpg')
+  ) {
+    return 'UTILITIES';
+  }
+
+  if (
+    lower.includes('credit') ||
+    lower.includes('loan') ||
+    lower.includes('insurance') ||
+    lower.includes('tax') ||
+    lower.includes('challan')
+  ) {
+    return 'FINANCIAL SERVICES';
+  }
+
+  if (
+    lower.includes('housing') ||
+    lower.includes('municipal') ||
+    lower.includes('education') ||
+    lower.includes('hospital') ||
+    lower.includes('rental')
+  ) {
+    return 'HOUSING, EDUCATION & HEALTH';
+  }
+
+  return 'OTHER SERVICES';
+};
+
+const categoryRank = (section: SectionName, name: string) => {
+  const index = CATEGORY_DISPLAY_ORDER[section].indexOf(name);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+};
 
 const RechargeBillSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
@@ -183,24 +260,37 @@ function RechargeBill() {
       UTILITIES: [],
       'FINANCIAL SERVICES': [],
       'HOUSING, EDUCATION & HEALTH': [],
+      'OTHER SERVICES': [],
     };
 
-    const categoryByName = new Map(
-      categories
-        .filter((item) => Boolean(CATEGORY_GROUPS[item.operator_category_name]))
-        .map((item) => [item.operator_category_name, item]),
-    );
+    categories.forEach((item) => {
+      if (String(item?.status) !== '1') {
+        return;
+      }
+
+      const categoryName = normalizeCategoryName(item.operator_category_name);
+      if (!categoryName) {
+        return;
+      }
+
+      const section = getCategorySection(categoryName);
+      baseGroups[section].push({
+        ...item,
+        operator_category_name: categoryName,
+      });
+    });
 
     SECTION_ORDER.forEach((section) => {
-      const namesInOrder = CATEGORY_DISPLAY_ORDER[section];
+      baseGroups[section].sort((a, b) => {
+        const rankDiff =
+          categoryRank(section, a.operator_category_name) -
+          categoryRank(section, b.operator_category_name);
 
-      namesInOrder.forEach((name) => {
-        const item = categoryByName.get(name);
-        if (!item) {
-          return;
+        if (rankDiff !== 0) {
+          return rankDiff;
         }
 
-        baseGroups[section].push(item);
+        return a.operator_category_id - b.operator_category_id;
       });
     });
 

@@ -10,34 +10,41 @@ export interface BillCategory {
   status: string;
 }
 
+export interface BillLocation {
+  operator_location_name: string;
+  operator_location_id: string;
+  abbreviation: string;
+}
+
 export interface Operator {
   operator_id: number;
   name: string;
+  billFetchResponse: number;
+  high_commission_channel: number;
+  kyc_required: number;
+  operator_category: number;
+  location_id: number;
 }
-
-export type OperatorGrouped = Record<string, Operator[]>;
 
 export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
   try {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`);
-    return res.data?.data || [];
+    return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error("❌ Fetch Categories Error:", error?.response || error);
+    console.error("Fetch Categories Error:", error?.response?.data || error);
     throw error;
   }
 };
 
-/**
- * Fetch operators grouped by state for a given category
- * @param categoryId The category ID to fetch operators for
- * @returns Operators grouped by state
- */
-export const fetchOperatorsGrouped = async (categoryId: number): Promise<OperatorGrouped> => {
+export const fetchBillLocations = async (): Promise<BillLocation[]> => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/v1/bills/operators-grouped?category_id=${categoryId}`);
-    return res.data?.data || {};
+    const res = await axios.get(`${API_BASE_URL}/v1/bills/locations`);
+    return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error("❌ Fetch Operators Grouped Error:", error?.response || error);
+    console.error(
+      "Fetch Locations Error:",
+      error?.response?.data || error
+    );
     throw error;
   }
 };
@@ -50,28 +57,31 @@ export const fetchOperators = async (
       `${API_BASE_URL}/v1/bills/operators?category_id=${categoryId}`
     );
 
-    return res.data?.data || [];
+    return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error("❌ Fetch Operators Error:", error?.response || error);
+    console.error(
+      "Fetch Operators Error:",
+      error?.response?.data || error
+    );
     throw error;
   }
 };
 
-
-export interface OperatorParam {
-  param_label: string;
-  param_name: string;
-  regex: string;
+export interface OperatorField {
   error_message: string;
-  param_type?: string;
+  param_label: string;
+  regex: string;
+  param_name: string;
+  param_id: string;
+  param_type: string;
 }
 
 export interface OperatorDetails {
-  operator_id: number;
   operator_name: string;
+  operator_id: number;
   fetchBill: number;
   BBPS: number;
-  data: OperatorParam[];
+  data: OperatorField[];
 }
 
 export const fetchOperatorDetails = async (
@@ -82,22 +92,21 @@ export const fetchOperatorDetails = async (
       `${API_BASE_URL}/v1/bills/operator/${operatorId}`
     );
 
-    const payload = res.data?.data || res.data;
     return {
-      ...payload,
-      data: Array.isArray(payload?.data) ? payload.data : [],
-    } as OperatorDetails;
+      operator_name: res.data?.operator_name || "",
+      operator_id: res.data?.operator_id || 0,
+      fetchBill: res.data?.fetchBill || 0,
+      BBPS: res.data?.BBPS || 0,
+      data: Array.isArray(res.data?.data) ? res.data.data : [],
+    };
   } catch (error: any) {
-    console.error("❌ Operator Details Error:", error?.response || error);
+    console.error("Operator Details Error:", error?.response?.data || error);
     throw error;
   }
 };
 
-
-
-
 export const fetchBill = async (
-  payload: Record<string, any>,
+  payload: Record<string, string | number | undefined>,
   token?: string,
 ) => {
   try {
@@ -123,66 +132,172 @@ export const fetchBill = async (
     }
 
     console.log(
-      "❌ Fetch Bill Error:",
+      "Fetch Bill Error:",
       error?.response?.data || error?.message
     );
+
+    if (error?.response?.data) {
+      return error.response.data;
+    }
+
     throw error?.response?.data || error?.message;
   }
 };
-export const fetchBillDetails = async (payload: {
+
+export interface RechargePlan {
+  planId: string;
+  amount: string;
+  validity: string;
+  description: string;
+  [key: string]: any;
+}
+
+export interface RechargePlansResponse {
+  status: number;
+  responseTypeId: number;
+  message: string;
+  operatorId: string;
+  circleId: string;
+  mobile: string;
+  count: number;
+  plans: RechargePlan[];
+}
+
+export const fetchRechargePlans = async (
+  mobile: string,
+  operatorId: number | string,
+  circleId: number | string,
+) => {
+  try {
+    const res = await axios.get(
+      `${API_BASE_URL}/v1/bills/recharge/plans`,
+      {
+        params: {
+          mobile,
+          operator_id: operatorId,
+          circle_id: circleId,
+        },
+      }
+    );
+
+    return {
+      success: res.data?.success ?? false,
+      message: res.data?.message ?? '',
+      data: {
+        status: res.data?.data?.status ?? 0,
+        responseTypeId: res.data?.data?.responseTypeId ?? 0,
+        message: res.data?.data?.message ?? '',
+        operatorId: res.data?.data?.operatorId ?? '',
+        circleId: res.data?.data?.circleId ?? '',
+        mobile: res.data?.data?.mobile ?? '',
+        count: res.data?.data?.count ?? 0,
+        plans: Array.isArray(res.data?.data?.plans)
+          ? res.data.data.plans
+          : [],
+      } as RechargePlansResponse,
+    };
+  } catch (error: any) {
+    console.error(
+      'Recharge Plans Error:',
+      error?.response?.data || error
+    );
+
+    throw error?.response?.data || error;
+  }
+};
+
+export type BillPayCreateOrderPayload = {
   operator_id: string;
-  consumer_number: string;
-  mobile_number?: string;
-}, token?: string) => {
+  utility_acc_no?: string;
+  circle_id?: string;
+  plan_id?: string;
+  bill_fetch_id?: number | string;
+  sender_name?: string;
+};
+
+export const createBillPayOrder = async (
+  payload: BillPayCreateOrderPayload,
+  token?: string,
+) => {
   try {
     const authHeaders = token
       ? { Authorization: `Bearer ${token}` }
       : await getAuthHeaders();
 
-    // --- Log Request Details ---
-    console.log("--- 🚀 Fetch Bill Request ---");
-    console.log("URL:", `${API_BASE_URL}/v1/bills/check-customer-number`);
-    console.log("Payload:", payload);
-    console.log("Headers:", authHeaders);
-
     const res = await axios.post(
-      `${API_BASE_URL}/v1/bills/check-customer-number`,
+      `${API_BASE_URL}/v1/bill-pay/create-order`,
       payload,
       {
         headers: {
           "Content-Type": "application/json",
           ...authHeaders,
         },
-        timeout: 15000,
       }
     );
 
-    // --- Log Success Response ---
-    console.log("--- ✅ Fetch Bill Success ---");
-    console.log("Response Data:", res.data);
-
     return res.data;
   } catch (error: any) {
-    // --- Log Error Details ---
-    console.log("--- ❌ Fetch Bill Error ---");
-    
-    if (error.response) {
-      // The server responded with a status code (400, 401, 500, etc.)
-      console.log("Status:", error.response.status);
-      console.log("Error Data:", error.response.data);
-    } else if (error.request) {
-      // The request was made but no response was received (Network Error)
-      console.log("No Response Received (Network/Timeout issue)");
-      console.log("Request Object:", error.request);
-    } else {
-      // Something happened in setting up the request
-      console.log("Message:", error.message);
-    }
-
     if (error?.response?.status === 401) {
       await clearAuthToken();
     }
 
-    throw error?.response?.data || { message: "Something went wrong" };
+    console.error("Create Bill Pay Order Error:", error?.response?.data || error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const verifyBillPayPayment = async (
+  payload: Record<string, any>,
+  token?: string,
+) => {
+  try {
+    const authHeaders = token
+      ? { Authorization: `Bearer ${token}` }
+      : await getAuthHeaders();
+
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/bill-pay/verify-payment`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+      }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Verify Bill Pay Payment Error:", error?.response?.data || error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const checkBillTransactionStatus = async (
+  transactionId: string | number,
+  token?: string,
+) => {
+  try {
+    const authHeaders = token
+      ? { Authorization: `Bearer ${token}` }
+      : await getAuthHeaders();
+
+    const res = await axios.get(
+      `${API_BASE_URL}/v1/bills/check-status/${transactionId}`,
+      { headers: authHeaders }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Check Bill Status Error:", error?.response?.data || error);
+    throw error?.response?.data || error;
   }
 };

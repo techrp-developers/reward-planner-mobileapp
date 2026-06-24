@@ -18,6 +18,7 @@ import PointsButton from "./PointsButton";
 import { setWishlistState } from "../../api/WishlistApi";
 import OptimizedImage from "../../components/common/OptimizedImage";
 import RPpriceBadge from "./RPpriceBadge";
+import { normalizeProduct } from "../../utils/normalizeProduct";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -130,8 +131,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
-    const coins = Number(item?.rewardCoins ?? 0);
-    const redeemValue = Number(item?.redeem_coins ?? 0);
+    const normalized = normalizeProduct(item);
 
     return {
       starCount: Math.round(safeRating),
@@ -141,10 +141,10 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
         .join(" "),
       priceText: String(item?.price ?? ""),
       originalPriceText: String(item?.originalPrice ?? ""),
-      rewardCoins: Number.isFinite(coins) ? coins : 0,
-      redeemCoins: Number.isFinite(redeemValue) ? redeemValue : 0,
+      rewardCoins: normalized.rewardCoins,
+      redeemCoins: normalized.redeem_coins,
       rp_price: item?.rp_price ?? "",
-      discount: item?.discount ?? item?.off_percent ?? "",  
+      discount: item?.discount ?? item?.off_percent ?? "",
     };
   }, [item]);
 
@@ -270,6 +270,9 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
 
 // Memoized export
 const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
+  const prevNormalized = normalizeProduct(prevProps.item);
+  const nextNormalized = normalizeProduct(nextProps.item);
+
   return (
     prevProps.item?.id === nextProps.item?.id &&
     prevProps.item?.is_wishlisted === nextProps.item?.is_wishlisted &&
@@ -278,8 +281,8 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevProps.item?.rp_price === nextProps.item?.rp_price &&
     prevProps.item?.price === nextProps.item?.price &&
     prevProps.item?.originalPrice === nextProps.item?.originalPrice &&
-    prevProps.item?.rewardCoins === nextProps.item?.rewardCoins &&
-    prevProps.item?.redeem_coins === nextProps.item?.redeem_coins &&
+    prevNormalized.rewardCoins === nextNormalized.rewardCoins &&
+    prevNormalized.redeem_coins === nextNormalized.redeem_coins &&
     prevProps.item?.image === nextProps.item?.image &&
     prevProps.item?.product_name === nextProps.item?.product_name &&
     prevProps.shouldLoadImage === nextProps.shouldLoadImage

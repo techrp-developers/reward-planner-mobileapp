@@ -2,6 +2,8 @@ import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
 
 type Props = {
   total: number;
@@ -10,6 +12,8 @@ type Props = {
   disabled?: boolean;
   onPlaceOrder?: () => void | Promise<void>;
   wrapperPaddingBottom?: number;
+  bottomOffset?: number;
+  onLayout?: ReturnType<typeof useStickyBottomCTA>['onCtaLayout'];
 };
 
 export default function OrderProcedbutton({
@@ -18,11 +22,17 @@ export default function OrderProcedbutton({
   loading = false,
   disabled = false,
   onPlaceOrder,
-  wrapperPaddingBottom = 80,
+  wrapperPaddingBottom = 16,
+  bottomOffset,
+  onLayout,
 }: Props) {
   const safeTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
+  const autoSticky = useStickyBottomCTA();
+  const resolvedBottomOffset = bottomOffset ?? autoSticky.bottomOffset;
+  const resolvedOnLayout = onLayout ?? autoSticky.onCtaLayout;
 
   return (
+    <StickyBottomCTA bottomOffset={resolvedBottomOffset} onLayout={resolvedOnLayout}>
     <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}> 
       <View style={styles.freeBanner}>
         <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
@@ -46,6 +56,7 @@ export default function OrderProcedbutton({
         </TouchableOpacity>
       </View>
     </View>
+    </StickyBottomCTA>
   );
 }
 
@@ -55,7 +66,13 @@ const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#F4F5FF',
     padding: 16,
-    borderRadius: 18,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    elevation: 12,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   addressRow: {
     flexDirection: 'row',

@@ -6,20 +6,22 @@ const API_BASE_URL = "https://rewardplanners.com/api/crm";
 export const addWishlist = async (productId: number, variantId?: number) => {
   const headers = await getAuthHeaders();
   const parsedProductId = Number(productId);
-  const parsedVariantId = Number(variantId ?? productId);
+  const hasProvidedVariantId = variantId !== null && variantId !== undefined;
+  const parsedVariantId = hasProvidedVariantId ? Number(variantId) : undefined;
 
   if (!parsedProductId || Number.isNaN(parsedProductId)) {
     throw new Error("Invalid product id");
   }
 
   const candidates = [
-    {
-      product_id: parsedProductId,
-      variant_id:
-        parsedVariantId && !Number.isNaN(parsedVariantId)
-          ? parsedVariantId
-          : undefined,
-    },
+    ...(parsedVariantId && !Number.isNaN(parsedVariantId)
+      ? [
+          {
+            product_id: parsedProductId,
+            variant_id: parsedVariantId,
+          },
+        ]
+      : []),
     {
       product_id: parsedProductId,
       variant_id: parsedProductId,
@@ -115,19 +117,23 @@ export const removeWishlist = async (payload: {
   };
 
   const attempts: Array<() => Promise<any>> = [
-    () =>
-      canUseProductVariant
-        ? axios.delete(
-            `${API_BASE_URL}/v1/wishlist/remove/${parsedProductId}/${parsedVariantId}`,
-            { headers }
-          )
-        : Promise.reject(new Error("missing product/variant ids")),
-    () =>
-      canUseWishlistId
-        ? axios.delete(`${API_BASE_URL}/v1/wishlist/remove-wishlist/${parsedWishlistId}`, {
-            headers,
-          })
-        : Promise.reject(new Error("missing wishlist id")),
+    ...(canUseProductVariant
+      ? [
+          () =>
+            axios.delete(
+              `${API_BASE_URL}/v1/wishlist/remove/${parsedProductId}/${parsedVariantId}`,
+              { headers }
+            ),
+        ]
+      : []),
+    ...(canUseWishlistId
+      ? [
+          () =>
+            axios.delete(`${API_BASE_URL}/v1/wishlist/remove-wishlist/${parsedWishlistId}`, {
+              headers,
+            }),
+        ]
+      : []),
     () => axios.post(`${API_BASE_URL}/v1/wishlist/remove-wishlist`, body, { headers }),
   ];
 
@@ -139,6 +145,25 @@ export const removeWishlist = async (payload: {
       return res.data;
     } catch (error: any) {
       lastError = error;
+
+      const status = Number(error?.response?.status || 0);
+      const message = String(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          ""
+      ).toLowerCase();
+
+      const canTryNextFallback =
+        status >= 400 &&
+        status < 500 &&
+        (message.includes("not found") ||
+          message.includes("already") ||
+          message.includes("removed"));
+
+      if (!canTryNextFallback) {
+        throw error;
+      }
     }
   }
 
@@ -164,7 +189,16 @@ export const removeWishlist = async (payload: {
 
 export const toggleWishlist = async (productId: number, variantId?: number) => {
   const safeVariantId = variantId ?? productId;
-  const checkRes = await checkWishlist(productId, safeVariantId);
+  let checkRes: any;
+
+  try {
+    checkRes = await checkWishlist(productId, safeVariantId);
+  } catch (err: any) {
+    throw new Error(
+      `Failed to check wishlist status: ${err?.message || "Unknown error"}`
+    );
+  }
+
   const present = isWishlistPresent(checkRes);
 
   if (present) {
