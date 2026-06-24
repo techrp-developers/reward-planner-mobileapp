@@ -30,7 +30,7 @@ interface StepsCounterCardProps {
 // ── Daily activity sparkline ───────────────────────────────────────────────
 const DAILY_BARS = [0.3, 0.5, 0.4, 0.7, 0.6, 0.9, 0.5, 0.8, 0.65, 0.4, 0.75, 0.55];
 const ACTIVE_BAR_INDEX = DAILY_BARS.length - 3;
-const BAR_MAX = rs(26);
+const BAR_MAX = rs(22);
 
 const BAR_HEIGHTS = DAILY_BARS.map((h, i) => ({
     height: h * BAR_MAX,
@@ -59,7 +59,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     }, [steps, goalSteps, progressPercent]);
 
     // Ring geometry
-    const ringSize = Math.min(cWidth * 0.64, rs(72));
+    const ringSize = Math.min(cWidth * 0.6, rs(68));
     const strokeWidth = ringSize * 0.1;
     const radius = (ringSize - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
         flex: 1,
         // backgroundColor & shadowColor via t.card
         borderRadius: rs(22),
-        padding: rs(12),
+        padding: rs(10),
         shadowOffset: { width: 0, height: rs(6) },
         shadowOpacity: Platform.OS === "ios" ? 0.2 : 0.28,
         shadowRadius: rs(16),
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: rs(18),
+        marginBottom: rs(10),
         gap: rs(6),
     },
     iconBubble: {
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     subtitle: { fontSize: fs(10), marginTop: 1 },  // color via t.subtitle
     body: {
         alignItems: "center",
-        gap: rs(8),
+        gap: rs(6),
     },
 
     ringWrapper: {
@@ -309,13 +309,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-end",
         alignSelf: "center",
-        height: rs(36),
-        marginTop: rs(10),
-        marginBottom: rs(5),
+        height: rs(30),
+        marginTop: rs(7),
+        marginBottom: rs(3),
         gap: rs(3),
     },
     bar: {
-        width: rs(6),
+        width: rs(5),
         borderRadius: rs(20),
         minHeight: rs(4),
     },

@@ -24,7 +24,6 @@ interface PaymentsQuickAccessCardProps {
 
 type QuickAction = {
   title: string;
-  subtitle: string;
   icon: string;
   label?: string;
   onPress?: () => void;
@@ -53,26 +52,22 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
   const actions = useMemo<QuickAction[]>(
     () => [
       {
-        title: "UPI Payments",
-        subtitle: "Pay instantly using UPI",
-        icon: "contactless-payment",
-        label: "UPI",
-        onPress: onOpenPayments,
+        title: "Recharges",
+        icon: "cellphone-charging",
+        onPress: onOpenBills,
       },
       {
-        title: "Bills & Recharges",
-        subtitle: "Pay your bills and recharge anytime",
+        title: "Bills & Utilities",
         icon: "receipt-text-outline",
         onPress: onOpenBills,
       },
       {
         title: "Recent Transaction",
-        subtitle: "No recent transactions",
         icon: "clock-time-four-outline",
         onPress: onOpenHistory,
       },
     ],
-    [onOpenBills, onOpenHistory, onOpenPayments],
+    [onOpenBills, onOpenHistory],
   );
 
   const t = useMemo(
@@ -88,7 +83,6 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
         borderColor: isDark ? "rgba(196, 181, 253, 0.14)" : "rgba(124, 58, 237, 0.12)",
       } as ViewStyle,
       actionTitle: { color: theme.text } as TextStyle,
-      actionSubtitle: { color: theme.secondaryText } as TextStyle,
     }),
     [isDark, theme],
   );
@@ -142,9 +136,6 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
                 <Text style={[styles.actionTitle, t.actionTitle]} numberOfLines={1}>
                   {action.title}
                 </Text>
-                <Text style={[styles.actionSubtitle, t.actionSubtitle]} numberOfLines={2}>
-                  {action.subtitle}
-                </Text>
               </View>
               {action.label ? (
                 <Text style={styles.actionLabel}>{action.label}</Text>
@@ -180,7 +171,7 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     borderRadius: rs(22),
-    padding: rs(12),
+    padding: rs(10),
     shadowOffset: { width: 0, height: rs(6) },
     shadowOpacity: Platform.OS === "ios" ? 0.2 : 0.28,
     shadowRadius: rs(16),
@@ -192,7 +183,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: rs(6),
-    marginBottom: rs(10),
+    marginBottom: rs(8),
   },
   iconBubble: {
     width: rs(34),
@@ -213,15 +204,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   actionList: {
-    gap: rs(6),
-    marginBottom: rs(8),
+    gap: rs(5),
+    marginBottom: rs(7),
   },
   actionCard: {
-    minHeight: rs(38),
+    minHeight: rs(31),
     borderRadius: rs(12),
     borderWidth: 1,
     paddingHorizontal: rs(9),
-    paddingVertical: rs(7),
+    paddingVertical: rs(5),
     flexDirection: "row",
     alignItems: "center",
     gap: rs(8),
@@ -230,14 +221,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionTitle: {
-    fontSize: fs(10.5),
+    fontSize: fs(11),
     fontWeight: "800",
-    letterSpacing: 0,
-  },
-  actionSubtitle: {
-    fontSize: fs(8.5),
-    lineHeight: rs(12),
-    marginTop: 1,
     letterSpacing: 0,
   },
   actionLabel: {
@@ -248,8 +233,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   cta: {
-    minHeight: rs(36),
-    borderRadius: rs(18),
+    minHeight: rs(32),
+    borderRadius: rs(16),
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
