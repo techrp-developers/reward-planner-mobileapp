@@ -36,6 +36,7 @@ import {
 } from "../../api/useFitnessQueries";
 import { useStepTracker } from "../StepCode/useStepTracker";
 import GoalCelebrationScreen from "./GoalCelebrationScreen";
+import GoalReachedScreen from "./GoalReachedScreen";
 import TodayGoalCompletedScreen from "./TodayGoalCompletedScreen";
 import type { GoalSyncData } from "../../api/Stepsapi";
 import WeeklyGraph from "./WeeklyGraph";
@@ -252,14 +253,23 @@ const Dashboard: React.FC = () => {
   });
 
   const { celebrationData, dismissCelebration } = useStepTracker();
+  // Goal completion shows two overlays in sequence: GoalReachedScreen (quick
+  // "Target Reached!" recap) first, then Continue advances to the fuller
+  // TodayGoalCompletedScreen (Plan Overview + full summary).
+  const [goalReachedData, setGoalReachedData] = useState<GoalSyncData | null>(null);
   const [summaryData, setSummaryData] = useState<GoalSyncData | null>(null);
 
   const handleDismissCelebration = useCallback(() => {
     if (celebrationData?.planOverview && celebrationData?.overallSummary) {
-      setSummaryData(celebrationData);
+      setGoalReachedData(celebrationData);
     }
     dismissCelebration();
   }, [celebrationData, dismissCelebration]);
+
+  const handleContinueFromGoalReached = useCallback(() => {
+    setSummaryData(goalReachedData);
+    setGoalReachedData(null);
+  }, [goalReachedData]);
 
   const handleDismissSummary = useCallback(() => setSummaryData(null), []);
 
@@ -503,6 +513,18 @@ const Dashboard: React.FC = () => {
           response={celebrationData}
           onDismiss={handleDismissCelebration}
         />
+      )}
+
+      {goalReachedData?.overallSummary && (
+        <View style={styles.summaryOverlay}>
+          <GoalReachedScreen
+            overallSummary={goalReachedData.overallSummary}
+            currentStreak={goalReachedData.currentStreak ?? 0}
+            reward={goalReachedData.reward}
+            onContinue={handleContinueFromGoalReached}
+            onBack={handleContinueFromGoalReached}
+          />
+        </View>
       )}
 
       {summaryData?.planOverview && summaryData?.overallSummary && (
