@@ -23,7 +23,7 @@ import {
   PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 1000;
 const NEW_ARRIVALS_QUERY_KEY = ["ecommerce", "promotion", "new-arrivals"] as const;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
@@ -52,16 +52,77 @@ const resolveImageUrl = (item: any) => {
   return getProductImageUrl(normalizedPath, "thumbnail", 40);
 };
 
+const extractRawList = (res: any): any[] => {
+  const candidates = [
+    res?.products,
+    res?.data?.products,
+    res?.items,
+    res?.data?.items,
+    res?.data,
+    res?.result?.products,
+    res?.result?.items,
+    res?.result,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      if (__DEV__) {
+        const sample = candidate[0];
+        console.log("[NewArrivals] extractRawList found items:", {
+          count: candidate.length,
+          sampleKeys: Object.keys(sample ?? {}),
+          rewardCoins: sample?.rewardCoins,
+          reward_coins: sample?.reward_coins,
+          redeem_coins: sample?.redeem_coins,
+          redeemCoins: sample?.redeemCoins,
+          reward: sample?.reward,
+          points: sample?.points,
+        });
+      }
+      return candidate;
+    }
+  }
+
+  if (__DEV__) {
+    console.warn(
+      "[NewArrivals] extractRawList: no valid array found",
+      Object.keys(res ?? {})
+    );
+  }
+  return [];
+};
+
 const fetchNewArrivalsData = async () => {
   const res = await fetchNewArrivals();
-  const rawList =
-    (Array.isArray(res?.products) && res.products) ||
-    (Array.isArray(res?.data?.products) && res.data.products) ||
-    (Array.isArray(res?.data) && res.data) ||
-    [];
+
+  if (__DEV__) {
+    console.log("[NewArrivals] raw API response shape:", {
+      keys: Object.keys(res ?? {}),
+      hasProducts: Array.isArray(res?.products),
+      hasDataProducts: Array.isArray(res?.data?.products),
+      hasItems: Array.isArray(res?.items),
+      hasDataItems: Array.isArray(res?.data?.items),
+      hasData: Array.isArray(res?.data),
+      productsLength: res?.products?.length,
+    });
+  }
+
+  const rawList = extractRawList(res);
 
   return rawList.map((item: any, index: number) => {
     const normalized = normalizeProduct(item);
+
+    if (__DEV__ && normalized.rewardCoins === 0 && normalized.redeem_coins === 0) {
+      console.warn("[NewArrivals] 0 coins after normalize:", {
+        id: item?.id ?? item?.product_id,
+        rewardCoins: item?.rewardCoins,
+        reward_coins: item?.reward_coins,
+        redeem_coins: item?.redeem_coins,
+        redeemCoins: item?.redeemCoins,
+        reward: item?.reward,
+        points: item?.points,
+      });
+    }
 
     return {
       ...normalized,
@@ -70,6 +131,9 @@ const fetchNewArrivalsData = async () => {
       brand: item?.brand_name ?? item?.brand ?? "",
       image: resolveImageUrl(item),
       oldPrice: item?.old_price ?? item?.original_price ?? undefined,
+      // Pin last — wins over any accidental spread clobber
+      rewardCoins: normalized.rewardCoins,
+      redeem_coins: normalized.redeem_coins,
     };
   });
 };
@@ -82,6 +146,8 @@ function NewArrivals() {
     queryFn: fetchNewArrivalsData,
     staleTime: CACHE_TTL_MS,
     gcTime: 30 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
   const handleViewAll = useCallback(() => {
