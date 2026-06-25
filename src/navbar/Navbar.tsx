@@ -364,6 +364,10 @@ export default function Navbar() {
     navigateToScreen("AddAddressMap", { fromSource: "newAddress" });
   }, [navigateToScreen]);
 
+  const navigateToChangeAddress = React.useCallback(() => {
+    navigateToScreen("AddressSelect");
+  }, [navigateToScreen]);
+
   const loadNavbarUser = React.useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated) {
       applyUserSnapshot({
@@ -524,16 +528,28 @@ export default function Navbar() {
           pointerEvents={showLocation ? "auto" : "none"}
         >
           <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-          <Text style={styles.locationText} numberOfLines={1}>
+          <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
             <Text style={styles.homeBold}>HOME- </Text>
             {displayName}
-            {hasAddress ? `, ${displayAddress}` : ", "}
-            {!hasAddress ? (
-              <Text style={styles.addAddressLink} onPress={navigateToAddAddress}>
-                Add Address
-              </Text>
-            ) : null}
+            {hasAddress ? `, ${displayAddress}` : ""}
           </Text>
+          {hasAddress ? (
+            <Text
+              style={styles.addAddressLink}
+              numberOfLines={1}
+              onPress={navigateToChangeAddress}
+            >
+              {" "}Change
+            </Text>
+          ) : (
+            <Text
+              style={styles.addAddressLink}
+              numberOfLines={1}
+              onPress={navigateToAddAddress}
+            >
+              {" "}Add Address
+            </Text>
+          )}
         </View>
       </View>
 
@@ -667,7 +683,7 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    maxWidth: "72%",
     marginRight: 10,
   },
 
@@ -787,5 +803,7 @@ const styles = StyleSheet.create({
     color: "#2563EB",
     textDecorationLine: "underline",
     fontWeight: "800",
+    fontSize: 14,
+    flexShrink: 0,
   },
 });
