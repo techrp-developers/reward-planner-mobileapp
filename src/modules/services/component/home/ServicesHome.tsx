@@ -239,6 +239,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 12,
     overflow: 'hidden',
+    borderWidth: 1.2,
+    borderColor: 'rgba(101, 73, 195, 0.18)',
   },
 
   /* GRID SIZES */
