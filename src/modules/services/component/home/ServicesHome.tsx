@@ -94,7 +94,7 @@ const Card = ({
         style={StyleSheet.absoluteFill}
       />
 
-      <Text style={styles.title} numberOfLines={2}>
+      <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
         {title}
       </Text>
 
@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#374151',
     lineHeight: 18,
-    maxWidth: '88%',
   },
 
   imageWrap: {
