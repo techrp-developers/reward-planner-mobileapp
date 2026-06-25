@@ -163,7 +163,7 @@ function MainLayout() {
           initialRouteName="ProductModule"
           screenOptions={{
             headerShown: false,
-            animation: "slide_from_right",
+            animation: "fade",
             gestureEnabled: true,
           }}
         >
