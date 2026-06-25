@@ -43,12 +43,16 @@ function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
             goTo("Home");
             break;
 
+          case "Search":
+            goTo("SearchScreen");
+            break;
+
           case "Cart":
             goTo("Cart");
             break;
 
           case "Notes":
-            goTo("Notes");
+            goTo("TodoList");
             break;
 
           case "Profile":

@@ -37,6 +37,9 @@ const PaginationDot = memo(({
   isDark: boolean;
 }) => {
   const width = useRef(new Animated.Value(active ? rs(18) : rs(6))).current;
+  const activeColor = '#818CF8';
+  const inactiveColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(49,46,129,0.18)';
+  const dotColor = active ? activeColor : inactiveColor;
 
   useEffect(() => {
     Animated.spring(width, {
@@ -53,9 +56,7 @@ const PaginationDot = memo(({
         styles.dot,
         {
           width,
-          backgroundColor: active
-            ? '#8B35D6'
-            : isDark ? 'rgba(255,255,255,0.18)' : 'rgba(139,53,214,0.20)',
+          backgroundColor: dotColor,
         },
       ]}
     />

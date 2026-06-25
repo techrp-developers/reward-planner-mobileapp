@@ -4,9 +4,9 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import StepsCounterCard from "./StepsCounterCard";
-import HealthStatusCard from "./HealthStatusCard";
+import PaymentsQuickAccessCard from "./PaymentsQuickAccessCard";
 import { rs} from "../../../utils/responsive";
 import { useStepTracker, StepDataState } from "../../step_counter/component/StepCode/useStepTracker";
 
@@ -89,9 +89,22 @@ export default function Home_Chart() {
     parent?.navigate("RewardStack", { moduleName: "Step Counter" });
   }, [navigation]);
 
-  const goToHealth = useCallback(() => {
-    navigation.navigate?.("HealthStack");
+  const goToPaymentsScreen = useCallback((screen: "Home" | "RechargeSection" | "OrderHistory" = "Home") => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: "Home",
+        params: {
+          screen: "PaymentsModule",
+          params: { screen, moduleName: "Payments" },
+          moduleName: "Payments",
+        },
+      }),
+    );
   }, [navigation]);
+
+  const goToPayments = useCallback(() => goToPaymentsScreen("Home"), [goToPaymentsScreen]);
+  const goToBills = useCallback(() => goToPaymentsScreen("RechargeSection"), [goToPaymentsScreen]);
+  const goToPaymentHistory = useCallback(() => goToPaymentsScreen("OrderHistory"), [goToPaymentsScreen]);
 
   return (
     <View style={[styles.container, { paddingHorizontal: layout.containerPadding }]}>
@@ -105,9 +118,10 @@ export default function Home_Chart() {
           loading={stepDataState === 'loading'}
           cardWidth={layout.cardWidth}
         />
-        <HealthStatusCard
-          status="active"
-          onNavigate={goToHealth}
+        <PaymentsQuickAccessCard
+          onOpenPayments={goToPayments}
+          onOpenBills={goToBills}
+          onOpenHistory={goToPaymentHistory}
           cardWidth={layout.cardWidth}
         />
       </View>

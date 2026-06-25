@@ -10,7 +10,6 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import type { DailyData } from "../../navigation/type";
 import {
   BORDER_RADIUS,
-  SHADOWS,
   SPACING,
   TYPOGRAPHY,
 } from "../../utils/theme";
@@ -21,13 +20,18 @@ interface WeeklyGraphProps {
 }
 
 const VD = {
-  accent: "#C4A8FF",
-  accentDim: "rgba(196,168,255,0.25)",
-  accentFaint: "rgba(196,168,255,0.12)",
+  accent: "#8EA2FF",
+  accentDark: "#B9C4FF",
+  accentDim: "rgba(142,162,255,0.22)",
+  accentFaint: "rgba(142,162,255,0.12)",
+  ink: "#F6F7FF",
+  muted: "#A8AEC8",
   white: "#FFFFFF",
-  whiteLow: "rgba(255,255,255,0.45)",
-  cardBg: "rgba(255,255,255,0.10)",
-  cardBorder: "rgba(196,168,255,0.18)",
+  whiteLow: "#979EBC",
+  cardBg: "rgba(255,255,255,0.075)",
+  cardBorder: "rgba(174,188,255,0.16)",
+  track: "rgba(255,255,255,0.09)",
+  shadow: "#02030A",
 };
 
 const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
@@ -56,7 +60,7 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
           <MaterialCommunityIcons
             name="arrow-right"
             size={16}
-            color={VD.white}
+            color={VD.accentDark}
           />
         </TouchableOpacity>
       </View>
@@ -81,19 +85,14 @@ const WeeklyGraph: React.FC<WeeklyGraphProps> = ({
                 <View
                   style={[
                     styles.barFill,
+                    isToday && styles.todayBarFill,
                     {
                       height: `${fillHeight}%`,
                       backgroundColor: item.done
-                        ? VD.white
-                        : isToday
-                        ? "rgba(255,255,255,0.85)"
-                        : "rgba(255,255,255,0.25)",
-                      borderWidth: isToday
-                        ? 1
-                        : 0,
-                      borderColor: isToday
                         ? VD.accent
-                        : "transparent",
+                        : isToday
+                        ? "#B9C4FF"
+                        : VD.accentDim,
                     },
                   ]}
                 />
@@ -137,7 +136,11 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
-    ...SHADOWS.card,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
 
   weekHeader: {
@@ -150,10 +153,10 @@ const styles = StyleSheet.create({
 
   sectionLabel: {
     fontSize: 11,
-    fontWeight: "600",
-    color: VD.white,
+    fontWeight: "800",
+    color: VD.ink,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
 
   viewMoreButton: {
@@ -174,7 +177,7 @@ const styles = StyleSheet.create({
 
   viewMore: {
     ...TYPOGRAPHY.caption,
-    color: VD.white,
+    color: VD.accentDark,
     marginRight: 4,
   },
 
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 90,
     backgroundColor:
-      "rgba(255,255,255,0.06)",
+      VD.track,
     borderRadius: 12,
     justifyContent: "flex-end",
     overflow: "hidden",
@@ -205,6 +208,11 @@ const styles = StyleSheet.create({
   barFill: {
     width: "100%",
     borderRadius: 12,
+  },
+
+  todayBarFill: {
+    borderWidth: 1,
+    borderColor: VD.accent,
   },
 
   dayLabel: {
@@ -220,7 +228,7 @@ const styles = StyleSheet.create({
   },
 
   todayText: {
-    color: VD.accent,
+    color: VD.accentDark,
     fontWeight: "700",
   },
 });

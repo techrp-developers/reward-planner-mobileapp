@@ -26,24 +26,25 @@ type Nav = NativeStackNavigationProp<FitnessStackParamList, "StepWelcome">;
 // ─── Violet Dusk palette ──────────────────────────────────────────────────────
 
 const VD = {
-  accent:      "#C4A8FF",
-  accentFaint: "rgba(196,168,255,0.12)",
-  cardBg:      "rgba(255,255,255,0.09)",
-  cardBorder:  "rgba(196,168,255,0.18)",
+  accent:      "#8EA2FF",
+  accentDark:  "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg:      "rgba(255,255,255,0.075)",
+  cardBorder:  "rgba(174,188,255,0.16)",
   white:       "#FFFFFF",
-  whiteMid:    "rgba(255,255,255,0.70)",
-  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteMid:    "#CDD2EA",
+  whiteLow:    "#979EBC",
   whiteGhost:  "rgba(255,255,255,0.10)",
 };
 
-const BG = ["#1A1040", "#3D2080", "#6B3FA0"];
+const BG = ["#070A16", "#111735", "#201A3F"];
 
 // ─── Feature row ─────────────────────────────────────────────────────────────
 
 const Feature = ({ icon, text }: { icon: string; text: string }) => (
   <View style={ss.feature}>
     <View style={ss.featureIcon}>
-      <MaterialCommunityIcons name={icon} size={18} color={VD.accent} />
+      <MaterialCommunityIcons name={icon} size={18} color={VD.accentDark} />
     </View>
     <Text style={ss.featureText}>{text}</Text>
   </View>
@@ -127,14 +128,14 @@ const StepWelcome = () => {
     <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      <LinearGradient colors={BG} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           contentContainerStyle={[ss.scroll, { paddingHorizontal: RESPONSIVE.horizontalPadding }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Back */}
           <TouchableOpacity style={ss.backBtn} onPress={handleBack} activeOpacity={0.78}>
-            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accent} />
+            <MaterialCommunityIcons name="chevron-left" size={22} color={VD.accentDark} />
           </TouchableOpacity>
 
           {/* Hero illustration */}
@@ -188,16 +189,16 @@ const StepWelcome = () => {
           {/* CTA */}
           <TouchableOpacity activeOpacity={0.9} onPress={handleNext} disabled={checking} style={ss.ctaWrap}>
             <LinearGradient
-              colors={checking ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#9B6FFF", "#C4A8FF"]}
+              colors={checking ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#8EA2FF", "#B9C4FF"]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={ss.cta}
             >
               {checking ? (
-                <ActivityIndicator color={VD.accent} />
+                <ActivityIndicator color={VD.accentDark} />
               ) : (
                 <>
                   <Text style={ss.ctaText}>Let's Get Moving</Text>
-                  <MaterialCommunityIcons name="arrow-right" size={18} color="#1A1040" />
+                  <MaterialCommunityIcons name="arrow-right" size={18} color="#070A16" />
                 </>
               )}
             </LinearGradient>
@@ -215,7 +216,7 @@ export default React.memo(StepWelcome);
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const ss = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  safe:     { flex: 1, backgroundColor: "#070A16" },
   gradient: { flex: 1 },
   scroll:   { alignItems: "center", paddingTop: SPACING.xl },
 
@@ -237,7 +238,7 @@ const ss = StyleSheet.create({
   heroGlow: {
     position: "absolute",
     width: 180, height: 180, borderRadius: 90,
-    backgroundColor: "rgba(196,168,255,0.15)",
+    backgroundColor: "rgba(142,162,255,0.16)",
   },
   runnerWrap: {
     alignItems: "center",
@@ -253,12 +254,12 @@ const ss = StyleSheet.create({
   },
 
   eyebrow: {
-    fontSize: 11, fontWeight: "700", letterSpacing: 1.2,
-    textTransform: "uppercase", color: VD.accent, marginBottom: 8,
+    fontSize: 11, fontWeight: "700", letterSpacing: 0,
+    textTransform: "uppercase", color: VD.accentDark, marginBottom: 8,
   },
   title: {
     fontSize: 32, fontWeight: "900", color: VD.white,
-    letterSpacing: -0.8, lineHeight: 38,
+    letterSpacing: 0, lineHeight: 38,
     textAlign: "center", marginBottom: SPACING.md,
   },
   subtitle: {
@@ -282,8 +283,8 @@ const ss = StyleSheet.create({
   featureText: { flex: 1, fontSize: 13, color: VD.whiteMid, fontWeight: "500" },
 
   tagline: {
-    fontSize: 16, fontWeight: "800", color: VD.accent,
-    letterSpacing: 0.5, textAlign: "center", marginBottom: SPACING.xl,
+    fontSize: 16, fontWeight: "800", color: VD.accentDark,
+    letterSpacing: 0, textAlign: "center", marginBottom: SPACING.xl,
   },
 
   ctaWrap: { width: "100%" },
@@ -291,7 +292,7 @@ const ss = StyleSheet.create({
     height: 54, borderRadius: BORDER_RADIUS.large,
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
   },
-  ctaText: { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+  ctaText: { fontSize: 16, fontWeight: "800", color: "#070A16", letterSpacing: 0 },
 
   bottomPad: { height: SPACING.xxl },
 });

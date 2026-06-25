@@ -33,19 +33,20 @@ type Nav = NativeStackNavigationProp<FitnessStackParamList, "BMICart">;
 // ─── Violet Dusk palette ──────────────────────────────────────────────────────
 
 const VD = {
-  bg:          ["#1A1040", "#3D2080", "#6B3FA0"],
-  accent:      "#C4A8FF",
-  accentFaint: "rgba(196,168,255,0.12)",
-  accentDim:   "rgba(196,168,255,0.25)",
-  cardBg:      "rgba(255,255,255,0.09)",
-  cardBorder:  "rgba(196,168,255,0.18)",
+  bg:          ["#070A16", "#111735", "#201A3F"],
+  accent:      "#8EA2FF",
+  accentDark:  "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  accentDim:   "rgba(142,162,255,0.26)",
+  cardBg:      "rgba(255,255,255,0.075)",
+  cardBorder:  "rgba(174,188,255,0.16)",
   white:       "#FFFFFF",
-  whiteMid:    "rgba(255,255,255,0.70)",
-  whiteLow:    "rgba(255,255,255,0.45)",
+  whiteMid:    "#CDD2EA",
+  whiteLow:    "#979EBC",
   whiteGhost:  "rgba(255,255,255,0.10)",
-  success:     "#4ADE80",
-  warning:     "#FBBF24",
-  error:       "#F87171",
+  success:     "#9AAEFF",
+  warning:     "#F8B84E",
+  error:       "#F38C9A",
 };
 
 // ─── BMI bar constants ────────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ const BMIScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={ss.safe} edges={["top", "bottom"]}>
-      <LinearGradient colors={VD.bg} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      <LinearGradient colors={VD.bg} style={ss.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
 
           {/* ── Hero banner ───────────────────────────────────────── */}
@@ -255,7 +256,11 @@ const BMIScreen: React.FC = () => {
                   {BMI_SEGMENTS.map((seg, i) => (
                     <View
                       key={seg.label}
-                      style={[ss.segment, { backgroundColor: seg.color, flex: seg.max - seg.min, marginLeft: i === 0 ? 0 : 3 }]}
+                      style={[
+                        ss.segment,
+                        i > 0 && ss.segmentWithGap,
+                        { backgroundColor: seg.color, flex: seg.max - seg.min },
+                      ]}
                     />
                   ))}
                   <Animated.View style={[ss.indicator, { transform: [{ translateX: indicatorAnim }] }]} />
@@ -282,7 +287,7 @@ const BMIScreen: React.FC = () => {
 
                 {/* Weekly plan card */}
                 <View style={ss.weekCard}>
-                  <LinearGradient colors={["#7C3AED", "#C4A8FF"]} style={ss.weekHeader}>
+                  <LinearGradient colors={["#27305F", "#1B2148", "#2A1E50"]} style={ss.weekHeader}>
                     <Text style={ss.weekHeading}>Weekly Breakdown</Text>
                   </LinearGradient>
 
@@ -319,9 +324,9 @@ const BMIScreen: React.FC = () => {
 
                 {/* CTA */}
                 <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("StepGoal")} style={ss.ctaWrap}>
-                  <LinearGradient colors={["#9B6FFF", "#C4A8FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ss.cta}>
+                  <LinearGradient colors={["#8EA2FF", "#B9C4FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ss.cta}>
                     <Text style={ss.ctaText}>{bmi.currentGoal ? "Choose a New Plan" : "Make This My Goal"}</Text>
-                    <MaterialCommunityIcons name="arrow-right" size={18} color="#1A1040" />
+                    <MaterialCommunityIcons name="arrow-right" size={18} color="#070A16" />
                   </LinearGradient>
                 </TouchableOpacity>
               </>
@@ -338,7 +343,7 @@ export default React.memo(BMIScreen);
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const ss = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: "#1A1040" },
+  safe:     { flex: 1, backgroundColor: "#070A16" },
   gradient: { flex: 1 },
   scroll:   { alignItems: "center", paddingBottom: 32 },
 
@@ -350,7 +355,7 @@ const ss = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(20,10,50,0.35)",
+    backgroundColor: "rgba(7,10,22,0.52)",
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   backBtn: {
@@ -391,6 +396,7 @@ const ss = StyleSheet.create({
     marginTop: 16, marginBottom: 6,
   },
   segment:  { borderRadius: BORDER_RADIUS.pill },
+  segmentWithGap: { marginLeft: 3 },
   indicator: {
     position: "absolute", left: 0, top: -7,
     width: 5, height: 20, borderRadius: BORDER_RADIUS.pill,
@@ -402,7 +408,7 @@ const ss = StyleSheet.create({
     textAlign: "center",
   },
   bmiCategory: {
-    fontSize: 20, fontWeight: "800", marginTop: 16, letterSpacing: -0.3,
+    fontSize: 20, fontWeight: "800", marginTop: 16, letterSpacing: 0,
   },
   guidance: {
     fontSize: 13, color: VD.whiteLow, lineHeight: 18, marginTop: 6,
@@ -421,7 +427,7 @@ const ss = StyleSheet.create({
   },
   currentGoalIconWrap: {
     width: 38, height: 38, borderRadius: 12,
-    backgroundColor: "rgba(252,139,173,0.15)",
+    backgroundColor: VD.accentFaint,
     alignItems: "center", justifyContent: "center",
   },
   currentGoalCopy:  { flex: 1 },
@@ -452,8 +458,8 @@ const ss = StyleSheet.create({
     borderWidth: 1, borderColor: VD.cardBorder,
     padding: SPACING.sm,
   },
-  weekBoxTitle: { fontSize: 11, fontWeight: "700", color: VD.accent, letterSpacing: 0.5 },
-  weekBoxSteps: { fontSize: 20, fontWeight: "900", color: VD.white, letterSpacing: -0.5, marginTop: 4 },
+  weekBoxTitle: { fontSize: 11, fontWeight: "700", color: VD.accentDark, letterSpacing: 0.5 },
+  weekBoxSteps: { fontSize: 20, fontWeight: "900", color: VD.white, letterSpacing: 0, marginTop: 4 },
   weekBoxLabel: { fontSize: 10, color: VD.whiteLow, fontWeight: "500" },
   weekEmpty: {
     fontSize: 13, color: VD.whiteLow, textAlign: "center",
@@ -462,9 +468,9 @@ const ss = StyleSheet.create({
   lossBox: {
     flexDirection: "row", alignItems: "flex-start",
     gap: 8, margin: 14, padding: SPACING.md,
-    backgroundColor: "rgba(74,222,128,0.08)",
+    backgroundColor: VD.accentFaint,
     borderRadius: BORDER_RADIUS.large,
-    borderWidth: 1, borderColor: "rgba(74,222,128,0.20)",
+    borderWidth: 1, borderColor: VD.cardBorder,
   },
   lossTxt:  { flex: 1, fontSize: 12, color: VD.whiteLow, lineHeight: 18 },
   lossBold: { color: VD.success, fontWeight: "800" },
@@ -495,7 +501,7 @@ const ss = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center", justifyContent: "center", gap: 8,
   },
-  ctaText: { fontSize: 16, fontWeight: "800", color: "#1A1040", letterSpacing: 0.2 },
+  ctaText: { fontSize: 16, fontWeight: "800", color: "#070A16", letterSpacing: 0.2 },
 
   // States
   stateBox: {
@@ -511,7 +517,7 @@ const ss = StyleSheet.create({
     backgroundColor: VD.accentFaint,
     borderWidth: 1, borderColor: VD.cardBorder,
   },
-  retryText: { fontSize: 14, fontWeight: "700", color: VD.accent },
+  retryText: { fontSize: 14, fontWeight: "700", color: VD.accentDark },
   errorIcon: {
     width: 54, height: 54, borderRadius: 27,
     backgroundColor: "rgba(248,113,113,0.15)",

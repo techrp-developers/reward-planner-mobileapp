@@ -18,13 +18,16 @@ import { useTodayHourlyStatsQuery } from '../../api/useFitnessQueries';
 const { width } = Dimensions.get('window');
 
 const VD = {
-  accent:      "#C4A8FF",
-  accentFaint: "rgba(196,168,255,0.12)",
-  cardBorder:  "rgba(196,168,255,0.18)",
+  accent:      "#8EA2FF",
+  accentDark:  "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBorder:  "rgba(174,188,255,0.16)",
+  ink:         "#F6F7FF",
+  muted:       "#A8AEC8",
   white:       "#FFFFFF",
-  whiteLow:    "rgba(255,255,255,0.45)",
-  whiteGhost:  "rgba(255,255,255,0.10)",
-  warning:     "#FBBF24",
+  whiteLow:    "#979EBC",
+  whiteGhost:  "rgba(255,255,255,0.13)",
+  warning:     "#F8B84E",
 };
 
 const DEFAULT_HOURLY_DATA: HourlyStatItem[] = [
@@ -132,7 +135,7 @@ const StatisticsGraph: React.FC = () => {
                   width={BAR_WIDTH}
                   height={barHeight}
                   rx={3}
-                  fill={VD.white}
+                  fill={VD.accent}
                 />
               );
             })}
@@ -155,7 +158,7 @@ const StatisticsGraph: React.FC = () => {
           <Text style={styles.timeLabel}>6PM</Text>
 
           <View style={styles.labelWithIcon}>
-            <MaterialCommunityIcons name="weather-night" size={24} color={VD.accent} />
+            <MaterialCommunityIcons name="weather-night" size={24} color={VD.accentDark} />
           </View>
         </View>
       </View>
@@ -181,8 +184,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "800",
-    color: VD.white,
-    letterSpacing: -0.3,
+    color: VD.ink,
+    letterSpacing: 0,
   },
   dropdown: {
     minHeight: 28,
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 13,
-    color: VD.white,
+    color: VD.accentDark,
     fontWeight: "700",
   },
   graphContainer: {

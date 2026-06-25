@@ -34,22 +34,23 @@ type PointsNavProp = NativeStackNavigationProp<FitnessStackParamList, 'CoinHisto
 
 // Violet Dusk palette — all on-dark, matching Dashboard/CoinHistoryAndPlan
 const VD = {
-  bg: ['#1A1040', '#3D2080', '#6B3FA0'],
-  accent: '#C4A8FF',
-  accentDim: 'rgba(196,168,255,0.25)',
-  accentFaint: 'rgba(196,168,255,0.12)',
+  bg: ['#070A16', '#111735', '#201A3F'],
+  accent: '#8EA2FF',
+  accentDark: '#B9C4FF',
+  accentDim: 'rgba(142,162,255,0.26)',
+  accentFaint: 'rgba(142,162,255,0.12)',
   white: '#FFFFFF',
-  whiteMid: 'rgba(255,255,255,0.70)',
-  whiteLow: 'rgba(255,255,255,0.45)',
+  whiteMid: '#CDD2EA',
+  whiteLow: '#979EBC',
   whiteGhost: 'rgba(255,255,255,0.10)',
-  cardBg: 'rgba(255,255,255,0.10)',
-  cardBorder: 'rgba(196,168,255,0.18)',
-  success: '#4ADE80',
-  successBg: 'rgba(74,222,128,0.14)',
-  successBorder: 'rgba(74,222,128,0.28)',
-  warning: '#FBBF24',
-  warningBg: 'rgba(251,191,36,0.12)',
-  warningBorder: 'rgba(251,191,36,0.25)',
+  cardBg: 'rgba(255,255,255,0.075)',
+  cardBorder: 'rgba(174,188,255,0.16)',
+  success: '#9AAEFF',
+  successBg: 'rgba(142,162,255,0.14)',
+  successBorder: 'rgba(142,162,255,0.26)',
+  warning: '#F8B84E',
+  warningBg: 'rgba(248,184,78,0.12)',
+  warningBorder: 'rgba(248,184,78,0.25)',
 };
 
 const formatNumber = (value: number) =>
@@ -143,7 +144,7 @@ const PointsStatementScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -158,14 +159,14 @@ const PointsStatementScreen: React.FC = () => {
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}
               >
-                <Icon name="chevron-left" size={24} color={VD.accent} />
+                <Icon name="chevron-left" size={24} color={VD.accentDark} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Points Statement</Text>
               <View style={styles.headerPlaceholder} />
             </View>
 
             <LinearGradient
-              colors={['#9B6FFF', '#7C3AED', '#5B21B6']}
+              colors={['#27305F', '#1B2148', '#2A1E50']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.balanceGradient}
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(196,168,255,0.35)',
+    borderColor: 'rgba(174,188,255,0.28)',
   },
   balanceContent: {
     flexDirection: 'row',

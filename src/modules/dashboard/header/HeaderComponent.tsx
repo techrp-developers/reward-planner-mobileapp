@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,17 +12,26 @@ import {
   type ImageStyle,
   type LayoutChangeEvent,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import Logo from '../../../assets/menu/logo.png';
 import { useGlobalSearch } from './useGlobalSearch';
-import SearchDropdown from './SearchDropdown';
+import type { SearchData } from '../api/GlobalSearchAPI';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
+
+export type SearchOverlayState = {
+  visible: boolean;
+  top: number;
+  query: string;
+  results: SearchData | null;
+  loading: boolean;
+  isEmpty: boolean;
+  onClose: () => void;
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,10 +39,14 @@ interface HeaderProps {
   userName?:              string;
   userImageUri?:          string;
   companyLogoUri?:        string;
+  surface?:               'solid' | 'transparent';
+  dismissSignal?:         number;
   onNotificationPress?:   () => void;
   onAIToggle?:            (value: boolean) => void;
   onSearchSubmit?:        (query: string) => void;
   onSearchActiveChange?:  (active: boolean) => void;
+  onSearchDropdownChange?: (active: boolean) => void;
+  onSearchOverlayChange?: (state: SearchOverlayState) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -42,9 +55,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   userName = 'User',
   userImageUri,
   companyLogoUri,
+  surface = 'solid',
+  dismissSignal = 0,
   onNotificationPress,
   onSearchSubmit,
   onSearchActiveChange,
+  onSearchDropdownChange,
+  onSearchOverlayChange,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -56,6 +73,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const dateFade    = useRef(new Animated.Value(1)).current;
   const searchFade  = useRef(new Animated.Value(0)).current;
   const searchSlide = useRef(new Animated.Value(28)).current;
+  const searchScale = useRef(new Animated.Value(0.94)).current;
+  const searchSweep = useRef(new Animated.Value(0)).current;
+  const lastDismissSignal = useRef(dismissSignal);
   const inputRef    = useRef<TextInput>(null);
 
   const insets  = useSafeAreaInsets();
@@ -71,19 +91,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Theme tokens ──────────────────────────────────────────────────────────
 
   const tk = useMemo(() => ({
-    headerGradient:   isDark ? ['#1A1A2E', '#2D2D44'] : ['#C8B9FF', '#F0EDFF'],
-    helloColor:       isDark ? '#A89FD8' : '#6B5BA8',
-    nameColor:        isDark ? '#FFFFFF'  : '#1A1A2E',
-    logoPillBg:       isDark ? '#2D2D44'  : '#FFFFFF',
-    avatarRingBg:     isDark ? '#2D1F6E'  : '#E9E4FF',
-    dateColor:        isDark ? '#C4BCFF'  : '#4A3A82',
-    iconBg:           isDark ? 'rgba(255,255,255,0.10)' : 'rgba(124,92,252,0.12)',
-    iconTint:         isDark ? '#D0CBFF'  : '#7C5CFC',
-    searchBg:         isDark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.80)',
-    searchBorder:     isDark ? 'rgba(255,255,255,0.15)' : 'rgba(124,92,252,0.25)',
-    searchTextColor:  isDark ? '#FFFFFF'  : '#1A1A2E',
-    placeholderColor: isDark ? '#6A6A8E'  : '#9B8FCC',
-  }), [isDark]);
+    headerBg:         surface === 'transparent' ? 'transparent' : '#111827',
+    helloColor:       isDark ? '#A1A1AA' : '#C7D2FE',
+    nameColor:        '#FFFFFF',
+    logoPillBg:       'rgba(255,255,255,0.92)',
+    avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
+    dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
+    iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
+    iconTint:         '#FFFFFF',
+    searchBg:         '#09090B',
+    searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.22)',
+    searchTextColor:  '#FFFFFF',
+    placeholderColor: isDark ? '#A1A1AA'  : '#C7D2FE',
+  }), [isDark, surface]);
 
   const formattedDate = useMemo(() => {
     const n = new Date();
@@ -98,6 +118,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     setHeaderHeight(e.nativeEvent.layout.height);
   }, []);
 
+  useEffect(() => {
+    const sweepLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(searchSweep, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(searchSweep, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+
+    sweepLoop.start();
+    return () => sweepLoop.stop();
+  }, [searchSweep]);
+
   // ── Search animation ──────────────────────────────────────────────────────
 
   const openSearch = useCallback(() => {
@@ -107,22 +139,55 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 10 }),
     ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide, onSearchActiveChange]);
+  }, [dateFade, searchFade, searchSlide, searchScale, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
+    if (!searchActive) return;
     inputRef.current?.blur();
     onSearchActiveChange?.(false);
     Animated.parallel([
       Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 28, duration: 200, useNativeDriver: true }),
+      Animated.timing(searchScale, { toValue: 0.94, duration: 180, useNativeDriver: true }),
     ]).start(() => {
       setSearchActive(false);
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchFade, searchSlide, reset, onSearchActiveChange]);
+  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
+
+  useEffect(() => {
+    onSearchDropdownChange?.(showDropdown);
+    onSearchOverlayChange?.({
+      visible: showDropdown && headerHeight > 0,
+      top: headerHeight,
+      query: searchQuery,
+      results,
+      loading,
+      isEmpty,
+      onClose: closeSearch,
+    });
+  }, [
+    closeSearch,
+    headerHeight,
+    isEmpty,
+    loading,
+    onSearchDropdownChange,
+    onSearchOverlayChange,
+    results,
+    searchQuery,
+    showDropdown,
+  ]);
+
+  useEffect(() => {
+    if (dismissSignal !== lastDismissSignal.current) {
+      lastDismissSignal.current = dismissSignal;
+      closeSearch();
+    }
+  }, [dismissSignal, closeSearch]);
 
   const handleQueryChange = useCallback((text: string) => {
     setSearchQuery(text);
@@ -138,6 +203,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     onSearchSubmit?.(q);
   }, [searchQuery, closeSearch, onSearchSubmit]);
 
+  const sweepTranslateX = searchSweep.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-90, 360],
+  });
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -145,11 +215,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     // dashboard content below without affecting the layout flow.
     <View style={styles.wrapper}>
 
-      <LinearGradient
-        colors={tk.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[styles.gradient, { paddingTop: safeTop + 10 }]}
+      <View
+        style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10 }]}
         onLayout={handleHeaderLayout}
       >
         {/* ── Row 1 : Avatar | Greeting | Logo ── */}
@@ -167,7 +234,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   resizeMode="cover"
                 />
               ) : (
-                <MaterialCommunityIcons name="account-circle" size={32} color="#7C5CFC" />
+                <MaterialCommunityIcons name="account-circle" size={32} color="#FFFFFF" />
               )}
             </View>
           </TouchableOpacity>
@@ -180,11 +247,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           </View>
 
           <View style={[styles.logoPill, { backgroundColor: tk.logoPillBg }]}>
-            <Image
-              source={companyLogoUri ? { uri: companyLogoUri } : Logo}
-              style={styles.logoImage as ImageStyle}
-              resizeMode="contain"
-            />
+            <View style={styles.logoImageWrap}>
+              <Image
+                source={companyLogoUri ? { uri: companyLogoUri } : Logo}
+                style={styles.logoImage as ImageStyle}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
         </View>
@@ -224,11 +293,23 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   backgroundColor: tk.searchBg,
                   borderColor:     tk.searchBorder,
                   opacity:         searchFade,
-                  transform: [{ translateX: searchSlide }],
+                  transform: [{ translateX: searchSlide }, { scale: searchScale }],
                 },
               ]}
               pointerEvents={searchActive ? 'auto' : 'none'}
             >
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.searchSweep,
+                  {
+                    transform: [
+                      { translateX: sweepTranslateX },
+                      { rotate: '16deg' },
+                    ],
+                  },
+                ]}
+              />
               <MaterialCommunityIcons
                 name="magnify"
                 size={16}
@@ -284,26 +365,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           </View>
 
         </View>
-      </LinearGradient>
+      </View>
 
       {/* ── Search Dropdown ─────────────────────────────────────────────────
        *  Absolutely positioned below the gradient so it overlays page content
        *  without affecting the layout flow of the dashboard.
        */}
-      {showDropdown && headerHeight > 0 && (
-        <View
-          style={[styles.dropdownWrap, { top: headerHeight }]}
-        >
-          <SearchDropdown
-            query={searchQuery}
-            results={results}
-            loading={loading}
-            isEmpty={isEmpty}
-            onClose={closeSearch}
-          />
-        </View>
-      )}
-
     </View>
   );
 };
@@ -316,27 +383,34 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 
-  gradient: {
-    paddingHorizontal: 20,
-    paddingBottom: 18,
+  headerSurface: {
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
+    overflow: 'hidden',
   },
-
   // ── Row 1 ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 13,
     marginBottom: 16,
   },
   avatarRing: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     borderWidth: 2,
-    borderColor: '#7C5CFC',
+    borderColor: 'rgba(255,255,255,0.78)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
   },
   avatarImg: {
     width: '100%',
@@ -347,33 +421,44 @@ const styles = StyleSheet.create({
   },
   helloText: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '600',
     lineHeight: 17,
     letterSpacing: 0.2,
   },
   nameText: {
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 23,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 24,
+    letterSpacing: 0,
   },
   logoPill: {
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 100,
+    borderRadius: 18,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    minWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    shadowColor: '#7C5CFC',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.75)',
+  },
+  logoImageWrap: {
+    width: 106,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
   logoImage: {
-    width: 90,
-    height: 32,
+    width: 100,
+    height: 30,
   },
 
   // ── Row 2 ──
@@ -381,12 +466,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    height: 40,
+    height: 50,
   },
   flexZone: {
     flex: 1,
     position: 'relative',
-    height: 40,
+    height: 50,
   },
 
   // Date
@@ -408,18 +493,32 @@ const styles = StyleSheet.create({
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    height: 50,
+    gap: 9,
+    overflow: 'hidden',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  searchSweep: {
+    position: 'absolute',
+    top: -18,
+    bottom: -18,
+    left: 0,
+    width: 58,
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   searchIcon: {},
   searchInput: {
     flex: 1,
     fontSize: 13,
     paddingVertical: 0,
-    height: 40,
+    height: 50,
   },
 
   // Action buttons
@@ -435,17 +534,11 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
 
   // Dropdown container — absolute, overlays content below header
-  dropdownWrap: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    zIndex: 200,
-    elevation: 20,
-  },
-
 });
 
 export default HeaderComponent;

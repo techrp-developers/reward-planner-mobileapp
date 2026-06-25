@@ -22,7 +22,6 @@ interface StepsCounterCardProps {
     goalSteps?: number;
     progressPercent?: number;
     stepsToday?: number;
-    onMenuPress?: () => void;
     onPress?: () => void;
     loading?: boolean;
     cardWidth?: number;
@@ -31,7 +30,7 @@ interface StepsCounterCardProps {
 // ── Daily activity sparkline ───────────────────────────────────────────────
 const DAILY_BARS = [0.3, 0.5, 0.4, 0.7, 0.6, 0.9, 0.5, 0.8, 0.65, 0.4, 0.75, 0.55];
 const ACTIVE_BAR_INDEX = DAILY_BARS.length - 3;
-const BAR_MAX = rs(20);
+const BAR_MAX = rs(22);
 
 const BAR_HEIGHTS = DAILY_BARS.map((h, i) => ({
     height: h * BAR_MAX,
@@ -45,9 +44,8 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     goalSteps = 7000,
     progressPercent,
     stepsToday = 320,
-    onMenuPress,
     onPress,
-    loading = false,
+    loading: _loading = false,
     cardWidth,
 }) => {
     const { isDark, theme } = useAppTheme();
@@ -61,7 +59,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     }, [steps, goalSteps, progressPercent]);
 
     // Ring geometry
-    const ringSize = Math.min(cWidth * 0.54, rs(60));
+    const ringSize = Math.min(cWidth * 0.6, rs(68));
     const strokeWidth = ringSize * 0.1;
     const radius = (ringSize - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -83,12 +81,12 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
         return () => anim.stop();
     }, [mountAnim]);
 
-    const ringTrackColor   = isDark ? "#374151"               : "#F0E6FF";
-    const bubbleBg         = isDark ? "rgba(240,66,159,0.15)" : "#FFF0F7";
-    const goalBadgeBg      = isDark ? "rgba(240,66,159,0.15)" : "#FEE2F0";
+    const ringTrackColor   = isDark ? "#334155"               : "#E2E8F0";
+    const bubbleBg         = isDark ? "rgba(236,72,153,0.14)" : "#FDF2F8";
+    const goalBadgeBg      = isDark ? "rgba(99,102,241,0.16)" : "#EEF2FF";
 
     const t = useMemo(() => ({
-        card:       { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : "#9B3DD8" } as ViewStyle,
+        card:       { backgroundColor: isDark ? "#18181B" : "#FFFFFF", shadowColor: isDark ? "#000000" : "#64748B" } as ViewStyle,
         title:      { color: theme.text } as TextStyle,
         subtitle:   { color: theme.secondaryText } as TextStyle,
         stepsValue: { color: theme.text } as TextStyle,
@@ -123,19 +121,16 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                             <Text style={[styles.title, t.title]} numberOfLines={1}>Steps Counter</Text>
                             <Text style={[styles.subtitle, t.subtitle]}>Today's Progress</Text>
                         </View>
-                        <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                            <Text style={styles.menuDots}>⋮</Text>
-                        </TouchableOpacity>
                     </View>
 
-                    {/* Body: ring + stats */}
+                    {/* Body: ring, stats, activity */}
                     <View style={styles.body}>
                         <View style={[styles.ringWrapper, { width: ringSize, height: ringSize }]}>
                             <Svg width={ringSize} height={ringSize}>
                                 <Defs>
                                     <SvgGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <Stop offset="0%" stopColor="#F0429F" />
-                                        <Stop offset="100%" stopColor="#7C3AED" />
+                                        <Stop offset="0%" stopColor="#EC4899" />
+                                        <Stop offset="100%" stopColor="#4F46E5" />
                                     </SvgGradient>
                                 </Defs>
                                 <Circle cx={center} cy={center} r={radius} stroke={ringTrackColor} strokeWidth={strokeWidth} fill="none" />
@@ -159,9 +154,8 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                             </View>
                         </View>
 
-                        {/* Right stats */}
                         <View style={styles.statsColumn}>
-                            <View style={styles.stepsUpRow}>
+                            <View style={styles.statItem}>
                                 <View style={[styles.arrowBubble, t.arrowBubble]}>
                                     <Text style={styles.arrowText}>↑</Text>
                                 </View>
@@ -170,8 +164,14 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                                     <Text style={[styles.stepsUpSub, t.stepsUpSub]}>steps today</Text>
                                 </View>
                             </View>
-                            <View style={[styles.goalBadge, t.goalBadge]}>
-                                <Text style={styles.goalBadgeText}>{goalPercent}% of goal</Text>
+                            <View style={[styles.statItem, styles.goalStatItem]}>
+                                <View style={[styles.goalBubble, t.goalBadge]}>
+                                    <Text style={styles.goalBubbleText}>%</Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.goalValue}>{goalPercent}%</Text>
+                                    <Text style={[styles.stepsUpSub, t.stepsUpSub]}>of goal</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -181,7 +181,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                         {BAR_HEIGHTS.map((bar, i) => (
                             <LinearGradient
                                 key={i}
-                                colors={bar.active ? ["#F0429F", "#C026A8"] : ["#F8BCDB", "#F3D0E8"]}
+                                colors={bar.active ? ["#EC4899", "#6366F1"] : ["#CBD5E1", "#E2E8F0"]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 0, y: 1 }}
                                 style={[styles.bar, { height: bar.height, opacity: bar.opacity }]}
@@ -205,20 +205,20 @@ const styles = StyleSheet.create({
     card: {
         flex: 1,
         // backgroundColor & shadowColor via t.card
-        borderRadius: rs(22),
-        padding: rs(12),
-        shadowOffset: { width: 0, height: rs(6) },
-        shadowOpacity: Platform.OS === "ios" ? 0.2 : 0.28,
-        shadowRadius: rs(16),
-        elevation: 8,
+        borderRadius: rs(18),
+        padding: rs(10),
+        shadowOffset: { width: 0, height: rs(8) },
+        shadowOpacity: Platform.OS === "ios" ? 0.12 : 0.18,
+        shadowRadius: rs(14),
+        elevation: 5,
         borderWidth: 1,
-        borderColor: "rgba(200, 180, 255, 0.2)",
+        borderColor: "rgba(148, 163, 184, 0.18)",
     },
 
     header: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: rs(18),
+        marginBottom: rs(10),
         gap: rs(6),
     },
     iconBubble: {
@@ -240,12 +240,9 @@ const styles = StyleSheet.create({
         letterSpacing: -0.2,
     },
     subtitle: { fontSize: fs(10), marginTop: 1 },  // color via t.subtitle
-    menuDots: { fontSize: fs(20), color: "#C4B5FD", paddingLeft: rs(4) },
-
     body: {
-        flexDirection: "row",
         alignItems: "center",
-        gap: rs(8),
+        gap: rs(6),
     },
 
     ringWrapper: {
@@ -265,17 +262,24 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     goalLabel: { fontSize: fs(10), marginTop: 1 },   // color via t.goalLabel
-    stepsWord: { fontSize: fs(10), color: "#A855F7", fontWeight: "600", marginTop: 1 },
+    stepsWord: { fontSize: fs(10), color: "#6366F1", fontWeight: "700", marginTop: 1 },
 
     statsColumn: {
-        flex: 1,
-        alignItems: "flex-start",
-        gap: rs(5),
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: rs(6),
     },
-    stepsUpRow: {
+    statItem: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         gap: rs(5),
+        flexShrink: 1,
+    },
+    goalStatItem: {
+        justifyContent: "flex-end",
     },
     arrowBubble: {
         width: rs(20),
@@ -285,27 +289,29 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    arrowText:    { fontSize: fs(12), color: "#F0429F", fontWeight: "700" },
-    stepsUpValue: { fontSize: fs(12), fontWeight: "700", color: "#F0429F" },
+    arrowText:    { fontSize: fs(12), color: "#EC4899", fontWeight: "700" },
+    stepsUpValue: { fontSize: fs(12), fontWeight: "800", color: "#EC4899" },
     stepsUpSub:   { fontSize: fs(9) },  // color via t.stepsUpSub
 
-    goalBadge: {
-        // backgroundColor via t.goalBadge
-        borderRadius: rs(20),
-        paddingHorizontal: rs(8),
-        paddingVertical: rs(3),
+    goalBubble: {
+        width: rs(20),
+        height: rs(20),
+        borderRadius: rs(9),
         borderWidth: 1,
-        borderColor: "rgba(240, 66, 159, 0.14)",
+        borderColor: "rgba(99, 102, 241, 0.18)",
+        alignItems: "center",
+        justifyContent: "center",
     },
-    goalBadgeText: { fontSize: fs(10), fontWeight: "700", color: "#E0348A" },
+    goalBubbleText: { fontSize: fs(10), fontWeight: "800", color: "#4F46E5" },
+    goalValue: { fontSize: fs(12), fontWeight: "800", color: "#4F46E5" },
 
     barsWrapper: {
         flexDirection: "row",
         alignItems: "flex-end",
         alignSelf: "center",
         height: rs(30),
-        marginTop: rs(14),
-        marginBottom: rs(5),
+        marginTop: rs(7),
+        marginBottom: rs(3),
         gap: rs(3),
     },
     bar: {

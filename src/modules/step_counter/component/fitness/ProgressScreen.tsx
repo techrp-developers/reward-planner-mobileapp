@@ -22,9 +22,7 @@ import {
 import { useCalendarProgressQuery } from "../../api/useFitnessQueries";
 import {
   BORDER_RADIUS,
-  COLORS,
   RESPONSIVE,
-  SHADOWS,
   SPACING,
   TYPOGRAPHY,
 } from "../../utils/theme";
@@ -58,6 +56,23 @@ const selectedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   month: "long",
 });
+
+const VD = {
+  bg: ["#070A16", "#111735", "#201A3F"],
+  ink: "#F6F7FF",
+  muted: "#A8AEC8",
+  softText: "#979EBC",
+  accent: "#8EA2FF",
+  accentDark: "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg: "rgba(255,255,255,0.075)",
+  cardSoft: "rgba(255,255,255,0.10)",
+  cardBorder: "rgba(174,188,255,0.16)",
+  success: "#9AAEFF",
+  warning: "#F8B84E",
+  danger: "#F38C9A",
+  shadow: "#02030A",
+};
 
 const pad2 =(value: number) => String(value).padStart(2, "0");
 const toMonthKey = (date: Date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
@@ -132,7 +147,10 @@ const ProgressScreen: React.FC = () => {
 
   const monthOptions = useMemo(() => buildMonthOptions(today), [today]);
   const calendarQuery = useCalendarProgressQuery(selectedMonth);
-  const calendarData = calendarQuery.data?.data?.calendar || {};
+  const calendarData = useMemo(
+    () => calendarQuery.data?.data?.calendar || {},
+    [calendarQuery.data]
+  );
   const monthlySummary = calendarQuery.data?.data?.summary || null;
   const loadingCalendar = calendarQuery.isLoading;
   const errorMessage =
@@ -183,7 +201,7 @@ const ProgressScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={COLORS.gradientScreen} style={styles.gradient}>
+      <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -194,7 +212,7 @@ const ProgressScreen: React.FC = () => {
           <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
             <View style={styles.header}>
               <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()} activeOpacity={0.82}>
-                <MaterialCommunityIcons name="chevron-left" size={25} color={COLORS.textDark} />
+                <MaterialCommunityIcons name="chevron-left" size={25} color={VD.accentDark} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Your Progress</Text>
               <View style={styles.headerSpacer} />
@@ -231,7 +249,7 @@ const ProgressScreen: React.FC = () => {
             <View style={styles.card}>
               {loadingCalendar ? (
                 <View style={styles.stateBox}>
-                  <ActivityIndicator color={COLORS.primaryIndigo} />
+                  <ActivityIndicator color={VD.accent} />
                   <Text style={styles.stateText}>Loading calendar...</Text>
                 </View>
               ) : errorMessage ? (
@@ -258,7 +276,7 @@ const ProgressScreen: React.FC = () => {
                   value={formatNumber(safeNumber(selectedDayData?.calories))}
                   label="Kcal"
                   Icon={FireIcon}
-                  color="#F97316"
+                  color={VD.warning}
                 />
                 <Stat
                   value={safeNumber(selectedDayData?.distance_km).toFixed(1)}
@@ -353,7 +371,7 @@ const DayItem = React.memo(({ cell, onSelectDate }: DayItemProps) => {
         ]}
       >
         {completed ? (
-          <MaterialCommunityIcons name="check" size={16} color={COLORS.textWhite} />
+          <MaterialCommunityIcons name="check" size={16} color={VD.ink} />
         ) : (
           <Text
             style={[
@@ -378,7 +396,7 @@ type StatProps = {
   color?: string;
 };
 
-const Stat = React.memo(({ value, label, Icon, color = "#2563EB" }: StatProps) => (
+const Stat = React.memo(({ value, label, Icon, color = VD.accentDark }: StatProps) => (
   <View style={styles.statItem}>
     <Icon width={24} height={24} />
     <View style={styles.statTextRow}>
@@ -391,14 +409,14 @@ const Stat = React.memo(({ value, label, Icon, color = "#2563EB" }: StatProps) =
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
+    backgroundColor: VD.bg[0],
   },
   gradient: {
     flex: 1,
   },
   scrollContent: {
     alignItems: "center",
-    paddingTop: SPACING.md,
+    paddingTop: SPACING.xl + SPACING.md,
     paddingBottom: SPACING.xxl,
   },
   content: {
@@ -417,11 +435,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: VD.cardSoft,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.vdWhite,
+    color: VD.ink,
     textAlign: "center",
   },
   headerSpacer: {
@@ -435,40 +455,46 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.medium,
     marginRight: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: VD.cardBorder,
   },
   monthTabActive: {
-    backgroundColor: "#FFE4F0",
-    borderColor: "#F9A8D4",
+    backgroundColor: VD.accentFaint,
+    borderColor: VD.accent,
   },
   monthText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
+    color: VD.muted,
   },
   monthTextActive: {
-    color: COLORS.primaryPurple,
+    color: VD.accentDark,
   },
   subText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.vdWhiteMid,
+    color: VD.muted,
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,
   },
   subTextStrong: {
-    color: COLORS.vdWhite,
+    color: VD.ink,
     fontWeight: "800",
   },
   card: {
     width: "100%",
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
-    ...SHADOWS.card,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   weekRow: {
     flexDirection: "row",
@@ -477,7 +503,7 @@ const styles = StyleSheet.create({
   weekText: {
     ...TYPOGRAPHY.caption,
     width: `${100 / 7}%`,
-    color: COLORS.textDark,
+    color: VD.muted,
     textAlign: "center",
   },
   grid: {
@@ -494,43 +520,43 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F6F7FB",
+    backgroundColor: VD.cardSoft,
     borderWidth: 1,
-    borderColor: "#EEF0F6",
+    borderColor: VD.cardBorder,
   },
   completedDay: {
-    backgroundColor: "#62D15F",
-    borderColor: "#62D15F",
+    backgroundColor: VD.accent,
+    borderColor: VD.accent,
   },
   missedDay: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#EEF0F6",
+    backgroundColor: "rgba(243,140,154,0.12)",
+    borderColor: "rgba(243,140,154,0.28)",
   },
   partialDay: {
-    backgroundColor: "#FEF3C7",
-    borderColor: "#F59E0B",
+    backgroundColor: "rgba(248,184,78,0.14)",
+    borderColor: VD.warning,
   },
   todayDay: {
-    borderColor: COLORS.primaryIndigo,
+    borderColor: VD.accentDark,
     borderWidth: 2,
   },
   selectedDay: {
-    backgroundColor: "#FFF0F7",
-    borderColor: COLORS.primaryPink,
+    backgroundColor: "rgba(142,162,255,0.18)",
+    borderColor: VD.accentDark,
     borderWidth: 2,
   },
   dayText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textDark,
+    color: VD.ink,
   },
   completedText: {
-    color: COLORS.textWhite,
+    color: VD.ink,
   },
   partialText: {
-    color: "#B45309",
+    color: VD.warning,
   },
   selectedText: {
-    color: COLORS.primaryPurple,
+    color: VD.accentDark,
   },
   statsRow: {
     flexDirection: "row",
@@ -550,22 +576,28 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.softText,
   },
   highestCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF5FF",
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
-    ...SHADOWS.small,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   trophyWrap: {
     width: 50,
     height: 50,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: "#FFF6E9",
+    backgroundColor: "rgba(248,184,78,0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: SPACING.md,
@@ -575,10 +607,10 @@ const styles = StyleSheet.create({
   },
   highestTitle: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textDark,
+    color: VD.ink,
   },
   highestAccent: {
-    color: COLORS.primaryIndigo,
+    color: VD.accentDark,
     fontWeight: "800",
   },
   highestRight: {
@@ -586,11 +618,11 @@ const styles = StyleSheet.create({
   },
   highestValue: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primaryIndigo,
+    color: VD.accentDark,
   },
   highestDate: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
+    color: VD.muted,
     marginTop: 2,
   },
   stateBox: {
@@ -600,7 +632,7 @@ const styles = StyleSheet.create({
   },
   stateText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
+    color: VD.muted,
     textAlign: "center",
     marginTop: SPACING.sm,
   },
@@ -611,10 +643,12 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.primaryIndigo,
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   retryText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+    color: VD.accentDark,
   },
 });

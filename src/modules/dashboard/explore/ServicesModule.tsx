@@ -47,7 +47,7 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
 };
 
 export default function ServicesModule() {
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
 
@@ -55,9 +55,9 @@ export default function ServicesModule() {
   const CARD_HEIGHT = CARD_WIDTH * 1.08;
 
   const t = useMemo(() => ({
-    wrapper:     { backgroundColor: theme.background } as ViewStyle,
-    headerTitle: { color: isDark ? '#FFFFFF' : '#1A1A2E' } as TextStyle,
-  }), [isDark, theme.background]);
+    wrapper:     { backgroundColor: 'transparent' } as ViewStyle,
+    headerTitle: { color: isDark ? '#FFFFFF' : '#0F172A' } as TextStyle,
+  }), [isDark]);
 
   const handleCategoryPress = useCallback(
     (tab: TopTab) => {
@@ -145,6 +145,8 @@ const styles = StyleSheet.create({
     gap: rs(10),
   },
   cardImage: {
-    borderRadius: rs(14),
+    borderRadius: rs(16),
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
   },
 });
