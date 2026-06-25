@@ -365,57 +365,63 @@ const ProfileScreen: React.FC = () => {
           ════════════════════════════════════ */}
           <SectionHead title="User Info" isDark={isDark} />
           <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
-            <View style={styles.userInfoGrid}>
-              <InfoTile
+            <InfoGroupTitle title="Contact Info" isDark={isDark} />
+            <InfoTableRow
                 icon="phone-outline"
                 label="Mobile"
                 value={formatPhone(userInfo?.phone ?? '')}
                 isDark={isDark}
                 theme={theme}
               />
-              <InfoTile
+              <InfoTableRow
                 icon="email-outline"
                 label="Email"
                 value={userInfo?.email ?? ''}
                 isDark={isDark}
                 theme={theme}
               />
-              <InfoTile
+              <InfoTableRow
                 icon="identifier"
                 label="User ID"
                 value={`#RP-${String(userInfo?.userId ?? 0).padStart(5, '0')}`}
                 isDark={isDark}
                 theme={theme}
                 badge="Active"
+                last={!showRole && !showDepartment && !showJoining}
               />
+              {(showRole || showDepartment || showJoining) && (
+                <InfoGroupTitle title="Work Info" isDark={isDark} />
+              )}
               {showRole && (
-                <InfoTile
+                <InfoTableRow
                   icon="briefcase-outline"
                   label="Role"
                   value={emp!.role}
                   isDark={isDark}
                   theme={theme}
+                  last={!showDepartment && !showJoining}
                 />
               )}
               {showDepartment && (
-                <InfoTile
+                <InfoTableRow
                   icon="domain"
                   label="Department"
                   value={emp!.department}
                   isDark={isDark}
                   theme={theme}
+                  last={!showJoining}
                 />
               )}
               {showJoining && (
-                <InfoTile
+                <InfoTableRow
                   icon="calendar-check-outline"
                   label="Joined"
                   value={formatDate(emp!.dateOfJoining)}
                   isDark={isDark}
                   theme={theme}
+                  last
                 />
               )}
-            </View>
           </View>
 
           {/* ════════════════════════════════════
@@ -549,34 +555,48 @@ const SectionHead = ({ title, isDark, action, onAction }: {
   </View>
 );
 
-interface InfoTileProps {
+const InfoGroupTitle: React.FC<{ title: string; isDark: boolean }> = ({ title, isDark }) => (
+  <View style={[styles.infoGroupTitleWrap, { backgroundColor: isDark ? 'rgba(129,140,248,0.08)' : '#EEF2FF' }]}>
+    <Text style={[styles.infoGroupTitle, { color: isDark ? '#C4B5FD' : '#4F46E5' }]}>
+      {title}
+    </Text>
+  </View>
+);
+
+interface InfoTableRowProps {
   icon: string;
   label: string;
   value: string;
   isDark: boolean;
   theme: any;
   badge?: string;
+  last?: boolean;
 }
-const InfoTile: React.FC<InfoTileProps> = ({
-  icon, label, value, isDark, theme, badge,
+const InfoTableRow: React.FC<InfoTableRowProps> = ({
+  icon, label, value, isDark, theme, badge, last,
 }) => (
-  <View style={[styles.infoTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.035)' : '#F8FAFC' }]}>
-    <View style={styles.infoTileTop}>
-      <View style={[styles.infoTileIcon, { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' }]}>
+  <View style={[styles.infoTableRow, !last && {
+    borderBottomWidth: 0.5,
+    borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)',
+  }]}>
+    <View style={styles.infoTableLabelCol}>
+      <View style={[styles.infoTableIcon, { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' }]}>
         <MaterialCommunityIcons name={icon} size={15} color="#6366F1" />
       </View>
+      <Text style={[styles.infoTableLabel, { color: theme.secondaryText }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+    <View style={styles.infoTableValueCol}>
+      <Text style={[styles.infoTableValue, { color: theme.text }]} numberOfLines={2}>
+        {value || '-'}
+      </Text>
       {badge ? (
         <View style={styles.badgePurple}>
           <Text style={styles.badgePurpleText}>{badge}</Text>
         </View>
       ) : null}
     </View>
-    <Text style={[styles.infoTileLabel, { color: theme.secondaryText }]} numberOfLines={1}>
-      {label}
-    </Text>
-    <Text style={[styles.infoTileValue, { color: theme.text }]} numberOfLines={2}>
-      {value || '-'}
-    </Text>
   </View>
 );
 
@@ -787,49 +807,66 @@ const styles = StyleSheet.create({
   userInfoCard: {
     borderRadius: rs(18),
     borderWidth: 1,
-    padding: rs(10),
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.035,
     shadowRadius: 16,
     elevation: 1,
   },
-  userInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: rs(10),
+  infoGroupTitleWrap: {
+    paddingHorizontal: rs(14),
+    paddingVertical: rs(9),
   },
-  infoTile: {
-    width: '48.2%',
-    minHeight: rs(104),
-    borderRadius: rs(14),
-    padding: rs(11),
-    justifyContent: 'space-between',
+  infoGroupTitle: {
+    fontSize: fs(10),
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  infoTileTop: {
+  infoTableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: rs(6),
+    minHeight: rs(58),
+    paddingHorizontal: rs(14),
+    paddingVertical: rs(10),
+    gap: rs(12),
   },
-  infoTileIcon: {
-    width: rs(28),
-    height: rs(28),
+  infoTableLabelCol: {
+    width: '38%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+  },
+  infoTableIcon: {
+    width: rs(26),
+    height: rs(26),
     borderRadius: rs(9),
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  infoTileLabel: {
+  infoTableLabel: {
+    flex: 1,
     fontSize: fs(10),
-    fontWeight: '700',
-    marginTop: rs(8),
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  infoTileValue: {
-    fontSize: fs(12),
-    lineHeight: fs(16),
+  infoTableValueCol: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: rs(8),
+  },
+  infoTableValue: {
+    flexShrink: 1,
+    fontSize: fs(13),
+    lineHeight: fs(18),
     fontWeight: '900',
     letterSpacing: 0,
-    marginTop: rs(3),
+    textAlign: 'right',
   },
   dangerCard: {
     marginTop: rs(14),
