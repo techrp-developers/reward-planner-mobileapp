@@ -24,7 +24,7 @@ export default function QuickServices() {
   const quickServicesSection = useMemo(() => {
     if (!homeData?.data || !Array.isArray(homeData.data)) return null;
     return homeData.data.find(
-      (section) => section.section_key === 'quick_services'
+      section => section.section_key === 'quick_services',
     );
   }, [homeData]);
 
@@ -60,17 +60,16 @@ export default function QuickServices() {
 
   const renderItem = ({ item }: { item: ServiceItem; index: number }) => {
     const coinsText = item.coins ? `${item.coins}` : '0';
-    const orders = item.total_orders ? `${(item.total_orders / 1000).toFixed(1)}K` : '0';
-    const discount = item.discount_percent && item.discount_percent > 0 
-      ? `${item.discount_percent}%` 
-      : undefined;
-
+    const orders = item.total_orders
+      ? `${(item.total_orders / 1000).toFixed(1)}K`
+      : '0';
+    const discount =
+      item.discount_percent && item.discount_percent > 0
+        ? `${item.discount_percent}%`
+        : undefined;
 
     return (
-      <View style={[
-        styles.cardWrapper, 
-      
-      ]}>
+      <View style={[styles.cardWrapper]}>
         <Card
           title={item.title || item.name}
           image={getImageSource(item)}
@@ -90,22 +89,23 @@ export default function QuickServices() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>
-          {quickServicesSection?.title || 'Quick & Easy Services'}
-        </Text>
+        <View>
+          <Text style={styles.heading}>
+            {quickServicesSection?.title || 'Quick & Easy Services'}
+          </Text>
+          <Text style={styles.subheading}>Quick and easy</Text>
+        </View>
       </View>
 
       <FlatList<ServiceItem>
         data={items}
-        keyExtractor={(item) => `${item.service_id}-${item.variant_id}`}
+        keyExtractor={item => `${item.service_id}-${item.variant_id}`}
         renderItem={renderItem}
         horizontal
         showsHorizontalScrollIndicator={false}
-        
         // Manual sliding snapping configurations
         decelerationRate="fast"
         disableIntervalMomentum={true}
-        
         contentContainerStyle={styles.horizontalContent}
       />
     </View>
@@ -124,8 +124,14 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#1F2937', // Deeper contrast typography 
+    color: '#1F2937', // Deeper contrast typography
     letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: 12.5,
+    color: '#8B93A1',
+    marginTop: 3,
+    fontWeight: '500',
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -134,6 +140,7 @@ const styles = StyleSheet.create({
   },
   horizontalContent: {
     paddingLeft: HORIZONTAL_PADDING,
+    paddingRight: 4,
   },
   cardWrapper: {
     justifyContent: 'flex-start',
