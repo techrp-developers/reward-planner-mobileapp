@@ -117,8 +117,15 @@ const DynamicEnquiryForm: React.FC<Props> = ({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.heading}>{title}</Text>
-      <Text style={styles.desc}>{description}</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerIcon}>
+          <MaterialIcons name="chat-bubble-outline" size={18} color="#5B47A3" />
+        </View>
+        <View style={styles.headerTextCol}>
+          <Text style={styles.heading}>{title}</Text>
+          <Text style={styles.desc}>{description}</Text>
+        </View>
+      </View>
 
       {fields.map(renderField)}
 
@@ -126,7 +133,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
         activeOpacity={0.85}
         onPress={onSubmit}
         disabled={!canSubmit}
-        style={!canSubmit ? styles.submitBtnDisabled : undefined}
+        style={[styles.submitBtnShadow, !canSubmit && styles.submitBtnDisabled]}
       >
         <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.submitBtn}>
           {isSubmitting ? (
@@ -188,30 +195,51 @@ export default DynamicEnquiryForm;
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 12,
+    marginTop: 16,
     marginHorizontal: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EDEDED',
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  headerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3EFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  headerTextCol: {
+    flex: 1,
   },
   heading: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#202020',
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   desc: {
-    fontSize: 11.5,
-    color: '#6B6B6B',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
     lineHeight: 16,
-    marginBottom: 2,
   },
   label: {
     marginTop: 14,
     fontSize: 13,
     color: '#111111',
+    fontWeight: '500',
   },
   star: {
     color: '#E11D48',
@@ -219,11 +247,11 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    minHeight: 44,
+    borderWidth: 1.2,
+    borderColor: '#ECE7FF',
+    borderRadius: 10,
+    backgroundColor: '#FAF9FF',
+    minHeight: 46,
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
@@ -262,15 +290,25 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 72,
   },
-  submitBtn: {
+  submitBtnShadow: {
     marginTop: 16,
-    height: 46,
-    borderRadius: 8,
+    borderRadius: 10,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  submitBtn: {
+    height: 48,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnDisabled: {
     opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitText: {
     fontSize: 14,
