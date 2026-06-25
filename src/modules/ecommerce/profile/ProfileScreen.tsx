@@ -101,10 +101,10 @@ const ProfileScreen: React.FC = () => {
   const [showOrderMenu, setShowOrderMenu]           = useState(false);
 
   const om = useMemo(() => ({
-    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#27272A' : '#E5E7EB' },
-    parentIconBg: { backgroundColor: isDark ? '#27272A' : '#EEF2FF' },
-    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#27272A' : '#E5E7EB', backgroundColor: isDark ? '#18181B' : '#F8FAFC' },
-    subIconBg:    { backgroundColor: isDark ? '#312E81' : '#EEF2FF' },
+    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)' },
+    parentIconBg: { backgroundColor: isDark ? 'rgba(129,140,248,0.12)' : '#EEF2FF' },
+    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)', backgroundColor: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(238,242,255,0.55)' },
+    subIconBg:    { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' },
   }), [isDark]);
 
   const topPadding =
@@ -363,30 +363,59 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               CONTACT INFO
           ════════════════════════════════════ */}
-          <SectionHead title="Contact Info" isDark={isDark} />
-          <View style={[styles.card, cardColor(isDark, theme)]}>
-            <InfoRow
-              icon="phone-outline"
-              label="Mobile"
-              value={formatPhone(userInfo?.phone ?? '')}
-              isDark={isDark} theme={theme}
-              noChevron
-            />
-            <InfoRow
-              icon="email-outline"
-              label="Email"
-              value={userInfo?.email ?? ''}
-              isDark={isDark} theme={theme}
-              noChevron
-            />
-            <InfoRow
-              icon="identifier"
-              label="User ID"
-              value={`#RP-${String(userInfo?.userId ?? 0).padStart(5, '0')}`}
-              isDark={isDark} theme={theme}
-              last noChevron
-              badge={{ label: 'Active', color: 'purple' }}
-            />
+          <SectionHead title="User Info" isDark={isDark} />
+          <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
+            <View style={styles.userInfoGrid}>
+              <InfoTile
+                icon="phone-outline"
+                label="Mobile"
+                value={formatPhone(userInfo?.phone ?? '')}
+                isDark={isDark}
+                theme={theme}
+              />
+              <InfoTile
+                icon="email-outline"
+                label="Email"
+                value={userInfo?.email ?? ''}
+                isDark={isDark}
+                theme={theme}
+              />
+              <InfoTile
+                icon="identifier"
+                label="User ID"
+                value={`#RP-${String(userInfo?.userId ?? 0).padStart(5, '0')}`}
+                isDark={isDark}
+                theme={theme}
+                badge="Active"
+              />
+              {showRole && (
+                <InfoTile
+                  icon="briefcase-outline"
+                  label="Role"
+                  value={emp!.role}
+                  isDark={isDark}
+                  theme={theme}
+                />
+              )}
+              {showDepartment && (
+                <InfoTile
+                  icon="domain"
+                  label="Department"
+                  value={emp!.department}
+                  isDark={isDark}
+                  theme={theme}
+                />
+              )}
+              {showJoining && (
+                <InfoTile
+                  icon="calendar-check-outline"
+                  label="Joined"
+                  value={formatDate(emp!.dateOfJoining)}
+                  isDark={isDark}
+                  theme={theme}
+                />
+              )}
+            </View>
           </View>
 
           {/* ════════════════════════════════════
@@ -395,93 +424,8 @@ const ProfileScreen: React.FC = () => {
               — role: only if non-empty from API
               — department + dateOfJoining: shown
           ════════════════════════════════════ */}
-          {(showDepartment || showJoining || showRole) && (
-            <>
-              <SectionHead title="Work Info" isDark={isDark} />
-              <View style={[styles.card, cardColor(isDark, theme)]}>
-                {showRole && (
-                  <InfoRow
-                    icon="briefcase-outline"
-                    label="Role"
-                    value={emp!.role}
-                    isDark={isDark} theme={theme}
-                    last={!showDepartment && !showJoining}
-                    noChevron
-                  />
-                )}
-                {showDepartment && (
-                  <InfoRow
-                    icon="domain"
-                    label="Department"
-                    value={emp!.department}
-                    isDark={isDark} theme={theme}
-                    last={!showJoining}
-                    noChevron
-                  />
-                )}
-                {showJoining && (
-                  <InfoRow
-                    icon="calendar-check-outline"
-                    label="Date of Joining"
-                    value={formatDate(emp!.dateOfJoining)}
-                    isDark={isDark} theme={theme}
-                    last noChevron
-                  />
-                )}
-              </View>
-            </>
-          )}
-
           {/* ════════════════════════════════════
               DEFAULT ADDRESS
-          ════════════════════════════════════ */}
-          {userInfo?.defaultAddress && (
-            <>
-              <SectionHead
-                title="Default Address"
-                isDark={isDark}
-                action="Change"
-                onAction={() => navigation.navigate('AddressSelect' as any)}
-              />
-              <View style={[styles.card, cardColor(isDark, theme), { padding: rs(14) }]}>
-                <View style={styles.addrTop}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <MaterialCommunityIcons name="home-outline" size={15} color="#4F46E5" />
-                    <View style={styles.badgePurple}>
-                      <Text style={styles.badgePurpleText}>
-                        {userInfo.defaultAddress.type.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.badgeGreen}>
-                    <Text style={styles.badgeGreenText}>Default</Text>
-                  </View>
-                </View>
-                <Text style={[styles.addrText, { color: theme.text }]}>
-                  {userInfo.defaultAddress.line1}, {userInfo.defaultAddress.line2},{'\n'}
-                  {userInfo.defaultAddress.city}, {userInfo.defaultAddress.state} – {userInfo.defaultAddress.zipcode},{'\n'}
-                  {userInfo.defaultAddress.country}
-                </Text>
-                <View style={styles.addrLandmark}>
-                  <MaterialCommunityIcons name="map-marker-outline" size={12} color={theme.secondaryText} />
-                  <Text style={[styles.landmarkText, { color: theme.secondaryText }]}>
-                    {userInfo.defaultAddress.landmark}
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* ════════════════════════════════════
-              PREFERENCES
-          ════════════════════════════════════ */}
-          <SectionHead title="Preferences" isDark={isDark} />
-          <View style={[styles.card, cardColor(isDark, theme)]}>
-            <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />
-          </View>
-
-          {/* ════════════════════════════════════
-              SHOP SECTION
           ════════════════════════════════════ */}
           <SectionHead title="Shop" isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
@@ -550,15 +494,15 @@ const ProfileScreen: React.FC = () => {
           ════════════════════════════════════ */}
           <SectionHead title="Others" isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
+            <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />
             <AccountRow icon="file-document-outline" label="Terms & Conditions" isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />
             <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('HelpForm' as any)} />
-            <AccountRow icon="lock-reset"             label="Change Password"    isDark={isDark} theme={theme} onPress={() => navigation.navigate('ChangePassword')} />
+            <AccountRow icon="lock-reset"             label="Change Password"    isDark={isDark} theme={theme} last onPress={() => navigation.navigate('ChangePassword')} />
+          </View>
 
-            {/* Divider before danger actions */}
-            <View style={[styles.sectionDivider, { backgroundColor: isDark ? '#27272A' : '#E5E7EB' }]} />
-
+          <View style={[styles.dangerCard, cardColor(isDark, theme)]}>
             <AccountRow icon="logout"        label="Log Out"        isDark={isDark} theme={theme} danger onPress={() => setLogoutModalVisible(true)} />
             <AccountRow icon="delete-outline" label="Delete Account" sub="This action cannot be undone" isDark={isDark} theme={theme} danger last onPress={handleDeleteAccount} />
           </View>
@@ -605,35 +549,34 @@ const SectionHead = ({ title, isDark, action, onAction }: {
   </View>
 );
 
-interface InfoRowProps {
-  icon: string; label: string; value: string;
-  isDark: boolean; theme: any;
-  last?: boolean; noChevron?: boolean;
-  badge?: { label: string; color: 'purple' | 'green' };
+interface InfoTileProps {
+  icon: string;
+  label: string;
+  value: string;
+  isDark: boolean;
+  theme: any;
+  badge?: string;
 }
-const InfoRow: React.FC<InfoRowProps> = ({
-  icon, label, value, isDark, theme, last, noChevron, badge,
+const InfoTile: React.FC<InfoTileProps> = ({
+  icon, label, value, isDark, theme, badge,
 }) => (
-  <View style={[styles.mrow, !last && {
-    borderBottomWidth: 0.5,
-    borderBottomColor: isDark ? '#27272A' : '#E5E7EB',
-  }]}>
-    <View style={[styles.micon, { backgroundColor: isDark ? '#27272A' : '#EEF2FF' }]}>
-      <MaterialCommunityIcons name={icon} size={17} color="#4F46E5" />
+  <View style={[styles.infoTile, { backgroundColor: isDark ? 'rgba(255,255,255,0.035)' : '#F8FAFC' }]}>
+    <View style={styles.infoTileTop}>
+      <View style={[styles.infoTileIcon, { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' }]}>
+        <MaterialCommunityIcons name={icon} size={15} color="#6366F1" />
+      </View>
+      {badge ? (
+        <View style={styles.badgePurple}>
+          <Text style={styles.badgePurpleText}>{badge}</Text>
+        </View>
+      ) : null}
     </View>
-    <View style={{ flex: 1 }}>
-      <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>{label}</Text>
-      <Text style={[styles.rowVal, { color: theme.text }]} numberOfLines={1}>{value}</Text>
-    </View>
-    {badge?.color === 'purple' && (
-      <View style={styles.badgePurple}><Text style={styles.badgePurpleText}>{badge.label}</Text></View>
-    )}
-    {badge?.color === 'green' && (
-      <View style={styles.badgeGreen}><Text style={styles.badgeGreenText}>{badge.label}</Text></View>
-    )}
-    {!noChevron && !badge && (
-      <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
-    )}
+    <Text style={[styles.infoTileLabel, { color: theme.secondaryText }]} numberOfLines={1}>
+      {label}
+    </Text>
+    <Text style={[styles.infoTileValue, { color: theme.text }]} numberOfLines={2}>
+      {value || '-'}
+    </Text>
   </View>
 );
 
@@ -648,17 +591,17 @@ const AccountRow: React.FC<AccountRowProps> = ({
   <TouchableOpacity
     style={[styles.mrow, !last && {
       borderBottomWidth: 0.5,
-      borderBottomColor: isDark ? '#27272A' : '#E5E7EB',
+      borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)',
     }]}
     onPress={onPress}
     activeOpacity={0.7}
   >
     <View style={[styles.micon, {
       backgroundColor: danger
-        ? (isDark ? '#3B1A1A' : '#FFF0F0')
-        : (isDark ? '#27272A' : '#EEF2FF'),
+        ? (isDark ? 'rgba(239,68,68,0.12)' : '#FFF0F0')
+        : (isDark ? 'rgba(129,140,248,0.12)' : '#EEF2FF'),
     }]}>
-      <MaterialCommunityIcons name={icon} size={17} color={danger ? '#EF4444' : '#4F46E5'} />
+      <MaterialCommunityIcons name={icon} size={16} color={danger ? '#EF4444' : '#6366F1'} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={[styles.rowVal, { color: danger ? '#EF4444' : theme.text }]}>{label}</Text>
@@ -673,12 +616,15 @@ const AccountRow: React.FC<AccountRowProps> = ({
 const DarkModeRow: React.FC<{ isDark: boolean; theme: any; onToggle: () => void }> = ({
   isDark, theme, onToggle,
 }) => (
-  <View style={styles.mrow}>
-    <View style={[styles.micon, { backgroundColor: isDark ? '#312E81' : '#EEF2FF' }]}>
+  <View style={[styles.mrow, {
+    borderBottomWidth: 0.5,
+    borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)',
+  }]}>
+    <View style={[styles.micon, { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' }]}>
       <MaterialCommunityIcons
         name={isDark ? 'weather-night' : 'white-balance-sunny'}
         size={18}
-        color="#4F46E5"
+        color="#6366F1"
       />
     </View>
     <View style={{ flex: 1 }}>
@@ -699,9 +645,9 @@ const DarkModeRow: React.FC<{ isDark: boolean; theme: any; onToggle: () => void 
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const cardColor = (isDark: boolean, _theme: any) => ({
-  backgroundColor: isDark ? '#18181B' : '#FFFFFF',
-  borderColor: isDark ? '#27272A' : '#E5E7EB',
-  shadowColor: isDark ? '#000' : '#64748B',
+  backgroundColor: isDark ? '#111113' : 'rgba(255,255,255,0.82)',
+  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)',
+  shadowColor: isDark ? '#000' : '#94A3B8',
 });
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -825,30 +771,86 @@ const styles = StyleSheet.create({
 
   // ── Body ──
   body:    { paddingHorizontal: rs(16), marginTop: rs(16) },
-  secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: rs(20), marginBottom: rs(10), marginLeft: 2 },
-  secTitle: { fontSize: fs(11), fontWeight: '800', letterSpacing: 0.7 },
-  secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '700' },
+  secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: rs(22), marginBottom: rs(9), marginLeft: rs(10), marginRight: rs(8) },
+  secTitle: { fontSize: fs(10), fontWeight: '800', letterSpacing: 0.6 },
+  secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
 
-  card: { borderRadius: 18, borderWidth: 1, overflow: 'hidden', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 3 },
-  mrow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: rs(14), paddingVertical: rs(13), gap: 12 },
-  micon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  rowLbl: { fontSize: fs(11), marginBottom: 1 },
-  rowVal: { fontSize: fs(13), fontWeight: '500' },
+  card: {
+    borderRadius: rs(18),
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.035,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+  userInfoCard: {
+    borderRadius: rs(18),
+    borderWidth: 1,
+    padding: rs(10),
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.035,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+  userInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: rs(10),
+  },
+  infoTile: {
+    width: '48.2%',
+    minHeight: rs(104),
+    borderRadius: rs(14),
+    padding: rs(11),
+    justifyContent: 'space-between',
+  },
+  infoTileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: rs(6),
+  },
+  infoTileIcon: {
+    width: rs(28),
+    height: rs(28),
+    borderRadius: rs(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTileLabel: {
+    fontSize: fs(10),
+    fontWeight: '700',
+    marginTop: rs(8),
+  },
+  infoTileValue: {
+    fontSize: fs(12),
+    lineHeight: fs(16),
+    fontWeight: '900',
+    letterSpacing: 0,
+    marginTop: rs(3),
+  },
+  dangerCard: {
+    marginTop: rs(14),
+    borderRadius: rs(18),
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.025,
+    shadowRadius: 14,
+    elevation: 1,
+  },
+  mrow: { flexDirection: 'row', alignItems: 'center', minHeight: rs(58), paddingHorizontal: rs(14), paddingVertical: rs(10), gap: rs(12) },
+  micon: { width: rs(30), height: rs(30), borderRadius: rs(10), alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowLbl: { fontSize: fs(10), marginBottom: 2, fontWeight: '600' },
+  rowVal: { fontSize: fs(13), fontWeight: '800', letterSpacing: 0 },
 
   // Badges
   badgePurple:     { backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
   badgePurpleText: { fontSize: fs(10), fontWeight: '800', color: '#4338CA' },
   badgeGreen:      { backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
   badgeGreenText:  { fontSize: fs(10), fontWeight: '800', color: '#047857' },
-
-  // Address
-  addrTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(10) },
-  addrText:     { fontSize: fs(13), lineHeight: 21 },
-  addrLandmark: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: rs(6) },
-  landmarkText: { fontSize: fs(11) },
-
-  // Divider inside card
-  sectionDivider: { height: 0.5, marginHorizontal: rs(14) },
 
   flex1:   { flex: 1 },
   subRow:  { paddingLeft: rs(10) },
@@ -860,3 +862,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+
