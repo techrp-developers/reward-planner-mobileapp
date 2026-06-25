@@ -150,30 +150,25 @@ function BottomTabs({
 
   const tabs = isDashboard ? DASHBOARD_TABS : TABS;
 
-  const animateDashboardIndicator = useCallback((index: number, after?: () => void) => {
+  const animateDashboardIndicator = useCallback((index: number) => {
     Animated.spring(dashboardIndicatorX, {
       toValue: index * DASHBOARD_SLOT_WIDTH,
       useNativeDriver: true,
       tension: 120,
       friction: 13,
-    }).start(({ finished }) => {
-      if (finished) {
-        after?.();
-      }
-    });
+    }).start();
   }, [dashboardIndicatorX]);
 
   const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Profile") => {
     const index = tab === "Notes" ? 0 : tab === "Home" ? 1 : 2;
     activeTabRef.current = tab;
     setActiveTab(tab);
-    animateDashboardIndicator(index, () => {
-      if (tab === "Home") {
-        onCenterPress?.();
-        return;
-      }
-      onTabPress?.(tab);
-    });
+    animateDashboardIndicator(index);
+    if (tab === "Home") {
+      onCenterPress?.();
+      return;
+    }
+    onTabPress?.(tab);
   }, [animateDashboardIndicator, onCenterPress, onTabPress]);
 
   // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,

@@ -432,10 +432,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   logoPill: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 128,
+    borderRadius: 18,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    minWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -448,17 +448,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.75)',
   },
   logoImageWrap: {
-    width: 110,
-    height: 42,
-    borderRadius: 14,
+    width: 106,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   logoImage: {
-    width: 102,
-    height: 36,
+    width: 100,
+    height: 30,
   },
 
   // ── Row 2 ──
