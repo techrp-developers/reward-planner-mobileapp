@@ -96,10 +96,13 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
           style={styles.statsCard}
         >
           {stats.map((item, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
+            <React.Fragment key={index}>
+              {index > 0 && <View style={styles.statDivider} />}
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{item.value}</Text>
+                <Text style={styles.statLabel}>{item.label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </LinearGradient>
       )}
@@ -139,11 +142,15 @@ export default ServiceFeaturesBullet;
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFF',
-    padding: 16,
+    padding: 18,
     marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F1F1F1',
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   featureRow: {
@@ -218,8 +225,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 16,
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   safetyTitle: {
@@ -248,29 +260,45 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 10,
     marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 16,
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   statItem: {
     alignItems: 'center',
     flex: 1,
+    paddingHorizontal: 10,
+  },
+
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(109, 91, 255, 0.18)',
+    marginHorizontal: 6,
   },
 
   statValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#6D5BFF',
   },
 
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',
+    lineHeight: 14,
   },
 
 });
