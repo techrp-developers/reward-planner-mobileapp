@@ -32,7 +32,6 @@ export default function HomeStack() {
       <Stack.Screen name="WishList" getComponent={() => require("../screens/WishlistScreen").default} />
       <Stack.Screen name="AddAddressMap" getComponent={() => require("../components/ItemCardAddress/AddAddressMapScreen").default} />
       <Stack.Screen name="ReviewScreen" getComponent={() => require("../screens/ReviewScreen").default} />
-      <Stack.Screen name="Notification" getComponent={() => require("../../dashboard/notification/Notification").default} />
       <Stack.Screen name="BuyNow" getComponent={() => require("../components/product/product_section/BuyAgain").default} />
       <Stack.Screen name="ProductScreen" getComponent={() => require("../screens/ProductScreen").default} />
       <Stack.Screen name="TermsAndConditions" getComponent={() => require("../profile/TermsandCondition").default} />

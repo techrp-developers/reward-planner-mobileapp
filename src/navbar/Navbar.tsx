@@ -401,7 +401,7 @@ export default function Navbar() {
         const storedName = await getStoredUserName();
         const userInfo = await fetchUserInfo();
         const user = userInfo?.user || null;
-        const rewardPoints = Number(
+        const fetchedRewardPoints = Number(
           user?.rewardPoints || userInfo?.data?.rewardPoints || 0
         );
         const userName =
@@ -435,7 +435,7 @@ export default function Navbar() {
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
           displayAddress: addressText || "Address not set",
-          rewardPoints,
+          rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
 
@@ -553,7 +553,7 @@ export default function Navbar() {
         </View>
       </View>
 
-      {/* SEARCH + WALLET + NOTIFICATION */}
+      {/* SEARCH + WALLET */}
       <View style={styles.searchRow}>
         <TouchableOpacity
           activeOpacity={0.9}
@@ -590,15 +590,6 @@ export default function Navbar() {
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.85}
-          onPress={() => navigateToScreen("Notification")}
-        >
-          <MaterialCommunityIcons name="bell-outline" size={22} color="#111827" />
-          <View style={styles.badgeDot} />
         </TouchableOpacity>
       </View>
     </View>
@@ -708,7 +699,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
-    gap: 10,
+    gap: 12,
     marginBottom: 15,
     marginTop: 10,
   },
@@ -719,15 +710,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 48,
     borderColor: "rgba(0,0,0,0.10)",
     borderWidth: 1,
     ...shadow,
   },
 
   fakePlaceholder: {
-    marginLeft: 8,
+    flex: 1,
+    marginLeft: 9,
     color: "#6B7280",
     fontSize: 14,
     fontWeight: "600",
@@ -774,29 +766,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 12,
     maxWidth: 34,
-  },
-
-  iconCircle: {
-    width: 48,
-    height: 48,
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    ...shadow,
-  },
-  badgeDot: {
-    position: "absolute",
-    top: 9,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "#FF3B30",
-    borderWidth: 2,
-    borderColor: "#fff",
   },
 
   addAddressLink: {

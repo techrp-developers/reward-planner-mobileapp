@@ -24,13 +24,10 @@ function ProductHeadColor({
   title = "",
   onBackPress,
   onSearchPress,
-  showNotificationDot = true,
 }: {
   title?: string;
   onBackPress?: () => void;
   onSearchPress?: () => void;
-  onBellPress?: () => void;
-  showNotificationDot?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
 
@@ -43,12 +40,6 @@ function ProductHeadColor({
   const handleSearch = () => {
     handleNavigateWithPrefetch({
       navigate: onSearchPress ?? (() => navigation.navigate('SearchScreen')),
-    });
-  };
-
-  const handleNotification = () => {
-    handleNavigateWithPrefetch({
-      navigate: () => navigation.navigate('Notification'),
     });
   };
 
@@ -71,14 +62,6 @@ function ProductHeadColor({
             variant="solid"
             style={styles.circleIcon}
             onPress={handleSearch}
-          />
-
-          <AppIconButton
-            type="notification"
-            variant="solid"
-            style={styles.circleIcon}
-            onPress={handleNotification}
-            showDotBadge={showNotificationDot}
           />
         </View>
       </View>

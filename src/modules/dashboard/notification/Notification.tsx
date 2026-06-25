@@ -12,9 +12,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import OrderHeading from "../../ecommerce/constants/heading/OrderHeading";
-import { HomeStackParamList } from "../../ecommerce/navigation/types";
+import type { AppStackParamList } from "../../../navigation/RootNavigator";
 
-type Nav = NativeStackNavigationProp<HomeStackParamList>;
+type Nav = NativeStackNavigationProp<AppStackParamList>;
 
 const notifications = [
   // {

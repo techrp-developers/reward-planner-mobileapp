@@ -39,7 +39,6 @@ export type HomeStackParamList = {
   OrderConfirm: { order_id?: number; items?: any[]; total?: number };
   MyOrder: undefined;
   BuyNow: undefined;
-  Notification: undefined;
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   TodoList: undefined;

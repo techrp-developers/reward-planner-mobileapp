@@ -230,7 +230,6 @@ export default function AddressSelectScreen() {
         title="Select Address"
         onBackPress={() => navigation.goBack()}
         onSearchPress={() => alert.info("Search", "Search functionality coming soon")}
-        onBellPress={() => alert.info("Notifications", "Notifications coming soon")}
       />
 
 

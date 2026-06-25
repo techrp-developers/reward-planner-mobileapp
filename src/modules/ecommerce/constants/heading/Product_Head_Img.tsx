@@ -27,15 +27,12 @@ export default function ProductHead({
   onSearchPress,
   onCartPress,
   // cartCount = 0,
-  showNotificationDot = true,
 }: {
   headerHeight?: number;
   onBackPress?: () => void;
   onSearchPress?: () => void;
   onCartPress?: () => void;
-  onNotificationPress?: () => void;
   cartCount?: number;
-  showNotificationDot?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
@@ -80,12 +77,6 @@ export default function ProductHead({
 
     handleNavigateWithPrefetch({
       navigate: onCartPress ?? (() => navigation.navigate("Cart")),
-    });
-  };
-
-  const handleNotification = () => {
-    handleNavigateWithPrefetch({
-      navigate: () => navigation.navigate("Notification"),
     });
   };
 
@@ -147,13 +138,6 @@ export default function ProductHead({
           type="cart"
           onPress={handleCart}
           badgeCount={cartCount}
-          style={{ width: ICON, height: ICON }}
-        />
-
-        <AppIconButton
-          type="notification"
-          onPress={handleNotification}
-          showDotBadge={showNotificationDot}
           style={{ width: ICON, height: ICON }}
         />
       </View>

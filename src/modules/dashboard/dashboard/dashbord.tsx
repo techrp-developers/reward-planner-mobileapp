@@ -159,6 +159,7 @@ function Dashbord() {
             onSearchActiveChange={setIsSearchOpen}
             onSearchOverlayChange={setSearchOverlay}
             onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+            onNotificationPress={() => navigation.navigate('Notification')}
           />
 
           {/* Motivational Quote Banner */}
