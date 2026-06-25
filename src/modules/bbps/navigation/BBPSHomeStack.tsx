@@ -5,6 +5,8 @@ import ProductScreen from '../screen/ProductScreen';
 import BillerSelectScreen from '../screen/BillerSelectScreen';
 import BillDetailsScreen from '../screen/BillDetailsScreen';
 import PaymentConfirmationScreen from '../screen/PaymentConfirmationScreen';
+import RechargeConfirmationScreen from '../screen/RechargeConfirmationScreen';
+import TransactionStatusScreen from '../screen/TransactionStatusScreen';
 import OrderSuccessful from '../screen/OrderSuccessful';
 import ReachargeHomeScreen from '../component/recharge/ReachargeHomeScreen';
 import RechargeSection from '../component/recharge/RechargeSection';
@@ -20,6 +22,9 @@ export type BBPSStackParamList = {
   OrderSuccessful: undefined;
   ReachargeHomeScreen: undefined;
   RechargeSection: undefined;
+  RechargePlanScreen: undefined;
+  RechargeConfirmationScreen: undefined;
+  TransactionStatusScreen: undefined;
   Search: undefined;
   OrderHistory: undefined;
 
@@ -66,6 +71,21 @@ function BBPSHomeStack() {
       <Stack.Screen
         name="RechargeSection"
         component={RechargeSection}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="RechargePlanScreen"
+        component={RechargeSection}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="RechargeConfirmationScreen"
+        component={RechargeConfirmationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TransactionStatusScreen"
+        component={TransactionStatusScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

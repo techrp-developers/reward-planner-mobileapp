@@ -30,6 +30,7 @@ import { HomeStackParamList } from '../../navigation/type';
 import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentStatus } from '../../api/ServicepaymentAPI';
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import RazorpayCheckout from "react-native-razorpay";
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
 
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCheckoutScreen'>;
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
@@ -244,6 +245,7 @@ const serviceCheckoutQueryKey = (
 
 export default function ServiceCheckoutScreen() {
   const navigation = useNavigation<NavProps>();
+  const stickyCTA = useStickyBottomCTA();
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
   const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};
@@ -710,7 +712,10 @@ export default function ServiceCheckoutScreen() {
     <View style={styles.container}>
       <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* Address card */}
         <View style={styles.card}>
@@ -821,6 +826,8 @@ export default function ServiceCheckoutScreen() {
         disabled={isAddressFetching}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
+        bottomOffset={stickyCTA.bottomOffset}
+        onLayout={stickyCTA.onCtaLayout}
       />
     </View>
   );

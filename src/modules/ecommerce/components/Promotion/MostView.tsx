@@ -16,9 +16,14 @@ import HorizontalProductList from "../common/HorizontalProductList";
 import { fetchMostViewedProducts } from "../../api/PromotionalApi";
 import { getProductImageUrl } from "../../api/ProductApi";
 import { queryClient } from "../../../../query/queryClient";
+import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+  PROMO_CARD_WIDTH,
+  PROMO_CARD_GAP,
+  PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
-const CARD_WIDTH = 136;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MOST_VIEW_QUERY_KEY = ["ecommerce", "promotion", "most-viewed"] as const;
 
@@ -43,6 +48,17 @@ const resolveImageUrl = (item: any) => {
   return getProductImageUrl(normalizedPath, "thumbnail", 45);
 };
 
+const mapMostViewItem = (item: any, index: number) => {
+  const normalized = normalizeProduct(item);
+
+  return {
+    ...normalized,
+    id: item?.product_id ?? item?.id ?? `most-viewed-${index}`,
+    image: resolveImageUrl(item),
+  };
+};
+
+
 function MostView() {
   const navigation = useNavigation<Nav>();
   const fetchMostViewData = useCallback(async () => {
@@ -53,15 +69,7 @@ function MostView() {
       (Array.isArray(res?.data) && res.data) ||
       [];
 
-    return rawList.slice(0, 8).map((item: any, index: number) => ({
-      ...item,
-      id: item?.product_id ?? item?.id ?? `most-viewed-${index}`,
-      title: item?.product_name ?? item?.title ?? "Product",
-      brand: item?.brand_name ?? item?.brand ?? "",
-      image: resolveImageUrl(item),
-      price: item?.price ?? item?.selling_price ?? "",
-      oldPrice: item?.old_price ?? item?.original_price ?? undefined,
-    }));
+    return rawList.slice(0, 8).map(mapMostViewItem);
   }, []);
 
   const { data: products = [], isLoading } = useQuery({
@@ -77,7 +85,7 @@ function MostView() {
 
   const renderCard = useCallback(
     ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-      <ProductCard item={item} cardWidth={CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
+      <ProductCard item={item} cardWidth={PROMO_CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
     ),
     []
   );
@@ -107,9 +115,9 @@ function MostView() {
       </View>
       <HorizontalProductList
         data={products}
-        itemWidth={CARD_WIDTH}
-        gap={12}
-        estimatedItemSize={CARD_WIDTH + 12}
+        itemWidth={PROMO_CARD_WIDTH}
+        gap={PROMO_CARD_GAP}
+        estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
         keyExtractor={(item) => String(item.id)}
         renderCard={renderCard}
       />
@@ -128,15 +136,7 @@ export const prefetchMostViewSection = async () => {
         (Array.isArray(res?.data) && res.data) ||
         [];
 
-      return rawList.slice(0, 8).map((item: any, index: number) => ({
-        ...item,
-        id: item?.product_id ?? item?.id ?? `most-viewed-${index}`,
-        title: item?.product_name ?? item?.title ?? "Product",
-        brand: item?.brand_name ?? item?.brand ?? "",
-        image: resolveImageUrl(item),
-        price: item?.price ?? item?.selling_price ?? "",
-        oldPrice: item?.old_price ?? item?.original_price ?? undefined,
-      }));
+      return rawList.slice(0, 8).map(mapMostViewItem);
     },
     staleTime: CACHE_TTL_MS,
   });

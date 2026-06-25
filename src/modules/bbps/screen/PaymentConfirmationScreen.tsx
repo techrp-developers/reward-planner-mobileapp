@@ -7,12 +7,16 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
+import RazorpayCheckout from 'react-native-razorpay';
 import BBPSHead from '../constatnt/BBPSHead';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
+import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
+import { useAlert } from '../../ecommerce/components/alerts';
 
 type ConfirmationRouteParams = {
   operatorName?: string;
@@ -20,6 +24,8 @@ type ConfirmationRouteParams = {
   nickname?: string;
   formValues?: Record<string, string>;
   fetchBillData?: {
+    success?: boolean;
+    message?: string;
     data?: {
       customer?: {
         consumerNumber?: string;
@@ -32,6 +38,7 @@ type ConfirmationRouteParams = {
         billNumber?: string;
         billDate?: string;
       };
+      billFetchId?: number;
       raw?: Record<string, any>;
     };
   };
@@ -59,37 +66,50 @@ const formatAmount = (value?: string | number) => {
   return amount.toString();
 };
 
+const getOrderValue = (order: any, keys: string[]) => {
+  for (const key of keys) {
+    if (order?.[key] !== undefined && order?.[key] !== null && String(order[key]).trim()) {
+      return order[key];
+    }
+  }
+
+  return undefined;
+};
+
 const PaymentConfirmationScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const alert = useAlert();
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [amount, setAmount] = useState('');
   const pulse = useRef(new Animated.Value(0)).current;
 
   const params = (route.params || {}) as ConfirmationRouteParams;
-  const billData = params.fetchBillData?.data?.bill || {};
-  const customerData = params.fetchBillData?.data?.customer || {};
+  const customer = params.fetchBillData?.data?.customer || {};
+  const bill = params.fetchBillData?.data?.bill || {};
   const consumerNumber =
-    customerData.consumerNumber ||
-    params.formValues?.consumer_number ||
+    customer.consumerNumber ||
+    params.formValues?.utility_acc_no ||
     Object.values(params.formValues || {}).find((value) => value?.trim()) ||
     '-';
-  const customerName = customerData.customerName || 'Customer';
+  const customerName = customer.customerName || 'Customer';
   const nickname = params.nickname || '';
   const operatorName = params.operatorName || 'Biller';
   const cardTitle = nickname ? `${nickname}- ${customerName}` : customerName;
   const cardSubTitle = `${consumerNumber}- ${operatorName}`;
-  const dueDate = billData.dueDate || '-';
-  const billNumber = billData.billNumber || '-';
-  const billDate = billData.billDate || '-';
-  const billAmount = formatAmount(billData.amount);
+  const dueDate = bill.dueDate || '-';
+  const billNumber = bill.billNumber || '-';
+  const billDate = bill.billDate || '-';
+  const billAmount = formatAmount(bill.amount);
+  const billFetchId = params.fetchBillData?.data?.billFetchId;
   const rawMessage = params.fetchBillData?.data?.raw?.message || '';
   const isBillDetailsMissing =
-    !hasDisplayValue(billData.amount) &&
-    !hasDisplayValue(billData.dueDate) &&
-    !hasDisplayValue(billData.billNumber);
+    !hasDisplayValue(bill.amount) &&
+    !hasDisplayValue(bill.dueDate) &&
+    !hasDisplayValue(bill.billNumber);
   const sanitizedAmount = amount.replace(/[^0-9.]/g, '');
-  const isProceedDisabled = sanitizedAmount.length === 0;
+  const isProceedDisabled = processing || sanitizedAmount.length === 0;
   const headerTitle = params.categoryName ? `Pay ${params.categoryName}` : 'Pay Bill';
   const logoText = operatorName.slice(0, 2).toUpperCase() || 'BB';
 
@@ -122,6 +142,89 @@ const PaymentConfirmationScreen = () => {
     console.log('🧾 Customer data:', incomingParams.fetchBillData?.data?.customer || {});
     console.log('🧾 Bill data:', incomingParams.fetchBillData?.data?.bill || {});
   }, [route.params]);
+
+  const handleProceed = async () => {
+    if (!billFetchId) {
+      alert.warning('Missing Bill', 'Bill fetch id is missing. Please fetch the bill again.');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const payload = {
+        operator_id: String(customer.operatorId || ''),
+        bill_fetch_id: billFetchId,
+      };
+
+      console.log('Create Bill Order Payload:', payload);
+      const response = await createBillPayOrder(payload);
+      console.log('Create Bill Order Response:', response);
+
+      if (!response?.success) {
+        alert.warning(
+          'Order Failed',
+          response?.message || 'Unable to create bill payment order.'
+        );
+        return;
+      }
+
+      const order = response?.data || response;
+      const razorpayKey = getOrderValue(order, ['key', 'key_id', 'razorpay_key']);
+      const razorpayOrderId = getOrderValue(order, ['razorpay_order_id', 'razorpayOrderId', 'order_id', 'id']);
+
+      if (!razorpayKey || !razorpayOrderId) {
+        alert.warning('Payment Failed', 'Payment order details are missing.');
+        return;
+      }
+
+      const paymentResult = await RazorpayCheckout.open({
+        key: razorpayKey,
+        order_id: razorpayOrderId,
+        amount: getOrderValue(order, ['amount']) || sanitizedAmount,
+        currency: getOrderValue(order, ['currency']) || 'INR',
+        name: 'RewardsPlanners',
+        description: `${operatorName} bill payment`,
+        prefill: {
+          name: customerName,
+          contact: consumerNumber,
+        },
+      });
+
+      const verifyPayload = {
+        ...paymentResult,
+        order_id: getOrderValue(order, ['order_id', 'id']),
+        transaction_id: getOrderValue(order, ['transaction_id', 'transactionId']),
+      };
+      console.log('Verify Bill Payment Payload:', verifyPayload);
+      const verifyResponse = await verifyBillPayPayment(verifyPayload);
+      console.log('Verify Bill Payment Response:', verifyResponse);
+
+      if (!verifyResponse?.success) {
+        alert.warning(
+          'Payment Verification Failed',
+          verifyResponse?.message || 'Unable to verify payment.'
+        );
+        return;
+      }
+
+      const transactionId =
+        verifyResponse?.data?.transaction_id ||
+        verifyResponse?.data?.transactionId ||
+        verifyResponse?.transaction_id ||
+        verifyResponse?.transactionId;
+
+      if (transactionId) {
+        navigation.navigate('TransactionStatusScreen', { transactionId });
+        return;
+      }
+
+      navigation.navigate('OrderSuccessful');
+    } catch (error: any) {
+      alert.error('Error', error?.message || 'Could not create bill payment order.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -244,7 +347,7 @@ const PaymentConfirmationScreen = () => {
           style={[styles.proceedButton, isProceedDisabled && styles.proceedButtonDisabled]}
           activeOpacity={0.8}
           disabled={isProceedDisabled}
-          onPress={() => navigation.navigate('OrderSuccessful')}
+          onPress={handleProceed}
         >
           <LinearGradient
             start={{ x: 1, y: 0.5 }}
@@ -252,8 +355,14 @@ const PaymentConfirmationScreen = () => {
             colors={isProceedDisabled ? ['#C4B5FD', '#A5B4FC'] : ['#5B47A3', '#8665FF']}
             style={styles.proceedButtonGradient}
           >
-            <MaterialIcons name="verified-user" size={20} color="#FFFFFF" style={styles.shieldIcon} />
-            <Text style={styles.proceedText}>Proceed Securely</Text>
+            {processing ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <MaterialIcons name="verified-user" size={20} color="#FFFFFF" style={styles.shieldIcon} />
+                <Text style={styles.proceedText}>Proceed Securely</Text>
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>

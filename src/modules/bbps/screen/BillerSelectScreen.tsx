@@ -12,8 +12,8 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
-import { Biller, StateBillerSection, transformOperatorsData } from './type';
-import { fetchOperators, fetchOperatorsGrouped } from '../api/BillsAPI';
+import { Biller, StateBillerSection } from './type';
+import { fetchOperators, Operator } from '../api/BillsAPI';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
 const BillerSelectScreen = () => {
@@ -27,29 +27,48 @@ const BillerSelectScreen = () => {
   const pulse = useRef(new Animated.Value(0)).current;
 
   // Extract categoryId and categoryName from route params
-  const categoryId = route.params?.categoryId;
+  const categoryId = Number(route.params?.categoryId);
   const categoryName = route.params?.categoryName || 'Billers';
 
-  const mapFlatOperatorsToSection = (operators: { operator_id: number; name: string }[]): StateBillerSection[] => {
-    if (!operators?.length) {
+  const mapFlatOperatorsToSection = (operators: Operator[]): StateBillerSection[] => {
+    if (!Array.isArray(operators) || operators.length === 0) {
+      return [];
+    }
+
+    const billers = operators
+      .map((item) => {
+        const operatorId = Number(item?.operator_id);
+        const name = String(item?.name || '').trim();
+
+        if (!Number.isFinite(operatorId) || operatorId <= 0 || !name) {
+          return null;
+        }
+
+        return {
+          id: operatorId.toString(),
+          name,
+          operator_id: operatorId,
+        };
+      })
+      .filter((item): item is Biller => Boolean(item));
+
+    if (billers.length === 0) {
       return [];
     }
 
     return [
       {
         title: 'All Billers',
-        data: operators.map((item) => ({
-          id: item.operator_id.toString(),
-          name: item.name,
-          operator_id: item.operator_id,
-        })),
+        data: billers,
       },
     ];
   };
 
   const loadOperators = useCallback(async () => {
-    if (!categoryId) {
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
       setError('Category ID not provided');
+      setAllData([]);
+      setFilteredData([]);
       setLoading(false);
       return;
     }
@@ -58,21 +77,10 @@ const BillerSelectScreen = () => {
       setLoading(true);
       setError(null);
 
-      // 1) Primary source: grouped by location/state
-      const groupedData = await fetchOperatorsGrouped(categoryId);
-      const transformedGrouped = transformOperatorsData(groupedData);
-
-      // 2) Fallback: flat operators list by category
-      if (transformedGrouped.length > 0) {
-        setAllData(transformedGrouped);
-        setFilteredData(transformedGrouped);
-        return;
-      }
-
-      const flatOperators = await fetchOperators(categoryId);
-      const transformedFlat = mapFlatOperatorsToSection(flatOperators);
-      setAllData(transformedFlat);
-      setFilteredData(transformedFlat);
+      const operators = await fetchOperators(categoryId);
+      const transformedData = mapFlatOperatorsToSection(operators);
+      setAllData(transformedData);
+      setFilteredData(transformedData);
     } catch (err) {
       console.error('❌ Error fetching operators:', err);
       setError('Failed to load billers. Please try again.');

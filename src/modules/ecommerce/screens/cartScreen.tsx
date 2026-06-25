@@ -4,12 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import WithoutAddress from '../components/ItemCardAddress/WithoutAddress';
 import WithAddress from '../components/ItemCardAddress/WithAddress';
 import { fetchAllAddress } from '../api/AddressApi';
-import { fetchCartItems } from '../api/CartApi';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import {
   addressesQueryKey,
-  cartItemsQueryKey,
 } from '../navigation/navigationPerformance';
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -31,14 +29,6 @@ function CartScreen() {
     return () => animation.stop();
   }, [pulse]);
 
-  const { data: cartData, isFetching: isCartFetching } = useQuery({
-    queryKey: cartItemsQueryKey,
-    queryFn: fetchCartItems,
-    enabled: isAuthenticated,
-    staleTime: TEN_MINUTES,
-    gcTime: THIRTY_MINUTES,
-  });
-
   const { data: addressData, isFetching: isAddressFetching } = useQuery({
     queryKey: addressesQueryKey,
     queryFn: fetchAllAddress,
@@ -52,11 +42,10 @@ function CartScreen() {
     return list.length > 0;
   }, [addressData?.data]);
 
-  const hasAnyCachedData = Boolean(cartData || addressData);
   const loading =
     isAuthenticated &&
-    !hasAnyCachedData &&
-    (isCartFetching || isAddressFetching);
+    !addressData &&
+    isAddressFetching;
 
   if (loading) {
     return (

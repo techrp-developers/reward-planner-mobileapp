@@ -5,6 +5,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { HomeStackParamList } from '../../navigation/types'
+import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
@@ -14,6 +16,8 @@ type Props = {
   count: number
   onProceedToBuy?: () => void
   wrapperPaddingBottom?: number
+  bottomOffset?: number
+  onLayout?: ReturnType<typeof useStickyBottomCTA>['onCtaLayout']
 }
 
 export default function CheckoutSummary({
@@ -21,12 +25,18 @@ export default function CheckoutSummary({
   total,
   count,
   onProceedToBuy,
-  wrapperPaddingBottom = 88,
+  wrapperPaddingBottom = 16,
+  bottomOffset,
+  onLayout,
 }: Props) {
   const navigation = useNavigation<Nav>()
+  const autoSticky = useStickyBottomCTA()
+  const resolvedBottomOffset = bottomOffset ?? autoSticky.bottomOffset
+  const resolvedOnLayout = onLayout ?? autoSticky.onCtaLayout
   
   return (
-    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}> 
+    <StickyBottomCTA bottomOffset={resolvedBottomOffset} onLayout={resolvedOnLayout}>
+    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}>
       <View style={styles.addressRow}>
         <View style={styles.addressLeft}>
           <MaterialCommunityIcons name="home-outline" size={22} color="#7C3AED" />
@@ -63,6 +73,7 @@ export default function CheckoutSummary({
         </TouchableOpacity>
       </View>
     </View>
+    </StickyBottomCTA>
   )
 }
 
@@ -70,7 +81,13 @@ const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#F4F5FF',
     padding: 16,
-    borderRadius: 18,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    elevation: 12,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   addressRow: {
     flexDirection: 'row',

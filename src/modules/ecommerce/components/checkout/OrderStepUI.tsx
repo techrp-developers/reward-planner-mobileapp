@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  InteractionManager,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
@@ -41,6 +42,7 @@ import {
   checkoutPreviewQueryKey,
 } from "../../navigation/navigationPerformance";
 import RecommendedProducts from "../Promotion/RecommendedProducts";
+import { useStickyBottomCTA } from "../../../../bottombar/hooks/useStickyBottomCTA";
 
 type RouteT = RouteProp<HomeStackParamList, "OrderStepUI">;
 type StepStatus = "done" | "current" | "upcoming";
@@ -126,6 +128,7 @@ const isPaymentVerified = (res: any) => {
 
 export default function OrderStepUI() {
   const { isAuthenticated, logout, user } = useAuth();
+  const stickyCTA = useStickyBottomCTA();
   const { removeItem: removeFromCart } = useCart();
   const alert = useAlert();
   const alertRef = useRef(alert);
@@ -134,6 +137,7 @@ export default function OrderStepUI() {
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [useRewards, setUseRewards] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
   const isCreatingOrder = useRef(false);
   const [hasCheckoutStarted, setHasCheckoutStarted] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
@@ -324,19 +328,31 @@ export default function OrderStepUI() {
   }, [hasCheckoutStarted, isCheckoutFetching, checkoutData, checkoutError]);
 
   useEffect(() => {
+    if (!checkoutData || items.length === 0) {
+      setShowRecommendations(false);
+      return undefined;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShowRecommendations(true);
+    });
+
+    return () => task.cancel();
+  }, [checkoutData, items.length]);
+
+  useEffect(() => {
     const status = Number((addressError as any)?.response?.status);
     if (status === 401) {
       handleUnauthorized();
     }
   }, [addressError, handleUnauthorized]);
 
-  // Sync `items`/`cartSummary` from checkoutData synchronously during render
-  // (not in a useEffect) so they update in the same render pass as
-  // `isCheckoutFetching` flipping to false. Doing this in an effect leaves a
-  // one-frame window where checkoutData is ready but items is still stale/
-  // empty, which briefly tripped the EmptyCart view on checkout redirect.
   const prevCheckoutDataRef = useRef<typeof checkoutData>(undefined);
-  if (prevCheckoutDataRef.current !== checkoutData) {
+  useEffect(() => {
+    if (prevCheckoutDataRef.current === checkoutData) {
+      return;
+    }
+
     prevCheckoutDataRef.current = checkoutData;
     if (checkoutData) {
       if (!skipItemsRefresh.current) {
@@ -367,7 +383,7 @@ export default function OrderStepUI() {
           : emptyCheckoutSummary()
       );
     }
-  }
+  }, [checkoutData]);
 
   const checkoutPayableAmount = useMemo(() => {
     return getCheckoutPayableAmount(cartSummary, useRewards);
@@ -808,6 +824,9 @@ export default function OrderStepUI() {
     await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
   };
 
+  const checkoutDataItems = Array.isArray(checkoutData?.items) ? checkoutData.items : [];
+  const checkoutHasItemsPendingSync = checkoutDataItems.length > 0 && items.length === 0;
+
   const loading =
     isAuthenticated &&
     (
@@ -816,6 +835,7 @@ export default function OrderStepUI() {
       isCheckoutFetching ||
       isAddressFetching ||
       (hasCheckoutStarted && checkoutData === undefined) ||
+      checkoutHasItemsPendingSync ||
       (mode === "buy_now" && isBuyNowValid && items.length === 0 && !checkoutError)
     );
 
@@ -835,6 +855,7 @@ export default function OrderStepUI() {
 
 if (
   items.length === 0 &&
+  checkoutDataItems.length === 0 &&
   hasCheckoutStarted &&
   !isCheckoutFetching &&
   !isAddressFetching &&
@@ -864,7 +885,10 @@ if (
         onSearchPress={() => Alert.alert("Search", "Open search")}
         onBellPress={() => Alert.alert("Notifications", "Open notifications")}
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
+      >
         <View style={styles.scrollPadding}>
           {/* Step Counter */}
           <View style={styles.stepRow}>
@@ -958,22 +982,31 @@ if (
 
           {/* <PaymentOptionsUI /> */}
         </View>
-                <RecommendedProducts />
-                <View style={styles.relatedSection}>
-                          <Text style={styles.relatedTitle}>Related Products</Text>
-                          <ProductGrid
-                            key={`related-${relatedProductId}`}
-                            useFlatList={false}
-                            relatedProductId={relatedProductId}
-                            take={8}
-                          />
-                        </View>
+
+        {showRecommendations && (
+          <>
+            <RecommendedProducts />
+            {relatedProductId ? (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedTitle}>Related Products</Text>
+                <ProductGrid
+                  key={`related-${relatedProductId}`}
+                  useFlatList={false}
+                  relatedProductId={relatedProductId}
+                  take={8}
+                />
+              </View>
+            ) : null}
+          </>
+        )}
       </ScrollView>
       <OrderProcedbutton
         total={checkoutPayableAmount}
         count={checkoutItemCount}
         loading={placing}
         onPlaceOrder={handlePlaceOrder}
+        bottomOffset={stickyCTA.bottomOffset}
+        onLayout={stickyCTA.onCtaLayout}
       />
     </View>
   );

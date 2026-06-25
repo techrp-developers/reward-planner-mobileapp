@@ -23,8 +23,17 @@ const appendImageOptimizationParams = (url: string, width: number, quality: numb
   return `${url}${separator}width=${safeWidth}&quality=${safeQuality}`;
 };
 
-export const fetchAllProducts = async () => {
-    const res = await axios.get(`${API_BASE_URL}/v1/product/all-products`);
+export type FetchAllProductsParams = {
+  page?: number;
+  pageSize?: number;
+};
+
+export const fetchAllProducts = async (params?: FetchAllProductsParams) => {
+    const res = await axios.get(`${API_BASE_URL}/v1/product/all-products`, {
+      params: params?.page
+        ? { page: params.page, pageSize: params.pageSize }
+        : undefined,
+    });
     return res.data;
 };
 
@@ -78,8 +87,13 @@ export const getProductImageUrl = (
   return appendImageOptimizationParams(fullUrl, width, quality);
 };
 export const fetchProductDetailsByID = async (productId: string | number) => {
+  if (!productId) {
+    throw new Error("Missing product id");
+  }
+
   const res = await api.get(`/v1/product/product-details/${productId}`);
-  return res.data.product;
+  const payload = res?.data;
+  return payload?.product ?? payload?.data?.product ?? payload?.data ?? null;
 };
 // v1/cart/cart-items/check-stock/:variantId
 

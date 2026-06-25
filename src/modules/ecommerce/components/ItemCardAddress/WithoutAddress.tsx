@@ -35,6 +35,8 @@ import {
   checkoutPreviewQueryKey,
   prefetchCheckoutScreenData,
 } from '../../navigation/navigationPerformance'
+import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 const { height } = Dimensions.get('window')
@@ -101,6 +103,7 @@ const CartRow = React.memo(function CartRow({
 
 export default function WithoutAddress() {
   const navigation = useNavigation<Nav>()
+  const stickyCTA = useStickyBottomCTA()
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [useRewards, setUseRewards] = useState(true)
@@ -109,39 +112,18 @@ export default function WithoutAddress() {
   const pulse = useRef(new Animated.Value(0)).current
 
   const goToCheckout = useCallback((params?: HomeStackParamList['OrderStepUI']) => {
+    const checkoutParams = params ?? { mode: 'cart' as const }
+
     prefetchCheckoutScreenData({
-      mode: params?.mode === 'buy_now' ? 'buy_now' : 'cart',
-      product_id: params?.product_id,
-      variant_id: params?.variant_id,
-      qty: params?.qty,
+      mode: checkoutParams.mode === 'buy_now' ? 'buy_now' : 'cart',
+      product_id: checkoutParams.product_id,
+      variant_id: checkoutParams.variant_id,
+      qty: checkoutParams.qty,
     }).catch(() => {
       // Ignore prefetch failures and continue navigation.
     })
 
-    const nav = navigation as any
-    const routeNames: string[] = nav?.getState?.()?.routeNames ?? []
-
-    if (routeNames.includes('OrderStepUI')) {
-      nav.navigate('OrderStepUI', params)
-      return
-    }
-
-    if (routeNames.includes('Checkout')) {
-      nav.navigate('Checkout', params)
-      return
-    }
-
-    const parentNav = nav?.getParent?.()
-    const parentRouteNames: string[] = parentNav?.getState?.()?.routeNames ?? []
-
-    if (parentRouteNames.includes('OrderStepUI')) {
-      parentNav.navigate('OrderStepUI', params)
-      return
-    }
-
-    if (parentRouteNames.includes('Checkout')) {
-      parentNav.navigate('Checkout', params)
-    }
+    navigation.navigate('OrderStepUI', checkoutParams)
   }, [navigation])
 
   useEffect(() => {
@@ -370,7 +352,7 @@ export default function WithoutAddress() {
     return (
       <View style={styles.container}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.skeletonScrollContent}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={126} borderRadius={14} style={styles.skeletonGap} />
@@ -389,7 +371,7 @@ export default function WithoutAddress() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
         removeClippedSubviews={true}
         windowSize={7}
         initialNumToRender={4}
@@ -398,6 +380,7 @@ export default function WithoutAddress() {
         showsVerticalScrollIndicator={false}
       />
 
+      <StickyBottomCTA bottomOffset={stickyCTA.bottomOffset} onLayout={stickyCTA.onCtaLayout}>
       <View style={styles.bottomBar}>
         <TouchableOpacity onPress={() => navigation.navigate('AddressSelect')}>
           <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.button}>
@@ -405,6 +388,7 @@ export default function WithoutAddress() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      </StickyBottomCTA>
 
       <Modal visible={false} transparent animationType="none">
         <Pressable style={styles.overlay} />
@@ -425,10 +409,10 @@ export default function WithoutAddress() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: '#F9FAFB', marginBottom: 70,
+    flex: 1, backgroundColor: '#F9FAFB',
   },
-  scrollContent: { paddingBottom: 100 },
-  skeletonScrollContent: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 120 },
+  scrollContent: { paddingBottom: 24 },
+  skeletonScrollContent: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 24 },
   skeletonGap: { marginTop: 14 },
   skeletonGapLg: { marginTop: 20 },
   wrapper: { paddingHorizontal: 14, marginTop: 10 },
@@ -470,13 +454,13 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 16, fontWeight: '600' },
   close: { fontSize: 24, fontWeight: '600' },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#FFF',
-    paddingBottom: 10,
+    paddingBottom: 16,
     elevation: 10,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     borderTopWidth: 1,
     borderTopColor: '#EEE',
   },
