@@ -6,7 +6,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import WalletSvg from '../../../../../assets/homepage/navwallet.svg';
 import ServiceTop from '../../../../../assets/homepage/service_top_nav.png';
 import type { HomeStackParamList } from '../../../navigation/type';
-import { useCart } from "../../../../ecommerce/context/CartContext";
+import { useServiceCartCount } from '../../../hooks/useServiceCartCount';
 import { fetchUserInfo } from "../../../../common/auth/api/AuthAPI";
 import { useAuth } from "../../../../common/auth/context/AuthContext";
 type CartHeadProps = {
@@ -19,7 +19,7 @@ function CartHead({ onBackPress }: CartHeadProps) {
   const authRewardPoints = (user as { rewardPoints?: number } | null)?.rewardPoints;
   const [rewardPoints, setRewardPoints] = useState(0);
   const placeholder = "Search “ITR Filing”";
-const { totalQuantity } = useCart();
+const totalQuantity = useServiceCartCount();
 const handleCartPress = () => {
   navigation.navigate("CartScreen");
 };

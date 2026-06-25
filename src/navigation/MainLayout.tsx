@@ -8,6 +8,7 @@ import Navbar from "../navbar/Navbar";
 import BottomTabs from "../bottombar/BottomTabs";
 import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
+import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -98,7 +99,19 @@ function MainLayout() {
     [activeMode]
   );
   const bottomInset = Math.max(insets.bottom, 8);
-  const { totalQuantity } = useCart(); // import this
+
+  // Each module owns its own cart count — add a new entry here (and its
+  // hook call above) when a future module (e.g. Health) gets its own cart.
+  // Hooks are called unconditionally so this stays rules-of-hooks safe.
+  const { totalQuantity: ecommerceCartCount } = useCart();
+  const serviceCartCount = useServiceCartCount();
+  const moduleCartCounts: Record<AppMode, number> = {
+    Product: ecommerceCartCount,
+    Services: serviceCartCount,
+    Payments: 0,
+    DineOut: 0,
+  };
+  const cartCount = moduleCartCounts[activeMode];
 
   const activeTabKey = React.useMemo(() => {
     const leafRoute = routeChain[routeChain.length - 1];
@@ -193,7 +206,7 @@ function MainLayout() {
         <BottomTabs
           activeMode={activeMode}
           activeTabKey={activeTabKey}
-          cartCount={totalQuantity}
+          cartCount={cartCount}
           onTabPress={handleBottomTabPress}
           onCenterPress={handleCenterPress}
         />) : null}
