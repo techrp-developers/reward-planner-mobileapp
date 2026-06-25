@@ -51,6 +51,7 @@ function Notification() {
       <OrderHeading
         title="Notifications"
         onBackPress={() => navigation.goBack()}
+        showHelp={false}
       />
 
       <ScrollView
