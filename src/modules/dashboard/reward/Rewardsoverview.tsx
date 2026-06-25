@@ -1,25 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-  type ViewStyle,
+  View,
   type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import LinearGradient from "react-native-linear-gradient";
+import RewardIcon from "../../../assets/product/rewards.svg";
+import { useAppTheme } from "../../../theme/ThemeContext";
 import {
   fetchWalletBalance,
   fetchWalletTransactions,
   WalletTransaction,
 } from "../../ecommerce/api/WalleteAPI";
-import LinearGradient from 'react-native-linear-gradient';
-import RewardIcon from '../../../assets/product/rewards.svg';
-import { useAppTheme } from '../../../theme/ThemeContext';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RewardsState {
   balance: number;
@@ -32,15 +29,11 @@ interface RewardsState {
   error: string | null;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const formatINR = (amount: number): string =>
-  `₹${amount.toLocaleString("en-IN")}`;
+const PURPLE = "#8665FF";
+const PURPLE_DARK = "#5B47A3";
 
 const formatPts = (pts: number): string =>
   `${pts.toLocaleString("en-IN")} pts`;
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 const StatColumn: React.FC<{ label: string; value: string }> = ({ label, value }) => {
   const { theme } = useAppTheme();
@@ -51,13 +44,11 @@ const StatColumn: React.FC<{ label: string; value: string }> = ({ label, value }
 
   return (
     <View style={styles.statColumn}>
-      <Text style={[styles.statLabel, t.statLabel]}>{label}</Text>
-      <Text style={[styles.statValue, t.statValue]}>{value}</Text>
+      <Text style={[styles.statLabel, t.statLabel]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.statValue, t.statValue]} numberOfLines={1}>{value}</Text>
     </View>
   );
 };
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 const RewardsOverview: React.FC = () => {
   const { isDark, theme } = useAppTheme();
@@ -85,13 +76,11 @@ const RewardsOverview: React.FC = () => {
         ]);
 
         const credits = creditRes.success ? creditRes.data : [];
-        const debits  = debitRes.success  ? debitRes.data  : [];
-
-        const totalSpent    = credits.reduce((sum, tx) => sum + tx.coins, 0);
+        const debits = debitRes.success ? debitRes.data : [];
+        const totalSpent = credits.reduce((sum, tx) => sum + tx.coins, 0);
         const totalRedeemed = debits.reduce((sum, tx) => sum + tx.coins, 0);
-
         const allTx = [...credits, ...debits].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
 
         setState({
@@ -112,81 +101,68 @@ const RewardsOverview: React.FC = () => {
         }));
       }
     };
+
     load();
   }, []);
 
   const t = useMemo(() => ({
-    screen:        { backgroundColor: theme.background } as ViewStyle,
-    centered:      { backgroundColor: theme.background } as ViewStyle,
-    loadingText:   { color: theme.secondaryText } as TextStyle,
-    card:          { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : PURPLE } as ViewStyle,
-    cardTitle:     { color: theme.text } as TextStyle,
-    statsRow:      { borderBottomColor: theme.border } as ViewStyle,
-    statDivider:   { backgroundColor: theme.border } as ViewStyle,
-    savingsBanner: { backgroundColor: isDark ? theme.card : "#F3F1FF" } as ViewStyle,
+    centered: { backgroundColor: theme.background } as ViewStyle,
+    loadingText: { color: theme.secondaryText } as TextStyle,
+    card: {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      shadowColor: isDark ? "#000000" : PURPLE,
+    } as ViewStyle,
+    title: { color: theme.text } as TextStyle,
+    subtitle: { color: theme.secondaryText } as TextStyle,
+    statCard: {
+      backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#F8FAFC",
+      borderColor: theme.border,
+    } as ViewStyle,
   }), [isDark, theme]);
 
-  // ── Loading ──
   if (state.loading) {
     return (
       <View style={[styles.centered, t.centered]}>
-        <ActivityIndicator size="large" color="#8665FF" />
-        <Text style={[styles.loadingText, t.loadingText]}>Loading rewards…</Text>
+        <ActivityIndicator size="small" color={PURPLE} />
+        <Text style={[styles.loadingText, t.loadingText]}>Loading rewards...</Text>
       </View>
     );
   }
 
-  // ── Error ──
   if (state.error) {
     return (
       <View style={styles.errorBox}>
-        <Text style={styles.errorText}>⚠ {state.error}</Text>
+        <Text style={styles.errorText}>{state.error}</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.screen, t.screen]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* ══ OVERVIEW CARD ══ */}
+    <View style={styles.section}>
       <View style={[styles.card, t.card]}>
-        {/* Trophy emoji – top-right */}
-        <View style={styles.rewardIconContainer}>
-          <RewardIcon width={50} height={50} />
+        <View style={styles.headerRow}>
+          <View style={styles.titleWrap}>
+            <Text style={styles.eyebrow}>REWARDS</Text>
+            <Text style={[styles.title, t.title]}>Overview</Text>
+            <Text style={[styles.subtitle, t.subtitle]} numberOfLines={1}>
+              Track your reward points
+            </Text>
+          </View>
+
+          <View style={styles.iconBubble}>
+            <RewardIcon width={40} height={40} />
+          </View>
         </View>
 
-        {/* Title */}
-        <Text style={[styles.cardTitle, t.cardTitle]}>Your Rewards Overview</Text>
+        <View style={styles.balanceRow}>
+          <StatColumn label="Available" value={formatPts(state.balance)} />
 
-        {/* Stats row */}
-        <View style={[styles.statsRow, t.statsRow]}>
-          <StatColumn label="Available Rewards" value={formatPts(state.balance)} />
-          <View style={[styles.statDivider, t.statDivider]} />
-          <StatColumn label="Rewards Earned" value={formatINR(state.totalSpent)} />
-          <View style={[styles.statDivider, t.statDivider]} />
-          <StatColumn label="Redeemed" value={formatINR(state.totalRedeemed)} />
-        </View>
-
-        {/* Savings banner */}
-        <View style={[styles.savingsBanner, t.savingsBanner]}>
-          <Text style={styles.savingsArrow}>↗</Text>
-          <Text style={styles.savingsText}>
-            {"You saved "}
-            <Text style={styles.savingsAmount}>{formatINR(state.totalSpent)}</Text>
-            {" this month"}
-          </Text>
-        </View>
-
-        {/* Action buttons */}
-        <View style={styles.actionRow}>
           <LinearGradient
-            colors={["#8665FF", "#5B47A3"]}
+            colors={[PURPLE, PURPLE_DARK]}
             start={{ x: 1, y: 0 }}
             end={{ x: 0, y: 0 }}
-            style={[styles.primaryBtn, { borderRadius: 14 }]}
+            style={styles.primaryBtn}
           >
             <TouchableOpacity
               style={styles.primaryBtnInner}
@@ -197,190 +173,142 @@ const RewardsOverview: React.FC = () => {
             </TouchableOpacity>
           </LinearGradient>
         </View>
+
+        <View style={styles.statsGrid}>
+          <View style={[styles.statCard, t.statCard]}>
+            <StatColumn label="Earned" value={formatPts(state.totalSpent)} />
+          </View>
+          <View style={[styles.statCard, t.statCard]}>
+            <StatColumn label="Redeemed" value={formatPts(state.totalRedeemed)} />
+          </View>
+        </View>
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 export default RewardsOverview;
 
-// ─── StyleSheet ───────────────────────────────────────────────────────────────
-
-const PURPLE      = "#8665FF";
-const PURPLE_DARK = "#5B47A3";
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    // backgroundColor via t.screen
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 16,
-  },
-
   centered: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    // backgroundColor via t.centered
+    gap: 8,
+    paddingVertical: 24,
   },
   loadingText: {
-    fontSize: 14,
-    // color via t.loadingText
+    fontSize: 13,
   },
   errorBox: {
     margin: 16,
-    padding: 16,
+    padding: 14,
     backgroundColor: "#FFF0F0",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#FFCDD2",
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#C0392B",
+    fontWeight: "600",
   },
-
   card: {
-    // backgroundColor & shadowColor via t.card
-    borderRadius: 20,
-    padding: 20,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-    position: "relative",
-    overflow: "hidden",
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
-  rewardIconContainer: {
-    position: "absolute",
-    top: 12,
-    right: 14,
-    width: 50,
-    height: 50,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    // color via t.cardTitle
-    marginBottom: 18,
-    paddingRight: 56,
-  },
-
-  statsRow: {
+  headerRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    paddingBottom: 16,
-    borderBottomWidth: 1.5,
-    // borderBottomColor via t.statsRow
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 14,
   },
-  statColumn: {
+  titleWrap: {
     flex: 1,
-    paddingHorizontal: 4,
+    paddingRight: 12,
   },
-  statLabel: {
-    fontSize: 11,
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: PURPLE,
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "800",
+    lineHeight: 24,
+    letterSpacing: 0,
+  },
+  subtitle: {
+    fontSize: 12,
     fontWeight: "500",
-    marginBottom: 4,
-    // color via StatColumn t.statLabel
+    marginTop: 3,
   },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-    // color via StatColumn t.statValue
-  },
-  statDivider: {
-    width: 1,
-    alignSelf: "stretch",
-    // backgroundColor via t.statDivider
-    marginHorizontal: 4,
-  },
-
-  expiryBanner: {
-    flexDirection: "row",
+  iconBubble: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: "center",
-    backgroundColor: "#FFF8ED",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#FFE4B0",
-    gap: 8,
-    display: "none",
+    justifyContent: "center",
+    backgroundColor: "rgba(134,101,255,0.12)",
   },
-  expiryIcon: { fontSize: 15 },
-  expiryText: { fontSize: 13, color: "#8B5E0A", flex: 1 },
-  expiryBold: { fontWeight: "700" },
-
-  savingsBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    // backgroundColor via t.savingsBanner
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 16,
-    gap: 8,
-  },
-  savingsArrow: {
-    fontSize: 16,
-    color: PURPLE_DARK,
-    fontWeight: "700",
-  },
-  savingsText: {
-    fontSize: 13,
-    color: PURPLE_DARK,
-    flex: 1,
-  },
-  savingsAmount: {
-    fontWeight: "700",
-    color: "#3D2E8A",
-  },
-
-  actionRow: {
+  balanceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginBottom: 12,
+  },
+  statColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statLabel: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 0,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   primaryBtn: {
-    flex: 1,
-    height: 50,
-    borderRadius: 14,
+    width: 132,
+    height: 42,
+    borderRadius: 13,
     overflow: "hidden",
     justifyContent: "center",
   },
   primaryBtnInner: {
     flex: 1,
-    height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
   primaryBtnText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.2,
-  },
-  ghostBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  ghostBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: PURPLE,
-    textDecorationLine: "underline",
-  },
-  trophy: {
-    position: "absolute",
-    top: 12,
-    right: 14,
-    fontSize: 42,
   },
 });

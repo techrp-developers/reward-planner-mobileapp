@@ -31,7 +31,7 @@ const Avatar = memo(({ name, photo }: { name: string; photo?: string | null }) =
   return (
     // Gold-warm gradient ring — contrasts beautifully with the purple card
     <LinearGradient
-      colors={['#F59E0B', '#F97316', '#EC4899']}
+      colors={['#E0E7FF', '#818CF8', '#4F46E5']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.avatarRing, { width: RING_SIZE, height: RING_SIZE, borderRadius: RING_SIZE / 2 }]}
@@ -74,15 +74,17 @@ const SparkDot = memo(({
 
   return (
     <Animated.View
-      style={{
-        position: 'absolute',
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        top, right, left, bottom,
-        opacity: pulse,
-      }}
+      style={[
+        styles.sparkDot,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: color,
+          top, right, left, bottom,
+          opacity: pulse,
+        },
+      ]}
     />
   );
 });
@@ -129,8 +131,8 @@ const BirthdayCard = memo(({
     <Animated.View style={[styles.wrapper, { width: cardWidth, transform: [{ translateY }] }]}>
       <LinearGradient
         colors={isDark
-          ? ['#12003A', '#2E0878', '#6B21A8']
-          : ['#1C0142', '#4A0E9F', '#8B35D6']}
+          ? ['#09090B', '#111827', '#18181B']
+          : ['#111827', '#1E1B4B', '#312E81']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.card}
@@ -138,10 +140,10 @@ const BirthdayCard = memo(({
         {/* ── Decorative background blobs ─────────────────────────────── */}
         <View style={styles.blobTopRight} />
         <View style={styles.blobBottomLeft} />
-        <SparkDot size={rs(5)}  top={rs(18)} right={rs(56)} color="rgba(251,191,36,0.7)"  delay={0} />
+        <SparkDot size={rs(5)}  top={rs(18)} right={rs(56)} color="rgba(199,210,254,0.75)"  delay={0} />
         <SparkDot size={rs(4)}  top={rs(40)} right={rs(30)} color="rgba(255,255,255,0.5)" delay={400} />
-        <SparkDot size={rs(5)}  bottom={rs(22)} right={rs(72)} color="rgba(244,114,182,0.7)" delay={800} />
-        <SparkDot size={rs(3)}  bottom={rs(40)} right={rs(20)} color="rgba(251,191,36,0.5)" delay={200} />
+        <SparkDot size={rs(5)}  bottom={rs(22)} right={rs(72)} color="rgba(129,140,248,0.75)" delay={800} />
+        <SparkDot size={rs(3)}  bottom={rs(40)} right={rs(20)} color="rgba(99,102,241,0.55)" delay={200} />
 
         {/* ── Glassmorphism inner panel ────────────────────────────────── */}
         <View style={styles.glass}>
@@ -149,7 +151,7 @@ const BirthdayCard = memo(({
           {/* Celebration chip — top row */}
           <View style={styles.chipRow}>
             <View style={styles.chip}>
-              <MaterialCommunityIcons name="cake-variant" size={fs(12)} color="#FCD34D" />
+              <MaterialCommunityIcons name="cake-variant" size={fs(12)} color="#C7D2FE" />
               <Text style={styles.chipText}>Happy Birthday!</Text>
             </View>
           </View>
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: rs(20),
     ...Platform.select({
       ios: {
-        shadowColor: '#4A0E9F',
+        shadowColor: '#111827',
         shadowOffset: { width: 0, height: rs(10) },
         shadowOpacity: 0.45,
         shadowRadius: rs(20),
@@ -238,12 +240,15 @@ const styles = StyleSheet.create({
     width: rs(90),
     height: rs(90),
     borderRadius: rs(45),
-    backgroundColor: 'rgba(139,53,214,0.18)',
+    backgroundColor: 'rgba(79,70,229,0.16)',
     bottom: -rs(30),
     left: -rs(20),
   },
 
   // ── Glass panel ──────────────────────────────────────────────────────────────
+  sparkDot: {
+    position: 'absolute',
+  },
   glass: {
     margin: rs(2),
     borderRadius: rs(18),
@@ -269,13 +274,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: rs(10),
     paddingVertical: rs(4),
     borderWidth: 1,
-    borderColor: 'rgba(252,211,77,0.30)',
+    borderColor: 'rgba(199,210,254,0.28)',
     alignSelf: 'flex-start',
   },
   chipText: {
     fontSize: fs(11),
     fontWeight: '700',
-    color: '#FCD34D',
+    color: '#C7D2FE',
     letterSpacing: 0.2,
   },
 
@@ -297,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInner: {
-    backgroundColor: '#2D0869',
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

@@ -6,6 +6,7 @@ import {
   StatusBar,
   TouchableOpacity,
   Image,
+  Animated,
   Platform,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -266,8 +267,26 @@ export default function Navbar() {
     () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
     [activeTab]
   );
-  const bgImageKey = React.useMemo(() => `bg-image-${activeTab}`, [activeTab]);
   const isNavigatingRef = React.useRef(false);
+
+  // Cross-fade the background instead of remounting the Image on every tab
+  // switch — remounting could briefly leave the previous module's background
+  // visible underneath while the content below had already switched, and
+  // felt like a hard cut rather than a smooth transition.
+  const [prevBgSource, setPrevBgSource] = React.useState(bgSource);
+  const bgFade = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (bgSource === prevBgSource) return;
+    bgFade.setValue(0);
+    Animated.timing(bgFade, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setPrevBgSource(bgSource);
+    });
+  }, [bgSource, prevBgSource, bgFade]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
@@ -442,15 +461,20 @@ export default function Navbar() {
         backgroundColor="transparent"
       />
 
-      {/* ✅ Background switches instantly (remount on tab change) */}
+      {/* ✅ Background cross-fades smoothly between modules */}
       <View style={styles.bgWrapper} pointerEvents="none">
         <Image
-          key={bgImageKey}
-          source={bgSource}
+          source={prevBgSource}
           style={[styles.absoluteFill, { top: -insets.top }]}
           resizeMode="cover"
-          fadeDuration={0}
         />
+        {bgSource !== prevBgSource && (
+          <Animated.Image
+            source={bgSource}
+            style={[styles.absoluteFill, { top: -insets.top, opacity: bgFade }]}
+            resizeMode="cover"
+          />
+        )}
       </View>
 
       {/* TOP 4 ICON TABS */}

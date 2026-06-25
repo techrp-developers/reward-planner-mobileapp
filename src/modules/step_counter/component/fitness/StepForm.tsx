@@ -24,18 +24,14 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
 import {
   BORDER_RADIUS,
-  COLORS,
   RESPONSIVE,
-  SHADOWS,
   SPACING,
   TYPOGRAPHY,
-  fitnessCardStyle,
 } from "../../utils/theme";
 
 import WeightLoss from "../../assets/StepCount/weaight_loss.svg";
 import WeightGain from "../../assets/StepCount/weight_gain.svg";
 import StayHealthy from "../../assets/StepCount/stey_healthy.svg";
-import StepCountBg from "../../assets/StepCount/Step_Count.svg";
 import {
   updateBasicProfile,
   updateBodyProfile,
@@ -56,6 +52,20 @@ const goals = [
   { id: 2, label: "Weight Gain", goalType: "weight_gain" as GoalType, Icon: WeightGain },
   { id: 3, label: "Stay Healthy", goalType: "stay_healthy" as GoalType, Icon: StayHealthy },
 ];
+
+const VD = {
+  bg: ["#070A16", "#111735", "#201A3F"],
+  accent: "#8EA2FF",
+  accentDark: "#B9C4FF",
+  accentFaint: "rgba(142,162,255,0.12)",
+  cardBg: "rgba(255,255,255,0.075)",
+  cardSoft: "rgba(255,255,255,0.10)",
+  cardBorder: "rgba(174,188,255,0.16)",
+  white: "#FFFFFF",
+  whiteMid: "#CDD2EA",
+  whiteLow: "#979EBC",
+  shadow: "#02030A",
+};
 
 const parseLeadingNumber = (value: string) => {
   const parsed = Number.parseFloat(value.replace(/[^\d.]/g, ""));
@@ -198,16 +208,20 @@ const StepForm = () => {
         <Text style={styles.dropdownLabel}>{label}</Text>
         <Text style={styles.dropdownText}>{value}</Text>
       </View>
-      <MaterialCommunityIcons name="chevron-down" size={24} color={COLORS.primaryPurple} />
+      <MaterialCommunityIcons name="chevron-down" size={24} color={VD.accentDark} />
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <StepCountBg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-      </View>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <LinearGradient
+        colors={VD.bg}
+        style={StyleSheet.absoluteFillObject}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardWrap}
@@ -221,14 +235,14 @@ const StepForm = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <LinearGradient colors={COLORS.gradientCard} style={styles.popupCard}>
+          <LinearGradient colors={["rgba(255,255,255,0.105)", "rgba(255,255,255,0.06)"]} style={styles.popupCard}>
             <View style={styles.stepRow}>
               <TouchableOpacity
                 style={styles.iconBtn}
                 onPress={handleBack}
                 activeOpacity={0.8}
               >
-                <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.textDark} />
+                <MaterialCommunityIcons name="chevron-left" size={26} color={VD.accentDark} />
               </TouchableOpacity>
 
               <View style={styles.progressPill}>
@@ -240,7 +254,7 @@ const StepForm = () => {
                 onPress={() => navigation.goBack()}
                 activeOpacity={0.8}
               >
-                <MaterialCommunityIcons name="close" size={22} color={COLORS.textMedium} />
+                <MaterialCommunityIcons name="close" size={22} color={VD.whiteMid} />
               </TouchableOpacity>
             </View>
 
@@ -318,7 +332,7 @@ const StepForm = () => {
         <View style={styles.modalBox}>
           <View style={styles.modalHandle} />
           {dropdownItems.length === 0 ? (
-            <ActivityIndicator color={COLORS.primaryPurple} />
+            <ActivityIndicator color={VD.accentDark} />
           ) : (
             <FlatList
               data={dropdownItems}
@@ -356,15 +370,15 @@ const GradientButton = React.memo(({
 }) => (
   <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={disabled} style={styles.buttonWrap}>
     <LinearGradient
-      colors={disabled ? [COLORS.textMuted, "rgba(107, 114, 128, 0.7)"] : COLORS.gradientPurple}
+      colors={disabled ? ["rgba(255,255,255,0.15)", "rgba(255,255,255,0.10)"] : ["#8EA2FF", "#B9C4FF"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.button}
     >
       {loading ? (
-        <ActivityIndicator color={COLORS.textWhite} />
+        <ActivityIndicator color={disabled ? VD.whiteLow : "#070A16"} />
       ) : (
-        <Text style={styles.buttonText}>{label}</Text>
+        <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled]}>{label}</Text>
       )}
     </LinearGradient>
   </TouchableOpacity>
@@ -375,7 +389,7 @@ export default React.memo(StepForm);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
+    backgroundColor: VD.bg[0],
   },
   keyboardWrap: {
     flex: 1,
@@ -387,7 +401,18 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl,
   },
   popupCard: {
-    ...fitnessCardStyle,
+    width: "100%",
+    maxWidth: RESPONSIVE.cardMaxWidth,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
   stepRow: {
     flexDirection: "row",
@@ -399,76 +424,86 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BORDER_RADIUS.medium,
-    backgroundColor: "rgba(124, 77, 255, 0.09)", // Fixed: Used primaryPurple alpha representation
+    backgroundColor: VD.cardSoft,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   progressPill: {
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: "rgba(124, 77, 255, 0.1)", // Fixed: Swapped with soft version of primaryPurple 
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
     paddingVertical: 7,
     paddingHorizontal: 14,
   },
   stepIndicator: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
+    color: VD.accentDark,
   },
   eyebrow: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.primaryPurple,
+    color: VD.accentDark,
     textTransform: "uppercase",
     marginBottom: SPACING.xs,
     textAlign: "center",
   },
   title: {
     ...TYPOGRAPHY.h3,
-    color: COLORS.textDark,
+    color: VD.white,
     textAlign: "center",
     marginBottom: SPACING.xs,
   },
   subtitle: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     textAlign: "center",
     marginBottom: SPACING.xl,
   },
   goalRow: {
+    width: "100%",
     flexDirection: "row",
-    gap: SPACING.sm,
+    justifyContent: "space-between",
     marginBottom: SPACING.xl,
   },
   goalBox: {
-    flex: 1,
+    width: "31.5%",
+    flexShrink: 1,
     minHeight: 132,
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: VD.cardBorder,
     justifyContent: "center",
     alignItems: "center",
     padding: SPACING.sm,
-    ...SHADOWS.small,
+    shadowColor: VD.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   goalSelected: {
-    borderColor: COLORS.primaryIndigo,
-    backgroundColor: "rgba(113, 77, 245, 0.08)", // Fixed: Matches your primaryIndigo theme tint
+    borderColor: VD.accentDark,
+    backgroundColor: VD.accentFaint,
   },
   goalLabel: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMedium,
+    color: VD.whiteMid,
     textAlign: "center",
     marginTop: SPACING.sm,
   },
   goalLabelSelected: {
-    color: COLORS.deepIndigo,
+    color: VD.accentDark,
   },
   dropdown: {
     width: "100%",
     minHeight: 62,
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: VD.cardBorder,
     marginBottom: SPACING.md,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
@@ -478,11 +513,11 @@ const styles = StyleSheet.create({
   },
   dropdownLabel: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
   },
   dropdownText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
     marginTop: 2,
   },
   buttonWrap: {
@@ -497,11 +532,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+    color: "#070A16",
+  },
+  buttonTextDisabled: {
+    color: VD.whiteLow,
   },
   modalBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: "#111735",
     borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
     maxHeight: "68%",
     padding: SPACING.md,
   },
@@ -509,7 +549,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: COLORS.border, // Fixed: Swapped hardcoded light violet with your core border definition
+    backgroundColor: VD.cardBorder,
     alignSelf: "center",
     marginBottom: SPACING.sm,
   },
@@ -517,10 +557,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border, // Fixed: Swapped out hardcoded item separation line
+    borderBottomColor: VD.cardBorder,
   },
   modalText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
   },
 });

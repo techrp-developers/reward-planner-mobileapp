@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import {
@@ -101,6 +102,7 @@ const buildTimeOptions = () => {
 };
 
 const TodoListScreen = () => {
+  const navigation = useNavigation<any>();
   const today = new Date();
   const todayKey = formatDateKey(today);
 
@@ -573,9 +575,18 @@ const TodoListScreen = () => {
 
           <Text style={styles.headerDate}>{formatHeaderDate(selectedDate)}</Text>
 
-          <TouchableOpacity onPress={openAlarmModal}>
-            <MaterialCommunityIcons name="alarm" size={22} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerActionBtn}
+              onPress={() => navigation.navigate("Dashboard")}
+            >
+              <MaterialCommunityIcons name="home" size={21} color="#fff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.headerActionBtn} onPress={openAlarmModal}>
+              <MaterialCommunityIcons name="alarm" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.todayRow}>
@@ -1139,6 +1150,21 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  headerActionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
 
   todayRow: {

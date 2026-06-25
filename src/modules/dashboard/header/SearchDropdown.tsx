@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type TextStyle,
   type ViewStyle,
@@ -37,10 +38,12 @@ const HighlightedText = memo(({
   text,
   query,
   titleColor,
+  accentColor,
 }: {
   text: string;
   query: string;
   titleColor: string;
+  accentColor: string;
 }) => {
   const trimmed = query.trim();
 
@@ -48,7 +51,7 @@ const HighlightedText = memo(({
 
   if (!trimmed || idx === -1) {
     return (
-      <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={2}>
+      <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={1}>
         {text}
       </Text>
     );
@@ -59,9 +62,9 @@ const HighlightedText = memo(({
   const after = text.slice(idx + trimmed.length);
 
   return (
-    <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={2}>
+    <Text style={[styles.itemTitle, { color: titleColor }]} numberOfLines={1}>
       {before}
-      <Text style={styles.highlight}>{match}</Text>
+      <Text style={[styles.highlight, { color: accentColor }]}>{match}</Text>
       {after}
     </Text>
   );
@@ -75,6 +78,7 @@ const ResultItem = memo(({
   onPress,
   isLast,
   thumbBg,
+  itemBg,
   titleColor,
   separatorColor,
 }: {
@@ -83,6 +87,7 @@ const ResultItem = memo(({
   onPress: (item: SearchResultItem) => void;
   isLast: boolean;
   thumbBg: string;
+  itemBg: string;
   titleColor: string;
   separatorColor: string;
 }) => {
@@ -95,6 +100,7 @@ const ResultItem = memo(({
     <TouchableOpacity
       style={[
         styles.item,
+        { backgroundColor: itemBg },
         !isLast && styles.itemBorder,
         !isLast && { borderBottomColor: separatorColor },
       ]}
@@ -109,12 +115,20 @@ const ResultItem = memo(({
         )}
       </View>
 
-      <HighlightedText text={item.title} query={query} titleColor={titleColor} />
-
-      <View style={[styles.badge, { backgroundColor: badgeColor + '18' }]}>
-        <MaterialCommunityIcons name={badgeIcon} size={11} color={badgeColor} />
-        <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
+      <View style={styles.resultTextWrap}>
+        <HighlightedText
+          text={item.title}
+          query={query}
+          titleColor={titleColor}
+          accentColor={badgeColor}
+        />
+        <View style={styles.resultMetaRow}>
+          <MaterialCommunityIcons name={badgeIcon} size={12} color={badgeColor} />
+          <Text style={[styles.resultMetaText, { color: badgeColor }]}>{badgeLabel}</Text>
+        </View>
       </View>
+
+      <MaterialCommunityIcons name="chevron-right" size={20} color={badgeColor} />
     </TouchableOpacity>
   );
 });
@@ -146,22 +160,25 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
 }) => {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
+  const { height: windowHeight } = useWindowDimensions();
+  const dropdownHeight = Math.min(Math.max(windowHeight * 0.42, 320), 460);
 
   // ── Theme tokens ──────────────────────────────────────────────────────────────
   const tk = useMemo(() => ({
     card: {
       backgroundColor: isDark ? '#1E1E32' : '#FFFFFF',
-      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(124,92,252,0.12)'
+      borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.08)'
     } as ViewStyle,
     spinnerHint: { color: isDark ? '#6A6A8E' : '#9B8FCC' } as TextStyle,
     minCharHint: { color: isDark ? '#5A5A7E' : '#B0A8D8' } as TextStyle,
     emptyTitle: { color: isDark ? '#C4BCFF' : '#1A1A2E' } as TextStyle,
     emptyHint: { color: isDark ? '#5A5A7E' : '#9B8FCC' } as TextStyle,
-    sectionBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(124,92,252,0.05)',
-    sectionText: isDark ? '#9B8FCC' : '#7C5CFC',
-    thumbBg: isDark ? '#2A2A3E' : '#F3F0FF',
-    titleColor: isDark ? '#F0EFFF' : '#1A1A2E',
-    separatorColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    sectionBg: isDark ? 'rgba(255,255,255,0.05)' : '#F9FAFB',
+    sectionText: isDark ? '#C4BCFF' : '#7C3AED',
+    thumbBg: isDark ? '#2A2A3E' : '#EEF2FF',
+    itemBg: isDark ? '#1E1E32' : '#FFFFFF',
+    titleColor: isDark ? '#F8FAFC' : '#111827',
+    separatorColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.06)',
     footerBorder: { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' } as ViewStyle,
     magnifyIcon: isDark ? '#3D3D5C' : '#D0CBFF',
   }), [isDark]);
@@ -181,7 +198,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   }, []);
 
   const animStyle = useMemo(() => ({
-    opacity: anim,
     transform: [{
       translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }),
     }],
@@ -272,13 +288,15 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   // ── Results ───────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.card, tk.card]}>
-      <Animated.View style={animStyle}>
+      <Animated.View style={[styles.listWrap, { height: dropdownHeight, maxHeight: dropdownHeight }, animStyle]}>
         <SectionList
-          style={styles.list}
+          style={[styles.list, { height: dropdownHeight, maxHeight: dropdownHeight }]}
+          contentContainerStyle={styles.listContent}
           sections={sections}
           keyExtractor={(item) => `${item.type}-${item.id}`}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator
+          persistentScrollbar
           scrollEnabled={true}
           nestedScrollEnabled={true}
           bounces={false}
@@ -297,6 +315,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
               onPress={handlePress}
               isLast={index === section.data.length - 1}
               thumbBg={tk.thumbBg}
+              itemBg={tk.itemBg}
               titleColor={tk.titleColor}
               separatorColor={tk.separatorColor}
             />
@@ -315,30 +334,37 @@ export default memo(SearchDropdown);
 const styles = StyleSheet.create({
   // Outer card: shadow + border. NO overflow:'hidden' — that blocks Android scroll events.
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    shadowColor: '#7C5CFC',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 16,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.20,
+    shadowRadius: 22,
+    elevation: 24,
   },
 
   // SectionList owns the scroll area — maxHeight lives here, not on the card.
+  listWrap: {
+    overflow: 'hidden',
+    borderRadius: 20,
+  },
   list: {
-    maxHeight: 420,
-    borderRadius: 18,
+    borderRadius: 20,
+  },
+  listContent: {
+    paddingBottom: 4,
   },
 
   // Section header
   section: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   sectionText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.1,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 1.3,
   },
 
   // Result row
@@ -348,14 +374,14 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12.5,
+    gap: 13,
   },
   thumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -365,28 +391,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  itemTitle: {
+  resultTextWrap: {
     flex: 1,
-    fontSize: 13,
+    minWidth: 0,
+  },
+  itemTitle: {
+    fontSize: 14.5,
     fontWeight: '500',
-    lineHeight: 18,
+    lineHeight: 19,
+    letterSpacing: 0,
   },
   highlight: {
     fontWeight: '800',
-    color: '#7C5CFC',
   },
-  badge: {
+  resultMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-    flexShrink: 0,
+    gap: 5,
+    marginTop: 5,
   },
-  badgeText: {
-    fontSize: 10,
+  resultMetaText: {
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
   // "See all results" footer
@@ -394,14 +421,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderTopWidth: 1,
   },
   viewAllText: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     color: '#7C5CFC',
   },
 

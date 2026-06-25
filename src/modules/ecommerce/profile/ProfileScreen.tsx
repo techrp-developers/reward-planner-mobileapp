@@ -95,16 +95,16 @@ const ProfileScreen: React.FC = () => {
   const [avatarUri, setAvatarUri]         = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading]             = useState(true);
-  const [orders, setOrders]             = useState<any[]>([]);
+  const [_orders, setOrders]            = useState<any[]>([]);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [logoutLoading, setLogoutLoading]           = useState(false);
   const [showOrderMenu, setShowOrderMenu]           = useState(false);
 
   const om = useMemo(() => ({
-    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#374151' : '#F5F3FF' },
-    parentIconBg: { backgroundColor: isDark ? '#374151' : '#F0EDFF' },
-    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#374151' : '#F5F3FF', backgroundColor: isDark ? '#1F1740' : '#FAF9FF' },
-    subIconBg:    { backgroundColor: isDark ? '#2D2060' : '#EDE9FE' },
+    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#27272A' : '#E5E7EB' },
+    parentIconBg: { backgroundColor: isDark ? '#27272A' : '#EEF2FF' },
+    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? '#27272A' : '#E5E7EB', backgroundColor: isDark ? '#18181B' : '#F8FAFC' },
+    subIconBg:    { backgroundColor: isDark ? '#312E81' : '#EEF2FF' },
   }), [isDark]);
 
   const topPadding =
@@ -240,7 +240,7 @@ const ProfileScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={[styles.loader, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color="#7C5CFC" />
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -254,107 +254,110 @@ const ProfileScreen: React.FC = () => {
   const showJoining    = !!emp?.dateOfJoining;
 
   return (
-    <View style={[styles.root, { backgroundColor: isDark ? theme.background : '#F4F2FF' }]}>
+    <LinearGradient
+      colors={isDark ? ['#09090B', '#111827', '#151526'] : ['#F8FAFC', '#EEF2FF', '#FFFFFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.root}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: rs(56) }}
         bounces
       >
         {/* ════════════════════════════════════
-            HERO — gradient with decorative orbs
+            HERO
         ════════════════════════════════════ */}
         <LinearGradient
-          colors={isDark ? ['#2D1F6E', '#1A1040'] : ['#7C5CFC', '#9B7FFF']}
+          colors={isDark ? ['#09090B', '#111827', '#151526'] : ['#F8FAFC', '#EEF2FF', '#FFFFFF']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={[styles.hero, { paddingTop: topPadding }]}
         >
-          <View style={styles.orb1} />
-          <View style={styles.orb2} />
-
           {/* Top bar */}
           <View style={styles.heroBar}>
             <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.goBack()}>
-              <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+              <MaterialCommunityIcons name="arrow-left" size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>My Profile</Text>
-            <TouchableOpacity
-              style={styles.heroBtn}
-              onPress={() => navigation.navigate('EditProfile' as any)}
-            >
-              <MaterialCommunityIcons name="pencil-outline" size={18} color="#fff" />
-            </TouchableOpacity>
+            <Text style={[styles.heroTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>My Profile</Text>
+            <View style={styles.heroBtnGhost} />
           </View>
 
-          {/* Avatar */}
-          <View style={styles.avatarWrap}>
-            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} disabled={imageUploading}>
-              <View style={styles.avatarRing}>
-                <View style={[styles.avatarInner, { backgroundColor: isDark ? '#2D1F6E' : '#E9E4FF' }]}>
-                  {(avatarUri || userInfo?.userImage)
-                    ? <Image
-                        source={{ uri: (avatarUri || userInfo?.userImage)! }}
-                        style={styles.avatarImg}
-                      />
-                    : <MaterialCommunityIcons name="account-circle" size={62} color="#7C5CFC" />}
+          <LinearGradient
+            colors={isDark ? ['#18181B', '#27233A', '#312E81'] : ['#111827', '#312E81', '#4F46E5']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.profilePanel}
+          >
+            <View style={styles.avatarWrap}>
+              <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} disabled={imageUploading}>
+                <View style={styles.avatarRing}>
+                  <View style={[styles.avatarInner, { backgroundColor: isDark ? '#18181B' : '#FFFFFF' }]}>
+                    {(avatarUri || userInfo?.userImage)
+                      ? <Image
+                          source={{ uri: (avatarUri || userInfo?.userImage)! }}
+                          style={styles.avatarImg}
+                        />
+                      : <MaterialCommunityIcons name="account-circle" size={76} color="#6366F1" />}
 
-                  {imageUploading && (
-                    <View style={styles.avatarUploadOverlay}>
-                      <ActivityIndicator size="small" color="#fff" />
+                    {imageUploading && (
+                      <View style={styles.avatarUploadOverlay}>
+                        <ActivityIndicator size="small" color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.camBadge}>
+                  <MaterialCommunityIcons name="camera" size={12} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              {showRole && (
+                <Text style={styles.heroRole} numberOfLines={1}>
+                  {emp!.role}
+                </Text>
+              )}
+
+              <View style={styles.heroMetrics}>
+                <View style={styles.heroMetricCard}>
+                  <View style={styles.heroMetricIcon}>
+                    <Reward width={18} height={18} />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={styles.heroMetricValue} numberOfLines={1}>
+                      {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
+                    </Text>
+                    <Text style={styles.heroMetricLabel}>Points</Text>
+                  </View>
+                </View>
+
+                <View style={styles.heroMetricCard}>
+                  {userInfo?.company?.logo ? (
+                    <Image source={{ uri: userInfo.company.logo }} style={styles.heroCompanyLogo} resizeMode="contain" />
+                  ) : (
+                    <View style={styles.heroMetricIcon}>
+                      <MaterialCommunityIcons name="office-building-outline" size={16} color="#4F46E5" />
                     </View>
                   )}
+                  <View style={styles.flex1}>
+                    <Text style={styles.heroMetricValue} numberOfLines={1}>
+                      {userInfo?.company?.name ?? 'Company'}
+                    </Text>
+                    <Text style={styles.heroMetricLabel}>Company</Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.camBadge}>
-                <MaterialCommunityIcons name="camera" size={11} color="#7C5CFC" />
-              </View>
-            </TouchableOpacity>
-
-            <Text style={styles.heroName}>{displayName}</Text>
-            {showRole && <Text style={styles.heroRole}>{emp!.role}</Text>}
-          </View>
+            </View>
+          </LinearGradient>
         </LinearGradient>
 
         {/* ════════════════════════════════════
             STATS ROW — Reward pts (big) + company logo
         ════════════════════════════════════ */}
-        <View style={[styles.statsRow, {
-          backgroundColor: isDark ? theme.card : '#fff',
-          shadowColor: isDark ? '#000' : '#7C5CFC',
-        }]}>
-          {/* Reward points — takes 60% */}
-          <View style={styles.statRewardCell}>
-            <View style={[styles.statIcon, ]}>
-              <Reward width={20} height={20} />
-            </View>
-            <View>
-              <Text style={[styles.statRewardVal, { color: isDark ? '#fff' : '#1A1A2E' }]}>
-                {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
-              </Text>
-              <Text style={[styles.statLbl, { color: '#9CA3AF' }]}>Reward Points</Text>
-            </View>
-          </View>
-
-          <View style={[styles.statDivider, { backgroundColor: isDark ? theme.border : '#F0EDFF' }]} />
-
-          {/* Company logo cell — takes 40% */}
-          <View style={styles.statCompanyCell}>
-            {userInfo?.company?.logo ? (
-              <Image
-                source={{ uri: userInfo.company.logo }}
-                style={styles.statCompanyLogo}
-                resizeMode="contain"
-              />
-            ) : (
-              <View style={[styles.statIcon, { backgroundColor: isDark ? '#374151' : '#F0EDFF' }]}>
-                <MaterialCommunityIcons name="office-building-outline" size={15} color="#7C5CFC" />
-              </View>
-            )}
-            <Text style={[styles.statLbl, { color: '#9CA3AF' }]} numberOfLines={1}>
-              {userInfo?.company?.name ?? 'Company'}
-            </Text>
-          </View>
-        </View>
-
         <View style={styles.body}>
 
           {/* ════════════════════════════════════
@@ -367,12 +370,14 @@ const ProfileScreen: React.FC = () => {
               label="Mobile"
               value={formatPhone(userInfo?.phone ?? '')}
               isDark={isDark} theme={theme}
+              noChevron
             />
             <InfoRow
               icon="email-outline"
               label="Email"
               value={userInfo?.email ?? ''}
               isDark={isDark} theme={theme}
+              noChevron
             />
             <InfoRow
               icon="identifier"
@@ -441,7 +446,7 @@ const ProfileScreen: React.FC = () => {
               <View style={[styles.card, cardColor(isDark, theme), { padding: rs(14) }]}>
                 <View style={styles.addrTop}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <MaterialCommunityIcons name="home-outline" size={15} color="#7C5CFC" />
+                    <MaterialCommunityIcons name="home-outline" size={15} color="#4F46E5" />
                     <View style={styles.badgePurple}>
                       <Text style={styles.badgePurpleText}>
                         {userInfo.defaultAddress.type.toUpperCase()}
@@ -487,7 +492,7 @@ const ProfileScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <View style={[styles.micon, om.parentIconBg]}>
-                <MaterialCommunityIcons name="shopping-outline" size={17} color="#7C5CFC" />
+                <MaterialCommunityIcons name="shopping-outline" size={17} color="#4F46E5" />
               </View>
               <View style={styles.flex1}>
                 <Text style={[styles.rowVal, { color: theme.text }]}>My Orders</Text>
@@ -495,7 +500,7 @@ const ProfileScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name={showOrderMenu ? 'chevron-up' : 'chevron-down'}
                 size={18}
-                color={isDark ? '#4B5563' : '#DDD8F5'}
+                color={isDark ? '#52525B' : '#CBD5E1'}
               />
             </TouchableOpacity>
 
@@ -507,13 +512,13 @@ const ProfileScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.micon, om.subIconBg]}>
-                    <MaterialCommunityIcons name="cart-outline" size={16} color="#7C5CFC" />
+                    <MaterialCommunityIcons name="cart-outline" size={16} color="#4F46E5" />
                   </View>
                   <View style={styles.flex1}>
                     <Text style={[styles.rowVal, { color: theme.text }]}>Ecommerce Orders</Text>
                     <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Products & shopping</Text>
                   </View>
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -525,13 +530,13 @@ const ProfileScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.micon, om.subIconBg]}>
-                    <MaterialCommunityIcons name="briefcase-check-outline" size={16} color="#7C5CFC" />
+                    <MaterialCommunityIcons name="briefcase-check-outline" size={16} color="#4F46E5" />
                   </View>
                   <View style={styles.flex1}>
                     <Text style={[styles.rowVal, { color: theme.text }]}>Service Orders</Text>
                     <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Insurance, docs & more</Text>
                   </View>
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
                 </TouchableOpacity>
               </>
             )}
@@ -552,7 +557,7 @@ const ProfileScreen: React.FC = () => {
             <AccountRow icon="lock-reset"             label="Change Password"    isDark={isDark} theme={theme} onPress={() => navigation.navigate('ChangePassword')} />
 
             {/* Divider before danger actions */}
-            <View style={[styles.sectionDivider, { backgroundColor: isDark ? theme.border : '#F5F3FF' }]} />
+            <View style={[styles.sectionDivider, { backgroundColor: isDark ? '#27272A' : '#E5E7EB' }]} />
 
             <AccountRow icon="logout"        label="Log Out"        isDark={isDark} theme={theme} danger onPress={() => setLogoutModalVisible(true)} />
             <AccountRow icon="delete-outline" label="Delete Account" sub="This action cannot be undone" isDark={isDark} theme={theme} danger last onPress={handleDeleteAccount} />
@@ -579,7 +584,7 @@ const ProfileScreen: React.FC = () => {
         onConfirm={handleLogoutConfirm}
         onCancel={() => setLogoutModalVisible(false)}
       />
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -589,7 +594,7 @@ const SectionHead = ({ title, isDark, action, onAction }: {
   title: string; isDark: boolean; action?: string; onAction?: () => void;
 }) => (
   <View style={styles.secHead}>
-    <Text style={[styles.secTitle, { color: isDark ? '#6B7280' : '#9CA3AF' }]}>
+    <Text style={[styles.secTitle, { color: isDark ? '#A1A1AA' : '#475569' }]}>
       {title.toUpperCase()}
     </Text>
     {action && (
@@ -611,10 +616,10 @@ const InfoRow: React.FC<InfoRowProps> = ({
 }) => (
   <View style={[styles.mrow, !last && {
     borderBottomWidth: 0.5,
-    borderBottomColor: isDark ? '#374151' : '#F5F3FF',
+    borderBottomColor: isDark ? '#27272A' : '#E5E7EB',
   }]}>
-    <View style={[styles.micon, { backgroundColor: isDark ? '#374151' : '#F0EDFF' }]}>
-      <MaterialCommunityIcons name={icon} size={17} color="#7C5CFC" />
+    <View style={[styles.micon, { backgroundColor: isDark ? '#27272A' : '#EEF2FF' }]}>
+      <MaterialCommunityIcons name={icon} size={17} color="#4F46E5" />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>{label}</Text>
@@ -627,7 +632,7 @@ const InfoRow: React.FC<InfoRowProps> = ({
       <View style={styles.badgeGreen}><Text style={styles.badgeGreenText}>{badge.label}</Text></View>
     )}
     {!noChevron && !badge && (
-      <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+      <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
     )}
   </View>
 );
@@ -643,7 +648,7 @@ const AccountRow: React.FC<AccountRowProps> = ({
   <TouchableOpacity
     style={[styles.mrow, !last && {
       borderBottomWidth: 0.5,
-      borderBottomColor: isDark ? '#374151' : '#F5F3FF',
+      borderBottomColor: isDark ? '#27272A' : '#E5E7EB',
     }]}
     onPress={onPress}
     activeOpacity={0.7}
@@ -651,16 +656,16 @@ const AccountRow: React.FC<AccountRowProps> = ({
     <View style={[styles.micon, {
       backgroundColor: danger
         ? (isDark ? '#3B1A1A' : '#FFF0F0')
-        : (isDark ? '#374151' : '#F0EDFF'),
+        : (isDark ? '#27272A' : '#EEF2FF'),
     }]}>
-      <MaterialCommunityIcons name={icon} size={17} color={danger ? '#EF4444' : '#7C5CFC'} />
+      <MaterialCommunityIcons name={icon} size={17} color={danger ? '#EF4444' : '#4F46E5'} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={[styles.rowVal, { color: danger ? '#EF4444' : theme.text }]}>{label}</Text>
       {sub ? <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>{sub}</Text> : null}
     </View>
     {!danger && (
-      <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#4B5563' : '#DDD8F5'} />
+      <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
     )}
   </TouchableOpacity>
 );
@@ -669,11 +674,11 @@ const DarkModeRow: React.FC<{ isDark: boolean; theme: any; onToggle: () => void 
   isDark, theme, onToggle,
 }) => (
   <View style={styles.mrow}>
-    <View style={[styles.micon, { backgroundColor: isDark ? '#1E1B4B' : '#F0EDFF' }]}>
+    <View style={[styles.micon, { backgroundColor: isDark ? '#312E81' : '#EEF2FF' }]}>
       <MaterialCommunityIcons
         name={isDark ? 'weather-night' : 'white-balance-sunny'}
         size={18}
-        color="#7C5CFC"
+        color="#4F46E5"
       />
     </View>
     <View style={{ flex: 1 }}>
@@ -686,17 +691,17 @@ const DarkModeRow: React.FC<{ isDark: boolean; theme: any; onToggle: () => void 
       value={isDark}
       onValueChange={onToggle}
       thumbColor="#FFFFFF"
-      trackColor={{ false: '#D0CCE8', true: '#7C5CFC' }}
-      ios_backgroundColor="#D0CCE8"
+      trackColor={{ false: '#CBD5E1', true: '#4F46E5' }}
+      ios_backgroundColor="#CBD5E1"
     />
   </View>
 );
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
-const cardColor = (isDark: boolean, theme: any) => ({
-  backgroundColor: theme.card,
-  borderColor: isDark ? theme.border : 'rgba(124,92,252,0.1)',
-  shadowColor: isDark ? '#000' : '#8B5CF6',
+const cardColor = (isDark: boolean, _theme: any) => ({
+  backgroundColor: isDark ? '#18181B' : '#FFFFFF',
+  borderColor: isDark ? '#27272A' : '#E5E7EB',
+  shadowColor: isDark ? '#000' : '#64748B',
 });
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -705,55 +710,136 @@ const styles = StyleSheet.create({
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ── Hero ──
-  hero: { paddingHorizontal: rs(20), paddingBottom: rs(24), overflow: 'hidden' },
-  orb1: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -50, right: -50 },
-  orb2: { position: 'absolute', width: 130, height: 130, borderRadius: 65,  backgroundColor: 'rgba(255,255,255,0.05)', bottom: -30, left: 10 },
-  heroBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(22), zIndex: 2 },
-  heroTitle: { fontSize: fs(16), fontWeight: '600', color: '#fff' },
-  heroBtn:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  hero: {
+    paddingHorizontal: rs(20),
+    paddingBottom: rs(18),
+    overflow: 'hidden',
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148,163,184,0.16)',
+  },
+  heroBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(16), zIndex: 2 },
+  heroTitle: { fontSize: fs(16), fontWeight: '800', letterSpacing: 0 },
+  heroBtn:  {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.20)',
+  },
+  heroBtnGhost: {
+    width: 38,
+    height: 38,
+  },
 
+  profilePanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(16),
+    zIndex: 2,
+    borderRadius: rs(24),
+    paddingHorizontal: rs(14),
+    paddingVertical: rs(16),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: rs(12) },
+    shadowOpacity: 0.22,
+    shadowRadius: rs(18),
+    elevation: 8,
+  },
   avatarWrap: { alignItems: 'center', zIndex: 2 },
-  avatarRing:  { width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.2)', padding: 3 },
-  avatarInner: { width: '100%', height: '100%', borderRadius: 45, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#fff', overflow: 'hidden' },
+  avatarRing:  {
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+    backgroundColor: '#FFFFFF',
+    padding: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  avatarInner: { width: '100%', height: '100%', borderRadius: 56, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden' },
   avatarImg:   { width: '100%', height: '100%' },
-  avatarUploadOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 45, alignItems: 'center', justifyContent: 'center' },
-  camBadge:    { position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#7C5CFC' },
-  heroName:    { fontSize: fs(20), fontWeight: '700', color: '#fff', marginTop: rs(12) },
-  heroRole:    { fontSize: fs(12), color: 'rgba(255,255,255,0.75)', marginTop: 3, fontWeight: '400' },
+  avatarUploadOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 56, alignItems: 'center', justifyContent: 'center' },
+  camBadge:    { position: 'absolute', bottom: 5, right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  heroInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroName:    { fontSize: fs(20), fontWeight: '800', letterSpacing: 0, color: '#FFFFFF' },
+  heroRole:    { fontSize: fs(12), marginTop: 4, fontWeight: '600', color: 'rgba(255,255,255,0.72)' },
+  heroMetrics: {
+    marginTop: rs(12),
+    gap: rs(8),
+  },
+  heroMetricCard: {
+    minHeight: rs(42),
+    borderRadius: rs(14),
+    paddingHorizontal: rs(10),
+    paddingVertical: rs(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  heroMetricIcon: {
+    width: rs(28),
+    height: rs(28),
+    borderRadius: rs(9),
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroMetricValue: {
+    fontSize: fs(13),
+    fontWeight: '800',
+    letterSpacing: 0,
+    color: '#FFFFFF',
+  },
+  heroMetricLabel: {
+    fontSize: fs(10),
+    marginTop: 1,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.70)',
+  },
+  heroCompanyLogo: {
+    width: rs(36),
+    height: rs(24),
+    borderRadius: rs(6),
+    backgroundColor: '#FFFFFF',
+  },
 
   // Company bar inside hero
-  companyBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: rs(14), backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: rs(14), paddingVertical: rs(7), alignSelf: 'center' },
-  companyLogo: { width: 64, height: 22, borderRadius: 4 },
-  companyLogoPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F0EDFF', alignItems: 'center', justifyContent: 'center' },
-  companyName: { fontSize: fs(13), fontWeight: '600', color: '#fff' },
 
   // ── Stats row — reward pts + company ──
-  statsRow: { flexDirection: 'row', marginHorizontal: rs(20), marginTop: rs(-20), borderRadius: 18, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(124,92,252,0.12)', elevation: 4, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, zIndex: 10 },
-  statRewardCell:  { flex: 3, flexDirection: 'row', alignItems: 'center', paddingVertical: rs(16), paddingHorizontal: rs(14), gap: 10 },
-  statCompanyCell: { flex: 2, alignItems: 'center', justifyContent: 'center', paddingVertical: rs(16), paddingHorizontal: rs(10), gap: 4 },
-  statRewardVal:   { fontSize: fs(22), fontWeight: '800', lineHeight: fs(26) },
-  statCompanyLogo: { width: 80, height: 28, borderRadius: 4 },
-  statIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  statDivider: { width: 0.5, marginVertical: rs(12) },
-  statLbl:  { fontSize: fs(10), fontWeight: '400' },
 
   // ── Body ──
   body:    { paddingHorizontal: rs(16), marginTop: rs(16) },
   secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: rs(20), marginBottom: rs(10), marginLeft: 2 },
-  secTitle: { fontSize: fs(11), fontWeight: '500', letterSpacing: 0.8 },
-  secAction: { fontSize: fs(12), color: '#7C5CFC', fontWeight: '500' },
+  secTitle: { fontSize: fs(11), fontWeight: '800', letterSpacing: 0.7 },
+  secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '700' },
 
-  card: { borderRadius: 18, borderWidth: 0.5, overflow: 'hidden', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  card: { borderRadius: 18, borderWidth: 1, overflow: 'hidden', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 3 },
   mrow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: rs(14), paddingVertical: rs(13), gap: 12 },
-  micon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  micon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowLbl: { fontSize: fs(11), marginBottom: 1 },
   rowVal: { fontSize: fs(13), fontWeight: '500' },
 
   // Badges
-  badgePurple:     { backgroundColor: '#F0EDFF', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
-  badgePurpleText: { fontSize: fs(10), fontWeight: '600', color: '#534AB7' },
-  badgeGreen:      { backgroundColor: '#EDFAF4', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
-  badgeGreenText:  { fontSize: fs(10), fontWeight: '600', color: '#0F6E56' },
+  badgePurple:     { backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
+  badgePurpleText: { fontSize: fs(10), fontWeight: '800', color: '#4338CA' },
+  badgeGreen:      { backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
+  badgeGreenText:  { fontSize: fs(10), fontWeight: '800', color: '#047857' },
 
   // Address
   addrTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(10) },

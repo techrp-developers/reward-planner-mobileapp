@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -64,6 +65,7 @@ type GlowOrbProps = {
   opacity?: number;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function GlowOrb({ color, size, top, bottom, left, right, opacity = 0.35 }: GlowOrbProps) {
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -271,11 +273,11 @@ export default function BiometricLockScreen({
   };
 
   const iconColor: Record<AuthState, string> = {
-    idle:          '#A78BFA',
-    authenticating: '#818CF8',
+    idle:          '#F472B6',
+    authenticating: '#C084FC',
     success:       '#34D399',
     failed:        '#F87171',
-    cancelled:     '#94A3B8',
+    cancelled:     '#CBD5E1',
     lockout:       '#F87171',
   };
 
@@ -290,27 +292,29 @@ export default function BiometricLockScreen({
       transparent={false}
     >
       <LinearGradient
-        colors={['#0C0018', '#130028', '#1A003A']}
+        colors={['#050716', '#0B1027', '#17102F']}
+        start={{ x: 0.05, y: 0 }}
+        end={{ x: 0.95, y: 1 }}
         style={styles.root}
       >
-        {/* Decorative orbs */}
-        <GlowOrb color="#7C3AED" size={280} top={-60} left={-80} />
-        <GlowOrb color="#4F46E5" size={200} bottom={80} right={-60} opacity={0.25} />
-        <GlowOrb color="#A855F7" size={120} bottom={220} left={40} opacity={0.2} />
+        <View pointerEvents="none" style={[styles.ambientPanel, styles.panelTop]} />
+        <View pointerEvents="none" style={[styles.ambientPanel, styles.panelBottom]} />
+        <View pointerEvents="none" style={styles.gridOverlay} />
 
         {/* Logo area */}
         <Animated.View
           style={[styles.logoArea, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
         >
-          {/* <LinearGradient
-            // colors={['#7C3AED', '#4F46E5']}
+          <LinearGradient
+            colors={['#FDF7FF', '#FFFFFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.logoBadge}
-          > */}
+          >
             <Image source={Logo} style={styles.logoImage} resizeMode="contain" />
-          {/* </LinearGradient> */}
-          <Text style={styles.appName}>Reward Planners</Text>
+          </LinearGradient>
+          <Text style={styles.appName}>Reward Planner</Text>
+          <Text style={styles.lockLabel}>Secure access</Text>
         </Animated.View>
 
         {/* Biometric icon */}
@@ -325,7 +329,7 @@ export default function BiometricLockScreen({
           >
             <Animated.View style={{ transform: [{ scale: iconBounce }] }}>
               <LinearGradient
-                colors={isScanning ? ['#4F46E5', '#7C3AED'] : ['#1E1040', '#2D1560']}
+                colors={isScanning ? ['#701A75', '#6D28D9'] : ['#130B2A', '#21103E']}
                 style={styles.iconCircle}
               >
                 <Icon
@@ -354,9 +358,11 @@ export default function BiometricLockScreen({
               : `Unlock with ${labelForType(biometricType)}`}
           </Text>
           {statusMessage[authState] ? (
-            <Text style={[styles.statusMsg, { color: iconColor[authState] }]}>
-              {statusMessage[authState]}
-            </Text>
+            <View style={styles.statusPill}>
+              <Text style={[styles.statusMsg, { color: iconColor[authState] }]}>
+                {statusMessage[authState]}
+              </Text>
+            </View>
           ) : null}
         </Animated.View>
 
@@ -370,12 +376,12 @@ export default function BiometricLockScreen({
           {!isLockout && canRetry && (
             <TouchableOpacity onPress={triggerAuth} activeOpacity={0.85}>
               <LinearGradient
-                colors={['#7C3AED', '#4F46E5']}
+                colors={['#EC4899', '#8B5CF6']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.retryBtn}
               >
-                <Icon name="refresh" size={18} color="#fff" style={styles.retryIcon} />
+                <Icon name="refresh" size={18} color="#FFFFFF" style={styles.retryIcon} />
                 <Text style={styles.retryBtnText}>
                   Try {labelForType(biometricType)} Again
                 </Text>
@@ -393,9 +399,12 @@ export default function BiometricLockScreen({
         </Animated.View>
 
         {/* Footer */}
-        <Text style={styles.footer}>
-          Your data is protected with {labelForType(biometricType)}
-        </Text>
+        <View style={styles.footer}>
+          <Icon name="shield-check-outline" size={14} color="#F472B6" />
+          <Text style={styles.footerText}>
+            Protected with {labelForType(biometricType)}
+          </Text>
+        </View>
       </LinearGradient>
     </Modal>
   );
@@ -412,7 +421,33 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // Glow
+  // Background
+  ambientPanel: {
+    position: 'absolute',
+    width: 270,
+    height: 150,
+    borderRadius: 28,
+    opacity: 0.18,
+    transform: [{ rotate: '-18deg' }],
+  },
+  panelTop: {
+    top: 64,
+    right: -88,
+    backgroundColor: '#EC4899',
+  },
+  panelBottom: {
+    left: -96,
+    bottom: 118,
+    backgroundColor: '#7C3AED',
+  },
+  gridOverlay: {
+    position: 'absolute',
+    top: 86,
+    left: 26,
+    right: 26,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
   glowOrb: {
     position: 'absolute',
   },
@@ -420,76 +455,107 @@ const styles = StyleSheet.create({
   // Logo
   logoArea: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 38,
   },
   logoBadge: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: 118,
+    height: 118,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 14,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 114, 182, 0.42)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.34,
+    shadowRadius: 28,
+    elevation: 12,
   },
   logoImage: {
-    width: 110,
-    height: 110,
+    width: 84,
+    height: 84,
   },
   appName: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0,
+  },
+  lockLabel: {
+    marginTop: 6,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#E2D9F3',
-    letterSpacing: 0.5,
+    color: 'rgba(226, 232, 240, 0.66)',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
 
   // Icon
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: 34,
   },
   iconTouchable: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.34,
+    shadowRadius: 24,
+    elevation: 10,
   },
   pulseRing: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
     borderWidth: 2,
-    borderColor: '#7C3AED',
+    borderColor: '#F472B6',
     backgroundColor: 'transparent',
   },
 
   // Text
   textBlock: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 34,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#F1F0FF',
-    letterSpacing: 0.3,
-    marginBottom: 6,
+    fontSize: 27,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#8B7FBF',
-    marginBottom: 10,
+    color: 'rgba(226, 232, 240, 0.72)',
+    marginBottom: 12,
+  },
+  statusPill: {
+    minHeight: 34,
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statusMsg: {
     fontSize: 13,
-    fontWeight: '500',
-    marginTop: 6,
+    fontWeight: '700',
     textAlign: 'center',
   },
 
@@ -504,36 +570,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 36,
-    borderRadius: 14,
+    borderRadius: 16,
     minWidth: 240,
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.24,
+    shadowRadius: 20,
+    elevation: 7,
   },
   retryIcon: {
     marginRight: 8,
   },
   retryBtnText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
   fallbackBtn: {
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 24,
   },
   fallbackText: {
-    color: '#8B7FBF',
+    color: 'rgba(226, 232, 240, 0.72)',
     fontSize: 14,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
   },
 
   // Footer
   footer: {
     position: 'absolute',
     bottom: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: 'rgba(236, 72, 153, 0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 114, 182, 0.16)',
+  },
+  footerText: {
     fontSize: 12,
-    color: '#4B3B72',
+    color: 'rgba(226, 232, 240, 0.68)',
+    fontWeight: '600',
     textAlign: 'center',
   },
 });
