@@ -69,6 +69,7 @@ type NavStateLike = {
 type NavbarUserSnapshot = {
   displayName: string;
   displayAddress: string;
+  rewardPoints: number;
   ts: number;
 };
 
@@ -298,6 +299,9 @@ export default function Navbar() {
     setDisplayAddress((prev) =>
       prev === snapshot.displayAddress ? prev : snapshot.displayAddress
     );
+    setRewardPoints((prev) =>
+      prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
+    );
   }, []);
 
   const navigateToScreen = React.useCallback(
@@ -365,6 +369,7 @@ export default function Navbar() {
       applyUserSnapshot({
         displayName: "Guest",
         displayAddress: "Address not set",
+        rewardPoints: 0,
         ts: Date.now(),
       });
       return;
@@ -392,10 +397,8 @@ export default function Navbar() {
         const storedName = await getStoredUserName();
         const userInfo = await fetchUserInfo();
         const user = userInfo?.user || null;
-        setRewardPoints(
-          user?.rewardPoints ||
-          userInfo?.data?.rewardPoints ||
-          0
+        const rewardPoints = Number(
+          user?.rewardPoints || userInfo?.data?.rewardPoints || 0
         );
         const userName =
           userInfo?.name ||
@@ -428,6 +431,7 @@ export default function Navbar() {
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
           displayAddress: addressText || "Address not set",
+          rewardPoints,
           ts: Date.now(),
         };
 
@@ -436,8 +440,9 @@ export default function Navbar() {
       } catch (error) {
         console.warn("Failed to load navbar user info:", error);
         return {
-          displayName: "User",
-          displayAddress: "Address not set",
+          displayName: navbarUserCache?.displayName || "User",
+          displayAddress: navbarUserCache?.displayAddress || "Address not set",
+          rewardPoints: navbarUserCache?.rewardPoints || 0,
           ts: Date.now(),
         } as NavbarUserSnapshot;
       } finally {
