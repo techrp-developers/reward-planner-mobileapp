@@ -1,27 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, View, ScrollView, StyleSheet, Text, ImageBackground } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import BillsCard from '../component/home/BillsCard';
+import { Animated, View, ScrollView, StyleSheet } from 'react-native';
+// import { Text, ImageBackground } from 'react-native'; // used by the commented-out Balance card below
+// import { useNavigation } from '@react-navigation/native'; // only used by the commented-out handleRechargePress below
+// import BillsCard from '../component/home/BillsCard';
 import RechargeBill from '../component/home/ReachargeBill';
-import Balance from '../assets/BBPS_Service/Balance.png';
-import RewardProductCard from '../constatnt/RewardProductCard';
-import RechargeModal from '../constatnt/RechargeModal'; // Verify this path!
+// import Balance from '../assets/BBPS_Service/Balance.png';
+// import RechargeModal from '../constatnt/RechargeModal'; // Verify this path!
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
 function HomePage() {
-    const navigation = useNavigation<any>();
+    // const navigation = useNavigation<any>(); // only used by the commented-out handleRechargePress below
     const [loading, setLoading] = useState(true);
-    const [showPopup, setShowPopup] = useState(false);
+    // const [showPopup, setShowPopup] = useState(false); // drives the commented-out RechargeModal below
     const pulse = useRef(new Animated.Value(0)).current;
 
-    const handleClosePopup = () => {
-        setShowPopup(false);
-    };
+    // const handleClosePopup = () => {
+    //     setShowPopup(false);
+    // };
 
-    const handleRechargePress = () => {
-        setShowPopup(false);
-        navigation.navigate('ReachargeHomeScreen');
-    };
+    // const handleRechargePress = () => {
+    //     setShowPopup(false);
+    //     navigation.navigate('ReachargeHomeScreen');
+    // };
 
     useEffect(() => {
         // Pulse Animation for Skeletons
@@ -37,9 +37,10 @@ function HomePage() {
         const timer = setTimeout(() => {
             setLoading(false);
             // Show popup 500ms after loading finishes to ensure UI is ready
-            setTimeout(() => {
-                setShowPopup(true);
-            }, 500);
+            // — disabled along with the commented-out RechargeModal below.
+            // setTimeout(() => {
+            //     setShowPopup(true);
+            // }, 500);
         }, 900);
 
         return () => {
@@ -64,7 +65,7 @@ function HomePage() {
                     </View>
                 ) : (
                     <>
-                        <View style={styles.balanceContainer}>
+                        {/* <View style={styles.balanceContainer}>
                             <ImageBackground
                                 source={Balance}
                                 style={styles.balanceImage}
@@ -76,21 +77,22 @@ function HomePage() {
                                     <Text style={styles.amountText}>₹0</Text>
                                 </View>
                             </ImageBackground>
-                        </View>
+                        </View> */}
 
-                        <BillsCard />
+                        {/* <BillsCard /> */}
                         <RechargeBill />
-                        <RewardProductCard />
+                        {/* <RewardProductCard /> */}
                     </>
                 )}
             </ScrollView>
 
             {/* CRITICAL: Keep Modal outside the ScrollView at the very bottom */}
-            <RechargeModal 
-                visible={showPopup} 
+            {/* <RechargeModal
+                visible={showPopup}
                 onClose={handleClosePopup}
                 onRecharge={handleRechargePress}
-            />
+            /> */}
+
         </View>
     );
 }

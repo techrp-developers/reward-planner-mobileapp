@@ -10,11 +10,15 @@ import {
   SafeAreaView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
 import { Biller, StateBillerSection } from './type';
 import { fetchOperators, Operator } from '../api/BillsAPI';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
+
+const BRAND_START = '#8665FF';
+const BRAND_END = '#5B47A3';
 
 const BillerSelectScreen = () => {
   const navigation = useNavigation<any>();
@@ -145,7 +149,8 @@ const BillerSelectScreen = () => {
 
   // Render individual Biller Item
   const renderBillerItem = ({ item, index, section }: { item: Biller; index: number; section: StateBillerSection }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
+      activeOpacity={0.7}
       style={[
         styles.billerItemRow,
         index === section.data.length - 1 && styles.lastBillerItemRow,
@@ -157,16 +162,25 @@ const BillerSelectScreen = () => {
         categoryName: categoryName,
       })}
     >
-      <View style={styles.logoPlaceholder} />
+      <LinearGradient
+        colors={[BRAND_START, BRAND_END]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.logoPlaceholder}
+      >
+        <Text style={styles.logoInitial}>{item.name.charAt(0).toUpperCase()}</Text>
+      </LinearGradient>
       <Text style={styles.billerNameText} numberOfLines={2}>
         {item.name}
       </Text>
+      <MaterialIcons name="chevron-right" size={22} color="#C7CBD9" />
     </TouchableOpacity>
   );
 
   // Render State Header (Section)
   const renderSectionHeader = ({ section: { title } }: { section: StateBillerSection }) => (
     <View style={styles.stateHeaderContainer}>
+      <View style={styles.stateHeaderAccent} />
       <Text style={styles.stateHeaderText}>{title}</Text>
     </View>
   );
@@ -272,14 +286,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderColor: '#ECE7FF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
     height: 52,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    shadowColor: '#5B47A3',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
     elevation: 2,
   },
   searchIcon: {
@@ -312,50 +326,67 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
   stateHeaderContainer: {
-    backgroundColor: '#DDE0FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3EFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginTop: 12,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: '#E5E7EB',
+    marginTop: 14,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    gap: 8,
+  },
+  stateHeaderAccent: {
+    width: 4,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#8665FF',
   },
   stateHeaderText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#3C3F52',
+    fontWeight: '700',
+    color: '#5B47A3',
+    letterSpacing: 0.2,
   },
   billerItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    gap: 12,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EEECFB',
     borderBottomWidth: 1,
-    borderBottomColor: '#ECEFF3',
+    borderBottomColor: '#F3F1FC',
+    shadowColor: '#5B47A3',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
   lastBillerItemRow: {
-    borderBottomColor: '#E5E7EB',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+    borderBottomColor: '#EEECFB',
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
   },
   logoPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#D1D5DB',
-    marginRight: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoInitial: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   billerNameText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '600',
+    color: '#1F2937',
     lineHeight: 18,
   },
   emptyContainer: {
@@ -391,10 +422,15 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    backgroundColor: '#8665FF',
+    borderRadius: 12,
+    shadowColor: '#5B47A3',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    elevation: 4,
   },
   retryButtonText: {
     color: '#FFF',

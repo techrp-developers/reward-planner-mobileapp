@@ -6,7 +6,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
@@ -22,6 +21,9 @@ import {
 import { useAlert } from '../../ecommerce/components/alerts';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
+
+const BRAND_START = '#8665FF';
+const BRAND_END = '#5B47A3';
 
 type BillDetailsRouteParams = {
   operatorData?: {
@@ -81,11 +83,11 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
 
   const [operatorDetails, setOperatorDetails] = useState<OperatorDetails | null>(null);
   const [formValues, setFormValues] = useState<FormValues>({});
-  const [selectedCategory, setSelectedCategory] = useState('Home');
+  // const [selectedCategory, setSelectedCategory] = useState('Home');
   const [isLoading, setIsLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(true);
 
-  const categories = ['Home', 'Office', 'Other', 'Shop', 'Farm', 'Clinic'];
+  // const categories = ['Home', 'Office', 'Other', 'Shop', 'Farm', 'Clinic'];
   const fields = useMemo(
     () => (operatorDetails?.data || []).filter(isUserInputField),
     [operatorDetails?.data]
@@ -249,7 +251,6 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
       navigation.navigate('PaymentConfirmationScreen', {
         operatorName: providerName,
         categoryName,
-        nickname: selectedCategory,
         formValues,
         fetchBillData: response,
       });
@@ -279,9 +280,14 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
               </>
             ) : (
               <>
-                <View style={styles.logoCircle}>
-                  <Icon name="flash" size={24} color="#E31E24" />
-                </View>
+                <LinearGradient
+                  colors={[BRAND_START, BRAND_END]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.logoCircle}
+                >
+                  <Icon name="flash" size={22} color="#FFFFFF" />
+                </LinearGradient>
                 <Text style={styles.providerName}>{providerName}</Text>
               </>
             )}
@@ -323,7 +329,7 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
             )}
           </View>
 
-          <View style={styles.nicknameWrapper}>
+          {/* <View style={styles.nicknameWrapper}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -350,20 +356,21 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
               ))}
 
               <TouchableOpacity style={styles.addNicknameBtn}>
-                <Icon name="plus" size={16} color="#555" />
+                <Icon name="plus" size={16} color="#5B47A3" />
                 <Text style={styles.addNicknameText}>Add Nickname</Text>
               </TouchableOpacity>
             </ScrollView>
-          </View>
+          </View> */}
         </View>
 
         <TouchableOpacity
           onPress={handleContinue}
           disabled={isContinueDisabled}
-          activeOpacity={0.7}
+          activeOpacity={0.85}
+          style={styles.buttonShadowWrap}
         >
           <LinearGradient
-            colors={['#8665FF', '#5B47A3']}
+            colors={[BRAND_START, BRAND_END]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={[styles.button, isContinueDisabled && styles.disabledBtn]}
@@ -381,16 +388,19 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9F9FB' },
+  container: { flex: 1, backgroundColor: '#F8F7FF' },
   content: { padding: 16 },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: '#EEE',
     marginBottom: 20,
     overflow: 'hidden',
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    elevation: 4,
   },
   providerSection: {
     flexDirection: 'row',
@@ -399,32 +409,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoCircle: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#EEE',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  providerName: { fontSize: 15, fontWeight: '500', color: '#333', flex: 1 },
+  providerName: { fontSize: 15, fontWeight: '700', color: '#1F2937', flex: 1 },
   providerSkeletonText: { flex: 1, marginLeft: 12 },
   inputWrapper: { paddingHorizontal: 20, marginBottom: 15 },
-  label: { fontSize: 13, color: '#666', marginBottom: 5 },
+  label: { fontSize: 13, color: '#6B7280', marginBottom: 6, fontWeight: '500' },
   mobileLabel: { marginTop: 14 },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
+    borderColor: '#E5E0FA',
+    backgroundColor: '#FAF9FF',
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: '#000',
+    color: '#111827',
   },
-  helperText: { fontSize: 11, color: '#999', marginTop: 5 },
+  helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 5 },
   skeletonInputGap: { marginTop: 8 },
   nicknameWrapper: {
-    backgroundColor: '#EEF0FF',
+    backgroundColor: '#F3EFFF',
     paddingVertical: 15,
   },
   scrollPadding: {
@@ -440,10 +449,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFF',
     elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
   selectedChip: {
     borderColor: '#8665FF',
@@ -456,16 +465,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: '#AAA',
+    borderColor: '#C4B5FD',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#FFF',
   },
-  addNicknameText: { fontSize: 14, color: '#555', marginLeft: 4 },
+  addNicknameText: { fontSize: 14, color: '#5B47A3', marginLeft: 4, fontWeight: '500' },
+  buttonShadowWrap: {
+    // Android's `elevation` needs an opaque background on this same view to
+    // compute the shadow shape — without one it renders a visible light
+    // rounded-rect halo on top of the gradient button underneath it.
+    backgroundColor: BRAND_END,
+    borderRadius: 16,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 6,
+  },
   button: {
     height: 55,
-    borderRadius: 10,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
