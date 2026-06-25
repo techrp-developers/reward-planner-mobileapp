@@ -1,18 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../constatnt/BBPSHead';
-import { checkBillTransactionStatus } from '../api/BillsAPI';
+import { pollTransactionStatus, TransactionStatus } from '../api/BillsAPI';
 
-const TERMINAL_STATUSES = [
-  'SUCCESS',
-  'FAILED',
-  'REFUNDED',
-  'RECONCILIATION_REQUIRED',
-];
+const BRAND_PRIMARY = '#8665FF';
+const BRAND_SECONDARY = '#5B47A3';
+
+const STATUS_PRESENTATION: Record<
+  TransactionStatus,
+  { icon: string; color: string; bg: string; title: string }
+> = {
+  PENDING: { icon: 'hourglass-empty', color: '#8665FF', bg: '#F3EFFF', title: 'Processing Payment' },
+  SUCCESS: { icon: 'check-circle', color: '#22C55E', bg: '#F0FDF4', title: 'Payment Successful' },
+  FAILED: { icon: 'cancel', color: '#EF4444', bg: '#FEF2F2', title: 'Payment Failed' },
+  REFUNDED: { icon: 'replay', color: '#F59E0B', bg: '#FFFBEB', title: 'Payment Refunded' },
+  RECONCILIATION_REQUIRED: {
+    icon: 'error-outline',
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    title: 'Reconciliation Required',
+  },
+};
 
 const TransactionStatusScreen = ({ navigation, route }: any) => {
   const transactionId = route?.params?.transactionId;
-  const [status, setStatus] = useState('PENDING');
+  const [status, setStatus] = useState<TransactionStatus>('PENDING');
   const [message, setMessage] = useState('Checking transaction status...');
 
   useEffect(() => {
@@ -22,78 +36,102 @@ const TransactionStatusScreen = ({ navigation, route }: any) => {
       return;
     }
 
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cancel = pollTransactionStatus(transactionId, (result) => {
+      setStatus(result.status);
+      setMessage(result.message);
+    });
 
-    const poll = async () => {
-      try {
-        const response = await checkBillTransactionStatus(transactionId);
-        const nextStatus = String(
-          response?.data?.status ||
-          response?.status ||
-          response?.data?.transaction_status ||
-          'PENDING'
-        ).toUpperCase();
-
-        if (cancelled) {
-          return;
-        }
-
-        setStatus(nextStatus);
-        setMessage(response?.message || response?.data?.message || 'Transaction is being processed.');
-
-        if (!TERMINAL_STATUSES.includes(nextStatus)) {
-          timer = setTimeout(poll, 4000);
-        }
-      } catch (error: any) {
-        if (!cancelled) {
-          setStatus('FAILED');
-          setMessage(error?.message || 'Could not check transaction status.');
-        }
-      }
-    };
-
-    poll();
-
-    return () => {
-      cancelled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
+    return cancel;
   }, [transactionId]);
 
-  const isTerminal = TERMINAL_STATUSES.includes(status);
+  const isTerminal = useMemo(
+    () => status !== 'PENDING',
+    [status]
+  );
+
+  const presentation = STATUS_PRESENTATION[status] ?? STATUS_PRESENTATION.PENDING;
+
+  const handleGoHome = useCallback(() => {
+    navigation.navigate('Home');
+  }, [navigation]);
+
+  const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <BBPSHead
-        title="Payment Status"
-        onBackPress={() => navigation.goBack()}
-      />
+      <BBPSHead title="Payment Status" onBackPress={handleGoBack} />
 
       <View style={styles.container}>
-        {!isTerminal ? <ActivityIndicator color="#8665FF" size="large" /> : null}
-        <Text style={styles.status}>{status}</Text>
-        <Text style={styles.message}>{message}</Text>
+        <View style={styles.card}>
+          <View style={[styles.iconCircle, { backgroundColor: presentation.bg }]}>
+            {!isTerminal ? (
+              <ActivityIndicator color={presentation.color} size="large" />
+            ) : (
+              <MaterialIcons name={presentation.icon} size={48} color={presentation.color} />
+            )}
+          </View>
+
+          <Text style={styles.title}>{presentation.title}</Text>
+          <Text style={styles.message}>{message}</Text>
+
+          {transactionId ? (
+            <View style={styles.transactionPill}>
+              <Text style={styles.transactionPillText}>Txn ID: {String(transactionId)}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {isTerminal && (
+          <TouchableOpacity activeOpacity={0.85} onPress={handleGoHome} style={styles.ctaShadowWrap}>
+            <LinearGradient
+              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.cta}
+            >
+              <Text style={styles.ctaText}>Go to Home</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8F9FE' },
+  safeArea: { flex: 1, backgroundColor: '#F8F7FF' },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
-  status: {
-    marginTop: 16,
+  card: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  iconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
     fontSize: 20,
-    color: '#111827',
     fontWeight: '800',
+    color: '#1F2937',
+    textAlign: 'center',
   },
   message: {
     marginTop: 8,
@@ -101,6 +139,43 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
+  },
+  transactionPill: {
+    marginTop: 16,
+    backgroundColor: '#F3EFFF',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  transactionPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5B47A3',
+  },
+  ctaShadowWrap: {
+    width: '100%',
+    marginTop: 24,
+    // Android's `elevation` needs an opaque background on this same view to
+    // compute the shadow shape — without one it renders a visible light
+    // rounded-rect halo on top of the gradient button underneath it.
+    backgroundColor: BRAND_SECONDARY,
+    borderRadius: 16,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  cta: {
+    height: 54,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

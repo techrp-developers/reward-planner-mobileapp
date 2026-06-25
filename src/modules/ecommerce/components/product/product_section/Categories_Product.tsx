@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -13,7 +13,6 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { RouteProp, useRoute } from "@react-navigation/native";
-import LinearGradient from "react-native-linear-gradient";
 
 import ProductCard from "../../../constants/product_cart/ProductCard";
 import ProductHead from "../../../constants/heading/Product_Head_Img";
@@ -28,6 +27,7 @@ import {
 } from "../../../api/ProductApi";
 import { HomeStackParamList } from "../../../navigation/types";
 import { normalizeProduct } from "../../../../../modules/ecommerce/utils/normalizeProduct";
+import { PROMO_CARD_GAP } from "../../../constants/cardLayout";
 
 interface Category {
   id: string | number;
@@ -56,7 +56,6 @@ type CategoryProductsPage = {
 
 const SIDEBAR_WIDTH = 104;
 const CONTENT_PADDING = 10;
-const GRID_GAP = 8;
 const PAGE_LIMIT = 10;
 
 type CategoryRouteProp = RouteProp<HomeStackParamList, "Category">;
@@ -75,11 +74,9 @@ export default function Categories_Product() {
 
   const numColumns = 2;
   const cardWidth = useMemo(() => {
-    const contentWidth = Math.max(240, width - SIDEBAR_WIDTH - CONTENT_PADDING * 2 - 12);
-    const totalHorizontal = CONTENT_PADDING * 2;
-    const totalGap = GRID_GAP * (numColumns - 1);
-    return Math.max(110, (contentWidth - totalHorizontal - totalGap) / numColumns);
-  }, [numColumns, width]);
+    const availableWidth = width - SIDEBAR_WIDTH - CONTENT_PADDING * 2;
+    return Math.floor((availableWidth - PROMO_CARD_GAP * (numColumns - 1)) / numColumns);
+  }, [width, numColumns]);
 
   const selectedCategory = useMemo(
     () => categories.find((cat) => String(cat.id) === String(selectedCategoryId)),
@@ -94,10 +91,42 @@ export default function Categories_Product() {
     return getProductImageUrl(path);
   }, []);
 
-  const extractProducts = useCallback((res: any) => {
-    if (Array.isArray(res?.products)) return res.products;
-    if (Array.isArray(res?.data?.products)) return res.data.products;
-    if (Array.isArray(res?.data)) return res.data;
+  const extractProducts = useCallback((res: any): any[] => {
+    const candidates = [
+      res?.products,
+      res?.data?.products,
+      res?.items,
+      res?.data?.items,
+      res?.data,
+      res?.result?.products,
+      res?.result?.items,
+      res?.result,
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate) && candidate.length > 0) {
+        if (__DEV__) {
+          const sample = candidate[0];
+          console.log("[Categories] extractProducts found items:", {
+            count: candidate.length,
+            sampleKeys: Object.keys(sample ?? {}),
+            rewardCoins: sample?.rewardCoins,
+            reward_coins: sample?.reward_coins,
+            redeem_coins: sample?.redeem_coins,
+            reward: sample?.reward,
+            points: sample?.points,
+          });
+        }
+        return candidate;
+      }
+    }
+
+    if (__DEV__) {
+      console.warn(
+        "[Categories] extractProducts: no valid array found in response",
+        Object.keys(res ?? {})
+      );
+    }
     return [];
   }, []);
 
@@ -138,6 +167,18 @@ export default function Categories_Product() {
         ? await fetchProductsBySubcategoryId(selectedSubcategoryId, queryOptions)
         : await fetchCategoriesByID(selectedCategoryId as string | number, queryOptions);
 
+      if (__DEV__) {
+        console.log("[Categories] raw API response shape:", {
+          keys: Object.keys(res ?? {}),
+          hasProducts: Array.isArray(res?.products),
+          hasDataProducts: Array.isArray(res?.data?.products),
+          hasItems: Array.isArray(res?.items),
+          hasDataItems: Array.isArray(res?.data?.items),
+          hasData: Array.isArray(res?.data),
+          productsLength: res?.products?.length,
+        });
+      }
+
       console.log("[Pagination] API Response:", {
         currentPage: res?.currentPage,
         totalPages: res?.totalPages,
@@ -146,7 +187,26 @@ export default function Categories_Product() {
       });
 
       const rawProducts = extractProducts(res);
-      const normalized = rawProducts.map(normalizeProduct);
+      const normalized = rawProducts.map((raw: any) => {
+        const n = normalizeProduct(raw);
+
+        if (__DEV__ && n.rewardCoins === 0 && n.redeem_coins === 0) {
+          console.warn("[Categories] Product has 0 coins after normalize:", {
+            id: raw?.id ?? raw?.product_id,
+            rewardCoins: raw?.rewardCoins,
+            reward_coins: raw?.reward_coins,
+            reward: raw?.reward,
+            points: raw?.points,
+            redeem_coins: raw?.redeem_coins,
+          });
+        }
+
+        return {
+          ...n,
+          rewardCoins: n.rewardCoins,
+          redeem_coins: n.redeem_coins,
+        };
+      });
 
       const hasMore = Boolean(res?.hasMore ?? res?.data?.hasMore ?? false);
       const currentPage = Number(res?.currentPage ?? res?.data?.currentPage ?? page);
@@ -165,8 +225,10 @@ export default function Categories_Product() {
       }
       return lastPage.nextPage;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
   // Flatten all pages into a single list; new pages are appended, not replaced
@@ -180,6 +242,27 @@ export default function Categories_Product() {
     console.log("[Pagination] fetchNextPage() triggered");
     fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  // ── Viewability-based image loading ─────────────────────────────────────────
+  const visibleIdsRef = useRef<Set<string>>(new Set());
+  const [, forceVisibleTick] = useState(0);
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<any> }) => {
+      const next = new Set<string>();
+      viewableItems.forEach((entry) => {
+        const key = String(entry.item?.id ?? entry.item?.product_id ?? "");
+        if (key) next.add(key);
+      });
+      visibleIdsRef.current = next;
+      forceVisibleTick((p) => p + 1);
+    }
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 30,
+    minimumViewTime: 60,
+  }).current;
 
   // ── Category Loading ────────────────────────────────────────────────────────
   const loadCategories = useCallback(async () => {
@@ -252,30 +335,31 @@ export default function Categories_Product() {
               activeOpacity={0.85}
               style={styles.sidebarItemTouch}
             >
-              {selectedSubcategoryId === null ? (
-                <LinearGradient
-                  colors={["#8665FF", "#5B47A3"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={[styles.sidebarItem, styles.sidebarItemActive]}
-                >
-                  <View style={[styles.iconContainer, styles.iconContainerActive]}>
-                    <AllIcons width={24} height={24} />
-                  </View>
-                  <Text style={[styles.sidebarText, styles.sidebarTextActive]} numberOfLines={2}>
-                    All
-                  </Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.sidebarItem}>
-                  <View style={styles.iconContainer}>
-                    <AllIcons width={24} height={24} />
-                  </View>
-                  <Text style={styles.sidebarText} numberOfLines={2}>
-                    All
-                  </Text>
-                </View>
+              {selectedSubcategoryId === null && (
+                <View style={styles.activeAccent} />
               )}
+              <View style={
+                selectedSubcategoryId === null
+                  ? styles.sidebarItemActive
+                  : styles.sidebarItem
+              }>
+                <View style={[
+                  styles.iconContainer,
+                  selectedSubcategoryId === null && styles.iconContainerActive,
+                ]}>
+                  <AllIcons width={26} height={26} />
+                </View>
+                <Text
+                  style={
+                    selectedSubcategoryId === null
+                      ? styles.sidebarTextActive
+                      : styles.sidebarText
+                  }
+                  numberOfLines={2}
+                >
+                  All
+                </Text>
+              </View>
             </TouchableOpacity>
 
             {subcategories.map((subcategory) => {
@@ -287,44 +371,28 @@ export default function Categories_Product() {
                   activeOpacity={0.85}
                   style={styles.sidebarItemTouch}
                 >
-                  {isActive ? (
-                    <LinearGradient
-                      colors={["#8665FF", "#5B47A3"]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.sidebarItem, styles.sidebarItemActive]}
-                    >
-                      <View style={[styles.iconContainer, styles.iconContainerActive]}>
-                        {subcategory.image ? (
-                          <Image
-                            source={{ uri: resolveImageUri(subcategory.image) }}
-                            style={styles.categoryIcon}
-                          />
-                        ) : (
-                          <View style={styles.placeholderIcon} />
-                        )}
-                      </View>
-                      <Text style={[styles.sidebarText, styles.sidebarTextActive]} numberOfLines={2}>
-                        {subcategory.name?.trim()}
-                      </Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.sidebarItem}>
-                      <View style={styles.iconContainer}>
-                        {subcategory.image ? (
-                          <Image
-                            source={{ uri: resolveImageUri(subcategory.image) }}
-                            style={styles.categoryIcon}
-                          />
-                        ) : (
-                          <View style={styles.placeholderIcon} />
-                        )}
-                      </View>
-                      <Text style={styles.sidebarText} numberOfLines={2}>
-                        {subcategory.name?.trim()}
-                      </Text>
+                  {isActive && <View style={styles.activeAccent} />}
+                  <View style={isActive ? styles.sidebarItemActive : styles.sidebarItem}>
+                    <View style={[
+                      styles.iconContainer,
+                      isActive && styles.iconContainerActive,
+                    ]}>
+                      {subcategory.image ? (
+                        <Image
+                          source={{ uri: resolveImageUri(subcategory.image) }}
+                          style={styles.categoryIcon}
+                        />
+                      ) : (
+                        <View style={styles.placeholderIcon} />
+                      )}
                     </View>
-                  )}
+                    <Text
+                      style={isActive ? styles.sidebarTextActive : styles.sidebarText}
+                      numberOfLines={2}
+                    >
+                      {subcategory.name?.trim()}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -342,6 +410,8 @@ export default function Categories_Product() {
             contentContainerStyle={styles.listContent}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.4}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
             ListHeaderComponent={
               <View>
                 <View style={styles.categoryRow}>
@@ -360,7 +430,20 @@ export default function Categories_Product() {
                 />
               </View>
             }
-            renderItem={({ item }) => <ProductCard item={item} cardWidth={cardWidth} />}
+            renderItem={({ item }) => {
+              const key = String(item?.id ?? item?.product_id ?? "");
+              const shouldLoadImage =
+                visibleIdsRef.current.size === 0
+                  ? true
+                  : visibleIdsRef.current.has(key);
+              return (
+                <ProductCard
+                  item={item}
+                  cardWidth={cardWidth}
+                  shouldLoadImage={shouldLoadImage}
+                />
+              );
+            }}
             ListEmptyComponent={
               !isProductsLoading ? (
                 <View style={styles.emptyWrap}>
@@ -412,73 +495,111 @@ const styles = StyleSheet.create({
 
   sidebar: {
     width: SIDEBAR_WIDTH,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8F7FF",
     borderRightWidth: 1,
-    borderRightColor: "#F3F4F6",
+    borderRightColor: "#EDE9FE",
+    shadowColor: "#8665FF",
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   sidebarScrollContent: {
-    paddingTop: 8,
-    paddingBottom: 70,
+    paddingTop: 12,
+    paddingBottom: 80,
   },
 
   sidebarItemTouch: {
     marginHorizontal: 6,
-    marginBottom: 6,
+    marginBottom: 4,
+    borderRadius: 14,
+    overflow: "hidden",
+    position: "relative",
+  },
+
+  activeAccent: {
+    position: "absolute",
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: "#8665FF",
+    zIndex: 1,
   },
 
   sidebarItem: {
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#EEF2F7",
-    backgroundColor: "#FFFFFF",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    backgroundColor: "transparent",
   },
 
   sidebarItemActive: {
-    borderWidth: 0,
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    backgroundColor: "#EDE9FE",
   },
 
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FB",
-    marginBottom: 8,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#EEF2F7",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
 
   iconContainerActive: {
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "#8665FF",
+    borderColor: "#8665FF",
+    shadowColor: "#8665FF",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
   },
 
   categoryIcon: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     resizeMode: "cover",
-    borderRadius: 10,
+    borderRadius: 22,
   },
 
   placeholderIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#E5E7EB",
   },
 
   sidebarText: {
-    fontSize: 12,
-    color: "#334155",
-    fontWeight: "600",
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
     textAlign: "center",
+    lineHeight: 14,
   },
 
   sidebarTextActive: {
-    color: "#FFFFFF",
+    fontSize: 11,
+    color: "#5B47A3",
     fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 14,
   },
 
   contentArea: {
@@ -496,7 +617,7 @@ const styles = StyleSheet.create({
 
   row: {
     justifyContent: "space-between",
-    marginBottom: GRID_GAP,
+    marginBottom: PROMO_CARD_GAP,
   },
 
   categoryRow: {

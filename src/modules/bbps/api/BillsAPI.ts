@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
+import { apiClient, NormalizedApiError } from "./apiClient";
 
 const API_BASE_URL = "https://rewardplanners.com/api/crm";
 
@@ -215,17 +216,71 @@ export type BillPayCreateOrderPayload = {
   sender_name?: string;
 };
 
+export type BillPayCreateOrderResult =
+  | { success: true; status: number; data: any }
+  | NormalizedApiError;
+
+/**
+ * A recharge order needs utility_acc_no + circle_id + plan_id + sender_name.
+ * A bill-pay order only needs operator_id + bill_fetch_id — the backend does
+ * not expect sender_name for this flow (see PaymentConfirmationScreen, which
+ * never sends it). Catching a missing field here means we never even hit the
+ * network for an incomplete payload, and the caller gets a precise message
+ * instead of a generic "Order Failed".
+ */
+const validateCreateOrderPayload = (payload: BillPayCreateOrderPayload): string | null => {
+  if (!payload?.operator_id) {
+    return "operator_id is required.";
+  }
+
+  const isRechargeOrder = Boolean(payload.plan_id || payload.circle_id || payload.utility_acc_no);
+
+  if (isRechargeOrder) {
+    if (!payload.utility_acc_no) return "utility_acc_no is required for a recharge order.";
+    if (!payload.circle_id) return "circle_id is required for a recharge order.";
+    if (!payload.plan_id) return "plan_id is required for a recharge order.";
+    if (!payload.sender_name) return "sender_name is required for a recharge order.";
+  } else if (!payload.bill_fetch_id) {
+    return "bill_fetch_id is required for a bill payment order.";
+  }
+
+  return null;
+};
+
 export const createBillPayOrder = async (
   payload: BillPayCreateOrderPayload,
   token?: string,
-) => {
+): Promise<BillPayCreateOrderResult> => {
+  const validationError = validateCreateOrderPayload(payload);
+
+  if (validationError) {
+    if (__DEV__) {
+      console.warn("[createBillPayOrder] Payload validation failed before any network call:", {
+        reason: validationError,
+        payload,
+      });
+    }
+
+    return {
+      success: false,
+      status: 400,
+      kind: "VALIDATION_ERROR",
+      message: validationError,
+      error: { field: validationError, payload },
+    };
+  }
+
   try {
+    // Explicit fallback header — apiClient's own interceptor will overwrite
+    // this with the live session token if one is set via setSessionHandlers,
+    // but BBPS previously relied solely on this AsyncStorage-backed token
+    // and never went through the shared session/refresh pipeline at all.
     const authHeaders = token
       ? { Authorization: `Bearer ${token}` }
       : await getAuthHeaders();
 
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/bill-pay/create-order`,
+    const res = await apiClient.post(
+      "/v1/bill-pay/create-order",
       payload,
       {
         headers: {
@@ -235,14 +290,22 @@ export const createBillPayOrder = async (
       }
     );
 
-    return res.data;
+    return { success: true, status: res.status, data: res.data?.data ?? res.data };
   } catch (error: any) {
-    if (error?.response?.status === 401) {
-      await clearAuthToken();
+    // apiClient's response interceptor already normalizes axios errors into
+    // a NormalizedApiError before they reach here.
+    if (error && error.success === false && error.kind) {
+      return error as NormalizedApiError;
     }
 
-    console.error("Create Bill Pay Order Error:", error?.response?.data || error);
-    throw error?.response?.data || error;
+    console.error("Create Bill Pay Order Error:", error);
+    return {
+      success: false,
+      status: null,
+      kind: "UNKNOWN_ERROR",
+      message: error?.message || "Could not create the recharge/bill order.",
+      error,
+    };
   }
 };
 
@@ -300,4 +363,73 @@ export const checkBillTransactionStatus = async (
     console.error("Check Bill Status Error:", error?.response?.data || error);
     throw error?.response?.data || error;
   }
+};
+
+export const TERMINAL_TRANSACTION_STATUSES = [
+  "SUCCESS",
+  "FAILED",
+  "REFUNDED",
+  "RECONCILIATION_REQUIRED",
+] as const;
+
+export type TransactionStatus =
+  | typeof TERMINAL_TRANSACTION_STATUSES[number]
+  | "PENDING";
+
+const extractTransactionStatus = (response: any): { status: TransactionStatus; message: string } => {
+  const status = String(
+    response?.data?.status ||
+    response?.status ||
+    response?.data?.transaction_status ||
+    "PENDING"
+  ).toUpperCase() as TransactionStatus;
+
+  const message =
+    response?.message || response?.data?.message || "Transaction is being processed.";
+
+  return { status, message };
+};
+
+/**
+ * Polls /v1/bills/check-status/:transactionId every `intervalMs` until a
+ * terminal status is reached. Returns a cancel function to stop polling
+ * (e.g. on screen unmount).
+ */
+export const pollTransactionStatus = (
+  transactionId: string | number,
+  onUpdate: (result: { status: TransactionStatus; message: string }) => void,
+  intervalMs: number = 5000,
+): (() => void) => {
+  let cancelled = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const tick = async () => {
+    try {
+      const response = await checkBillTransactionStatus(transactionId);
+      if (cancelled) return;
+
+      const result = extractTransactionStatus(response);
+      onUpdate(result);
+
+      if (!TERMINAL_TRANSACTION_STATUSES.includes(result.status as any)) {
+        timer = setTimeout(tick, intervalMs);
+      }
+    } catch (error: any) {
+      if (!cancelled) {
+        onUpdate({
+          status: "FAILED",
+          message: error?.message || "Could not check transaction status.",
+        });
+      }
+    }
+  };
+
+  tick();
+
+  return () => {
+    cancelled = true;
+    if (timer) {
+      clearTimeout(timer);
+    }
+  };
 };
