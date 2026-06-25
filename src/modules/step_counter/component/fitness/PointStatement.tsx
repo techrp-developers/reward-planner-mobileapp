@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,9 +23,7 @@ import {
 } from '../../api/DashboardAPI';
 import {
   BORDER_RADIUS,
-  COLORS,
   RESPONSIVE,
-  SHADOWS,
   SPACING,
   TYPOGRAPHY,
 } from '../../utils/theme';
@@ -33,6 +31,26 @@ import {
 import Coin from '../../../../assets/product/rewards.svg';
 
 type PointsNavProp = NativeStackNavigationProp<FitnessStackParamList, 'CoinHistory'>;
+
+// Violet Dusk palette — all on-dark, matching Dashboard/CoinHistoryAndPlan
+const VD = {
+  bg: ['#1A1040', '#3D2080', '#6B3FA0'],
+  accent: '#C4A8FF',
+  accentDim: 'rgba(196,168,255,0.25)',
+  accentFaint: 'rgba(196,168,255,0.12)',
+  white: '#FFFFFF',
+  whiteMid: 'rgba(255,255,255,0.70)',
+  whiteLow: 'rgba(255,255,255,0.45)',
+  whiteGhost: 'rgba(255,255,255,0.10)',
+  cardBg: 'rgba(255,255,255,0.10)',
+  cardBorder: 'rgba(196,168,255,0.18)',
+  success: '#4ADE80',
+  successBg: 'rgba(74,222,128,0.14)',
+  successBorder: 'rgba(74,222,128,0.28)',
+  warning: '#FBBF24',
+  warningBg: 'rgba(251,191,36,0.12)',
+  warningBorder: 'rgba(251,191,36,0.25)',
+};
 
 const formatNumber = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString('en-IN') : '0';
@@ -124,8 +142,8 @@ const PointsStatementScreen: React.FC = () => {
   }, [history]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={COLORS.gradientScreen} style={styles.gradientBackground}>
+    <SafeAreaView style={styles.safe}>
+      <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -140,21 +158,21 @@ const PointsStatementScreen: React.FC = () => {
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}
               >
-                <Icon name="chevron-left" size={26} color={COLORS.textDark} />
+                <Icon name="chevron-left" size={24} color={VD.accent} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Points Statement</Text>
               <View style={styles.headerPlaceholder} />
             </View>
 
             <LinearGradient
-              colors={COLORS.gradientPurple}
+              colors={['#9B6FFF', '#7C3AED', '#5B21B6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.balanceGradient}
             >
               <View style={styles.balanceContent}>
                 <View style={styles.balanceIconWrap}>
-                  <Coin width={44} height={44} />
+                  <Coin width={40} height={40} />
                 </View>
                 <View style={styles.balanceTextContainer}>
                   <Text style={styles.balanceTitle}>My Balance</Text>
@@ -179,7 +197,7 @@ const PointsStatementScreen: React.FC = () => {
             <View style={styles.expiryCard}>
               <View style={styles.expiryLeft}>
                 <View style={styles.expiryIcon}>
-                  <Icon name="clock-alert-outline" size={20} color={COLORS.warning} />
+                  <Icon name="clock-alert-outline" size={20} color={VD.warning} />
                 </View>
                 <View style={styles.expiryCopy}>
                   <Text style={styles.expiryText}>
@@ -240,7 +258,7 @@ const TransactionRow = React.memo(({ item }: { item: StepHistoryItem }) => {
 
       <View style={styles.amountContainer}>
         <View style={[styles.coinContainer, isDebit && styles.debitContainer]}>
-          <Coin width={16} height={16} />
+          <Coin width={14} height={14} />
           <Text style={[styles.coinText, isDebit && styles.debitText]}>
             {isDebit ? '-' : '+'}{formatNumber(Math.abs(item.coins))}
           </Text>
@@ -261,9 +279,9 @@ const StateBox = React.memo(({
 }) => (
   <View style={styles.stateBox}>
     {loading ? (
-      <ActivityIndicator color={COLORS.primaryIndigo} />
+      <ActivityIndicator color={VD.accent} />
     ) : (
-      <Icon name={onRetry ? 'refresh' : 'wallet-outline'} size={24} color={COLORS.primaryIndigo} />
+      <Icon name={onRetry ? 'refresh' : 'wallet-outline'} size={26} color={VD.accent} />
     )}
     <Text style={styles.stateText}>{message}</Text>
     {onRetry ? (
@@ -275,11 +293,11 @@ const StateBox = React.memo(({
 ));
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: COLORS.bgVeryLight,
+    backgroundColor: VD.bg[0],
   },
-  gradientBackground: {
+  gradient: {
     flex: 1,
   },
   scrollContent: {
@@ -303,11 +321,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.76)',
+    backgroundColor: VD.whiteGhost,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
     textAlign: 'center',
   },
   headerPlaceholder: {
@@ -318,19 +338,20 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.md,
-    ...SHADOWS.large,
+    borderWidth: 1,
+    borderColor: 'rgba(196,168,255,0.35)',
   },
   balanceContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   balanceIconWrap: {
-    width: 58,
-    height: 58,
+    width: 56,
+    height: 56,
     borderRadius: BORDER_RADIUS.large,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     marginRight: SPACING.md,
   },
   balanceTextContainer: {
@@ -342,7 +363,7 @@ const styles = StyleSheet.create({
   },
   balanceValue: {
     ...TYPOGRAPHY.h2,
-    color: COLORS.textWhite,
+    color: VD.white,
     marginTop: 2,
   },
   balanceMetaRow: {
@@ -354,7 +375,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: BORDER_RADIUS.large,
     padding: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   balanceMiniLabel: {
     ...TYPOGRAPHY.caption,
@@ -362,17 +385,16 @@ const styles = StyleSheet.create({
   },
   balanceMiniValue: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+    color: VD.white,
     marginTop: 2,
   },
   expiryCard: {
-    backgroundColor: '#FFF8EB',
+    backgroundColor: VD.warningBg,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.large,
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#FFE5B8',
-    ...SHADOWS.small,
+    borderColor: VD.warningBorder,
   },
   expiryLeft: {
     flexDirection: 'row',
@@ -384,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF0D1',
+    backgroundColor: 'rgba(251,191,36,0.16)',
     marginRight: SPACING.sm,
   },
   expiryCopy: {
@@ -392,11 +414,11 @@ const styles = StyleSheet.create({
   },
   expiryText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.warning,
+    color: VD.warning,
   },
   expiryDate: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     marginTop: 2,
   },
   tableHeader: {
@@ -406,7 +428,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     textTransform: 'uppercase',
   },
   dateColumn: {
@@ -426,24 +448,23 @@ const styles = StyleSheet.create({
   transactionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.large,
     marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.small,
+    borderColor: VD.cardBorder,
   },
   dateContainer: {
     width: 74,
   },
   dateMain: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
   },
   dateYear: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     marginTop: 1,
   },
   activityContainer: {
@@ -452,11 +473,11 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textDark,
+    color: VD.white,
   },
   activityDesc: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     marginTop: 2,
   },
   amountContainer: {
@@ -464,41 +485,41 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   coinContainer: {
-    minHeight: 34,
+    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.pill,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: VD.successBg,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: VD.successBorder,
   },
   debitContainer: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FED7AA',
+    backgroundColor: VD.warningBg,
+    borderColor: VD.warningBorder,
   },
   coinText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.success,
+    color: VD.success,
     marginLeft: 4,
+    fontWeight: '700',
   },
   debitText: {
-    color: COLORS.warning,
+    color: VD.warning,
   },
   stateBox: {
     minHeight: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: VD.cardBg,
     borderRadius: BORDER_RADIUS.large,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: VD.cardBorder,
     padding: SPACING.xl,
-    ...SHADOWS.small,
   },
   stateText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textMuted,
+    color: VD.whiteLow,
     textAlign: 'center',
     marginTop: SPACING.sm,
   },
@@ -509,11 +530,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primaryIndigo,
+    backgroundColor: VD.accentFaint,
+    borderWidth: 1,
+    borderColor: VD.cardBorder,
   },
   retryText: {
     ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textWhite,
+    color: VD.accent,
   },
 });
 

@@ -44,9 +44,7 @@ const BG = ["#1A1040", "#3D2080", "#6B3FA0"];
 
 type GoalOption = { id: number; dailySteps: number; label: string; coins: number };
 
-const fmt   = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-IN") : "0");
-const rewardCoins = (steps: number, i: number) =>
-  steps >= 10000 ? 40 : steps >= 7500 ? 30 : steps >= 5000 ? 20 : 10 + i * 5;
+const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-IN") : "0");
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -60,11 +58,15 @@ const StepGoal: React.FC = () => {
   const [error,       setError]       = useState("");
 
   const goals = useMemo<GoalOption[]>(() => {
+    // Daily reward is flat regardless of the chosen target (matches the
+    // actual syncSteps payout), so every option shows the same real coins
+    // instead of an invented number that scales with step count.
+    const coins = profilePlan?.daily_reward_coins ?? 0;
     const plan = profilePlan?.weekly_plan || [];
     if (plan.length > 0)
-      return plan.map((item, i) => ({ id: item.week, dailySteps: item.steps, label: `${fmt(item.steps)} Steps`, coins: rewardCoins(item.steps, i) }));
+      return plan.map((item) => ({ id: item.week, dailySteps: item.steps, label: `${fmt(item.steps)} Steps`, coins }));
     if (profilePlan?.recommended_steps)
-      return [{ id: 1, dailySteps: profilePlan.recommended_steps, label: `${fmt(profilePlan.recommended_steps)} Steps`, coins: rewardCoins(profilePlan.recommended_steps, 0) }];
+      return [{ id: 1, dailySteps: profilePlan.recommended_steps, label: `${fmt(profilePlan.recommended_steps)} Steps`, coins }];
     return [];
   }, [profilePlan]);
 

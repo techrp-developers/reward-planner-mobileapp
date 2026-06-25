@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -9,44 +10,74 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-// import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../../constatnt/BBPSHead';
 import SkeletonBox from '../../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../../common/auth/context/AuthContext';
+import {
+  BillLocation,
+  fetchBillLocations,
+  fetchRechargePlans,
+  RechargePlan,
+} from '../../api/BillsAPI';
+import { useAlert } from '../../../ecommerce/components/alerts';
 
-// const RECHARGE_HISTORY = [
-//   {
-//     id: '1',
-//     planType: 'Validity Plan',
-//     amount: '219',
-//     validity: '28 days',
-//     data: '3GB/pack',
-//     rechargedOn: '17 Jan',
-//     badgeColor: '#E9ECF9',
-//   },
-//   {
-//     id: '2',
-//     planType: 'Data Plan',
-//     amount: '33',
-//     validity: '1 days',
-//     data: '2GB/pack',
-//     rechargedOn: '17 Jan',
-//     badgeColor: '#E9ECF9',
-//   },
-// ];
+const getPlanId = (plan: RechargePlan) =>
+  String(plan.planId || plan.plan_id || plan.id || plan.recharge_plan_id || '');
 
-const FILTER_CHIPS = ['2GB Data', '28 Days Validity', '2.5 GB/Data'];
+const getPlanAmount = (plan: RechargePlan) =>
+  String(plan.amount || plan.price || plan.rs || plan.recharge_amount || '');
 
-const RECOMMENDED_PACKS = [
-  { id: '1', price: '39', validity: '3 days', data: '3GB/pack', desc: 'Data : 3GB/day | Validity : 3 days' },
-  { id: '2', price: '99', validity: '3 days', data: '3GB/pack', desc: 'Data : 3GB/day | Validity : 3 days' },
-  { id: '3', price: '359', validity: '3 days', data: '3GB/pack', desc: 'Data : 3GB/day | Validity : 3 days' },
-];
+const getPlanValidity = (plan: RechargePlan) =>
+  String(plan.validity || plan.validityDescription || plan.validity_desc || '-');
 
-function RechargeSection({ navigation }: any) {
+const getPlanData = (plan: RechargePlan) =>
+  String(plan.data || plan.dataBenefit || plan.benefits || '-');
+
+const getPlanDescription = (plan: RechargePlan) =>
+  String(plan.description || plan.desc || plan.planDescription || plan.short_desc || '');
+
+function RechargeSection({ navigation, route }: any) {
   const { user } = useAuth();
+  const alert = useAlert();
+  const alertRef = useRef(alert);
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState<BillLocation[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<BillLocation | null>(null);
+  const [plans, setPlans] = useState<RechargePlan[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [plansLoading, setPlansLoading] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
+
+  const params = route?.params || {};
+  const operatorId = params.operatorId;
+  const formValues = params.formValues || {};
+  const primaryValue =
+    formValues.utility_acc_no ||
+    Object.values(formValues).find((value: any) => String(value || '').trim()) ||
+    user?.phone ||
+    '';
+  const operatorName = params.operatorName || 'Operator';
+
+  const filteredPlans = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return plans;
+    }
+
+    return plans.filter((plan) => {
+      const searchable = [
+        getPlanAmount(plan),
+        getPlanValidity(plan),
+        getPlanData(plan),
+        getPlanDescription(plan),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(query);
+    });
+  }, [plans, searchQuery]);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -57,25 +88,119 @@ function RechargeSection({ navigation }: any) {
     );
     anim.start();
 
-    const timer = setTimeout(() => setLoading(false), 900);
-
     return () => {
-      clearTimeout(timer);
       anim.stop();
     };
   }, [pulse]);
+
+  useEffect(() => {
+    alertRef.current = alert;
+  }, [alert]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadLocations = async () => {
+      try {
+        setLoading(true);
+        const list = await fetchBillLocations();
+
+        if (!mounted) {
+          return;
+        }
+
+        setLocations(list);
+
+        if (params.circleId) {
+          const existing = list.find(
+            (item) => String(item.operator_location_id) === String(params.circleId)
+          );
+          if (existing) {
+            setSelectedLocation(existing);
+          }
+        }
+      } catch (error: any) {
+        alertRef.current.error('Error', error?.message || 'Could not load circles.');
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadLocations();
+
+    return () => {
+      mounted = false;
+    };
+  }, [params.circleId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPlans = async () => {
+      if (!selectedLocation || !primaryValue || !operatorId) {
+        setPlans([]);
+        return;
+      }
+
+      try {
+        setPlansLoading(true);
+        const response = await fetchRechargePlans(
+          String(primaryValue),
+          operatorId,
+          selectedLocation.operator_location_id
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setPlans(response?.data?.plans || []);
+      } catch (error: any) {
+        setPlans([]);
+        alertRef.current.error('Error', error?.message || 'Could not load recharge plans.');
+      } finally {
+        if (mounted) {
+          setPlansLoading(false);
+        }
+      }
+    };
+
+    loadPlans();
+
+    return () => {
+      mounted = false;
+    };
+  }, [operatorId, primaryValue, selectedLocation]);
+
+  const handlePlanPress = (plan: RechargePlan) => {
+    if (!selectedLocation) {
+      alert.warning('Select Circle', 'Please select a circle first.');
+      return;
+    }
+
+    navigation.navigate('RechargeConfirmationScreen', {
+      operatorId,
+      operatorName,
+      formValues,
+      circleId: selectedLocation.operator_location_id,
+      circleName: selectedLocation.operator_location_name,
+      plan,
+    });
+  };
 
   return (
     <ScrollView style={styles.mainContainer} stickyHeaderIndices={[0]}>
       <BBPSHead
         user={{
           name: user?.name || 'User',
-          number: user?.phone || '',
+          number: String(primaryValue),
           operatorLogo: require('../../assets/Sample/VI_Card.png'),
-          type: 'Prepaid',
+          type: operatorName,
         }}
         onBackPress={() => navigation.goBack()}
-        onChangePress={() => console.log('Change Operator')}
+        onChangePress={() => navigation.goBack()}
       />
 
       <View style={styles.outerContainer}>
@@ -86,104 +211,48 @@ function RechargeSection({ navigation }: any) {
               <SkeletonBox pulse={pulse} width={64} height={16} borderRadius={8} />
             </View>
 
-            {[0, 1].map((item) => (
+            {[0, 1, 2].map((item) => (
               <View key={`recharge-card-skeleton-${item}`} style={styles.cardWrapper}>
-                <SkeletonBox pulse={pulse} width={110} height={26} borderRadius={8} style={styles.skeletonBadge} />
                 <View style={styles.cardContainer}>
                   <View style={styles.leftContent}>
                     <SkeletonBox pulse={pulse} width="80%" height={16} borderRadius={8} />
                     <SkeletonBox pulse={pulse} width="62%" height={12} borderRadius={8} style={styles.skeletonGapSm} />
-                    <SkeletonBox pulse={pulse} width={90} height={12} borderRadius={8} style={styles.skeletonGapSm} />
                   </View>
                   <SkeletonBox pulse={pulse} width={110} height={44} borderRadius={10} />
                 </View>
               </View>
             ))}
-
-            <View style={styles.plansSection}>
-              <View style={styles.searchSection}>
-                <SkeletonBox pulse={pulse} width="100%" height={52} borderRadius={10} />
-                <View style={styles.skeletonChipRow}>
-                  <SkeletonBox pulse={pulse} width={40} height={36} borderRadius={18} />
-                  <SkeletonBox pulse={pulse} width={110} height={36} borderRadius={18} style={styles.skeletonChipGap} />
-                  <SkeletonBox pulse={pulse} width={130} height={36} borderRadius={18} style={styles.skeletonChipGap} />
-                </View>
-              </View>
-
-              <View style={styles.tabContainer}>
-                <SkeletonBox pulse={pulse} width={130} height={18} borderRadius={8} />
-              </View>
-
-              {[0, 1, 2].map((item) => (
-                <View key={`plan-skeleton-${item}`} style={styles.planRow}>
-                  <View style={styles.planInfoMain}>
-                    <SkeletonBox pulse={pulse} width={55} height={24} borderRadius={8} />
-                    <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={8} />
-                    <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={8} />
-                    <SkeletonBox pulse={pulse} width={24} height={24} borderRadius={12} />
-                  </View>
-                  <SkeletonBox pulse={pulse} width="85%" height={13} borderRadius={8} style={styles.skeletonGapSm} />
-                  <View style={styles.planDivider} />
-                </View>
-              ))}
-            </View>
           </View>
         ) : (
           <View>
-            {/* Previous Recharges Section */}
-            <View style={styles.headerRow}>
-              <Text style={styles.sectionTitle}>Previous Recharges</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Select Circle</Text>
             </View>
 
-            {/* {RECHARGE_HISTORY.map((item) => (
-              <View key={item.id} style={styles.cardWrapper}>
-                <View style={[styles.badge, { backgroundColor: item.badgeColor }]}>
-                  <Text style={styles.badgeText}>{item.planType}</Text>
-                </View>
-                <View style={styles.cardContainer}>
-                  <View style={styles.leftContent}>
-                    <Text style={styles.planDetails}>
-                      ₹{item.amount} – {item.validity} – {item.data}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.locationScroll}
+            >
+              {locations.map((item) => {
+                const selected =
+                  selectedLocation?.operator_location_id === item.operator_location_id;
+
+                return (
+                  <TouchableOpacity
+                    key={item.operator_location_id}
+                    style={[styles.locationChip, selected && styles.locationChipSelected]}
+                    onPress={() => setSelectedLocation(item)}
+                  >
+                    <Text style={[styles.locationChipText, selected && styles.locationChipTextSelected]}>
+                      {item.operator_location_name}
                     </Text>
-                    <Text style={styles.dateSubtext}>
-                      Recharged ₹{item.amount} on {item.rechargedOn}
-                    </Text>
-                    <TouchableOpacity style={styles.viewDetailsBtn}>
-                      <Text style={styles.viewDetailsText}>View Details</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {item.planType === 'Validity Plan' ? (
-                    <LinearGradient
-                      colors={['#8665FF', '#5B47A3']}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={styles.repeatButtonGradientBorder}
-                    >
-                      <TouchableOpacity style={styles.repeatButtonInner} activeOpacity={0.85}>
-                        <Text style={styles.repeatButtonText}>Repeat</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  ) : (
-                    <TouchableOpacity activeOpacity={0.85}>
-                      <LinearGradient
-                        colors={['#8665FF', '#5B47A3']}
-                        start={{ x: 0, y: 0.5 }}
-                        end={{ x: 1, y: 0.5 }}
-                        style={styles.rechargeButton}
-                      >
-                        <Text style={styles.rechargeButtonText}>Recharge</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))} */}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
             <View style={styles.plansSection}>
-              {/* Search and Filter Section */}
               <View style={styles.searchSection}>
                 <View style={styles.searchBar}>
                   <MaterialIcons name="search" size={24} color="#9CA3AF" />
@@ -191,49 +260,56 @@ function RechargeSection({ navigation }: any) {
                     placeholder="Search a Plan, e.g. 299 or 28 days"
                     style={styles.searchInput}
                     placeholderTextColor="#9CA3AF"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                   />
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                  <TouchableOpacity style={styles.filterIconButton}>
-                    <MaterialIcons name="tune" size={20} color="#4B5563" />
-                  </TouchableOpacity>
-                  {FILTER_CHIPS.map((chip, index) => (
-                    <TouchableOpacity key={index} style={styles.chip}>
-                      <Text style={styles.chipText}>{chip}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
               </View>
 
-              {/* Recommended Packs Tabs */}
               <View style={styles.tabContainer}>
                 <TouchableOpacity style={styles.activeTab}>
                   <Text style={styles.activeTabText}>Recommended Packs</Text>
                   <View style={styles.activeTabUnderline} />
                 </TouchableOpacity>
-                <Text style={styles.inactiveTabText}>Truly Unlimited</Text>
-                <Text style={styles.inactiveTabText}>Data</Text>
               </View>
 
-              {/* Plan List */}
-              {RECOMMENDED_PACKS.map((plan) => (
-                <TouchableOpacity key={plan.id} style={styles.planRow}>
-                  <View style={styles.planInfoMain}>
-                    <Text style={styles.planPriceText}>₹{plan.price}</Text>
-                    <View style={styles.planSpecCol}>
-                      <Text style={styles.specLabel}>Validity</Text>
-                      <Text style={styles.specValue}>{plan.validity}</Text>
+              {!selectedLocation ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>Select a circle to view plans</Text>
+                </View>
+              ) : plansLoading ? (
+                <View style={styles.loadingPlans}>
+                  <ActivityIndicator color="#8665FF" />
+                  <Text style={styles.loadingText}>Loading plans...</Text>
+                </View>
+              ) : filteredPlans.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No recharge plans found</Text>
+                </View>
+              ) : (
+                filteredPlans.map((plan, index) => (
+                  <TouchableOpacity
+                    key={`${getPlanId(plan) || getPlanAmount(plan)}-${index}`}
+                    style={styles.planRow}
+                    onPress={() => handlePlanPress(plan)}
+                  >
+                    <View style={styles.planInfoMain}>
+                      <Text style={styles.planPriceText}>Rs {getPlanAmount(plan)}</Text>
+                      <View style={styles.planSpecCol}>
+                        <Text style={styles.specLabel}>Validity</Text>
+                        <Text style={styles.specValue}>{getPlanValidity(plan)}</Text>
+                      </View>
+                      <View style={styles.planSpecCol}>
+                        <Text style={styles.specLabel}>Data</Text>
+                        <Text style={styles.specValue}>{getPlanData(plan)}</Text>
+                      </View>
+                      <MaterialIcons name="chevron-right" size={30} color="#9CA3AF" />
                     </View>
-                    <View style={styles.planSpecCol}>
-                      <Text style={styles.specLabel}>Data</Text>
-                      <Text style={styles.specValue}>{plan.data}</Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" size={30} color="#9CA3AF" />
-                  </View>
-                  <Text style={styles.planDescription}>{plan.desc}</Text>
-                  <View style={styles.planDivider} />
-                </TouchableOpacity>
-              ))}
+                    <Text style={styles.planDescription}>{getPlanDescription(plan)}</Text>
+                    <View style={styles.planDivider} />
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
           </View>
         )}
@@ -246,51 +322,40 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   outerContainer: { paddingVertical: 15, backgroundColor: '#F3F4F8' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 25 },
+  sectionHeader: { paddingHorizontal: 20, paddingBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#333' },
-  viewAllText: { color: '#8665FF', fontSize: 16, fontWeight: '600' },
   cardWrapper: { paddingHorizontal: 16, marginBottom: 20 },
-  badge: { position: 'absolute', left: 28, top: -12, zIndex: 10, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
-  badgeText: { fontSize: 12, fontWeight: '600', color: '#4B5563' },
   cardContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF',
     borderRadius: 16, paddingHorizontal: 18, paddingVertical: 20, borderWidth: 1, borderColor: '#EDEDED', elevation: 3,
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8,
   },
   leftContent: { flex: 1 },
-  planDetails: { fontSize: 16, fontWeight: '700', color: '#333' },
-  dateSubtext: { fontSize: 13, color: '#6B7280', marginTop: 4 },
-  viewDetailsBtn: { marginTop: 6 },
-  viewDetailsText: { color: '#8665FF', fontWeight: '600' },
   plansSection: {
     backgroundColor: '#FFFFFF',
-    marginTop: 6,
+    marginTop: 18,
     paddingTop: 8,
     paddingBottom: 8,
   },
-  rechargeButton: {
-    width: 110,
-    height: 44,
-    borderRadius: 10,
+  locationScroll: {
+    paddingHorizontal: 16,
+  },
+  locationChip: {
+    paddingHorizontal: 16,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#CFCFCF',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rechargeButtonText: { color: '#FFF', fontWeight: '700' },
-  repeatButtonGradientBorder: {
-    width: 110,
-    height: 44,
-    borderRadius: 10,
-    padding: 1,
-  },
-  repeatButtonInner: {
-    flex: 1,
-    borderRadius: 9,
+    marginRight: 8,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  repeatButtonText: { color: '#8665FF', fontWeight: '700' },
-
-  /* New Sections Styles */
+  locationChipSelected: {
+    borderColor: '#8665FF',
+    backgroundColor: '#EEF0FF',
+  },
+  locationChipText: { color: '#4B5563', fontWeight: '500' },
+  locationChipTextSelected: { color: '#5B47A3', fontWeight: '700' },
   searchSection: { paddingHorizontal: 16, marginTop: 10, backgroundColor: '#FFFFFF', paddingTop: 18, paddingBottom: 4 },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 10,
@@ -298,29 +363,23 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#000' },
-  chipScroll: { marginTop: 15, flexDirection: 'row' },
-  filterIconButton: { width: 40, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#CFCFCF', justifyContent: 'center', alignItems: 'center', marginRight: 8, backgroundColor: '#FFFFFF' },
-  chip: { paddingHorizontal: 16, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#CFCFCF', justifyContent: 'center', marginRight: 8, backgroundColor: '#FFFFFF' },
-  chipText: { color: '#4B5563', fontWeight: '500' },
-
   tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginTop: 25, paddingHorizontal: 16, backgroundColor: '#FFFFFF' },
   activeTab: { marginRight: 20, paddingBottom: 10 },
   activeTabText: { fontSize: 15, fontWeight: '700', color: '#374151' },
   activeTabUnderline: { height: 3, backgroundColor: '#8665FF', position: 'absolute', bottom: 0, left: 0, right: 0 },
-  inactiveTabText: { fontSize: 15, fontWeight: '500', color: '#9CA3AF', marginRight: 20 },
-
   planRow: { paddingHorizontal: 16, marginTop: 20, backgroundColor: '#FFFFFF' },
   planInfoMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  planPriceText: { fontSize: 24, fontWeight: '800', color: '#111827', width: '25%' },
+  planPriceText: { fontSize: 22, fontWeight: '800', color: '#111827', width: '28%' },
   planSpecCol: { width: '25%' },
   specLabel: { fontSize: 12, color: '#9CA3AF' },
   specValue: { fontSize: 15, fontWeight: '700', color: '#374151' },
   planDescription: { fontSize: 13, color: '#6B7280', marginTop: 10 },
   planDivider: { height: 1, backgroundColor: '#F3F4F6', marginTop: 15 },
-  skeletonBadge: { position: 'absolute', left: 28, top: -12, zIndex: 10 },
+  emptyState: { padding: 24, alignItems: 'center' },
+  emptyText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
+  loadingPlans: { padding: 24, alignItems: 'center' },
+  loadingText: { color: '#6B7280', marginTop: 8 },
   skeletonGapSm: { marginTop: 8 },
-  skeletonChipRow: { flexDirection: 'row', marginTop: 15 },
-  skeletonChipGap: { marginLeft: 8 },
 });
 
 export default RechargeSection;

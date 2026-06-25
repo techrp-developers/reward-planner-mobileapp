@@ -34,6 +34,7 @@ import {
   checkoutPreviewQueryKey,
   prefetchCheckoutScreenData,
 } from '../../navigation/navigationPerformance'
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
@@ -101,6 +102,7 @@ const CartRow = React.memo(function CartRow({
 
 export default function WithAddress() {
   const navigation = useNavigation<Nav>()
+  const stickyCTA = useStickyBottomCTA()
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current
@@ -108,39 +110,18 @@ export default function WithAddress() {
   const [useRewards, setUseRewards] = useState(true)
 
   const goToCheckout = useCallback((params?: HomeStackParamList['OrderStepUI']) => {
+    const checkoutParams = params ?? { mode: 'cart' as const }
+
     prefetchCheckoutScreenData({
-      mode: params?.mode === 'buy_now' ? 'buy_now' : 'cart',
-      product_id: params?.product_id,
-      variant_id: params?.variant_id,
-      qty: params?.qty,
+      mode: checkoutParams.mode === 'buy_now' ? 'buy_now' : 'cart',
+      product_id: checkoutParams.product_id,
+      variant_id: checkoutParams.variant_id,
+      qty: checkoutParams.qty,
     }).catch(() => {
       // Ignore prefetch failures and continue navigation.
     })
 
-    const nav = navigation as any
-    const routeNames: string[] = nav?.getState?.()?.routeNames ?? []
-
-    if (routeNames.includes('OrderStepUI')) {
-      nav.navigate('OrderStepUI', params)
-      return
-    }
-
-    if (routeNames.includes('Checkout')) {
-      nav.navigate('Checkout', params)
-      return
-    }
-
-    const parentNav = nav?.getParent?.()
-    const parentRouteNames: string[] = parentNav?.getState?.()?.routeNames ?? []
-
-    if (parentRouteNames.includes('OrderStepUI')) {
-      parentNav.navigate('OrderStepUI', params)
-      return
-    }
-
-    if (parentRouteNames.includes('Checkout')) {
-      parentNav.navigate('Checkout', params)
-    }
+    navigation.navigate('OrderStepUI', checkoutParams)
   }, [navigation])
 
   useEffect(() => {
@@ -385,7 +366,7 @@ export default function WithAddress() {
     return (
       <View style={styles.container}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.skeletonScrollContent}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -405,7 +386,7 @@ export default function WithAddress() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
         removeClippedSubviews={true}
         windowSize={7}
         initialNumToRender={4}
@@ -419,6 +400,8 @@ export default function WithAddress() {
         total={checkoutTotal}
         count={items.length}
         onProceedToBuy={() => goToCheckout()}
+        bottomOffset={stickyCTA.bottomOffset}
+        onLayout={stickyCTA.onCtaLayout}
       />
     </View>
   )

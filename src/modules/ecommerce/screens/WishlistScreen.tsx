@@ -20,6 +20,38 @@ import ProductHeadColor from "../constants/heading/Poduct_Head_Color";
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type WishlistItem = any;
 
+const toNumberOrUndefined = (value: unknown) => {
+  if (value === null || value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+const resolveProductId = (item: WishlistItem) =>
+  toNumberOrUndefined(
+    item?.product_id ??
+      item?.productId ??
+      item?.product?.product_id ??
+      item?.product?.id ??
+      item?.product?.productId
+  );
+
+const resolveVariantId = (item: WishlistItem, productId?: number) =>
+  toNumberOrUndefined(
+    item?.variant_id ??
+      item?.variantId ??
+      item?.variant?.variant_id ??
+      item?.variant?.id ??
+      item?.variant?.variantId ??
+      item?.product?.variant_id ??
+      item?.product?.default_variant_id ??
+      item?.product?.variants?.[0]?.variant_id ??
+      item?.product?.variants?.[0]?.id ??
+      productId
+  );
+
+const getProductField = (item: WishlistItem, key: string) =>
+  item?.[key] ?? item?.product?.[key] ?? item?.variant?.[key];
+
 const WishlistScreen = () => {
   const navigation = useNavigation<Nav>();
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -46,7 +78,7 @@ const WishlistScreen = () => {
         (Array.isArray(res?.items) && res.items) ||
         [];
 
-      if (res?.success) {
+      if (list.length > 0) {
         setItems(list);
       } else {
         setItems([]);
@@ -73,8 +105,14 @@ const WishlistScreen = () => {
     const firstImage =
       item?.images?.[0]?.image_url ||
       item?.images?.[0] ||
+      item?.product?.images?.[0]?.image_url ||
+      item?.product?.images?.[0] ||
+      item?.variant?.images?.[0]?.image_url ||
+      item?.variant?.images?.[0] ||
       item?.image ||
-      item?.product_image;
+      item?.product_image ||
+      item?.product?.image ||
+      item?.product?.product_image;
 
     if (!firstImage) return "";
     return String(firstImage).startsWith("http")
@@ -83,30 +121,22 @@ const WishlistScreen = () => {
   };
 
   const handleRemoveWishlist = async (item: WishlistItem) => {
-    const wishlistId = Number(item?.wishlist_id ?? item?.wishlistId ?? item?.id);
-    const productId = Number(
-      item?.product_id ??
-      item?.productId ??
-      item?.product?.product_id ??
-      item?.product?.id ??
-      item?.product?.productId
-    );
-    const variantId = Number(
-      item?.variant_id ??
-      item?.variantId ??
-      item?.variant?.variant_id ??
-      item?.variant?.id ??
-      item?.variant?.variantId ??
-      item?.product?.variant_id ??
-      item?.product?.default_variant_id ??
-      productId
-    );
+    const wishlistId =
+      item?.wishlist_id != null
+        ? toNumberOrUndefined(item.wishlist_id)
+        : item?.wishlistId != null
+        ? toNumberOrUndefined(item.wishlistId)
+        : item?.id != null
+        ? toNumberOrUndefined(item.id)
+        : undefined;
+    const productId = resolveProductId(item);
+    const variantId = resolveVariantId(item, productId);
 
     try {
       await removeWishlist({
-        wishlistId: Number.isNaN(wishlistId) ? undefined : wishlistId,
-        productId: Number.isNaN(productId) ? undefined : productId,
-        variantId: Number.isNaN(variantId) ? undefined : variantId,
+        wishlistId,
+        productId,
+        variantId,
       });
 
       setItems((prev) =>
@@ -122,21 +152,35 @@ const WishlistScreen = () => {
   };
 
   const renderProduct = ({ item }: { item: WishlistItem }) => {
-    const productId = item?.product_id ?? item?.id;
-    const salePrice = Number(item?.sale_price ?? item?.price ?? 0);
-    const mrp = Number(item?.mrp ?? item?.original_price ?? 0);
+    const productId = resolveProductId(item);
+    const salePrice = Number(
+      getProductField(item, "sale_price") ??
+        getProductField(item, "price") ??
+        item?.product?.variants?.[0]?.sale_price ??
+        0
+    );
+    const mrp = Number(
+      getProductField(item, "mrp") ??
+        getProductField(item, "original_price") ??
+        item?.product?.variants?.[0]?.mrp ??
+        0
+    );
     const discount = calculateDiscount(mrp, salePrice);
     const imageUrl = normalizeImage(item);
-    const brand = item?.brand_name || item?.brand || "BRAND";
-    const name = item?.product_name || item?.title || "Product";
-    const ratingText = item?.rating ? `${item.rating}` : "4.5";
-    const reviewText = item?.reviews ? `(${item.reviews})` : "(0)";
+    const brand = getProductField(item, "brand_name") || item?.brand || item?.product?.brand || "BRAND";
+    const name = getProductField(item, "product_name") || item?.title || item?.product?.title || "Product";
+    const ratingText = getProductField(item, "rating") ? `${getProductField(item, "rating")}` : "4.5";
+    const reviewText = getProductField(item, "reviews") ? `(${getProductField(item, "reviews")})` : "(0)";
 
     return (
       <TouchableOpacity 
         style={styles.card} 
         activeOpacity={0.9}
-        onPress={() => productId && navigation.navigate("ProductDescription", { productId })}
+        onPress={() => {
+          if (productId) {
+            navigation.navigate("ProductDescription", { productId });
+          }
+        }}
       >
         <View style={styles.imageWrapper}>
           <Image
@@ -175,11 +219,15 @@ const WishlistScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={styles.addToCartBtn}
+            style={styles.productNavBtn}
             activeOpacity={0.85}
-            onPress={() => handleRemoveWishlist(item)}
+            onPress={() => {
+              if (productId) {
+                navigation.navigate("ProductDescription", { productId });
+              }
+            }}
           >
-            <Text style={styles.btnText}>REMOVE WISHLIST</Text>
+            <Text style={styles.btnText}>VIEW PRODUCT</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -342,7 +390,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  addToCartBtn: {
+  productNavBtn: {
     marginTop: 10,
     borderWidth: 1,
     borderColor: "#8B5CF6",

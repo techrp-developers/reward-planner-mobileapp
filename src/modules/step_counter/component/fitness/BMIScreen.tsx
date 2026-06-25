@@ -112,15 +112,19 @@ const LoadingState = React.memo(() => (
   </View>
 ));
 
-const ErrorState = React.memo(({ message, onRetry }: { message: string; onRetry: () => void }) => (
+const ErrorState = React.memo(({
+  message, onRetry, onSetupProfile,
+}: { message: string; onRetry: () => void; onSetupProfile?: () => void }) => (
   <View style={ss.stateBox}>
     <View style={ss.errorIcon}>
       <MaterialCommunityIcons name="alert-circle-outline" size={28} color={VD.error} />
     </View>
-    <Text style={ss.stateTitle}>Plan unavailable</Text>
-    <Text style={ss.stateText}>{message}</Text>
-    <TouchableOpacity activeOpacity={0.9} onPress={onRetry} style={ss.retryBtn}>
-      <Text style={ss.retryText}>Retry</Text>
+    <Text style={ss.stateTitle}>{onSetupProfile ? "Let's set up your plan" : "Plan unavailable"}</Text>
+    <Text style={ss.stateText}>
+      {onSetupProfile ? "Add your body details so we can build your personalized step plan." : message}
+    </Text>
+    <TouchableOpacity activeOpacity={0.9} onPress={onSetupProfile || onRetry} style={ss.retryBtn}>
+      <Text style={ss.retryText}>{onSetupProfile ? "Set Up My Profile" : "Retry"}</Text>
     </TouchableOpacity>
   </View>
 ));
@@ -162,8 +166,18 @@ const BMIScreen: React.FC = () => {
       steps:    profilePlan?.recommended_steps ?? 0,
       minutes:  profilePlan?.recommended_minutes ?? 0,
       plan:     profilePlan?.weekly_plan ?? [],
+      currentGoal: profilePlan?.current_goal ?? null,
     };
   }, [profilePlan]);
+
+  const isProfileMissing = errorMessage === "Profile not found";
+
+  const goalSetDateLabel = useMemo(() => {
+    if (!bmi.currentGoal) return "";
+    const date = new Date(`${bmi.currentGoal.start_date}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(date);
+  }, [bmi.currentGoal]);
 
   const indicatorTarget = useMemo(() => {
     if (!barWidth || !Number.isFinite(bmi.value)) return 0;
@@ -205,8 +219,28 @@ const BMIScreen: React.FC = () => {
           {/* ── Content card ──────────────────────────────────────── */}
           <View style={[ss.card, { padding: contentPadding }]}>
 
-            {loading ? <LoadingState /> : errorMessage ? <ErrorState message={errorMessage} onRetry={load} /> : (
+            {loading ? <LoadingState /> : errorMessage ? (
+              <ErrorState
+                message={errorMessage}
+                onRetry={load}
+                onSetupProfile={isProfileMissing ? () => navigation.navigate("StepForm") : undefined}
+              />
+            ) : (
               <>
+                {/* Current goal, if one is already set */}
+                {bmi.currentGoal && (
+                  <View style={ss.currentGoalCard}>
+                    <View style={ss.currentGoalIconWrap}>
+                      <StepIcon width={20} height={20} />
+                    </View>
+                    <View style={ss.currentGoalCopy}>
+                      <Text style={ss.currentGoalLabel}>Your current plan</Text>
+                      <Text style={ss.currentGoalValue}>{fmt(bmi.currentGoal.daily_steps)} steps / day</Text>
+                      {!!goalSetDateLabel && <Text style={ss.currentGoalMeta}>Set on {goalSetDateLabel}</Text>}
+                    </View>
+                  </View>
+                )}
+
                 {/* BMI value */}
                 <Text style={ss.bmiTitle}>
                   Your BMI is{" "}
@@ -286,7 +320,7 @@ const BMIScreen: React.FC = () => {
                 {/* CTA */}
                 <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("StepGoal")} style={ss.ctaWrap}>
                   <LinearGradient colors={["#9B6FFF", "#C4A8FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ss.cta}>
-                    <Text style={ss.ctaText}>Make This My Goal</Text>
+                    <Text style={ss.ctaText}>{bmi.currentGoal ? "Choose a New Plan" : "Make This My Goal"}</Text>
                     <MaterialCommunityIcons name="arrow-right" size={18} color="#1A1040" />
                   </LinearGradient>
                 </TouchableOpacity>
@@ -376,6 +410,24 @@ const ss = StyleSheet.create({
   divider:   { height: StyleSheet.hairlineWidth, backgroundColor: VD.cardBorder, marginVertical: 20 },
   goalLabel: { fontSize: 15, fontWeight: "700", color: VD.whiteMid },
   goalValue: { color: VD.accent },
+
+  // Current goal summary
+  currentGoalCard: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: VD.accentFaint,
+    borderRadius: BORDER_RADIUS.large,
+    borderWidth: 1, borderColor: VD.cardBorder,
+    padding: SPACING.md, marginBottom: SPACING.lg, gap: SPACING.sm,
+  },
+  currentGoalIconWrap: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: "rgba(252,139,173,0.15)",
+    alignItems: "center", justifyContent: "center",
+  },
+  currentGoalCopy:  { flex: 1 },
+  currentGoalLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", color: VD.whiteLow },
+  currentGoalValue: { fontSize: 16, fontWeight: "800", color: VD.white, marginTop: 2 },
+  currentGoalMeta:  { fontSize: 11, color: VD.whiteLow, marginTop: 2 },
 
   // Weekly plan card
   weekCard: {

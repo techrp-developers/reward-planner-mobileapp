@@ -10,19 +10,26 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import type { HomeStackParamList } from "../../navigation/types";
 import { getRecommendedProducts } from "../../api/PromotionalApi";
 import { queryClient } from "../../../../query/queryClient";
+import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+    PROMO_CARD_WIDTH,
+    PROMO_CARD_GAP,
+    PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
-const CARD_WIDTH = 128;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const normalizeRecommended = (rawList: any[]) =>
     rawList
-        .map((item: any, index: number) => ({
-            ...item,
-            id: item?.product_id ?? item?.id ?? `rec-${index}`,
-            title: item?.product_name ?? "Product",
-            brand: item?.brand_name ?? "",
-        }))
+        .map((item: any, index: number) => {
+            const normalized = normalizeProduct(item);
+
+            return {
+                ...normalized,
+                id: item?.product_id ?? item?.id ?? `rec-${index}`,
+            };
+        })
         .sort((a: any, b: any) => Number(b?.score ?? 0) - Number(a?.score ?? 0));
 
 const fetchRecommendedData = async () => {
@@ -63,7 +70,7 @@ function RecommendedProducts() {
 
     const renderCard = useCallback(
         ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-            <ProductCard item={item} cardWidth={CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
+            <ProductCard item={item} cardWidth={PROMO_CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
         ),
         []
     );
@@ -96,13 +103,13 @@ function RecommendedProducts() {
 
             <HorizontalProductList
                 data={products}
-                itemWidth={CARD_WIDTH}
-                gap={10}
-                estimatedItemSize={138}
+                itemWidth={PROMO_CARD_WIDTH}
+                gap={PROMO_CARD_GAP}
+                estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
                 keyExtractor={(item) => String(item.id)}
                 renderCard={renderCard}
             />
-           
+
         </View>
     );
 }
@@ -119,14 +126,7 @@ export const prefetchRecommendedSection = async (userId: number) => {
                 (Array.isArray(res?.data?.products) && res.data.products) ||
                 [];
 
-            return rawList
-                .map((item: any, index: number) => ({
-                    ...item,
-                    id: item?.product_id ?? item?.id ?? `rec-${index}`,
-                    title: item?.product_name ?? "Product",
-                    brand: item?.brand_name ?? "",
-                }))
-                .sort((a: any, b: any) => Number(b?.score ?? 0) - Number(a?.score ?? 0));
+            return normalizeRecommended(rawList);
         },
         staleTime: CACHE_TTL_MS,
     });

@@ -28,6 +28,7 @@ import CartCard from '../cart/CartCard';
 import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowBundlePreview } from '../../api/BundleAPI';
+import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
@@ -148,6 +149,7 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
+  const stickyCTA = useStickyBottomCTA();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
@@ -419,7 +421,7 @@ function CartScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.skeletonScrollContent}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -453,7 +455,7 @@ function CartScreen() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => loadCart(true)} />
         }
@@ -470,6 +472,8 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
+        bottomOffset={stickyCTA.bottomOffset}
+        onLayout={stickyCTA.onCtaLayout}
       />
     </View>
   );

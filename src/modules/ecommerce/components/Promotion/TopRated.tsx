@@ -17,9 +17,14 @@ import { fetchTopRatedProducts } from "../../api/PromotionalApi";
 import { getProductImageUrl } from "../../api/ProductApi";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import { queryClient } from "../../../../query/queryClient";
+import { normalizeProduct } from "../../utils/normalizeProduct";
+import {
+  PROMO_CARD_WIDTH,
+  PROMO_CARD_GAP,
+  PROMO_ESTIMATED_ITEM_SIZE,
+} from "../../constants/cardLayout";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
-const CARD_WIDTH = 136;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const TOP_RATED_QUERY_KEY = ["ecommerce", "promotion", "top-rated"] as const;
 
@@ -45,15 +50,15 @@ const resolveImageUrl = (item: any) => {
 };
 
 const normalizeTopRated = (rawList: any[]) =>
-  rawList.slice(0, 4).map((item: any, index: number) => ({
-    ...item,
-    id: item?.product_id ?? item?.id ?? `top-${index}`,
-    title: item?.product_name ?? item?.title ?? "Product",
-    brand: item?.brand_name ?? item?.brand ?? "",
-    image: resolveImageUrl(item),
-    price: item?.price ?? item?.selling_price ?? "",
-    oldPrice: item?.old_price ?? item?.original_price ?? undefined,
-  }));
+  rawList.slice(0, 4).map((item: any, index: number) => {
+    const normalized = normalizeProduct(item);
+
+    return {
+      ...normalized,
+      id: item?.product_id ?? item?.id ?? `top-${index}`,
+      image: resolveImageUrl(item),
+    };
+  });
 
 const fetchTopRatedData = async () => {
   const res = await fetchTopRatedProducts();
@@ -105,7 +110,7 @@ function TopRated() {
 
   const renderCard = useCallback(
     ({ item, shouldLoadImage }: { item: any; index: number; shouldLoadImage: boolean }) => (
-      <ProductCard item={item} cardWidth={CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
+      <ProductCard item={item} cardWidth={PROMO_CARD_WIDTH} shouldLoadImage={shouldLoadImage} />
     ),
     []
   );
@@ -136,9 +141,9 @@ function TopRated() {
 
       <HorizontalProductList
         data={products}
-        itemWidth={CARD_WIDTH}
-        gap={12}
-        estimatedItemSize={CARD_WIDTH + 12}
+        itemWidth={PROMO_CARD_WIDTH}
+        gap={PROMO_CARD_GAP}
+        estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
         keyExtractor={(item) => String(item.id)}
         renderCard={renderCard}
       />

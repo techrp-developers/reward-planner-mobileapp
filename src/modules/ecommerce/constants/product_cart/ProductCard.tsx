@@ -18,6 +18,7 @@ import PointsButton from "./PointsButton";
 import { setWishlistState } from "../../api/WishlistApi";
 import OptimizedImage from "../../components/common/OptimizedImage";
 import RPpriceBadge from "./RPpriceBadge";
+import { normalizeProduct } from "../../utils/normalizeProduct";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -40,6 +41,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
 
   const usedCardWidth = cardWidth ?? CARD_WIDTH;
+  const normalizedProduct = useMemo(() => normalizeProduct(item), [item]);
 
   const productId = item?.id ?? item?.product_id ?? item?.productId;
   const variantId =
@@ -58,7 +60,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
     fontSizeReview: Math.max(9, Math.round(usedCardWidth * 0.066)),
     fontSizePrice: Math.max(12, Math.round(usedCardWidth * 0.096)),
     fontSizeOriginal: Math.max(9, Math.round(usedCardWidth * 0.065)),
-    fontSizeDiscount: Math.max(9, Math.round(usedCardWidth * 0.07)), // 👈 discount text size
+    fontSizeDiscount: Math.max(9, Math.round(usedCardWidth * 0.07)),
   }), [usedCardWidth]);
 
   const goToDetails = useCallback(() => {
@@ -130,23 +132,20 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
-    const coins = Number(item?.rewardCoins ?? 0);
-    const redeemValue = Number(item?.redeem_coins ?? 0);
-
     return {
       starCount: Math.round(safeRating),
       reviewText: item?.reviews ? `(${item.reviews})` : "",
       productTitle: [item?.product_name || item?.title, item?.brand || item?.brand_name]
         .filter(Boolean)
         .join(" "),
-      priceText: String(item?.price ?? ""),
-      originalPriceText: String(item?.originalPrice ?? ""),
-      rewardCoins: Number.isFinite(coins) ? coins : 0,
-      redeemCoins: Number.isFinite(redeemValue) ? redeemValue : 0,
-      rp_price: item?.rp_price ?? "",
-      discount: item?.discount ?? item?.off_percent ?? "",  
+      priceText: String(normalizedProduct.price ?? ""),
+      originalPriceText: String(normalizedProduct.originalPrice ?? ""),
+      rewardCoins: normalizedProduct.rewardCoins,
+      redeemCoins: normalizedProduct.redeem_coins,
+      rp_price: normalizedProduct.rp_price ?? "",
+      discount: normalizedProduct.discount ?? "",
     };
-  }, [item]);
+  }, [item, normalizedProduct]);
 
   return (
     <View
@@ -270,6 +269,9 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
 
 // Memoized export
 const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
+  const prevNormalized = normalizeProduct(prevProps.item);
+  const nextNormalized = normalizeProduct(nextProps.item);
+
   return (
     prevProps.item?.id === nextProps.item?.id &&
     prevProps.item?.is_wishlisted === nextProps.item?.is_wishlisted &&
@@ -278,8 +280,8 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevProps.item?.rp_price === nextProps.item?.rp_price &&
     prevProps.item?.price === nextProps.item?.price &&
     prevProps.item?.originalPrice === nextProps.item?.originalPrice &&
-    prevProps.item?.rewardCoins === nextProps.item?.rewardCoins &&
-    prevProps.item?.redeem_coins === nextProps.item?.redeem_coins &&
+    prevNormalized.rewardCoins === nextNormalized.rewardCoins &&
+    prevNormalized.redeem_coins === nextNormalized.redeem_coins &&
     prevProps.item?.image === nextProps.item?.image &&
     prevProps.item?.product_name === nextProps.item?.product_name &&
     prevProps.shouldLoadImage === nextProps.shouldLoadImage
