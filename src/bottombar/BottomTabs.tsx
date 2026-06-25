@@ -70,8 +70,11 @@ const DASHBOARD_TABS: TabConfig[] = [
   { key: "Profile", label: "Profile", Icon: ProfileIcon },
 ];
 
+const ACTIVE_COLOR = "#8B5CF6";
+const INACTIVE_COLOR = "#9CA3AF";
+
 const TabItem = React.memo(({ label, active, onPress, Icon, badgeCount }: TabItemProps) => {
-  const iconColor = active ? "#111827" : "#8B8B8B";
+  const iconColor = active ? ACTIVE_COLOR : INACTIVE_COLOR;
 
   return (
     <TouchableOpacity
@@ -287,6 +290,7 @@ function BottomTabs({
           onPress={onCenterPress ?? NOOP}
         />
       </View>
+      <View style={styles.homeIndicator} />
     </View>
   );
 }
@@ -357,6 +361,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
   },
   item: {
     alignItems: "center",
@@ -366,12 +374,22 @@ const styles = StyleSheet.create({
   label: {
     marginTop: 4,
     fontSize: 11,
-    color: "#8B8B8B",
+    color: INACTIVE_COLOR,
     fontWeight: "500",
   },
   labelActive: {
-    color: "#111827",
+    color: ACTIVE_COLOR,
     fontWeight: "700",
+  },
+  homeIndicator: {
+    position: "absolute",
+    bottom: 8,
+    alignSelf: "center",
+    width: 120,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    opacity: 0.9,
   },
   centerSpacer: {
     width: 60,

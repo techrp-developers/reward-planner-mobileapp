@@ -100,6 +100,14 @@ function MainLayout() {
   const bottomInset = Math.max(insets.bottom, 8);
   const { totalQuantity } = useCart(); // import this
 
+  const activeTabKey = React.useMemo(() => {
+    const leafRoute = routeChain[routeChain.length - 1];
+    if (leafRoute === "Cart") return "Cart";
+    if (leafRoute === "Profile") return "Profile";
+    if (leafRoute === "Search" || leafRoute === "ServiceSearch") return "Search";
+    return "Home";
+  }, [routeChain]);
+
   const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
     (tab: "Home" | "Search" | "Notes" | "Cart" | "Profile") => {
@@ -184,6 +192,7 @@ function MainLayout() {
       {showBottomTabs ? (
         <BottomTabs
           activeMode={activeMode}
+          activeTabKey={activeTabKey}
           cartCount={totalQuantity}
           onTabPress={handleBottomTabPress}
           onCenterPress={handleCenterPress}
