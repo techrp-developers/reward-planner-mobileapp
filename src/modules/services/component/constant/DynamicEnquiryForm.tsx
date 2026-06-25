@@ -9,6 +9,7 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -69,7 +70,10 @@ const DynamicEnquiryForm: React.FC<Props> = ({
           /* ── Dropdown ── */
           <Pressable
             style={styles.inputWrap}
-            onPress={() => setSelectState({ open: true, field })}
+            onPress={() => {
+              Keyboard.dismiss();
+              setTimeout(() => setSelectState({ open: true, field }), 80);
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Select ${field.label}`}
           >
@@ -148,6 +152,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
       <Modal
         visible={selectState.open}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setSelectState({ open: false, field: null })}
       >

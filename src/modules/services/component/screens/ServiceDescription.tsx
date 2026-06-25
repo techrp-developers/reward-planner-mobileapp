@@ -401,6 +401,7 @@
                 <ScrollView
                     ref={scrollRef}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                     contentContainerStyle={styles.scrollContent}
                 >
                     {/* 1. Hero image + variant selector */}
