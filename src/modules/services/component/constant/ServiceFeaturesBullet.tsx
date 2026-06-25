@@ -63,8 +63,8 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
         ))}
       </View>
 
-      {/* ====== BLOCK 2 : GRADIENT TITLE + BULLETS ====== */}
-      <View style={styles.card}>
+      {/* ====== BLOCK 2 : GRADIENT TITLE + TIMELINE ====== */}
+      <View style={[styles.card, styles.journeyCard]}>
         <MaskedView
           maskElement={
             <Text style={[styles.header, styles.transparentBg]}>
@@ -80,12 +80,26 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
         </MaskedView>
 
         <View style={styles.middlePointsWrap}>
-          {middlePoints.map((item, index) => (
-            <View key={index} style={styles.row}>
-              <View style={styles.dot} />
-              <Text style={styles.text}>{item}</Text>
-            </View>
-          ))}
+          {middlePoints.map((item, index) => {
+            const separatorIndex = item.indexOf(':');
+            const hasDetail = separatorIndex > -1;
+            const heading = hasDetail ? item.slice(0, separatorIndex).trim() : item;
+            const detail = hasDetail ? item.slice(separatorIndex + 1).trim() : '';
+            const isLast = index === middlePoints.length - 1;
+
+            return (
+              <View key={index} style={styles.timelineRow}>
+                <View style={styles.timelineMarkerCol}>
+                  <View style={styles.timelineDot} />
+                  {!isLast && <View style={styles.timelineLine} />}
+                </View>
+                <View style={[styles.timelineContent, !isLast && styles.timelineContentSpacing]}>
+                  <Text style={styles.timelineHeading}>{heading}</Text>
+                  {!!detail && <Text style={styles.timelineDetail}>{detail}</Text>}
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
 
@@ -180,25 +194,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  row: {
+  journeyCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#5B47A3',
+  },
+
+  timelineRow: {
     flexDirection: 'row',
+  },
+
+  timelineMarkerCol: {
+    width: 22,
     alignItems: 'center',
-    marginBottom: 12,
   },
 
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#8665FF',
-    marginRight: 10,
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#F3E8FF',
+    borderWidth: 2,
+    borderColor: '#B794F6',
   },
 
-  text: {
-    fontSize: 14,
-    color: '#4B5563',
-    fontWeight: '500',
+  timelineLine: {
+    width: 2,
     flex: 1,
+    marginTop: 2,
+    backgroundColor: '#E5D9FF',
+  },
+
+  timelineContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  timelineContentSpacing: {
+    paddingBottom: 18,
+  },
+
+  timelineHeading: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '700',
+  },
+
+  timelineDetail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+    lineHeight: 18,
   },
 
   header: {
