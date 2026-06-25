@@ -24,10 +24,12 @@ function ProductHeadColor({
   title = "",
   onBackPress,
   onSearchPress,
+  showSearch = true,
 }: {
   title?: string;
   onBackPress?: () => void;
   onSearchPress?: () => void;
+  showSearch?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
 
@@ -57,12 +59,14 @@ function ProductHeadColor({
         </Text>
                
         <View style={styles.rightIcons}>
-          <AppIconButton
-            type="search"
-            variant="solid"
-            style={styles.circleIcon}
-            onPress={handleSearch}
-          />
+          {showSearch ? (
+            <AppIconButton
+              type="search"
+              variant="solid"
+              style={styles.circleIcon}
+              onPress={handleSearch}
+            />
+          ) : null}
         </View>
       </View>
     </View>

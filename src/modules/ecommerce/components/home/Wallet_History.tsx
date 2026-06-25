@@ -236,6 +236,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
       <ProductHeadColor
         title="Wallet"
         onBackPress={() => navigation.goBack()}
+        showSearch={false}
       />
 
       <View style={styles.screen}>
