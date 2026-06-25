@@ -418,10 +418,17 @@ function BundleEnquiryForm() {
         />
 
         <View style={styles.card}>
-          <Text style={styles.heading}>Enquire Now</Text>
-          <Text style={styles.desc}>
-            Fill out the form below and our team will get in touch with you shortly.
-          </Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerIcon}>
+              <MaterialIcons name="chat-bubble-outline" size={18} color="#5B47A3" />
+            </View>
+            <View style={styles.headerTextCol}>
+              <Text style={styles.heading}>Enquire Now</Text>
+              <Text style={styles.desc}>
+                Fill out the form below and our team will get in touch with you shortly.
+              </Text>
+            </View>
+          </View>
 
           {(isLoadingFields || isPrefilling) && (
             <ActivityIndicator
@@ -442,7 +449,7 @@ function BundleEnquiryForm() {
           <TouchableOpacity
             activeOpacity={0.9}
             disabled={!canSubmit}
-            style={!canSubmit ? styles.disabled : undefined}
+            style={[styles.submitBtnShadow, !canSubmit && styles.disabled]}
             onPress={handleSubmit}
           >
             <LinearGradient
@@ -501,22 +508,46 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EDEDED',
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+
+  headerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3EFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+
+  headerTextCol: {
+    flex: 1,
   },
 
   heading: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#202020',
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: '#1F2937',
   },
 
   desc: {
-    fontSize: 11.5,
-    color: '#6B6B6B',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
     lineHeight: 16,
   },
 
@@ -529,12 +560,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     fontSize: 13,
     color: '#111111',
+    fontWeight: '500',
   },
 
   labelOptional: {
     marginTop: 14,
     fontSize: 13,
     color: '#606060',
+    fontWeight: '500',
   },
 
   star: {
@@ -549,9 +582,9 @@ const styles = StyleSheet.create({
   inputWrap: {
     marginTop: 6,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    backgroundColor: '#F9F9F9',
+    borderWidth: 1.2,
+    borderColor: '#ECE7FF',
+    backgroundColor: '#FAF9FF',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -591,8 +624,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  submitBtn: {
+  submitBtnShadow: {
     marginTop: 18,
+    borderRadius: 12,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  submitBtn: {
     height: 48,
     borderRadius: 12,
     justifyContent: 'center',
@@ -607,6 +649,8 @@ const styles = StyleSheet.create({
 
   disabled: {
     opacity: 0.45,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
   safetyCard: {
@@ -614,8 +658,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 14,
+    marginTop: 14,
+    borderRadius: 18,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   safetyTextWrap: {
