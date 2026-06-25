@@ -1,6 +1,8 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -41,6 +43,7 @@ import WeeklyGraph from "./WeeklyGraph";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // Fresh active palette for the step dashboard.
 const VD = {
@@ -51,13 +54,13 @@ const VD = {
   muted: "#A8AEC8",
   softText: "#8188A6",
   accent: "#8EA2FF",
-  accentDark: "#B9C4FF",
-  accentDim: "rgba(142,162,255,0.26)",
+  accentDark: "#EEF1FF",
+  accentDim: "rgba(105,118,178,0.44)",
   accentFaint: "rgba(142,162,255,0.12)",
   white: "#FFFFFF",
   whiteMid: "#CDD2EA",
   whiteLow: "#979EBC",
-  whiteGhost: "rgba(255,255,255,0.09)",
+  whiteGhost: "rgba(255,255,255,0.055)",
   cardBg: "rgba(255,255,255,0.075)",
   cardSoft: "rgba(255,255,255,0.10)",
   cardBorder: "rgba(174,188,255,0.16)",
@@ -80,18 +83,58 @@ const StepRing: React.FC<RingProps> = ({
   size = 200,
   strokeWidth = 16,
 }) => {
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+  const chargeBrightness = useRef(new Animated.Value(0)).current;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = goal > 0 ? Math.min(steps / goal, 1) : 0;
-  const strokeDashoffset = circumference * (1 - progress);
   const cx = size / 2;
   const cy = size / 2;
 
   const pct = Math.round(progress * 100);
+  const animatedStrokeOffset = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+  const highlightOpacity = chargeBrightness.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.38, 1],
+  });
+
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 950,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [animatedProgress, progress]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(chargeBrightness, {
+          toValue: 1,
+          duration: 950,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(chargeBrightness, {
+          toValue: 0,
+          duration: 950,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+      ])
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [chargeBrightness]);
 
   return (
     <View style={styles.ringWrap}>
-      <View style={{ width: size, height: size }}>
+      <View style={[styles.ringCanvas, { width: size, height: size }]}>
         <Svg width={size} height={size}>
           {/* Track */}
           <Circle
@@ -117,7 +160,7 @@ const StepRing: React.FC<RingProps> = ({
             origin={`${cx},${cy}`}
           />
           {/* Progress */}
-          <Circle
+          <AnimatedCircle
             cx={cx}
             cy={cy}
             r={radius}
@@ -125,12 +168,33 @@ const StepRing: React.FC<RingProps> = ({
             stroke={VD.accent}
             strokeWidth={strokeWidth}
             strokeDasharray={`${circumference}`}
-            strokeDashoffset={strokeDashoffset}
+            strokeDashoffset={animatedStrokeOffset}
             strokeLinecap="round"
             rotation="-90"
             origin={`${cx},${cy}`}
           />
+          {/* Breathing highlight over completed progress */}
+          {progress > 0 && (
+            <AnimatedCircle
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="none"
+              stroke={VD.accentDark}
+              strokeWidth={strokeWidth + 6}
+              strokeDasharray={`${circumference}`}
+              strokeDashoffset={animatedStrokeOffset}
+              strokeLinecap="round"
+              opacity={highlightOpacity}
+              rotation="-90"
+              origin={`${cx},${cy}`}
+            />
+          )}
         </Svg>
+
+        <View style={styles.ringPctOnRing}>
+          <Text style={styles.ringPct}>{pct}%</Text>
+        </View>
 
         {/* Center label */}
         <View style={styles.ringCenter}>
@@ -138,9 +202,6 @@ const StepRing: React.FC<RingProps> = ({
             {steps.toLocaleString()}
           </Text>
           <Text style={styles.ringLabel}>steps</Text>
-          <View style={styles.ringPctPill}>
-            <Text style={styles.ringPct}>{pct}%</Text>
-          </View>
         </View>
       </View>
 
@@ -423,7 +484,7 @@ const Dashboard: React.FC = () => {
                 <MaterialCommunityIcons
                   name="home-variant-outline"
                   size={22}
-                  color={VD.accentDark}
+                  color="#070A16"
                 />
               </TouchableOpacity>
             </View>
@@ -450,7 +511,7 @@ const Dashboard: React.FC = () => {
                   steps={stepStats.currentSteps}
                   goal={stepStats.goalSteps}
                   size={Math.min(contentMaxWidth * 0.6, 210)}
-                  strokeWidth={16}
+                  strokeWidth={18}
                 />
 
                 {/* Stat Grid */}
@@ -639,6 +700,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
+  ringCanvas: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ringPctOnRing: {
+    position: "absolute",
+    top: 2,
+    alignSelf: "center",
+    backgroundColor: "#111735",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: VD.accentDark,
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    shadowColor: VD.accent,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
   ringCenter: {
     position: "absolute",
     top: 0,
@@ -663,19 +744,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
-  ringPctPill: {
-    marginTop: 8,
-    backgroundColor: VD.accentFaint,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: VD.cardBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
   ringPct: {
-    fontSize: 12,
-    color: VD.accent,
-    fontWeight: "700",
+    fontSize: 14,
+    color: VD.accentDark,
+    fontWeight: "900",
   },
   ringGoalText: {
     fontSize: 13,
