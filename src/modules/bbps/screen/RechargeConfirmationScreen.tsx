@@ -89,7 +89,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       const response = await createBillPayOrder(payload);
       console.log('Create Recharge Order Response:', response);
 
-      if (!response.success) {
+      if (response.success === false) {
         if (__DEV__ && lastSuccessfulOrderPayload) {
           compareRechargePayloads(
             lastSuccessfulOrderPayload,
@@ -141,9 +141,11 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         },
       });
 
+      // verify-payment expects only the three razorpay_* fields — no transaction_id.
       const verifyPayload = {
-        ...paymentResult,
-        transaction_id: order.transaction_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
       };
       console.log('Verify Recharge Payment Payload:', verifyPayload);
       const verifyResponse = await verifyBillPayPayment(verifyPayload);

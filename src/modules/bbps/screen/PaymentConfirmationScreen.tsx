@@ -159,7 +159,7 @@ const PaymentConfirmationScreenComponent = () => {
 
       const response = await createBillPayOrder(payload);
 
-      if (!response.success) {
+      if (response.success === false) {
         alert.warning('Order Failed', response.message || 'Unable to create bill payment order.');
         return;
       }
@@ -188,9 +188,11 @@ const PaymentConfirmationScreenComponent = () => {
         },
       });
 
+      // verify-payment expects only the three razorpay_* fields — no transaction_id.
       const verifyPayload = {
-        ...paymentResult,
-        transaction_id: order.transaction_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
       };
 
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
