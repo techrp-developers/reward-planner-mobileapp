@@ -24,18 +24,18 @@ const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const cardStyle = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#EEF7F3',
+    borderColor: 'rgba(134,101,255,0.12)',
     ...Platform.select({
       ios: {
-        shadowColor: '#2BAE7E',
+        shadowColor: '#4C2F91',
         shadowOpacity: 0.08,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
       },
-      android: { elevation: 3 },
+      android: { elevation: 4 },
     }),
   },
 });
@@ -43,7 +43,7 @@ const cardStyle = StyleSheet.create({
 // ─── Maturity Banner ──────────────────────────────────────────────
 const MaturityBanner: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <LinearGradient
-    colors={['#8665FF', '#5B47A3']}
+    colors={['#24174E', '#5B3CB4', '#8B5CF6']}
     start={{ x: 0, y: 0 }}
     end={{ x: 1, y: 0 }}
     style={bannerStyle.banner}
@@ -55,15 +55,15 @@ const MaturityBanner: React.FC<{ label: string; value: string }> = ({ label, val
 
 const bannerStyle = StyleSheet.create({
   banner: {
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 18,
     alignItems: 'center',
     ...Platform.select({
       ios: {
         shadowColor: '#5B47A3',
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.22,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
       },
       android: { elevation: 6 },
     }),

@@ -30,28 +30,25 @@ interface Props {
     navigation: NativeStackNavigationProp<HomeStackParamList, 'MutualFundCalculators'>;
 }
 
+const ArticleSeparator = () => <View style={styles.separator} />;
+
 const MFInformedInvestors: React.FC<Props> = ({ navigation }) => {
     const [articles, setArticles] = useState<SliderArticle[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [_activeIndex, setActiveIndex] = useState(0);
     const flatRef = useRef<FlatList<SliderArticle>>(null);
 
     useEffect(() => {
         getMutualFundCategories()
             .then(cats => {
-                console.log('[MFInformedInvestors] all categories:', cats.map(c => c.id + ':' + c.title));
                 const target = cats.find(c => c.id === INFORMED_CATEGORY_ID);
-                console.log('[MFInformedInvestors] found category id=6:', target ? target.title : 'NOT FOUND');
                 if (!target) return;
-                console.log('[MFInformedInvestors] children count:', target.children.length);
                 const flat: SliderArticle[] = [];
                 for (const child of target.children) {
-                    console.log('[MFInformedInvestors] child section:', child.id, child.title, '| articles:', child.articles.length);
                     for (const article of child.articles) {
                         flat.push({ ...article, sectionId: child.id, sectionTitle: child.title });
                     }
                 }
-                console.log('[MFInformedInvestors] total flattened articles:', flat.length);
                 setArticles(flat);
             })
             .catch(err => {
@@ -138,7 +135,7 @@ const MFInformedInvestors: React.FC<Props> = ({ navigation }) => {
                 snapToAlignment="start"
                 decelerationRate="fast"
                 contentContainerStyle={styles.listContent}
-                ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+                ItemSeparatorComponent={ArticleSeparator}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
             />
@@ -168,47 +165,56 @@ const PURPLE = '#8665FF';
 
 const styles = StyleSheet.create({
     loaderContainer: { height: 80, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-    section: { marginBottom: 24 },
+    section: { marginBottom: 28 },
+    separator: { width: CARD_GAP },
     header: { paddingHorizontal: 4, marginBottom: 16 },
-    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1F2937', letterSpacing: -0.3, marginBottom: 6 },
-    sectionSubtitle: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
+    sectionTitle: { fontSize: 20, fontWeight: '900', color: '#241C3B', letterSpacing: -0.4, marginBottom: 6 },
+    sectionSubtitle: { fontSize: 13, color: '#746B86', lineHeight: 20 },
     listContent: { paddingLeft: 0, paddingRight: 8 },
     card: {
         width: CARD_WIDTH,
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
+        borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#F0F0F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 8,
-        elevation: 3,
+        borderColor: 'rgba(134,101,255,0.12)',
+        shadowColor: '#4C2F91',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 18,
+        elevation: 5,
     },
-    thumbContainer: { height: 180, backgroundColor: '#EDE9FF', position: 'relative' },
+    thumbContainer: { height: 190, backgroundColor: '#EDE9FF', position: 'relative' },
     thumb: { width: '100%', height: '100%' },
-    thumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.18)' },
+    thumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(36,23,78,0.24)' },
     tagRow: { position: 'absolute', top: 12, left: 12, right: 12 },
     tagBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
         backgroundColor: 'rgba(255,255,255,0.92)',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         maxWidth: '100%',
     },
     tagText: { fontSize: 9, fontWeight: '800', color: PURPLE, letterSpacing: 0.4 },
     tagSep: { fontSize: 9, color: '#9CA3AF', fontWeight: '600' },
     tagSection: { fontSize: 9, fontWeight: '600', color: '#374151', flexShrink: 1 },
-    body: { padding: 14 },
-    title: { fontSize: 14, fontWeight: '700', color: '#1F2937', lineHeight: 20, marginBottom: 8 },
-    excerpt: { fontSize: 12, color: '#6B7280', lineHeight: 17, marginBottom: 12 },
-    readMoreRow: { flexDirection: 'row', alignItems: 'center' },
-    readMore: { fontSize: 13, fontWeight: '700', color: PURPLE, textDecorationLine: 'underline' },
-    readMoreArrow: { fontSize: 15, color: PURPLE, fontWeight: '700' },
+    body: { padding: 16 },
+    title: { fontSize: 16, fontWeight: '900', color: '#241C3B', lineHeight: 22, marginBottom: 8 },
+    excerpt: { fontSize: 12, color: '#746B86', lineHeight: 18, marginBottom: 14 },
+    readMoreRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        backgroundColor: '#F1EBFF',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    readMore: { fontSize: 13, fontWeight: '900', color: PURPLE },
+    readMoreArrow: { fontSize: 15, color: PURPLE, fontWeight: '900' },
     dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
     dot: { borderRadius: 4, height: 6 },
     dotActive: { width: 20, backgroundColor: PURPLE },
@@ -217,9 +223,9 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
         marginTop: 16,
         backgroundColor: PURPLE,
-        paddingHorizontal: 22,
-        paddingVertical: 9,
-        borderRadius: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 999,
     },
-    viewAllText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
+    viewAllText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 },
 });

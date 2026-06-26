@@ -27,13 +27,14 @@ export const CalculatorScreen: React.FC<Props> = ({
   children,
 }) => (
   <SafeAreaView style={styles.safe} edges={['top']}>
-    <StatusBar barStyle="light-content" backgroundColor="#8665FF" />
+    <StatusBar barStyle="light-content" backgroundColor="#24174E" />
     <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
+      colors={['#24174E', '#5B3CB4', '#8B5CF6']}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.header}
     >
+      <View style={styles.headerGlow} />
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={styles.backBtn}
@@ -61,16 +62,17 @@ export const CalculatorScreen: React.FC<Props> = ({
 );
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  safe: { flex: 1, backgroundColor: '#F7F4FF' },
   header: {
     paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 26,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#5B47A3',
@@ -81,11 +83,20 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
+  headerGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    right: -45,
+    top: -58,
+  },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -93,8 +104,10 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 48,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -102,7 +115,7 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#fff',
     letterSpacing: -0.3,
   },
@@ -115,6 +128,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 18,
     paddingBottom: 60,
-    gap: 14,
+    gap: 16,
   },
 });
