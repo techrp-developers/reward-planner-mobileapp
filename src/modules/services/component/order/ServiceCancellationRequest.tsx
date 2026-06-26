@@ -140,7 +140,7 @@ export default function ServiceCancellationRequest() {
 
             <View style={styles.successBadge}>
               <View style={styles.successCircle}>
-                <MaterialCommunityIcons name="clock-check-outline" size={42} color="#FFF" />
+                <MaterialCommunityIcons name="clock-check-outline" size={32} color="#FFF" />
               </View>
               <MaterialCommunityIcons
                 name="star-four-points"
@@ -759,9 +759,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   successBadge: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -769,22 +769,22 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.24)',
   },
   successCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sparkleOne: {
     position: 'absolute',
-    left: 18,
-    top: 20,
+    left: 13,
+    top: 15,
   },
   sparkleTwo: {
     position: 'absolute',
-    right: 12,
-    bottom: 24,
+    right: 10,
+    bottom: 17,
   },
   confirmContent: {
     marginTop: -46,
