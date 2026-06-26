@@ -462,6 +462,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
               title={loading ? "Searching..." : "Get Free Quotes"}
               onPress={handleSubmit}
               disabled={!isFormValid || loading}
+              style={styles.submitButton}
             />
           </View>
         </View>
@@ -597,6 +598,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerButtonWrapper: { flex: 1 },
+  submitButton: { marginTop: 0, height: 52, justifyContent: "center" },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalContent: { backgroundColor: "#FFF", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "50%", padding: 20 },
