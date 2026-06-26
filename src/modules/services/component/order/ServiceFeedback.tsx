@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  LayoutChangeEvent,
+  GestureResponderEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +25,7 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceFeedback'>;
 
 const PURPLE = '#7C3AED';
+const TRACK_STEPS = [1, 2, 3, 4, 5];
 
 const EXPERIENCE_LABELS = ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
 const EASE_LABELS = ['Very Difficult', 'Difficult', 'Neutral', 'Easy', 'Very Easy'];
@@ -112,7 +115,6 @@ export default function ServiceFeedback() {
       <Header
         title="Service Feedback"
         onBack={() => navigation.goBack()}
-        onHelp={() => Alert.alert('Help', 'Tell us how your completed service went.')}
       />
 
       <ScrollView
@@ -206,29 +208,30 @@ export default function ServiceFeedback() {
 function Header({
   title,
   onBack,
-  onHelp,
 }: {
   title: string;
   onBack: () => void;
-  onHelp: () => void;
 }) {
   return (
-    <View style={styles.header}>
+    <LinearGradient
+      colors={['#30205F', '#5B3CB4', '#7C3AED']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.header}
+    >
       <TouchableOpacity
         style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={30} color="#6B7280" />
+        <MaterialCommunityIcons name="arrow-left" size={21} color="#FFF" />
       </TouchableOpacity>
 
-      <Text style={styles.headerTitle}>{title}</Text>
-
-      <TouchableOpacity style={styles.helpButton} onPress={onHelp} activeOpacity={0.8}>
-        <MaterialCommunityIcons name="message-text-outline" size={18} color="#E879D6" />
-        <Text style={styles.helpText}>Help</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.headerCopy}>
+        <Text style={styles.headerEyebrow}>COMPLETED SERVICE</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
+      </View>
+    </LinearGradient>
   );
 }
 
@@ -313,11 +316,25 @@ function EmojiScaleCard({
   labels: string[];
   onChange: (value: number) => void;
 }) {
+  const [trackWidth, setTrackWidth] = useState(0);
+  const selectedValue = value || 1;
+
+  const handleTrackLayout = (event: LayoutChangeEvent) => {
+    setTrackWidth(event.nativeEvent.layout.width);
+  };
+
+  const updateFromTrack = (event: GestureResponderEvent) => {
+    if (!trackWidth) return;
+    const x = Math.max(0, Math.min(event.nativeEvent.locationX, trackWidth));
+    const next = Math.min(5, Math.max(1, Math.round((x / trackWidth) * 4) + 1));
+    onChange(next);
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{title}</Text>
       <View style={styles.emojiRow}>
-        {[1, 2, 3, 4, 5].map(option => {
+        {TRACK_STEPS.map(option => {
           const selected = option === value;
           return (
             <TouchableOpacity
@@ -336,9 +353,18 @@ function EmojiScaleCard({
           );
         })}
       </View>
-      <View style={styles.scaleTrack}>
-        <View style={[styles.scaleFill, { width: `${Math.max(value, 1) * 20}%` }]} />
-        <View style={[styles.scaleThumb, { left: `${Math.max(value - 1, 0) * 25}%` }]} />
+      <View
+        onLayout={handleTrackLayout}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={updateFromTrack}
+        onResponderMove={updateFromTrack}
+        style={styles.scaleTrackTouch}
+      >
+        <View style={styles.scaleTrack}>
+          <View style={[styles.scaleFill, { width: `${selectedValue * 20}%` }]} />
+          <View style={[styles.scaleThumb, { left: `${(selectedValue - 1) * 25}%` }]} />
+        </View>
       </View>
     </View>
   );
@@ -381,59 +407,60 @@ function OptionCard({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFEFC' },
+  safe: { flex: 1, backgroundColor: '#F6F5FB' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE8F3',
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   backButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 6,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  headerCopy: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerEyebrow: {
+    color: 'rgba(255,255,255,0.64)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    color: '#4B4658',
+    fontSize: 22,
+    color: '#FFF',
     fontWeight: '900',
-  },
-  helpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#ECE8F3',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: '#FFF',
-  },
-  helpText: {
-    color: '#E879D6',
-    fontSize: 13,
-    fontWeight: '900',
+    marginTop: 1,
+    letterSpacing: -0.3,
   },
   scroll: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 34,
-    gap: 10,
+    gap: 12,
   },
   summaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: 22,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#ECE8F3',
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    elevation: 3,
   },
   imageWrap: {
     width: 72,
@@ -477,10 +504,15 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#ECE8F3',
     padding: 16,
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   cardTitle: {
     fontSize: 15,
@@ -514,7 +546,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emoji: {
-    fontSize: 24,
+    fontSize: 25,
     marginBottom: 6,
   },
   emojiMuted: {
@@ -530,11 +562,14 @@ const styles = StyleSheet.create({
     color: PURPLE,
     fontWeight: '900',
   },
+  scaleTrackTouch: {
+    paddingVertical: 12,
+    marginTop: 6,
+  },
   scaleTrack: {
     height: 5,
     backgroundColor: '#D9C7FF',
     borderRadius: 99,
-    marginTop: 18,
   },
   scaleFill: {
     height: 5,
@@ -595,7 +630,7 @@ const styles = StyleSheet.create({
     minHeight: 132,
     borderWidth: 1,
     borderColor: '#D9E5E5',
-    borderRadius: 8,
+    borderRadius: 14,
     padding: 14,
     color: '#111827',
     fontSize: 14,
@@ -603,10 +638,15 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     height: 54,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 22,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 4,
   },
   submitButtonDisabled: {
     opacity: 0.5,
