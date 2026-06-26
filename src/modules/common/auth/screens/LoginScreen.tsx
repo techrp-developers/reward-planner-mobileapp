@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../../../ecommerce/components/alerts";
@@ -24,6 +24,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 export default function LoginScreen({ navigation }: Props) {
   const { login, loading } = useAuth();
   const alert = useAlert();
+  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -163,7 +164,7 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           </ScrollView>
 
-          <View style={styles.bottomWrap}>
+          <View style={[styles.bottomWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <View style={styles.bottomRow}>
               <Text style={styles.bottomText}>New to Rewards Planners?</Text>
 
@@ -240,7 +241,9 @@ const styles = StyleSheet.create({
   },
   bottomWrap: {
     backgroundColor: "#F5F0FF",
-    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#E8DCF7",
+    paddingTop: 16,
     alignItems: "center",
     paddingHorizontal: 20,
   },
@@ -256,6 +259,7 @@ const styles = StyleSheet.create({
   signUp: {
     color: "#7B2CBF",
     fontWeight: "bold",
+    paddingVertical: 4,
   },
   forgotWrap: {
     alignSelf: "flex-end",

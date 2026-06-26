@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -18,7 +18,7 @@ import type { AuthStackParamList } from "../navigation/types";
 type Nav = NativeStackNavigationProp<AuthStackParamList>;
 type VerifyRoute = RouteProp<AuthStackParamList, "VerifyEmail">;
 
-export default function VerifyEmailScreen() {
+function VerifyEmailScreenComponent() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<VerifyRoute>();
   const alert = useAlert();
@@ -26,6 +26,28 @@ export default function VerifyEmailScreen() {
   const [resendLoading, setResendLoading] = useState(false);
 
   const email = route.params?.email || "";
+
+  const handleResend = useCallback(async () => {
+    if (!email || resendLoading) return;
+    try {
+      setResendLoading(true);
+      await resendActivationOtp({ email });
+      setResent(true);
+      alert.success("Resent", "Activation OTP resent successfully");
+    } catch (error: any) {
+      setResent(false);
+      alert.error(
+        "Resend Failed",
+        error?.response?.data?.message || "Failed to resend OTP"
+      );
+    } finally {
+      setResendLoading(false);
+    }
+  }, [email, resendLoading, alert]);
+
+  const handleGoToLogin = useCallback(() => {
+    navigation.navigate("Login");
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "top"]}>
@@ -55,30 +77,14 @@ export default function VerifyEmailScreen() {
 
         <TouchableOpacity
           disabled={resendLoading}
-          onPress={async () => {
-            if (!email || resendLoading) return;
-            try {
-              setResendLoading(true);
-              await resendActivationOtp({ email });
-              setResent(true);
-              alert.success("Resent", "Activation OTP resent successfully");
-            } catch (error: any) {
-              setResent(false);
-              alert.error(
-                "Resend Failed",
-                error?.response?.data?.message || "Failed to resend OTP"
-              );
-            } finally {
-              setResendLoading(false);
-            }
-          }}
+          onPress={handleResend}
         >
           <Text style={styles.link}>
             {resendLoading ? "Sending..." : "Resend verification email"}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("Login")}>
+        <TouchableOpacity activeOpacity={0.85} onPress={handleGoToLogin}>
           <LinearGradient
             colors={["#FC8BAD", "#A654CD"]}
             start={{ x: 1, y: 0 }}
@@ -92,6 +98,9 @@ export default function VerifyEmailScreen() {
     </SafeAreaView>
   );
 }
+
+const VerifyEmailScreen = React.memo(VerifyEmailScreenComponent);
+export default VerifyEmailScreen;
 
 const styles = StyleSheet.create({
   screen: {

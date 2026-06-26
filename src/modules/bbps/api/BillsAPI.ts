@@ -50,6 +50,14 @@ export const fetchBillLocations = async (): Promise<BillLocation[]> => {
   }
 };
 
+// Shared react-query cache keys so BillerSelectScreen's prefetch-on-tap and
+// BillDetailsScreen's own query land in the same cache entry.
+export const bbpsOperatorsQueryKey = (categoryId: number) =>
+  ['bbps-operators', categoryId] as const;
+
+export const bbpsOperatorDetailsQueryKey = (operatorId: number) =>
+  ['bbps-operator-details', operatorId] as const;
+
 export const fetchOperators = async (
   categoryId: number
 ): Promise<Operator[]> => {

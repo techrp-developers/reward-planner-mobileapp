@@ -83,7 +83,7 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value }) => (
 ));
 InfoRow.displayName = 'InfoRow';
 
-const PaymentConfirmationScreen = () => {
+const PaymentConfirmationScreenComponent = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const alert = useAlert();
@@ -622,4 +622,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const PaymentConfirmationScreen = React.memo(PaymentConfirmationScreenComponent);
 export default PaymentConfirmationScreen;

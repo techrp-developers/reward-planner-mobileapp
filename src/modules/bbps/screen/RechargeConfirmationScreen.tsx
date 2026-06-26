@@ -43,7 +43,7 @@ const getPlanAmount = (plan: any) =>
 const getPlanValidity = (plan: any) =>
   String(plan?.validity || plan?.validityDescription || plan?.validity_desc || '-');
 
-const RechargeConfirmationScreen = ({ navigation, route }: any) => {
+const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const { user } = useAuth();
   const alert = useAlert();
   const [loading, setLoading] = useState(false);
@@ -618,4 +618,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const RechargeConfirmationScreen = React.memo(RechargeConfirmationScreenComponent);
 export default RechargeConfirmationScreen;

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   View,
@@ -12,11 +12,23 @@ import { useNavigation } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
-const ProductScreen = () => {
+type RewardItem = { id: string; title: string; sub: string; image: string; brand: string };
+
+const SKELETON_DATA = ['s1', 's2', 's3', 's4'];
+
+const REWARDS: RewardItem[] = [
+  { id: '1', title: 'Minimalist', sub: 'Free Vitamin B5 Moisturizer worth 199', image: 'https://via.placeholder.com/150', brand: 'Minimalist' },
+  { id: '2', title: 'PUMA', sub: 'Flat 40% Off + Extra 10% Off', image: 'https://via.placeholder.com/150', brand: 'PUMA' },
+  { id: '3', title: 'The Man Company', sub: 'Get 60 Days Fragrant Kit at Just', image: 'https://via.placeholder.com/150', brand: 'The Man Company' },
+  { id: '4', title: 'Hyphen', sub: 'Flat 200 Off + Extra 5% Off', image: 'https://via.placeholder.com/150', brand: 'Hyphen' },
+  { id: '5', title: 'Hammer', sub: 'Flat 7000 Off', image: 'https://via.placeholder.com/150', brand: 'Skullcandy' },
+  { id: '6', title: 'Foxtale', sub: 'Buy 1 Get 1 Free + Upto 5% Foxcoins', image: 'https://via.placeholder.com/150', brand: 'Foxtale' },
+];
+
+const ProductScreenComponent = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const pulse = useRef(new Animated.Value(0)).current;
-  const skeletonData = ['s1', 's2', 's3', 's4'];
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -35,16 +47,7 @@ const ProductScreen = () => {
     };
   }, [pulse]);
 
-  const rewards = [
-    { id: '1', title: 'Minimalist', sub: 'Free Vitamin B5 Moisturizer worth 199', image: 'https://via.placeholder.com/150', brand: 'Minimalist' },
-    { id: '2', title: 'PUMA', sub: 'Flat 40% Off + Extra 10% Off', image: 'https://via.placeholder.com/150', brand: 'PUMA' },
-    { id: '3', title: 'The Man Company', sub: 'Get 60 Days Fragrant Kit at Just', image: 'https://via.placeholder.com/150', brand: 'The Man Company' },
-    { id: '4', title: 'Hyphen', sub: 'Flat 200 Off + Extra 5% Off', image: 'https://via.placeholder.com/150', brand: 'Hyphen' },
-    { id: '5', title: 'Hammer', sub: 'Flat 7000 Off', image: 'https://via.placeholder.com/150', brand: 'Skullcandy' },
-    { id: '6', title: 'Foxtale', sub: 'Buy 1 Get 1 Free + Upto 5% Foxcoins', image: 'https://via.placeholder.com/150', brand: 'Foxtale' },
-  ];
-
-  const renderItem = ({ item }) => {
+  const renderItem = useCallback(({ item }: { item: RewardItem | string }) => {
     if (loading) {
       return (
         <View style={styles.cardContainer}>
@@ -57,42 +60,56 @@ const ProductScreen = () => {
       );
     }
 
+    const reward = item as RewardItem;
+
     return (
       <View style={styles.cardContainer}>
         {/* Top Image Section with Brand Badge */}
         <View style={styles.imageSection}>
-          <Image source={{ uri: item.image }} style={styles.productImg} />
+          <Image source={{ uri: reward.image }} style={styles.productImg} />
           <View style={styles.brandBadge}>
-            <Text style={styles.brandBadgeText}>{item.brand}</Text>
+            <Text style={styles.brandBadgeText}>{reward.brand}</Text>
           </View>
         </View>
 
         {/* Bottom Text Content */}
         <View style={styles.detailsSection}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardTitle}>{reward.title}</Text>
           <Text style={styles.cardSubTitle} numberOfLines={2}>
-            {item.sub}
+            {reward.sub}
           </Text>
         </View>
       </View>
     );
-  };
+  }, [loading, pulse]);
+
+  const keyExtractor = useCallback(
+    (item: RewardItem | string, index: number) =>
+      loading ? `${item}-${index}` : (item as RewardItem).id,
+    [loading]
+  );
+
+  const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Strict use of custom ScreenHeader */}
       <BBPSHead
         title="Rewards"
-        onBackPress={() => navigation.goBack()}
+        onBackPress={handleBackPress}
       />
 
       <FlatList
-        data={loading ? skeletonData : rewards}
+        data={loading ? SKELETON_DATA : REWARDS}
         renderItem={renderItem}
-        keyExtractor={(item, index) => (loading ? `${item}-${index}` : item.id)}
+        keyExtractor={keyExtractor}
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={8}
       />
     </SafeAreaView>
   );
@@ -169,4 +186,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const ProductScreen = React.memo(ProductScreenComponent);
 export default ProductScreen;

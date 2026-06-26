@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,12 @@ import type { AuthStackParamList } from "../navigation/types";
 
 type Nav = NativeStackNavigationProp<AuthStackParamList>;
 
-function PasswordSuccess() {
+function PasswordSuccessComponent() {
   const navigation = useNavigation<Nav>();
+
+  const handleReturnToLogin = useCallback(() => {
+    navigation.navigate("Login");
+  }, [navigation]);
 
   return (
     <View style={styles.screen}>
@@ -44,7 +48,7 @@ function PasswordSuccess() {
           You can now log in to your account using your new password.
         </Text>
 
-        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("Login")}>
+        <TouchableOpacity activeOpacity={0.85} onPress={handleReturnToLogin}>
           <LinearGradient
             colors={["#A654CD", "#FC8BAD"]}
             start={{ x: 0, y: 0 }}
@@ -61,6 +65,7 @@ function PasswordSuccess() {
   );
 }
 
+const PasswordSuccess = React.memo(PasswordSuccessComponent);
 export default PasswordSuccess;
 
 const styles = StyleSheet.create({

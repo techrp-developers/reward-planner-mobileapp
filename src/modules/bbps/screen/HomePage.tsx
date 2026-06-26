@@ -8,7 +8,7 @@ import RechargeBill from '../component/home/ReachargeBill';
 // import RechargeModal from '../constatnt/RechargeModal'; // Verify this path!
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
-function HomePage() {
+function HomePageComponent() {
     // const navigation = useNavigation<any>(); // only used by the commented-out handleRechargePress below
     const [loading, setLoading] = useState(true);
     // const [showPopup, setShowPopup] = useState(false); // drives the commented-out RechargeModal below
@@ -109,4 +109,5 @@ const styles = StyleSheet.create({
     skeletonGap: { marginTop: 12 },
 });
 
+const HomePage = React.memo(HomePageComponent);
 export default HomePage;

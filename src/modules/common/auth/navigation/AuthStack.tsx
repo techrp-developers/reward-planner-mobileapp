@@ -13,7 +13,7 @@ import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-const AuthStack = () => {
+const AuthStack = React.memo(() => {
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false, animation: "slide_from_right" }}
@@ -29,6 +29,6 @@ const AuthStack = () => {
       <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
     </Stack.Navigator>
   );
-};
+});
 
 export default AuthStack;
