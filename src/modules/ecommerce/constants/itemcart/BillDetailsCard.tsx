@@ -62,7 +62,7 @@ export default function BillDetailsCard({
         <View style={styles.switchRow}>
           <Text style={styles.coinValue}>{formatAmount(safeRedeemed)}</Text>
           <Switch
-            value={useRewards}
+            value={canUseRewards ? useRewards : false}
             onValueChange={onUseRewardsChange ?? (() => {})}
             disabled={!canUseRewards}
             trackColor={{ false: '#E5E7EB', true: '#22C55E' }}
