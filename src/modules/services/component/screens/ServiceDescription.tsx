@@ -61,6 +61,23 @@
         return { label: name, planTitle: title || undefined };
     }
 
+    function shouldHideAddToCartForService(
+        serviceId: number,
+        serviceName?: string | null,
+    ): boolean {
+        const normalizedName = String(serviceName || '').toLowerCase();
+
+        return (
+            serviceId === 12 ||
+            serviceId === 18 ||
+            serviceId === 19 ||
+            normalizedName.includes('health insurance') ||
+            normalizedName.includes('super top-up') ||
+            normalizedName.includes('super top up') ||
+            normalizedName.includes('personal accident')
+        );
+    }
+
     function ServiceDescription() {
         const route = useRoute<CartRouteProps>();
         const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
@@ -88,6 +105,10 @@
         }, [serviceData]);
 
         const activeVariant = selectedVariant ?? serviceData?.variants?.[0] ?? null;
+        const hideAddToCart = shouldHideAddToCartForService(
+            Number(serviceData?.service?.id || serviceId || 0),
+            serviceData?.service?.name,
+        );
 
         const handleFieldChange = useCallback((fieldName: string, value: string) => {
             setFormValues((prev) => ({ ...prev, [fieldName]: value }));
@@ -425,6 +446,7 @@
                         primaryButtonText={ctaPrimaryText}
                         onPrimaryPress={handlePrimaryPress}
                         onAddToCart={handleAddToCart}
+                        showAddToCart={!hideAddToCart}
                     />
 
                     {/* 2. Title & description */}

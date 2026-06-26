@@ -28,6 +28,7 @@ type ServiceCartProps = {
     primaryButtonText?: string;
     onPrimaryPress?: () => void;
     onAddToCart?: () => void;
+    showAddToCart?: boolean;
 };
 
 export default function ServiceCart({
@@ -41,6 +42,7 @@ export default function ServiceCart({
     primaryButtonText: primaryButtonTextProp,
     onPrimaryPress,
     onAddToCart,
+    showAddToCart = true,
 }: ServiceCartProps) {
     const services = useMemo(() => {
         if (Array.isArray(variants)) {
@@ -174,11 +176,13 @@ export default function ServiceCart({
                     </LinearGradient>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.outlineButtonBorder} onPress={onAddToCart} activeOpacity={0.9}>
-                    <View style={styles.outlineButtonInner}>
-                        <Text style={styles.outlineButtonText}>Add To Cart</Text>
-                    </View>
-                </TouchableOpacity>
+                {showAddToCart && (
+                    <TouchableOpacity style={styles.outlineButtonBorder} onPress={onAddToCart} activeOpacity={0.9}>
+                        <View style={styles.outlineButtonInner}>
+                            <Text style={styles.outlineButtonText}>Add To Cart</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
             </View>
         </ScrollView>
     );
