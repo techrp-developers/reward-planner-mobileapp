@@ -352,7 +352,7 @@ const QuotesResult: React.FC<Props> = ({
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
-            <Text style={styles.ctaButtonText}>View Details</Text>
+            <Text style={styles.ctaButtonText}>Enquire Now</Text>
             <MaterialIcons name="arrow-forward" size={16} color="#FFF" />
             
           </TouchableOpacity>
