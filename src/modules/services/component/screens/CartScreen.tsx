@@ -454,7 +454,8 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
-        bottomOffset={stickyCTA.bottomOffset}
+        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
+        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>
