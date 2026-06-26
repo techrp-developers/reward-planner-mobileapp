@@ -95,6 +95,11 @@ export interface ServiceCancellation {
   can_cancel: boolean;
 }
 
+export interface ServiceCancellationReason {
+  reason_id: number;
+  reason_text: string;
+}
+
 export interface ServiceItem {
   id: number;
   order_ref: string;
@@ -326,6 +331,67 @@ export const checkServicePaymentStatus = async (parent_order_id: string) => {
       status: error?.response?.status,
       message: error?.response?.data?.message,
     });
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 6. Get Service Cancellation Reasons
+// ==============================
+export const getServiceCancellationReasons = async (): Promise<{
+  success: boolean;
+  reasons: ServiceCancellationReason[];
+}> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/cancellation-reasons`,
+      { headers }
+    );
+
+    return {
+      success: Boolean(res.data?.success),
+      reasons: Array.isArray(res.data?.reasons) ? res.data.reasons : [],
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Cancellation Reasons Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 7. Request Service Order Cancellation
+// ==============================
+export const requestServiceOrderCancellation = async (payload: {
+  service_order_id: number;
+  reason_id: number;
+  comment?: string;
+}) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service-orders/cancel-order-request`,
+      {
+        service_order_id: payload.service_order_id,
+        reason_id: payload.reason_id,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Request Service Cancellation Error:", error?.response || error);
     throw error?.response?.data || error;
   }
 };

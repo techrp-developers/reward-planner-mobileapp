@@ -6,21 +6,34 @@ import type { ServiceCancellation } from '../../api/OrderAPI';
 type Props = {
   cancellation: ServiceCancellation;
   serviceName: string;
+  canCancelByStatus: boolean;
   onCancelPress: () => void;
 };
 
 export default function ServiceCancellationCard({
   cancellation,
   serviceName,
+  canCancelByStatus,
   onCancelPress,
 }: Props) {
-  if (!cancellation.can_cancel) return null;
+  const enabled = cancellation.can_cancel && canCancelByStatus;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.cancelBtn} onPress={onCancelPress} activeOpacity={0.8}>
-        <MaterialCommunityIcons name="close-circle-outline" size={16} color="#DC2626" />
-        <Text style={styles.cancelText}>Cancel {serviceName}</Text>
+      <TouchableOpacity
+        style={[styles.cancelBtn, !enabled && styles.cancelBtnDisabled]}
+        onPress={onCancelPress}
+        activeOpacity={0.8}
+        disabled={!enabled}
+      >
+        <MaterialCommunityIcons
+          name={enabled ? 'close-circle-outline' : 'lock-outline'}
+          size={16}
+          color={enabled ? '#DC2626' : '#9CA3AF'}
+        />
+        <Text style={[styles.cancelText, !enabled && styles.cancelTextDisabled]}>
+          {enabled ? `Cancel ${serviceName}` : 'Cancellation unavailable'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -46,5 +59,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignSelf: 'flex-start',
   },
+  cancelBtnDisabled: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
   cancelText: { fontSize: 13, fontWeight: '700', color: '#DC2626' },
+  cancelTextDisabled: { color: '#9CA3AF' },
 });

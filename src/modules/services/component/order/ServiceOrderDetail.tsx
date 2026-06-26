@@ -118,21 +118,14 @@ export default function ServiceOrderDetail() {
 
   // ── Item action handlers (parent owns all side-effects) ───────────────────
   const handleCancelItem = (item: ServiceItem) => {
-    Alert.alert(
-      'Cancel Service',
-      `Are you sure you want to cancel "${item.service_name}"?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: call cancel API when endpoint is available
-            Alert.alert('Cancelled', `${item.service_name} has been cancelled.`);
-          },
-        },
-      ]
-    );
+    navigation.navigate('ServiceCancellationRequest', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      order_ref: item.order_ref,
+      service_name: item.service_name,
+      variant_name: item.variant_name,
+      image_url: item.image_url,
+    });
   };
 
   const handleFeedbackItem = (item: ServiceItem) => {
