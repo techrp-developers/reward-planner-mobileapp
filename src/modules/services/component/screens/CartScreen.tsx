@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
-import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview, getCheckoutPreview } from '../../api/CartAPI';
+import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview } from '../../api/CartAPI';
 import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCard';
 import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import CheckoutSummary from '../../../ecommerce/components/ItemCardAddress/CheckoutSummary';
@@ -79,8 +79,11 @@ type ServiceCartItem = {
 // };
 
 const normalizeCartItems = (response: any): ServiceCartItem[] => {
-  const bundles = response?.data?.bundles || [];
-  const individualItems = response?.data?.individual_items || [];
+  // getServiceCartItems() returns a flat { bundles, individual_items } shape;
+  // getCheckoutPreview() nests the same shape under .data. Handle both.
+  const data = response?.data ?? response ?? {};
+  const bundles = data?.bundles || [];
+  const individualItems = data?.individual_items || [];
 
   const normalized: ServiceCartItem[] = [];
 
@@ -197,35 +200,8 @@ function CartScreen() {
         setLoading(true);
       }
 
-      // Prefer checkout-preview: it includes service_id & variant_id (needed for Buy Now).
-      // Fall back to cart-items endpoint if preview fails or returns empty.
-      let response: any;
-      try {
-        response = await getCheckoutPreview();
-      } catch {
-        response = await getServiceCartItems();
-      }
-
-      let normalized = normalizeCartItems(response);
-
-      // checkout-preview may report empty if the cart was consumed by an order.
-      // In that case, fall back to cart-items so the screen still shows products.
-      if (normalized.length === 0) {
-        try {
-          const cartResponse = await getServiceCartItems();
-          const fallback = normalizeCartItems(cartResponse);
-          if (fallback.length > 0) {
-            setItems(fallback);
-            queryClient.setQueryData(serviceCartItemsQueryKey, cartResponse);
-            setError('');
-            return;
-          }
-          normalized = fallback;
-          response = cartResponse;
-        } catch {
-          // ignore fallback errors; keep normalized as empty
-        }
-      }
+      const response = await getServiceCartItems();
+      const normalized = normalizeCartItems(response);
 
       setItems(normalized);
       queryClient.setQueryData(serviceCartItemsQueryKey, response);
