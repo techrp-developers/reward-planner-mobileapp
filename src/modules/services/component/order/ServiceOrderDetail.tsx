@@ -444,14 +444,7 @@ function InvoiceDownloadRow({
 }) {
   return (
     <View style={styles.invoiceRow}>
-      <View style={styles.invoiceIcon}>
-        <MaterialCommunityIcons name="file-pdf-box" size={24} color={PURPLE} />
-      </View>
-
-      <View style={styles.invoiceCopy}>
-        <Text style={styles.invoiceTitle}>Service invoice</Text>
-        <Text style={styles.invoiceText}>Download your payment invoice as a PDF</Text>
-      </View>
+      <Text style={styles.invoiceText}>Save a copy of your order</Text>
 
       <TouchableOpacity
         style={[styles.invoiceButton, downloading && styles.invoiceButtonDisabled]}
@@ -460,12 +453,9 @@ function InvoiceDownloadRow({
         disabled={downloading}
       >
         {downloading ? (
-          <ActivityIndicator size="small" color="#FFF" />
+          <ActivityIndicator size="small" color={PURPLE} />
         ) : (
-          <>
-            <Text style={styles.invoiceButtonText}>Download</Text>
-            <MaterialCommunityIcons name="download" size={15} color="#FFF" />
-          </>
+          <Text style={styles.invoiceButtonText}>Download Invoice</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -580,52 +570,32 @@ const styles = StyleSheet.create({
   invoiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#F1EEF8',
-  },
-  invoiceIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0ECFF',
-  },
-  invoiceCopy: {
-    flex: 1,
-    marginLeft: 11,
-    marginRight: 8,
-  },
-  invoiceTitle: {
-    fontSize: 13,
-    color: '#251B40',
-    fontWeight: '900',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E7E0F2',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   invoiceText: {
-    fontSize: 11,
-    color: '#817A91',
+    flex: 1,
+    fontSize: 12,
+    color: '#2F293D',
     fontWeight: '600',
-    marginTop: 3,
   },
   invoiceButton: {
-    minWidth: 96,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: PURPLE,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
+    paddingLeft: 12,
+    minWidth: 118,
+    alignItems: 'flex-end',
   },
   invoiceButtonDisabled: {
     opacity: 0.65,
   },
   invoiceButtonText: {
-    fontSize: 11,
-    color: '#FFF',
+    fontSize: 12,
+    color: PURPLE,
     fontWeight: '900',
   },
 
