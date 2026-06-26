@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useServiceHome } from '../../hooks/useServiceHome';
 import type { ServiceItem } from '../../navigation/type';
 import Card from '../constant/Card';
@@ -13,6 +14,7 @@ import Card from '../constant/Card';
 const HORIZONTAL_PADDING = 16;
 
 // Professional sizing: Card occupies 78% of width, allowing next card to peek in
+const navigation = useNavigation<any>();
 
 // Fixed typo from 'assete' to 'assets'
 const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
@@ -78,9 +80,12 @@ export default function QuickServices() {
           users={orders}
           coins={coinsText}
           discount={discount}
-          onPress={() => {
-            // Handled safely inside EasyServiceCard
-          }}
+          onPress={() =>
+            navigation.navigate('ServiceDescription', {
+              serviceId: item.service_id,
+              title: item.name,
+            })
+          }
         />
       </View>
     );
