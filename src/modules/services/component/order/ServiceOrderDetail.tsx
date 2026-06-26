@@ -365,9 +365,6 @@ function Header({ onBack }: { onBack: () => void }) {
         <Text style={styles.headerEyebrow}>SERVICE HUB</Text>
         <Text style={styles.headerTitle}>Order details</Text>
       </View>
-      <View style={styles.headerIcon}>
-        <MaterialCommunityIcons name="receipt-text-outline" size={21} color="#FFF" />
-      </View>
     </LinearGradient>
   );
 }
@@ -478,7 +475,6 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, marginLeft: 12 },
   headerEyebrow: { color: 'rgba(255,255,255,0.64)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFF', marginTop: 1, letterSpacing: -0.3 },
-  headerIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 8, gap: 14 },
 
