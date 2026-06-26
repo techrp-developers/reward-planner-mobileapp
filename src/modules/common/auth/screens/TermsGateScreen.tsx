@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -42,7 +42,7 @@ const T = {
 
 type TermCardProps = { title: string; content: string; iconText: string };
 
-const TermCard = ({ title, content, iconText }: TermCardProps) => (
+const TermCard = memo(({ title, content, iconText }: TermCardProps) => (
   <View style={styles.card}>
     <View style={styles.cardHeader}>
       <View style={styles.iconCircle}>
@@ -52,13 +52,13 @@ const TermCard = ({ title, content, iconText }: TermCardProps) => (
     </View>
     <Text style={styles.cardContent}>{content}</Text>
   </View>
-);
+));
 
 // ─────────────────────────────────────────────────────────────
 // SCREEN
 // ─────────────────────────────────────────────────────────────
 
-export default function TermsGateScreen() {
+function TermsGateScreenComponent() {
   const { setTermsAccepted } = useAuth();
   const alert = useAlert();
 
@@ -123,6 +123,10 @@ export default function TermsGateScreen() {
     }
   }, [checked, saving, setTermsAccepted, alert]);
 
+  const handleToggleChecked = useCallback(() => {
+    setChecked(v => !v);
+  }, []);
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
@@ -179,7 +183,7 @@ export default function TermsGateScreen() {
                   style={styles.checkboxRow}
                   activeOpacity={0.8}
                   disabled={saving}
-                  onPress={() => setChecked(v => !v)}
+                  onPress={handleToggleChecked}
                 >
                   <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
                     {checked && <Text style={styles.checkIcon}>✓</Text>}
@@ -237,6 +241,9 @@ export default function TermsGateScreen() {
     </View>
   );
 }
+
+const TermsGateScreen = memo(TermsGateScreenComponent);
+export default TermsGateScreen;
 
 // ─────────────────────────────────────────────────────────────
 // STYLES

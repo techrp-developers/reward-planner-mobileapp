@@ -50,6 +50,14 @@ export const fetchBillLocations = async (): Promise<BillLocation[]> => {
   }
 };
 
+// Shared react-query cache keys so BillerSelectScreen's prefetch-on-tap and
+// BillDetailsScreen's own query land in the same cache entry.
+export const bbpsOperatorsQueryKey = (categoryId: number) =>
+  ['bbps-operators', categoryId] as const;
+
+export const bbpsOperatorDetailsQueryKey = (operatorId: number) =>
+  ['bbps-operator-details', operatorId] as const;
+
 export const fetchOperators = async (
   categoryId: number
 ): Promise<Operator[]> => {
@@ -377,7 +385,13 @@ export type TransactionStatus =
   | "PENDING";
 
 const extractTransactionStatus = (response: any): { status: TransactionStatus; message: string } => {
+  // check-status responds with { success, data: { final_status, bbps_status,
+  // payment_status, ... } } — final_status ("SUCCESS" | "FAILED" | "REFUNDED" |
+  // "RECONCILIATION_REQUIRED") is the terminal-state field; it has no top-level
+  // `status`/`transaction_status`/`message`, which is why polling never used to
+  // stop — those fields never existed in the real response.
   const status = String(
+    response?.data?.final_status ||
     response?.data?.status ||
     response?.status ||
     response?.data?.transaction_status ||
@@ -385,7 +399,11 @@ const extractTransactionStatus = (response: any): { status: TransactionStatus; m
   ).toUpperCase() as TransactionStatus;
 
   const message =
-    response?.message || response?.data?.message || "Transaction is being processed.";
+    response?.message ||
+    response?.data?.message ||
+    (status === "PENDING"
+      ? "Transaction is being processed."
+      : `Payment ${response?.data?.payment_status || response?.data?.bbps_status || status}.`);
 
   return { status, message };
 };

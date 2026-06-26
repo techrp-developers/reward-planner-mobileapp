@@ -53,6 +53,24 @@ const promptReasonForType = (type: BiometricType): string => {
   return 'Place your finger to access your account';
 };
 
+const STATUS_MESSAGE: Record<AuthState, string | null> = {
+  idle:          null,
+  authenticating: 'Scanning…',
+  success:       'Authenticated',
+  failed:        'Authentication failed. Please try again.',
+  cancelled:     'Cancelled. Tap the icon to try again.',
+  lockout:       'Too many attempts. Use your password.',
+};
+
+const ICON_COLOR: Record<AuthState, string> = {
+  idle:          '#F472B6',
+  authenticating: '#C084FC',
+  success:       '#34D399',
+  failed:        '#F87171',
+  cancelled:     '#CBD5E1',
+  lockout:       '#F87171',
+};
+
 // ─── GlowOrb ─────────────────────────────────────────────────────────────────
 
 type GlowOrbProps = {
@@ -66,7 +84,7 @@ type GlowOrbProps = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function GlowOrb({ color, size, top, bottom, left, right, opacity = 0.35 }: GlowOrbProps) {
+const GlowOrb = React.memo(function GlowOrb({ color, size, top, bottom, left, right, opacity = 0.35 }: GlowOrbProps) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -98,11 +116,11 @@ function GlowOrb({ color, size, top, bottom, left, right, opacity = 0.35 }: Glow
       ]}
     />
   );
-}
+});
 
 // ─── PulseRing ────────────────────────────────────────────────────────────────
 
-function PulseRing({ active }: { active: boolean }) {
+const PulseRing = React.memo(function PulseRing({ active }: { active: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
   const ringOpacity = useRef(new Animated.Value(0)).current;
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -144,11 +162,11 @@ function PulseRing({ active }: { active: boolean }) {
       ]}
     />
   );
-}
+});
 
 // ─── BiometricLockScreen ──────────────────────────────────────────────────────
 
-export default function BiometricLockScreen({
+function BiometricLockScreenComponent({
   visible,
   onSuccess,
   onUseFallback,
@@ -263,23 +281,8 @@ export default function BiometricLockScreen({
 
   const isScanning = authState === 'authenticating';
 
-  const statusMessage: Record<AuthState, string | null> = {
-    idle:          null,
-    authenticating: 'Scanning…',
-    success:       'Authenticated',
-    failed:        'Authentication failed. Please try again.',
-    cancelled:     'Cancelled. Tap the icon to try again.',
-    lockout:       'Too many attempts. Use your password.',
-  };
-
-  const iconColor: Record<AuthState, string> = {
-    idle:          '#F472B6',
-    authenticating: '#C084FC',
-    success:       '#34D399',
-    failed:        '#F87171',
-    cancelled:     '#CBD5E1',
-    lockout:       '#F87171',
-  };
+  const statusMessage = STATUS_MESSAGE;
+  const iconColor = ICON_COLOR;
 
   const canRetry = authState === 'failed' || authState === 'cancelled' || authState === 'idle';
   const isLockout = authState === 'lockout';
@@ -409,6 +412,9 @@ export default function BiometricLockScreen({
     </Modal>
   );
 }
+
+const BiometricLockScreen = React.memo(BiometricLockScreenComponent);
+export default BiometricLockScreen;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

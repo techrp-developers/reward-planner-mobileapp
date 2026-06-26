@@ -19,6 +19,11 @@ interface PaymentsQuickAccessCardProps {
   onOpenPayments?: () => void;
   onOpenBills?: () => void;
   onOpenHistory?: () => void;
+  // Bottom "Make a Payment" CTA — navigates straight to the standalone
+  // top-level BBPS stack (no navbar/bottom tabs), distinct from
+  // onOpenPayments which opens the BBPS home page nested inside
+  // PaymentsModule (keeps the navbar/bottom tabs visible).
+  onMakePayment?: () => void;
   cardWidth?: number;
 }
 
@@ -33,6 +38,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
   onOpenPayments,
   onOpenBills,
   onOpenHistory,
+  onMakePayment,
 }) => {
   const { isDark, theme } = useAppTheme();
   const mountAnim = useRef(new Animated.Value(0)).current;
@@ -60,7 +66,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
       {
         title: "Bills & Utilities",
         icon: "receipt-text-outline",
-        onPress: onOpenBills,
+        onPress: onOpenPayments,
       },
       {
         title: "Recent Transaction",
@@ -68,7 +74,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
         onPress: onOpenHistory,
       },
     ],
-    [onOpenBills, onOpenHistory],
+    [onOpenBills, onOpenPayments, onOpenHistory],
   );
 
   const t = useMemo(
@@ -147,7 +153,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
           ))}
         </View>
 
-        <TouchableOpacity onPress={onOpenPayments} activeOpacity={0.88}>
+        <TouchableOpacity onPress={onMakePayment} activeOpacity={0.88}>
           <LinearGradient
             colors={["#111827", "#4F46E5"]}
             start={{ x: 0, y: 0.5 }}

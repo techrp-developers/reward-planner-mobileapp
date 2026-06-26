@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
 import BBPSHead from '../constatnt/BBPSHead';
 import {
+  bbpsOperatorDetailsQueryKey,
   fetchBill,
   fetchOperatorDetails,
-  OperatorDetails,
   OperatorField,
 } from '../api/BillsAPI';
 import { useAlert } from '../../ecommerce/components/alerts';
@@ -24,6 +25,8 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 
 const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
+const FIVE_MINUTES = 5 * 60 * 1000;
+const FIELD_SKELETON_GROUPS = [0, 1];
 
 type BillDetailsRouteParams = {
   operatorData?: {
@@ -67,7 +70,7 @@ const isUserInputField = (field: OperatorField) =>
   Boolean(field?.param_name && field?.param_label) &&
   field.param_name !== 'recharge_plan_id';
 
-const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
+const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProps) => {
   const alert = useAlert();
   const alertRef = useRef(alert);
   const { user } = useAuth();
@@ -80,12 +83,21 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
   };
   const operatorId = Number(operatorData.id || routeParams.operatorId);
   const categoryName = routeParams?.categoryName || 'Electricity Bill';
+  const hasValidOperatorId = Number.isFinite(operatorId) && operatorId > 0;
 
-  const [operatorDetails, setOperatorDetails] = useState<OperatorDetails | null>(null);
   const [formValues, setFormValues] = useState<FormValues>({});
   // const [selectedCategory, setSelectedCategory] = useState('Home');
   const [isLoading, setIsLoading] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(true);
+
+  const {
+    data: operatorDetails = null,
+    isLoading: detailsLoading,
+  } = useQuery({
+    queryKey: bbpsOperatorDetailsQueryKey(operatorId),
+    queryFn: () => fetchOperatorDetails(operatorId),
+    enabled: hasValidOperatorId,
+    staleTime: FIVE_MINUTES,
+  });
 
   // const categories = ['Home', 'Office', 'Other', 'Shop', 'Farm', 'Clinic'];
   const fields = useMemo(
@@ -121,65 +133,32 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
   }, [alert]);
 
   useEffect(() => {
-    let mounted = true;
+    if (!hasValidOperatorId) {
+      alertRef.current.warning('Invalid Biller', 'Biller details are missing. Please select a biller again.');
+      return;
+    }
 
-    const loadOperatorDetails = async () => {
-      if (!Number.isFinite(operatorId) || operatorId <= 0) {
-        setDetailsLoading(false);
-        alertRef.current.warning('Invalid Biller', 'Biller details are missing. Please select a biller again.');
-        return;
+    if (!operatorDetails) {
+      return;
+    }
+
+    const initialValues = (operatorDetails.data || []).filter(isUserInputField).reduce<FormValues>((values, field) => {
+      if (field?.param_name) {
+        values[field.param_name] = '';
       }
+      return values;
+    }, {});
+    setFormValues(initialValues);
+  }, [hasValidOperatorId, operatorDetails]);
 
-      try {
-        setDetailsLoading(true);
-        const details = await fetchOperatorDetails(operatorId);
-
-        if (!mounted) {
-          return;
-        }
-
-        setOperatorDetails(details);
-        console.log('Operator Details:', details);
-        const initialValues = (details.data || []).filter(isUserInputField).reduce<FormValues>((values, field) => {
-          if (field?.param_name) {
-            values[field.param_name] = '';
-          }
-          return values;
-        }, {});
-        setFormValues(initialValues);
-      } catch (error: any) {
-        if (!mounted) {
-          return;
-        }
-
-        setOperatorDetails(null);
-        setFormValues({});
-        alertRef.current.error(
-          'Error',
-          error?.message || 'Could not load biller details. Please try again.'
-        );
-      } finally {
-        if (mounted) {
-          setDetailsLoading(false);
-        }
-      }
-    };
-
-    loadOperatorDetails();
-
-    return () => {
-      mounted = false;
-    };
-  }, [operatorId]);
-
-  const updateFieldValue = (field: OperatorField, value: string) => {
+  const updateFieldValue = useCallback((field: OperatorField, value: string) => {
     setFormValues((current) => ({
       ...current,
       [field.param_name]: sanitizeFieldValue(value, field),
     }));
-  };
+  }, []);
 
-  const validateInputs = () => {
+  const validateInputs = useCallback(() => {
     if (fields.length === 0) {
       alert.warning('Details Missing', 'No biller fields are available. Please try again.');
       return false;
@@ -205,9 +184,9 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
     }
 
     return true;
-  };
+  }, [fields, formValues, alert]);
 
-  const handleContinue = async () => {
+  const handleContinue = useCallback(async () => {
     if (!validateInputs()) {
       return;
     }
@@ -259,13 +238,27 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    validateInputs,
+    operatorDetails,
+    formValues,
+    loggedInUserName,
+    operatorId,
+    user?.phone,
+    isBillFetchSupported,
+    navigation,
+    providerName,
+    categoryName,
+    alert,
+  ]);
+
+  const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
       <BBPSHead
         title="Enter Details"
-        onBackPress={() => navigation.goBack()}
+        onBackPress={handleBackPress}
       />
 
       <View style={styles.content}>
@@ -296,7 +289,7 @@ const BillDetailsScreen = ({ route, navigation }: BillDetailsScreenProps) => {
           <View style={styles.inputWrapper}>
             {detailsLoading ? (
               <>
-                {[0, 1].map((item) => (
+                {FIELD_SKELETON_GROUPS.map((item) => (
                   <View key={`field-skeleton-${item}`} style={item > 0 && styles.mobileLabel}>
                     <SkeletonBox pulse={pulse} width={120} height={13} borderRadius={8} />
                     <SkeletonBox pulse={pulse} width="100%" height={50} borderRadius={8} style={styles.skeletonInputGap} />
@@ -494,4 +487,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFF', fontSize: 18, fontWeight: '600' },
 });
 
+const BillDetailsScreen = React.memo(BillDetailsScreenComponent);
 export default BillDetailsScreen;

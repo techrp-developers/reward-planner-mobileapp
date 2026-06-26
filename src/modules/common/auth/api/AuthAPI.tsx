@@ -252,13 +252,7 @@
 
   export const deleteCustomer = async () => {
     try {
-      const headers = await getAuthHeaders();
-
-      const res = await axios.delete(
-        `${API_BASE_URL}/v1/auth/delete-customer`,
-
-        { headers }
-      );
+      const res = await api.delete("/v1/auth/delete-customer");
 
       return res.data;
     } catch (error) {
@@ -268,17 +262,11 @@
   };
 
   export const updateProfile = async (formData: FormData) => {
-    const headers = await getAuthHeaders();
-    const res = await axios.put(
-      `${API_BASE_URL}/v1/auth/profile`,
-      formData,
-      {
-        headers: {
-          ...headers,
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
+    const res = await api.put("/v1/auth/profile", formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data;
   };
 
@@ -457,13 +445,7 @@ export const changePassword = async (
     newPassword: "***",
   });
 
-  const headers = await getAuthHeaders();
-
-  const res = await axios.put(
-    `${API_BASE_URL}/v1/auth/change-password`,
-    payload,
-    { headers }
-  );
+  const res = await api.put("/v1/auth/change-password", payload);
 
   console.log("✅ Change Password response:", res.data);
 
