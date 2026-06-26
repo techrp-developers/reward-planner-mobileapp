@@ -60,7 +60,9 @@ export interface OrdersResponse {
 
 export interface GetOrdersParams {
   page?: number;
+  limit?: number;
   search?: string;
+  status?: string;
   fromDate?: string;
   toDate?: string;
   timeFilter?: string;
@@ -156,7 +158,9 @@ export const getMyServiceOrders = async (
 
     const {
       page = 1,
+      limit = 10,
       search = "",
+      status = "",
       fromDate = "",
       toDate = "",
       timeFilter = "",
@@ -168,10 +172,12 @@ export const getMyServiceOrders = async (
         headers,
         params: {
           page,
+          limit,
           search,
-          fromDate,
-          toDate,
-          timeFilter,
+          status,
+          from_date: fromDate,
+          to_date: toDate,
+          time_filter: timeFilter,
         },
       }
     );

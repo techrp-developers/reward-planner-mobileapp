@@ -34,6 +34,13 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: "cancelled", label: "Cancelled" },
 ];
 
+const TIME_FILTERS = [
+  { key: "", label: "All time" },
+  { key: "30days", label: "Last 30 days" },
+  { key: "3months", label: "Last 3 months" },
+  { key: "6months", label: "Last 6 months" },
+];
+
 const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
   in_progress:      { color: "#2563EB", bg: "#EFF6FF", label: "In Progress" },
   pending_payment:  { color: "#D97706", bg: "#FFFBEB", label: "Pending Payment" },
@@ -152,6 +159,7 @@ export default function MyOrder() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [timeFilter, setTimeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
@@ -170,8 +178,10 @@ export default function MyOrder() {
       try {
         const res = await getMyServiceOrders({
           page: pageNum,
+          limit: 10,
           search: searchQuery,
-          timeFilter: statusFilter,
+          status: statusFilter,
+          timeFilter,
         });
         if (res.success) {
           const fetched = res.orders || [];
@@ -190,7 +200,7 @@ export default function MyOrder() {
         setLoadingMore(false);
       }
     },
-    [isAuthenticated, searchQuery, statusFilter]
+    [isAuthenticated, searchQuery, statusFilter, timeFilter]
   );
 
   useEffect(() => {
@@ -301,6 +311,39 @@ export default function MyOrder() {
           );
         })}
         </ScrollView>
+
+        <Text style={[styles.filterLabel, styles.periodLabel]}>ORDER PERIOD</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsRow}
+        >
+          {TIME_FILTERS.map(filter => {
+            const active = timeFilter === filter.key;
+            return (
+              <TouchableOpacity
+                key={filter.key}
+                onPress={() => setTimeFilter(filter.key)}
+                activeOpacity={0.7}
+              >
+                {active ? (
+                  <LinearGradient
+                    colors={["#8B6CFF", "#6545D8"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.tab}
+                  >
+                    <Text style={[styles.tabText, styles.tabTextActive]}>{filter.label}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tab}>
+                    <Text style={styles.tabText}>{filter.label}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Content */}
@@ -321,9 +364,13 @@ export default function MyOrder() {
         <View style={styles.centered}>
           <MaterialCommunityIcons name="clipboard-text-outline" size={56} color="#D1D5DB" />
           <Text style={styles.emptyTitle}>No orders found</Text>
-          {(searchQuery || statusFilter) ? (
+          {(searchQuery || statusFilter || timeFilter) ? (
             <TouchableOpacity
-              onPress={() => { setSearchQuery(""); setStatusFilter(""); }}
+              onPress={() => {
+                setSearchQuery("");
+                setStatusFilter("");
+                setTimeFilter("");
+              }}
             >
               <Text style={styles.clearText}>Clear filters</Text>
             </TouchableOpacity>
@@ -412,6 +459,7 @@ const styles = StyleSheet.create({
 
   filtersSection: { paddingTop: 20, paddingBottom: 2 },
   filterLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.1, color: "#918AA5", paddingHorizontal: 20, marginBottom: 10 },
+  periodLabel: { marginTop: 8 },
   tabsRow: {
     paddingHorizontal: 20,
     paddingBottom: 10,
