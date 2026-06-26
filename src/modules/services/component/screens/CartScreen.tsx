@@ -301,12 +301,12 @@ function CartScreen() {
     try {
       setBusyItemId(item.id as any);
 
-      if (item.isBundle && item.bundle_items) {
-        await Promise.all(
-          item.bundle_items.map((i: any) =>
-            removeServiceCartItem(i.id)
-          )
-        );
+      if (item.isBundle && item.bundle_items && item.bundle_items.length > 0) {
+        // Removing any one bundle item deletes the whole bundle server-side
+        // (see serviceCartModel.removeItem) — calling this per item in
+        // parallel just races duplicate deletes against an already-removed
+        // row, producing spurious 404s. One call is enough.
+        await removeServiceCartItem(item.bundle_items[0].id);
       } else {
         await removeServiceCartItem(item.id as number);
       }
