@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
   Modal,
   Platform,
@@ -244,6 +245,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
   }
 
   const FOOTER_HEIGHT = 84; // back button (52) + padding (20) + gap (12)
+  const SCREEN_HEIGHT = Dimensions.get("window").height;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -259,6 +261,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         contentContainerStyle={[
           styles.scrollContent,
           {
+            minHeight: SCREEN_HEIGHT + FOOTER_HEIGHT + insets.bottom,
             paddingBottom: FOOTER_HEIGHT + insets.bottom + 24,
           },
         ]}
