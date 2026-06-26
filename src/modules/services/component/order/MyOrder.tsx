@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -160,6 +161,7 @@ export default function MyOrder() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [timeFilter, setTimeFilter] = useState("");
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
@@ -220,6 +222,8 @@ export default function MyOrder() {
     if (key === "") return summaryData.all;
     return (summaryData as any)[key] ?? 0;
   };
+  const selectedTimeLabel =
+    TIME_FILTERS.find(filter => filter.key === timeFilter)?.label || "All time";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -266,64 +270,49 @@ export default function MyOrder() {
       </LinearGradient>
 
       <View style={styles.filtersSection}>
-        <Text style={styles.filterLabel}>FILTER BY STATUS</Text>
-        <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsRow}
-      >
-        {STATUS_TABS.map(tab => {
-          const active = statusFilter === tab.key;
-          const count = getSummaryCount(tab.key);
-          const inner = (
-            <>
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-              {summaryData !== null && (
-                <View style={[styles.tabCount, active && styles.tabCountActive]}>
-                  <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>
-                    {count}
-                  </Text>
-                </View>
-              )}
-            </>
-          );
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setStatusFilter(tab.key)}
-              activeOpacity={0.7}
-            >
-              {active ? (
-                <LinearGradient
-                  colors={["#8B6CFF", "#6545D8"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.tab}
-                >
-                  {inner}
-                </LinearGradient>
-              ) : (
-                <View style={styles.tab}>{inner}</View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-        </ScrollView>
-
-        <Text style={[styles.filterLabel, styles.periodLabel]}>ORDER PERIOD</Text>
+        <View style={styles.filterToolbar}>
+          <Text style={styles.filterLabel}>ORDER STATUS</Text>
+          <TouchableOpacity
+            style={[styles.filterButton, timeFilter && styles.filterButtonActive]}
+            onPress={() => setIsFilterSheetOpen(true)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="filter-variant"
+              size={16}
+              color={timeFilter ? "#FFF" : PURPLE}
+            />
+            <Text style={[styles.filterButtonText, timeFilter && styles.filterButtonTextActive]}>
+              {timeFilter ? selectedTimeLabel : "Filter"}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsRow}
         >
-          {TIME_FILTERS.map(filter => {
-            const active = timeFilter === filter.key;
+          {STATUS_TABS.map(tab => {
+            const active = statusFilter === tab.key;
+            const count = getSummaryCount(tab.key);
+            const inner = (
+              <>
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+                {summaryData !== null && (
+                  <View style={[styles.tabCount, active && styles.tabCountActive]}>
+                    <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
             return (
               <TouchableOpacity
-                key={filter.key}
-                onPress={() => setTimeFilter(filter.key)}
+                key={tab.key}
+                onPress={() => setStatusFilter(tab.key)}
                 activeOpacity={0.7}
               >
                 {active ? (
@@ -333,18 +322,70 @@ export default function MyOrder() {
                     end={{ x: 1, y: 0 }}
                     style={styles.tab}
                   >
-                    <Text style={[styles.tabText, styles.tabTextActive]}>{filter.label}</Text>
+                    {inner}
                   </LinearGradient>
                 ) : (
-                  <View style={styles.tab}>
-                    <Text style={styles.tabText}>{filter.label}</Text>
-                  </View>
+                  <View style={styles.tab}>{inner}</View>
                 )}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
+
+      <Modal
+        visible={isFilterSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsFilterSheetOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalDismissArea}
+            activeOpacity={1}
+            onPress={() => setIsFilterSheetOpen(false)}
+          />
+          <View style={styles.filterSheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeading}>
+              <View>
+                <Text style={styles.sheetTitle}>Filter orders</Text>
+                <Text style={styles.sheetSubtitle}>Choose an order period</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.sheetClose}
+                onPress={() => setIsFilterSheetOpen(false)}
+              >
+                <MaterialCommunityIcons name="close" size={20} color="#5F5873" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.periodOptions}>
+              {TIME_FILTERS.map(filter => {
+                const active = timeFilter === filter.key;
+                return (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[styles.periodOption, active && styles.periodOptionActive]}
+                    onPress={() => {
+                      setTimeFilter(filter.key);
+                      setIsFilterSheetOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.periodOptionText, active && styles.periodOptionTextActive]}>
+                      {filter.label}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name={active ? "check-circle" : "circle-outline"}
+                      size={21}
+                      color={active ? PURPLE : "#B4ADBF"}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Content */}
       {loading ? (
@@ -458,8 +499,26 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: "#1F1738", fontWeight: "500" },
 
   filtersSection: { paddingTop: 20, paddingBottom: 2 },
-  filterLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.1, color: "#918AA5", paddingHorizontal: 20, marginBottom: 10 },
-  periodLabel: { marginTop: 8 },
+  filterToolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  filterLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.1, color: "#918AA5" },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 11,
+    backgroundColor: "#F0ECFF",
+  },
+  filterButtonActive: { backgroundColor: PURPLE },
+  filterButtonText: { fontSize: 11, fontWeight: "800", color: PURPLE },
+  filterButtonTextActive: { color: "#FFF" },
   tabsRow: {
     paddingHorizontal: 20,
     paddingBottom: 10,
@@ -490,6 +549,36 @@ const styles = StyleSheet.create({
   tabCountActive: { backgroundColor: "rgba(255,255,255,0.25)" },
   tabCountText: { fontSize: 11, fontWeight: "700", color: "#6B7280" },
   tabCountTextActive: { color: "#FFF" },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(25, 17, 47, 0.46)", justifyContent: "flex-end" },
+  modalDismissArea: { flex: 1 },
+  filterSheet: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 34,
+  },
+  sheetHandle: { alignSelf: "center", width: 38, height: 4, borderRadius: 4, backgroundColor: "#DFD9E9", marginTop: 10 },
+  sheetHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 20, marginBottom: 18 },
+  sheetTitle: { fontSize: 20, fontWeight: "800", color: "#21183A", letterSpacing: -0.3 },
+  sheetSubtitle: { fontSize: 13, color: "#817A91", marginTop: 3 },
+  sheetClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F5F2F9", justifyContent: "center", alignItems: "center" },
+  periodOptions: { gap: 10 },
+  periodOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 54,
+    paddingHorizontal: 15,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#ECE8F2",
+    backgroundColor: "#FFF",
+  },
+  periodOptionActive: { borderColor: "#BDAEFF", backgroundColor: "#F5F2FF" },
+  periodOptionText: { fontSize: 14, fontWeight: "700", color: "#5F5873" },
+  periodOptionTextActive: { color: PURPLE },
 
   listContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28, gap: 14 },
 
