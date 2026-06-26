@@ -107,13 +107,13 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       service_id: null,
       variant_id: null,
 
-      // ✅ Better title
-      service_name: `Bundle (${bundleItems.length} Services)`,
+      // ✅ Real bundle name from backend, falling back to a generic label
+      service_name: bundle.bundle_name || `Bundle (${bundleItems.length} Services)`,
 
       variant_name: "Bundle Pack",
 
-      // ✅ Cleaner description
-      description: `${bundleItems.length} services included`,
+      // ✅ Real bundle description, falling back to item count
+      description: bundle.bundle_description || `${bundleItems.length} services included`,
 
       price: Number(bundle.bundle_total || 0),
       mrp: Number(bundle.bundle_total || 0),
@@ -263,7 +263,7 @@ function CartScreen() {
         return;
       }
 
-      const selected_items = item.bundle_items.map((i: any) => Number(i.id));
+      const selected_items = item.bundle_items.map((i: any) => Number(i.bundle_item_id));
 
       console.log("📦 Bundle Buy Now:", {
         bundle_id: item.bundle_id,
@@ -387,6 +387,7 @@ function CartScreen() {
 
   const footer = useMemo(() => (
     <>
+      {/* ── Coupons & Offers (temporarily disabled) ──────────────────────
       <View style={styles.wrapper}>
         <View style={styles.headerRow}>
           <Text style={styles.headerText}>Coupons and Offers</Text>
@@ -396,6 +397,7 @@ function CartScreen() {
         </View>
         <CouponsSection coupons={showAllCoupons ? SERVICE_COUPONS : SERVICE_COUPONS.slice(0, 1)} />
       </View>
+      ── end Coupons & Offers ───────────────────────────────────────── */}
       <BillDetailsCard
         subtotal={totals.subtotal}
         totalDiscount={totals.discount}
@@ -403,7 +405,7 @@ function CartScreen() {
       />
       <View style={styles.listBottomSpace} />
     </>
-  ), [showAllCoupons, totals]);
+  ), [totals]);
 
   if (!loading && !error && !refreshing && items.length === 0) {
     return (

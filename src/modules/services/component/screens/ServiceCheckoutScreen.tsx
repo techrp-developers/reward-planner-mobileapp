@@ -107,9 +107,9 @@ function normalizePreview(
         service_id: null,
         variant_id: null,
 
-        service_name: `Bundle (${bundleItems.length} Services)`,
+        service_name: bundle.bundle_name || `Bundle (${bundleItems.length} Services)`,
         variant_name: 'Bundle Pack',
-        description: `${bundleItems.length} services included`,
+        description: bundle.bundle_description || `${bundleItems.length} services included`,
 
         price: Number(bundle.bundle_total || 0),
         mrp: Number(bundle.bundle_total || 0),
@@ -140,7 +140,7 @@ function normalizePreview(
 
         service_name: bundle.bundle_name || 'Bundle',
         variant_name: 'Bundle Pack',
-        description: `${bundleItems.length} services included`,
+        description: bundle.bundle_description || `${bundleItems.length} services included`,
 
         price: Number(bundle.bundle_total || 0),
         mrp: Number(bundle.bundle_total || 0),
@@ -424,7 +424,7 @@ export default function ServiceCheckoutScreen() {
       if (mode === "buy_now" && bundle_id) {
         const selected_items = items
           .flatMap((item) => item.bundle_items ?? [])
-          .map((i: any) => Number(i.id))
+          .map((i: any) => Number(i.bundle_item_id))
           .filter((id) => Number.isFinite(id) && id > 0);
 
         orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
