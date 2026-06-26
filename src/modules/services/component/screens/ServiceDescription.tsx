@@ -47,15 +47,18 @@
         return '';
     }
 
-    function getVariantDisplayName(v: Partial<NormalizedVariant> | null | undefined): string {
+    function getVariantDisplayName(v: Partial<NormalizedVariant> | null | undefined): {
+        label: string;
+        planTitle?: string;
+    } {
         const name = String(v?.variant_name || '').trim();
         const title = String(v?.title || '').trim();
 
         if (!name || name.toLowerCase() === 'default') {
-            return title || 'Plan';
+            return { label: title || 'Plan' };
         }
 
-        return name;
+        return { label: name, planTitle: title || undefined };
     }
 
     function ServiceDescription() {
@@ -311,14 +314,18 @@
         // Variant cards for ServiceCart horizontal selector
         const serviceCartVariants = useMemo<CartVariantItem[]>(() => {
             if (!serviceData?.variants?.length) return [];
-            return serviceData.variants.map((v, idx) => ({
-                id: String(v.id || idx + 1),
-                title: getVariantDisplayName(v) || ('Plan ' + (idx + 1)),
-                price: '\u20B9' + Number(v.price || 0).toLocaleString('en-IN'),
-                oldPrice: v.mrp ? ('\u20B9' + Number(v.mrp).toLocaleString('en-IN')) : '\u20B90',
-                subtitle: v.short_description,
-                rawVariant: v,
-            }));
+            return serviceData.variants.map((v, idx) => {
+                const { label, planTitle } = getVariantDisplayName(v);
+                return {
+                    id: String(v.id || idx + 1),
+                    title: label || ('Plan ' + (idx + 1)),
+                    planTitle,
+                    price: '\u20B9' + Number(v.price || 0).toLocaleString('en-IN'),
+                    oldPrice: v.mrp ? ('\u20B9' + Number(v.mrp).toLocaleString('en-IN')) : '\u20B90',
+                    subtitle: v.short_description,
+                    rawVariant: v,
+                };
+            });
         }, [serviceData]);
 
         const hasMultipleVariants = serviceCartVariants.length > 1;

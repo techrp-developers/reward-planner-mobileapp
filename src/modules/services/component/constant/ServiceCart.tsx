@@ -8,6 +8,7 @@ import { getServiceImageUrl } from '../../utils/serviceImage';
 type VariantItem = {
     id: string;
     title: string;
+    planTitle?: string;
     price: string;
     oldPrice: string;
     subtitle?: string;

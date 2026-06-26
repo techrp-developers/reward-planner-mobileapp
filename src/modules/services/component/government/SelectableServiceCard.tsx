@@ -4,6 +4,7 @@ import LinearGradient from 'react-native-linear-gradient';
 
 type Props = {
   title: string;
+  planTitle?: string;
   price: string;
   oldPrice: string;
   selected?: boolean;
@@ -12,6 +13,7 @@ type Props = {
 
 export default function SelectableServiceCard({
   title,
+  planTitle,
   price,
   oldPrice,
   selected,
@@ -28,7 +30,7 @@ export default function SelectableServiceCard({
           style={styles.gradientBorder}
         >
           <View style={styles.selectedCard}>
-            <CardContent title={title} price={price} oldPrice={oldPrice} />
+            <CardContent title={title} planTitle={planTitle} price={price} oldPrice={oldPrice} />
           </View>
         </LinearGradient>
       </TouchableOpacity>
@@ -42,22 +44,27 @@ export default function SelectableServiceCard({
       activeOpacity={0.85}
       style={styles.unselectedCard}
     >
-      <CardContent title={title} price={price} oldPrice={oldPrice} />
+      <CardContent title={title} planTitle={planTitle} price={price} oldPrice={oldPrice} />
     </TouchableOpacity>
   );
 }
 function CardContent({
   title,
+  planTitle,
   price,
   oldPrice,
 }: {
   title: string;
+  planTitle?: string;
   price: string;
   oldPrice: string;
 }) {
   return (
     <>
       <Text style={styles.title}>{title}</Text>
+      {!!planTitle && (
+        <Text style={styles.planTitle} numberOfLines={2}>{planTitle}</Text>
+      )}
       <View style={styles.priceRow}>
         <Text style={styles.price}>{price}</Text>
         <Text style={styles.oldPrice}>{oldPrice}</Text>
@@ -77,6 +84,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     minWidth: 150,
+    maxWidth: 190,
   },
 
   unselectedCard: {
@@ -87,12 +95,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     minWidth: 150,
+    maxWidth: 190,
   },
 
   title: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#374151',
+  },
+
+  planTitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginTop: 2,
+    lineHeight: 15,
   },
 
   priceRow: {
