@@ -74,6 +74,14 @@ export type HomeStackParamList = {
     variant_name?: string;
     image_url?: string | null;
   };
+  ServiceFeedback: {
+    service_order_id: number;
+    parent_order_id: string;
+    order_ref: string;
+    service_name: string;
+    variant_name?: string;
+    image_url?: string | null;
+  };
   WalletHistory: undefined;
   TodoList: undefined;
   AddAddressMap: undefined;

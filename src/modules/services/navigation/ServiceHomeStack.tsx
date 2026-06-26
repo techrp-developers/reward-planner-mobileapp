@@ -42,6 +42,10 @@ export default function ServiceHomeStack() {
                 getComponent={() => require("../component/order/ServiceCancellationRequest").default}
             />
             <Stack.Screen
+                name="ServiceFeedback"
+                getComponent={() => require("../component/order/ServiceFeedback").default}
+            />
+            <Stack.Screen
                 name="WalletHistory"
                 getComponent={() => require("../../ecommerce/components/home/Wallet_History").default}
             />

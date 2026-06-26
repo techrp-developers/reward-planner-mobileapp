@@ -111,6 +111,17 @@ export interface ServiceInvoiceDetails {
   download_url: string;
 }
 
+export interface SubmitServiceFeedbackPayload {
+  service_order_id: number;
+  rating: number;
+  ease_rating?: number;
+  expert_rating?: number;
+  completion_time?: string;
+  confidence?: string;
+  reuse_intent?: string;
+  comment?: string;
+}
+
 export interface ServiceItem {
   id: number;
   order_ref: string;
@@ -449,6 +460,41 @@ export const getServiceInvoiceDetails = async (
     }
 
     console.error("Get Service Invoice Details Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 9. Submit Service Feedback
+// ==============================
+export const submitServiceFeedback = async (
+  payload: SubmitServiceFeedbackPayload
+) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service/feedback`,
+      {
+        service_order_id: payload.service_order_id,
+        rating: payload.rating,
+        ease_rating: payload.ease_rating,
+        expert_rating: payload.expert_rating,
+        completion_time: payload.completion_time,
+        confidence: payload.confidence,
+        reuse_intent: payload.reuse_intent,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Submit Service Feedback Error:", error?.response || error);
     throw error?.response?.data || error;
   }
 };

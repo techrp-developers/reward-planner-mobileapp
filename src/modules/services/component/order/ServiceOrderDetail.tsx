@@ -122,8 +122,14 @@ export default function ServiceOrderDetail() {
   };
 
   const handleFeedbackItem = (item: ServiceItem) => {
-    // TODO: navigate to feedback screen when available
-    Alert.alert('Feedback', `Rate your experience with "${item.service_name}".`);
+    navigation.navigate('ServiceFeedback', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      order_ref: item.order_ref,
+      service_name: item.service_name,
+      variant_name: item.variant_name,
+      image_url: item.image_url,
+    });
   };
 
   const handleDownloadInvoice = async () => {
