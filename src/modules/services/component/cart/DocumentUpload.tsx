@@ -457,6 +457,8 @@ const DocumentUpload = () => {
         title: 'Documents Uploaded Successfully',
         description: 'Our team will verify your documents and process your service order shortly.',
         enquiryId: parentOrderId,
+        redirectToHome: true,
+        redirectDelayMs: 3000,
       });
     } catch (err: any) {
       // Mark errored docs

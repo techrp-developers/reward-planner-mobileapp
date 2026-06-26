@@ -58,6 +58,9 @@ export type HomeStackParamList = {
     title?: string;
     description?: string;
     enquiryId?: string;
+    /** When true, auto-navigates to the Services home screen after redirectDelayMs. */
+    redirectToHome?: boolean;
+    redirectDelayMs?: number;
   };
   CartScreen: undefined;
   Profile: undefined;
