@@ -245,7 +245,11 @@ const serviceCheckoutQueryKey = (
 
 export default function ServiceCheckoutScreen() {
   const navigation = useNavigation<NavProps>();
-  const stickyCTA = useStickyBottomCTA();
+  // MainLayout already reserves space for the services-module bottom bar via
+  // paddingBottom on the content wrapper, so the CTA must not also offset by
+  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
+  // the bottom bar with a visible gap instead of sitting right on top of it.
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
   const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};

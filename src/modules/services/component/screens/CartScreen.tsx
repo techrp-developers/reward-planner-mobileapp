@@ -149,7 +149,11 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
-  const stickyCTA = useStickyBottomCTA();
+  // MainLayout already reserves space for the services-module bottom bar via
+  // paddingBottom on the content wrapper, so the CTA must not also offset by
+  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
+  // the bottom bar with a visible gap instead of sitting right on top of it.
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
