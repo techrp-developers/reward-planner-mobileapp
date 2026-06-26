@@ -10,7 +10,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 import type { ServiceItem } from '../../api/OrderAPI';
 import ServiceTimelineCard from './ServiceTimelineCard';
-import ServiceDocumentsCard from './ServiceDocumentsCard';
 import ServiceFeedbackCard from './ServiceFeedbackCard';
 import ServiceCancellationCard from './ServiceCancellationCard';
 
@@ -90,8 +89,6 @@ export default function ServiceOrderItemCard({
               <ServiceTimelineCard steps={item.timeline} />
             </>
           )}
-
-          <ServiceDocumentsCard documents={item.documents} />
 
           <ServiceFeedbackCard
             feedback={item.feedback}

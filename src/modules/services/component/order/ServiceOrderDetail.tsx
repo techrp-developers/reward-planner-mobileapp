@@ -51,6 +51,7 @@ const ORDER_STATUS_COLOR: Record<string, string> = {
   completed:       '#16A34A',
   cancelled:       '#DC2626',
 };
+const PURPLE = '#7C3AED';
 
 // ── Data transforms ──────────────────────────────────────────────────────────
 function buildStatusJourney(order: ServiceOrderDetails): OrderStatusItem[] {
@@ -174,6 +175,17 @@ export default function ServiceOrderDetail() {
   const addressLine  = buildAddressLine(order);
   const hasStandaloneItems = order.items.length > 0;
   const hasBundles         = order.bundles.length > 0;
+  const allServiceItems = [
+    ...order.items,
+    ...order.bundles.flatMap(bundle => bundle.items),
+  ];
+  const allDocuments = allServiceItems.flatMap(item => item.documents);
+  const pendingDocumentCount = allDocuments.filter(document => !document.uploaded).length;
+  const uploadedDocumentCount = allDocuments.length - pendingDocumentCount;
+  const documentOrderId =
+    allServiceItems.find(item => item.documents.some(document => !document.uploaded))?.id ||
+    allServiceItems[0]?.id ||
+    0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -273,6 +285,20 @@ export default function ServiceOrderDetail() {
         )}
 
         {/* ── Order-level journey (reused ecommerce component) ──────── */}
+        {allDocuments.length > 0 && (
+          <OrderDocumentsCard
+            total={allDocuments.length}
+            uploaded={uploadedDocumentCount}
+            pending={pendingDocumentCount}
+            onUpload={() =>
+              navigation.navigate('DocumentUpload', {
+                order_id: documentOrderId,
+                parent_order_id: order.parent_order_id,
+              })
+            }
+          />
+        )}
+
         <SectionCard>
           <OrderStatusJourney
             headerText="Overall order progress"
@@ -352,6 +378,51 @@ function SectionCard({
     <View style={styles.section}>
       {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
       {children}
+    </View>
+  );
+}
+
+function OrderDocumentsCard({
+  total,
+  uploaded,
+  pending,
+  onUpload,
+}: {
+  total: number;
+  uploaded: number;
+  pending: number;
+  onUpload: () => void;
+}) {
+  const complete = pending === 0;
+
+  return (
+    <View style={styles.documentsCard}>
+      <View style={styles.documentsIcon}>
+        <MaterialCommunityIcons
+          name={complete ? 'file-check-outline' : 'file-upload-outline'}
+          size={24}
+          color={complete ? '#16A34A' : PURPLE}
+        />
+      </View>
+      <View style={styles.documentsCopy}>
+        <Text style={styles.documentsTitle}>Documents</Text>
+        <Text style={styles.documentsText}>
+          {complete
+            ? `${uploaded} of ${total} documents uploaded`
+            : `${pending} document${pending > 1 ? 's' : ''} still needed`}
+        </Text>
+      </View>
+      {complete ? (
+        <View style={styles.documentsDone}>
+          <MaterialCommunityIcons name="check" size={14} color="#16A34A" />
+          <Text style={styles.documentsDoneText}>Complete</Text>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.uploadDocumentsButton} onPress={onUpload}>
+          <Text style={styles.uploadDocumentsText}>Upload</Text>
+          <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -442,6 +513,28 @@ const styles = StyleSheet.create({
     color: '#251B40',
     marginBottom: 10,
   },
+  documentsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E9E3F8',
+    borderRadius: 18,
+    padding: 14,
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  documentsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0ECFF', alignItems: 'center', justifyContent: 'center' },
+  documentsCopy: { flex: 1, marginLeft: 12, marginRight: 8 },
+  documentsTitle: { fontSize: 14, fontWeight: '800', color: '#251B40' },
+  documentsText: { fontSize: 12, color: '#817A91', fontWeight: '600', marginTop: 3 },
+  documentsDone: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF3', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 9 },
+  documentsDoneText: { fontSize: 10, color: '#16A34A', fontWeight: '800' },
+  uploadDocumentsButton: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PURPLE, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
+  uploadDocumentsText: { fontSize: 11, color: '#FFF', fontWeight: '800' },
 
   centered: {
     flex: 1,

@@ -106,6 +106,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
   const showThumb =
     doc.localUri &&
     (doc.localType?.startsWith('image/') || doc.localUri.match(/\.(jpg|jpeg|png|webp)$/i));
+  const isPersistedUpload = doc.uploaded && !doc.localUri;
 
   return (
     <Animated.View
@@ -182,14 +183,20 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
         {isUploading ? (
           <ActivityIndicator size="small" color="#7C3AED" />
         ) : ready ? (
-          <TouchableOpacity
-            style={styles.removeBtn}
-            onPress={() => onRemove(doc.document_key)}
-            disabled={disabled}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close-circle" size={22} color="#9CA3AF" />
-          </TouchableOpacity>
+          isPersistedUpload ? (
+            <View style={styles.persistedUpload}>
+              <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.removeBtn}
+              onPress={() => onRemove(doc.document_key)}
+              disabled={disabled}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={22} color="#9CA3AF" />
+            </TouchableOpacity>
+          )
         ) : (
           <TouchableOpacity
             style={styles.uploadBtn}
@@ -682,6 +689,7 @@ const styles = StyleSheet.create({
 
   cardRight: { alignItems: 'center', justifyContent: 'center' },
   removeBtn: { padding: 4 },
+  persistedUpload: { padding: 4 },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
