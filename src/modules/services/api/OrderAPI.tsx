@@ -134,7 +134,7 @@ export interface ServiceOrderDetails {
   parent_order_id: string;
   created_at: string;
   status: string;
-  address: ServiceAddress;
+  address: ServiceAddress | null;
   total_amount: number;
   summary: {
     total_services: number;

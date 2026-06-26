@@ -86,7 +86,7 @@ export default function ServiceOrderItemCard({
         <View style={styles.body}>
           {item.timeline.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Progress</Text>
+              <Text style={styles.sectionLabel}>Service progress</Text>
               <ServiceTimelineCard steps={item.timeline} />
             </>
           )}

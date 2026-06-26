@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
 import OrderStatusJourney, {
@@ -61,6 +62,7 @@ function buildStatusJourney(order: ServiceOrderDetails): OrderStatusItem[] {
 
 function buildAddressLine(order: ServiceOrderDetails): string {
   const a = order.address;
+  if (!a) return '';
   return [a.address1, a.address2, a.city, a.state, a.zipcode]
     .filter(Boolean)
     .join(', ');
@@ -190,18 +192,28 @@ export default function ServiceOrderDetail() {
         }
       >
         {/* ── Order summary card ─────────────────────────────────────── */}
-        <View style={styles.summaryCard}>
+        <LinearGradient
+          colors={['#30205F', '#6344BD', '#7C3AED']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.summaryCard}
+        >
           <View style={styles.summaryRow}>
             <View>
+              <Text style={styles.orderEyebrow}>SERVICE ORDER</Text>
               <Text style={styles.orderId}>
                 #{parent_order_id.slice(0, 8).toUpperCase()}
               </Text>
               <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
             </View>
-            <View style={[styles.statusChip, { borderColor: statusColor }]}>
-              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+            <View style={styles.summaryIcon}>
+              <MaterialCommunityIcons name="clipboard-text-outline" size={25} color="#FFF" />
             </View>
+          </View>
+
+          <View style={styles.statusChip}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={styles.statusLabel}>{statusLabel}</Text>
           </View>
 
           {/* ── Quick stats ───────────────────────────────────────────── */}
@@ -225,7 +237,7 @@ export default function ServiceOrderDetail() {
               <Text style={styles.statLabel}>Bundles</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* ── Standalone service items ───────────────────────────────── */}
         {hasStandaloneItems && (
@@ -263,20 +275,22 @@ export default function ServiceOrderDetail() {
         {/* ── Order-level journey (reused ecommerce component) ──────── */}
         <SectionCard>
           <OrderStatusJourney
-            arrivingBy={statusLabel}
+            headerText="Overall order progress"
             statuses={journeySteps}
           />
         </SectionCard>
 
         {/* ── Address (reused ecommerce component) ──────────────────── */}
-        <SectionCard >
-          <DeliveryDetailsCard
-            addressType={order.address.address_type?.toUpperCase() || 'HOME'}
-            address={addressLine}
-            name={order.address.contact_name}
-            phone={order.address.contact_phone}
-          />
-        </SectionCard>
+        {order.address ? (
+          <SectionCard>
+            <DeliveryDetailsCard
+              addressType={order.address.address_type?.toUpperCase() || 'HOME'}
+              address={addressLine}
+              name={order.address.contact_name}
+              phone={order.address.contact_phone}
+            />
+          </SectionCard>
+        ) : null}
 
         {/* ── Price summary (reused ecommerce component) ────────────── */}
         <SectionCard title="Payment Summary">
@@ -303,16 +317,27 @@ export default function ServiceOrderDetail() {
 // ── Local layout helpers (not exported — presentational only) ─────────────────
 function Header({ onBack }: { onBack: () => void }) {
   return (
-    <View style={styles.header}>
+    <LinearGradient
+      colors={['#30205F', '#5B3CB4', '#7C3AED']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.header}
+    >
       <TouchableOpacity
+        style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#111" />
+        <MaterialCommunityIcons name="arrow-left" size={21} color="#FFF" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Order Details</Text>
-      <View style={styles.headerSpacer} />
-    </View>
+      <View style={styles.headerCopy}>
+        <Text style={styles.headerEyebrow}>SERVICE HUB</Text>
+        <Text style={styles.headerTitle}>Order details</Text>
+      </View>
+      <View style={styles.headerIcon}>
+        <MaterialCommunityIcons name="receipt-text-outline" size={21} color="#FFF" />
+      </View>
+    </LinearGradient>
   );
 }
 
@@ -335,79 +360,87 @@ function SectionCard({
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  safe: { flex: 1, backgroundColor: '#F6F5FB' },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
-  headerSpacer: { width: 24 },
+  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
+  headerCopy: { flex: 1, marginLeft: 12 },
+  headerEyebrow: { color: 'rgba(255,255,255,0.64)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFF', marginTop: 1, letterSpacing: -0.3 },
+  headerIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
-  scroll: { padding: 16, gap: 12 },
+  scroll: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 8, gap: 14 },
 
   summaryCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    borderRadius: 22,
+    padding: 18,
+    elevation: 5,
+    shadowColor: '#33205E',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  orderId: { fontSize: 15, fontWeight: '800', color: '#111' },
-  orderDate: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  orderEyebrow: { color: 'rgba(255,255,255,0.62)', fontSize: 10, fontWeight: '800', letterSpacing: 1.1, marginBottom: 4 },
+  orderId: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: 0.2 },
+  orderDate: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 3, fontWeight: '600' },
+  summaryIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    borderWidth: 1,
+    alignSelf: 'flex-start',
     borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginBottom: 16,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusLabel: { fontSize: 12, fontWeight: '600' },
+  statusLabel: { fontSize: 12, fontWeight: '800', color: '#FFF' },
 
   statsRow: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 12,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+    paddingTop: 14,
   },
   statBox: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '800', color: '#111' },
-  statLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 8 },
+  statValue: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  statLabel: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 3, fontWeight: '600' },
+  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 8 },
 
   section: {
     backgroundColor: '#FFF',
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#ECE8F3',
+    elevation: 2,
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 12,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#251B40',
+    marginBottom: 10,
   },
 
   centered: {
