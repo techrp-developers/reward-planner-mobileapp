@@ -8,6 +8,7 @@ import {
   Image,
   Animated,
   Platform,
+  AppState,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
@@ -76,6 +77,74 @@ type NavbarUserSnapshot = {
 const NAVBAR_USER_TTL_MS = 60_000;
 let navbarUserCache: NavbarUserSnapshot | null = null;
 let navbarUserInFlight: Promise<NavbarUserSnapshot> | null = null;
+
+// --- Reward points fetch hardening -----------------------------------------
+// fetchUserInfo()'s response shape has drifted across backend revisions, so a
+// raw `userInfo.user.rewardPoints` access silently resolves to 0 whenever the
+// API responds with a different key — this is the same class of bug fixed in
+// NewArrivals/Categories_Product. toNumber/fetchWithRetry/extractRewardPoints
+// stay at module scope so they're shared by both the mount fetch and the
+// AppState-foreground refresh below, and so they're never recreated on render.
+const toNumber = (value: unknown, fallback = 0): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+};
+
+const fetchWithRetry = async <T,>(fn: () => Promise<T>, retries = 3): Promise<T> => {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === retries - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 8000)));
+    }
+  }
+  // Unreachable — the loop above always either returns or throws on the last attempt.
+  throw new Error("fetchWithRetry: exhausted retries");
+};
+
+const extractRewardPoints = (res: any): number => {
+  if (__DEV__) {
+    console.log("[WalletBadge] raw reward response:", {
+      keys: Object.keys(res ?? {}),
+      rewardCoins: res?.rewardCoins,
+      reward_coins: res?.reward_coins,
+      rewardPoints: res?.rewardPoints,
+      reward_points: res?.reward_points,
+      coins: res?.coins,
+      points: res?.points,
+      dataKeys: Object.keys(res?.data ?? {}),
+      dataRewardCoins: res?.data?.rewardCoins,
+      dataRewardPoints: res?.data?.rewardPoints,
+      dataCoins: res?.data?.coins,
+      userRewardCoins: res?.user?.rewardCoins,
+      walletCoins: res?.wallet?.coins,
+    });
+  }
+
+  return toNumber(
+    res?.rewardCoins ??
+      res?.reward_coins ??
+      res?.rewardPoints ??
+      res?.reward_points ??
+      res?.coins ??
+      res?.points ??
+      res?.data?.rewardCoins ??
+      res?.data?.reward_coins ??
+      res?.data?.rewardPoints ??
+      res?.data?.reward_points ??
+      res?.data?.coins ??
+      res?.data?.points ??
+      res?.user?.rewardCoins ??
+      res?.user?.reward_coins ??
+      res?.user?.rewardPoints ??
+      res?.user?.coins ??
+      res?.wallet?.coins ??
+      res?.wallet?.points ??
+      res?.wallet?.rewardCoins,
+    0
+  );
+};
 
 const PRODUCT_ROUTES = new Set(["Home", "Explore", "ProductScreen", "Cart"]);
 const PRODUCT_MODULE_ROUTES = new Set(["ProductModule"]);
@@ -235,7 +304,19 @@ export default function Navbar() {
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
-  const [rewardPoints, setRewardPoints] = React.useState(0);
+  // Seed from the module-level cache so a remounted Navbar (e.g. after a stack
+  // reset) shows the last known value instead of flashing back to 0.
+  const lastKnownPoints = React.useRef(navbarUserCache?.rewardPoints ?? 0);
+  const [rewardPoints, setRewardPoints] = React.useState(
+    () => navbarUserCache?.rewardPoints ?? 0
+  );
+  const updatePoints = React.useCallback((value: number) => {
+    lastKnownPoints.current = value;
+    setRewardPoints(value);
+    if (navbarUserCache) {
+      navbarUserCache.rewardPoints = value;
+    }
+  }, []);
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
     if (points >= 100000) return `${Math.floor(points / 1000)}k`;
@@ -294,15 +375,18 @@ export default function Navbar() {
     React.useState("Address not set");
   const hasAddress = String(displayAddress || "").trim() !== "Address not set";
 
-  const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
-    setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
-    setDisplayAddress((prev) =>
-      prev === snapshot.displayAddress ? prev : snapshot.displayAddress
-    );
-    setRewardPoints((prev) =>
-      prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
-    );
-  }, []);
+  const applyUserSnapshot = React.useCallback(
+    (snapshot: NavbarUserSnapshot) => {
+      setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
+      setDisplayAddress((prev) =>
+        prev === snapshot.displayAddress ? prev : snapshot.displayAddress
+      );
+      if (snapshot.rewardPoints !== undefined) {
+        updatePoints(snapshot.rewardPoints);
+      }
+    },
+    [updatePoints]
+  );
 
   const navigateToScreen = React.useCallback(
     (screen: string, params?: any) => {
@@ -399,7 +483,7 @@ export default function Navbar() {
     navbarUserInFlight = (async () => {
       try {
         const storedName = await getStoredUserName();
-        const userInfo = await fetchUserInfo();
+        const userInfo = await fetchWithRetry(() => fetchUserInfo());
         const user = userInfo?.user || null;
         const fetchedRewardPoints = Number(
           user?.rewardPoints || userInfo?.data?.rewardPoints || 0
@@ -456,7 +540,32 @@ export default function Navbar() {
 
     const snapshot = await navbarUserInFlight;
     applyUserSnapshot(snapshot);
-  }, [applyUserSnapshot, isAuthenticated]);
+  }, [applyUserSnapshot, isAuthenticated, updatePoints]);
+
+  // Dedicated, independently-callable reward points refresh — used when the
+  // app returns to the foreground so the badge self-heals from a cold-load
+  // failure without requiring a full navbar user/address refresh or a
+  // server restart.
+  const fetchRewardPoints = React.useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const res = await fetchWithRetry(() => fetchUserInfo());
+      const points = extractRewardPoints(res);
+      updatePoints(points);
+    } catch (err) {
+      if (__DEV__) {
+        console.warn("[WalletBadge] fetchRewardPoints failed:", err);
+      }
+    }
+  }, [isAuthenticated, updatePoints]);
+
+  React.useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchRewardPoints();
+    });
+    return () => sub.remove();
+  }, [fetchRewardPoints]);
 
   React.useEffect(() => {
     loadNavbarUser(false);

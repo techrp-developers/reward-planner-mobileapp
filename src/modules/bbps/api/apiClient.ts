@@ -19,7 +19,31 @@ import api from "../../common/auth/api/axios";
  */
 
 type RequestMetadata = { startTime: number };
-type ConfigWithMetadata = InternalAxiosRequestConfig & { metadata?: RequestMetadata };
+type ConfigWithMetadata = InternalAxiosRequestConfig & {
+  metadata?: RequestMetadata;
+  _dedupeKey?: string;
+  _retryCount?: number;
+};
+
+// ---- Request de-duplication ------------------------------------------------
+// Identical concurrent GETs (same method+url+params) share a single in-flight
+// promise instead of firing duplicate network requests — common when a screen
+// re-mounts/re-renders while a previous fetch for the same data is still out.
+const inFlightRequests = new Map<string, Promise<AxiosResponse>>();
+
+const buildDedupeKey = (config: ConfigWithMetadata) =>
+  `${(config.method || "get").toLowerCase()}:${config.baseURL ?? ""}${config.url}:${JSON.stringify(
+    config.params ?? {}
+  )}`;
+
+const RETRYABLE_BACKOFF_MS = [1000, 2000];
+
+const isRetryableNetworkError = (error: AxiosError) =>
+  !error.response &&
+  (error.code === "ERR_NETWORK" ||
+    error.code === "ECONNABORTED" ||
+    error.message === "Network Error" ||
+    /timeout/i.test(error.message || ""));
 
 export type ApiErrorKind =
   | "UNAUTHORIZED"
@@ -153,6 +177,24 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     const config = error.config as ConfigWithMetadata | undefined;
+
+    // Retry only network/timeout failures (no response at all) — never 4xx/5xx,
+    // since those are real backend answers, not transport hiccups.
+    if (config && isRetryableNetworkError(error)) {
+      const retryCount = config._retryCount ?? 0;
+
+      if (retryCount < RETRYABLE_BACKOFF_MS.length) {
+        config._retryCount = retryCount + 1;
+        const delay = RETRYABLE_BACKOFF_MS[retryCount];
+
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            api.request(config).then(resolve).catch(reject);
+          }, delay);
+        });
+      }
+    }
+
     const durationMs = config?.metadata ? Date.now() - config.metadata.startTime : undefined;
     const normalized = classifyAxiosError(error);
 
@@ -175,6 +217,33 @@ api.interceptors.response.use(
     return Promise.reject(normalized);
   }
 );
+
+// ---- Dedupe identical concurrent GETs --------------------------------------
+// Re-mounts/re-renders can fire the same GET (same url+params) while the first
+// one is still in flight; share the one promise instead of doubling the load.
+const originalRequest = api.request.bind(api);
+
+api.request = ((config: ConfigWithMetadata) => {
+  const method = (config.method || "get").toLowerCase();
+
+  if (method !== "get") {
+    return originalRequest(config);
+  }
+
+  const key = buildDedupeKey({ ...config, method });
+  const existing = inFlightRequests.get(key);
+
+  if (existing) {
+    return existing;
+  }
+
+  const pending = originalRequest(config).finally(() => {
+    inFlightRequests.delete(key);
+  });
+
+  inFlightRequests.set(key, pending);
+  return pending;
+}) as typeof api.request;
 
 export const apiClient = api;
 export default api;

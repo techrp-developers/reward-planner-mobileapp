@@ -4,7 +4,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
-import { CommonActions, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import StepsCounterCard from "./StepsCounterCard";
 import PaymentsQuickAccessCard from "./PaymentsQuickAccessCard";
 import { rs} from "../../../utils/responsive";
@@ -89,23 +89,19 @@ export default function Home_Chart() {
     parent?.navigate("RewardStack", { moduleName: "Step Counter" });
   }, [navigation]);
 
-  const goToPaymentsScreen = useCallback((screen: "Home" | "RechargeSection" | "OrderHistory" = "Home") => {
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: "Home",
-        params: {
-          screen: "PaymentsModule",
-          params: { screen, moduleName: "Payments" },
-          moduleName: "Payments",
-        },
-      }),
-    );
+  // Recharges, Bills & Utilities, Recent Transaction, and Make a Payment all
+  // land on the same PaymentsModule entry point (BBPSHomeStack's "Home").
+  const goToPayments = useCallback(() => {
+    navigation.navigate("Home", {
+      screen: "PaymentsModule",
+      params: {
+        screen: "Home",
+        params: { moduleName: "Payments" },
+        moduleName: "Payments",
+      },
+      moduleName: "Payments",
+    });
   }, [navigation]);
-
-  const goToPayments = useCallback(() => goToPaymentsScreen("Home"), [goToPaymentsScreen]);
-  const goToBills = useCallback(() => goToPaymentsScreen("RechargeSection"), [goToPaymentsScreen]);
-  const goToPaymentHistory = useCallback(() => goToPaymentsScreen("OrderHistory"), [goToPaymentsScreen]);
-
   return (
     <View style={[styles.container, { paddingHorizontal: layout.containerPadding }]}>
       <View style={[styles.row, { maxWidth: layout.contentWidth, gap: layout.gap }]}>
@@ -120,8 +116,9 @@ export default function Home_Chart() {
         />
         <PaymentsQuickAccessCard
           onOpenPayments={goToPayments}
-          onOpenBills={goToBills}
-          onOpenHistory={goToPaymentHistory}
+          onOpenBills={goToPayments}
+          onOpenHistory={goToPayments}
+          onMakePayment={goToPayments}
           cardWidth={layout.cardWidth}
         />
       </View>

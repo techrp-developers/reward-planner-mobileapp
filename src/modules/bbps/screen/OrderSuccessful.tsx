@@ -4,7 +4,7 @@ import RecommendedServices from '../component/order/RecommendedServices';
 import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-function OrderSuccessful() {
+function OrderSuccessfulComponent() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
@@ -66,4 +66,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const OrderSuccessful = React.memo(OrderSuccessfulComponent);
 export default OrderSuccessful;

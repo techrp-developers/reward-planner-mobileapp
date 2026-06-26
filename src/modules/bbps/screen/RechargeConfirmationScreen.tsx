@@ -43,7 +43,7 @@ const getPlanAmount = (plan: any) =>
 const getPlanValidity = (plan: any) =>
   String(plan?.validity || plan?.validityDescription || plan?.validity_desc || '-');
 
-const RechargeConfirmationScreen = ({ navigation, route }: any) => {
+const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const { user } = useAuth();
   const alert = useAlert();
   const [loading, setLoading] = useState(false);
@@ -89,7 +89,7 @@ const RechargeConfirmationScreen = ({ navigation, route }: any) => {
       const response = await createBillPayOrder(payload);
       console.log('Create Recharge Order Response:', response);
 
-      if (!response.success) {
+      if (response.success === false) {
         if (__DEV__ && lastSuccessfulOrderPayload) {
           compareRechargePayloads(
             lastSuccessfulOrderPayload,
@@ -141,9 +141,11 @@ const RechargeConfirmationScreen = ({ navigation, route }: any) => {
         },
       });
 
+      // verify-payment expects only the three razorpay_* fields — no transaction_id.
       const verifyPayload = {
-        ...paymentResult,
-        transaction_id: order.transaction_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
       };
       console.log('Verify Recharge Payment Payload:', verifyPayload);
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
@@ -618,4 +620,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const RechargeConfirmationScreen = React.memo(RechargeConfirmationScreenComponent);
 export default RechargeConfirmationScreen;

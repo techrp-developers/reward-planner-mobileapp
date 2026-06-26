@@ -24,7 +24,7 @@ const STATUS_PRESENTATION: Record<
   },
 };
 
-const TransactionStatusScreen = ({ navigation, route }: any) => {
+const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   const transactionId = route?.params?.transactionId;
   const [status, setStatus] = useState<TransactionStatus>('PENDING');
   const [message, setMessage] = useState('Checking transaction status...');
@@ -179,4 +179,5 @@ const styles = StyleSheet.create({
   },
 });
 
+const TransactionStatusScreen = React.memo(TransactionStatusScreenComponent);
 export default TransactionStatusScreen;

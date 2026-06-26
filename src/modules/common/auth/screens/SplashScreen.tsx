@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -19,7 +19,7 @@ import {
 
 const MIN_SPLASH_MS = 2500;
 
-export default function SplashScreen() {
+function SplashScreenComponent() {
   const isMounted = useRef(true);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.86)).current;
@@ -180,31 +180,51 @@ export default function SplashScreen() {
     shimmer,
   ]);
 
-  const spin = ringRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  const floatATranslate = floatA.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -18],
-  });
-
-  const floatBTranslate = floatB.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 22],
-  });
-
-  const shimmerTranslate = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-120, 120],
-  });
-
-  const dotTranslate = (value: Animated.Value) =>
-    value.interpolate({
+  const spin = useMemo(
+    () => ringRotate.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, -8],
-    });
+      outputRange: ["0deg", "360deg"],
+    }),
+    [ringRotate],
+  );
+
+  const floatATranslate = useMemo(
+    () => floatA.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -18],
+    }),
+    [floatA],
+  );
+
+  const floatBTranslate = useMemo(
+    () => floatB.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 22],
+    }),
+    [floatB],
+  );
+
+  const shimmerTranslate = useMemo(
+    () => shimmer.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-120, 120],
+    }),
+    [shimmer],
+  );
+
+  const dotTranslate = useCallback(
+    (value: Animated.Value) =>
+      value.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, -8],
+      }),
+    [],
+  );
+
+  const dotValues = useMemo(
+    () => [dotOne, dotTwo, dotThree],
+    [dotOne, dotTwo, dotThree],
+  );
 
   return (
     <LinearGradient
@@ -263,7 +283,7 @@ export default function SplashScreen() {
             />
           </View>
           <View style={styles.dots}>
-            {[dotOne, dotTwo, dotThree].map((dot, index) => (
+            {dotValues.map((dot, index) => (
               <Animated.View
                 key={index}
                 style={[
@@ -278,6 +298,9 @@ export default function SplashScreen() {
     </LinearGradient>
   );
 }
+
+const SplashScreen = React.memo(SplashScreenComponent);
+export default SplashScreen;
 
 const styles = StyleSheet.create({
   container: {
