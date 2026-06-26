@@ -52,10 +52,7 @@ const FAQSection: React.FC<Props> = ({ navigation }) => {
                 style={styles.cardGradient}
             >
                 <View style={styles.cardContent}>
-                    <View style={styles.questionIcon}>
-                        <MaterialCommunityIcons name="help-circle-outline" size={16} color="#8665FF" />
-                    </View>
-                    <Text style={styles.cardText} numberOfLines={2}>
+                    <Text style={styles.cardText}>
                         {item.title}
                     </Text>
                     <View style={styles.chevronContainer}>
@@ -164,26 +161,18 @@ const styles = StyleSheet.create({
     },
 
     cardGradient: {
-        padding: 13,
-        minHeight: 74,
+        paddingHorizontal: 13,
+        paddingVertical: 14,
+        minHeight: 88,
         justifyContent: 'center',
     },
 
     cardContent: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        minHeight: 40,
+        minHeight: 52,
         gap: 8,
-    },
-
-    questionIcon: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: '#F1EBFF',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 
     cardText: {
@@ -192,6 +181,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#342B45',
         lineHeight: 18,
+        paddingTop: 1,
     },
 
     chevronContainer: {
@@ -201,5 +191,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(134,101,255,0.08)',
         alignItems: 'center',
         justifyContent: 'center',
+        marginTop: 2,
     },
 });
