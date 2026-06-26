@@ -117,31 +117,34 @@ export default function ServiceCancellationRequest() {
 
           <View style={styles.confirmHero}>
             <View style={styles.confirmCopy}>
-              <Text style={styles.confirmTitle}>Service Cancellation Requested</Text>
+              <Text style={styles.confirmTitle}>Cancellation Requested</Text>
+              <Text style={styles.confirmSubtitle}>
+                We’ve received your request and our team will review it shortly.
+              </Text>
               <TouchableOpacity
                 style={styles.confirmLink}
                 activeOpacity={0.75}
                 onPress={() => navigation.navigate('ServiceOrderDetail', { parent_order_id })}
               >
-                <Text style={styles.confirmLinkText}>View Cancellation Details</Text>
+                <Text style={styles.confirmLinkText}>View Request Details</Text>
                 <MaterialCommunityIcons name="chevron-right" size={24} color="#6D5AE6" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.successBadge}>
               <View style={styles.successCircle}>
-                <MaterialCommunityIcons name="check" size={42} color="#FFF" />
+                <MaterialCommunityIcons name="clock-check-outline" size={42} color="#FFF" />
               </View>
               <MaterialCommunityIcons
                 name="star-four-points"
                 size={22}
-                color="#22C55E"
+                color={PURPLE}
                 style={styles.sparkleOne}
               />
               <MaterialCommunityIcons
                 name="star-four-points"
                 size={18}
-                color="#22C55E"
+                color={PURPLE}
                 style={styles.sparkleTwo}
               />
             </View>
@@ -189,7 +192,17 @@ export default function ServiceCancellationRequest() {
         />
 
         <View style={styles.reasonCard}>
-          <Text style={styles.reasonTitle}>Reason For Cancellation</Text>
+          <View style={styles.reasonHeader}>
+            <View style={styles.reasonIcon}>
+              <MaterialCommunityIcons name="clipboard-list-outline" size={20} color={PURPLE} />
+            </View>
+            <View style={styles.reasonHeaderCopy}>
+              <Text style={styles.reasonTitle}>Reason For Cancellation</Text>
+              <Text style={styles.reasonSubtitle}>
+                Pick the closest reason so we can process the request smoothly.
+              </Text>
+            </View>
+          </View>
 
           {loadingReasons ? (
             <View style={styles.loadingReasons}>
@@ -207,6 +220,7 @@ export default function ServiceCancellationRequest() {
             >
               <View style={styles.radioOuter} />
               <Text style={styles.reasonText}>{reason.reason_text}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#D1D5DB" />
             </TouchableOpacity>
           ))}
 
@@ -224,7 +238,7 @@ export default function ServiceCancellationRequest() {
           {selectedReason ? (
             <>
               <TouchableOpacity
-                style={styles.reasonRow}
+                style={[styles.reasonRow, styles.reasonRowSelected]}
                 activeOpacity={0.75}
                 onPress={() => setSelectedReason(null)}
               >
@@ -232,6 +246,7 @@ export default function ServiceCancellationRequest() {
                   <View style={styles.radioInner} />
                 </View>
                 <Text style={styles.reasonText}>{selectedReason.reason_text}</Text>
+                <Text style={styles.changeReasonText}>Change</Text>
               </TouchableOpacity>
 
               <View style={styles.commentBox}>
@@ -277,16 +292,27 @@ export default function ServiceCancellationRequest() {
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <View style={styles.header}>
+    <LinearGradient
+      colors={['#30205F', '#5B3CB4', '#7C3AED']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.header}
+    >
       <TouchableOpacity
         style={styles.headerBack}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={34} color="#6B7280" />
+        <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-    </View>
+      <View style={styles.headerCopy}>
+        <Text style={styles.headerEyebrow}>SERVICE REQUEST</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
+      </View>
+      <View style={styles.headerIcon}>
+        <MaterialCommunityIcons name="shield-check-outline" size={21} color="#FFF" />
+      </View>
+    </LinearGradient>
   );
 }
 
@@ -303,6 +329,7 @@ function ServiceSummaryCard({
 }) {
   return (
     <View style={styles.summaryCard}>
+      <View style={styles.summaryAccent} />
       <View style={styles.summaryTop}>
         <View style={styles.imageWrap}>
           {imageUrl ? (
@@ -321,8 +348,13 @@ function ServiceSummaryCard({
       </View>
 
       <View style={styles.orderRefRow}>
-        <Text style={styles.orderRefText}>Order ID - #{orderRef}</Text>
-        <MaterialCommunityIcons name="content-copy" size={18} color="#4F46E5" />
+        <View>
+          <Text style={styles.orderRefLabel}>ORDER ID</Text>
+          <Text style={styles.orderRefText}>#{orderRef}</Text>
+        </View>
+        <View style={styles.copyButton}>
+          <MaterialCommunityIcons name="content-copy" size={16} color="#4F46E5" />
+        </View>
       </View>
     </View>
   );
@@ -331,50 +363,84 @@ function ServiceSummaryCard({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFEFC',
+    backgroundColor: '#F6F5FB',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerBack: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  headerCopy: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerEyebrow: {
+    color: 'rgba(255,255,255,0.64)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#4B4B4F',
+    color: '#FFF',
+    marginTop: 1,
     letterSpacing: -0.4,
   },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
   scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 36,
   },
   summaryCard: {
     backgroundColor: '#FFF',
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECE8F3',
+    overflow: 'hidden',
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  summaryAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: PURPLE,
   },
   summaryTop: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   imageWrap: {
-    width: 86,
-    height: 86,
-    borderRadius: 22,
+    width: 78,
+    height: 78,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F0ECFF',
@@ -386,47 +452,93 @@ const styles = StyleSheet.create({
   },
   summaryInfo: {
     flex: 1,
-    marginLeft: 18,
+    marginLeft: 14,
   },
   serviceName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#4B4B4F',
+    color: '#251B40',
     letterSpacing: -0.3,
-    lineHeight: 25,
+    lineHeight: 23,
   },
   variantName: {
-    fontSize: 15,
-    color: '#5C5C62',
-    marginTop: 8,
-    lineHeight: 20,
+    fontSize: 13,
+    color: '#817A91',
+    marginTop: 6,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   orderRefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
-    gap: 8,
+    justifyContent: 'space-between',
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1EEF8',
+    paddingTop: 14,
+  },
+  orderRefLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   orderRefText: {
-    fontSize: 18,
-    color: '#737373',
-    fontWeight: '700',
+    fontSize: 14,
+    color: '#251B40',
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  copyButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2FF',
   },
   reasonCard: {
-    marginTop: 20,
+    marginTop: 14,
     backgroundColor: '#FFF',
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 20,
-    paddingVertical: 22,
+    borderColor: '#ECE8F3',
+    padding: 16,
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  reasonHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  reasonIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0ECFF',
+    marginRight: 12,
+  },
+  reasonHeaderCopy: {
+    flex: 1,
   },
   reasonTitle: {
-    fontSize: 21,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#171717',
-    marginBottom: 18,
+    color: '#251B40',
     letterSpacing: -0.25,
+  },
+  reasonSubtitle: {
+    fontSize: 12,
+    color: '#817A91',
+    lineHeight: 17,
+    marginTop: 4,
+    fontWeight: '600',
   },
   loadingReasons: {
     flexDirection: 'row',
@@ -442,33 +554,48 @@ const styles = StyleSheet.create({
   reasonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 9,
+    paddingVertical: 13,
+    paddingHorizontal: 2,
+    borderTopWidth: 1,
+    borderTopColor: '#F4F1FA',
+  },
+  reasonRowSelected: {
+    borderTopWidth: 0,
+    backgroundColor: '#F7F3FF',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
   radioOuter: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2.5,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 18,
+    marginRight: 12,
   },
   radioOuterActive: {
-    borderColor: '#222',
+    borderColor: PURPLE,
   },
   radioInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#222',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: PURPLE,
   },
   reasonText: {
     flex: 1,
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#55555A',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4B4658',
     fontWeight: '700',
+  },
+  changeReasonText: {
+    fontSize: 12,
+    color: PURPLE,
+    fontWeight: '900',
   },
   emptyReasonBox: {
     borderWidth: 1,
@@ -492,35 +619,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   commentBox: {
-    marginTop: 24,
+    marginTop: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    borderColor: '#E7DDFD',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFEFF',
   },
   commentLabel: {
-    fontSize: 18,
-    color: '#55555A',
-    fontWeight: '500',
-    marginBottom: 14,
+    fontSize: 13,
+    color: '#251B40',
+    fontWeight: '800',
+    marginBottom: 10,
   },
   commentInput: {
     minHeight: 96,
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 20,
     color: '#111827',
     padding: 0,
   },
   submitButton: {
     height: 58,
-    marginTop: 28,
-    marginHorizontal: 20,
-    borderRadius: 12,
+    marginTop: 20,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 4,
   },
   submitButtonDisabled: {
     opacity: 0.5,
@@ -533,6 +664,7 @@ const styles = StyleSheet.create({
   confirmScroll: {
     flexGrow: 1,
     paddingTop: 34,
+    backgroundColor: '#FFFEFC',
   },
   closeButton: {
     width: 54,
@@ -545,23 +677,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingTop: 72,
   },
   confirmCopy: {
     flex: 1,
     paddingRight: 12,
   },
   confirmTitle: {
-    fontSize: 29,
+    fontSize: 30,
     lineHeight: 36,
     fontWeight: '900',
     color: '#171717',
     letterSpacing: -0.7,
   },
+  confirmSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginTop: 12,
+  },
   confirmLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 22,
   },
   confirmLinkText: {
     color: '#6D5AE6',
@@ -574,13 +713,13 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EDE9FE',
   },
   successCircle: {
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: '#16A34A',
+    backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
   },
