@@ -107,8 +107,8 @@ android {
         applicationId "com.rewardsplanners"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 19
-                versionName "0.1"
+        versionCode 20
+                versionName "1.0"
     }
     signingConfigs {
         debug {

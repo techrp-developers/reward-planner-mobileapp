@@ -13,6 +13,7 @@ import axios from "axios";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { setAuthToken as setLegacyAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
+import { isTokenExpiringSoon } from "../utils/jwtUtils";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -160,18 +161,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
 
-  useEffect(() => {
-    accessTokenRef.current = accessToken;
-  }, [accessToken]);
+  const updateAccessToken = useCallback((nextAccessToken: string | null) => {
+    accessTokenRef.current = nextAccessToken;
+    setAccessToken(nextAccessToken);
+  }, []);
 
   const clearLocalSession = useCallback(async () => {
-    setAccessToken(null);
+    updateAccessToken(null);
     setUser(null);
     setLegacyAuthToken(null);
     setTermsAccepted(null); // reset so next login re-checks
     setFirstLoginReward(null);
     await secureDeleteItem(REFRESH_TOKEN_KEY);
-  }, []);
+  }, [updateAccessToken]);
 
   const fetchProfile = useCallback(async () => {
     const profileRes = await api.get("/v1/auth/user-info");
@@ -238,7 +240,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           throw new Error("Invalid login response");
         }
 
-        setAccessToken(nextAccessToken);
+        updateAccessToken(nextAccessToken);
         setLegacyAuthToken(nextAccessToken);
 
         await secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken);
@@ -261,7 +263,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       }
     },
-    [fetchProfile, checkTerms],
+    [fetchProfile, checkTerms, updateAccessToken],
   );
 
   const markFirstLoginRewardShown = useCallback(() => {
@@ -269,10 +271,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const restoreSession = useCallback(async () => {
+    const currentAccessToken = accessTokenRef.current;
+
+    // If the in-memory token is still valid and not expiring soon, skip the
+    // refresh call entirely and just re-validate profile/terms.
+    if (currentAccessToken && !isTokenExpiringSoon(currentAccessToken)) {
+      await fetchProfile();
+      await checkTerms();
+      return;
+    }
+
     const refreshToken = await secureGetItem(REFRESH_TOKEN_KEY);
 
     if (!refreshToken) {
-      setAccessToken(null);
+      updateAccessToken(null);
       setUser(null);
       return;
     }
@@ -288,7 +300,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error("Missing access token from refresh");
       }
 
-      setAccessToken(nextAccessToken);
+      updateAccessToken(nextAccessToken);
       setLegacyAuthToken(nextAccessToken);
 
       await fetchProfile();
@@ -296,11 +308,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Re-check terms on every session restore so the gate shows
       // correctly if the user was previously mid-onboarding.
       await checkTerms();
-    } catch (error) {
-      await clearLocalSession();
+    } catch (error: any) {
+      const status = error?.response?.status;
+
+      // Only clear the local session on a definitive auth failure
+      // (401/403). Network blips and timeouts should not log the user out.
+      if (status === 401 || status === 403) {
+        await clearLocalSession();
+      }
       throw error;
     }
-  }, [clearLocalSession, fetchProfile, checkTerms]);
+  }, [clearLocalSession, fetchProfile, checkTerms, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
     try {
@@ -319,7 +337,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       getRefreshToken: async () => secureGetItem(REFRESH_TOKEN_KEY),
 
       onAccessTokenRefresh: async (nextAccessToken) => {
-        setAccessToken(nextAccessToken);
+        updateAccessToken(nextAccessToken);
         setLegacyAuthToken(nextAccessToken);
       },
 
@@ -331,7 +349,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       setSessionHandlers(null);
     };
-  }, [clearLocalSession]);
+  }, [clearLocalSession, updateAccessToken]);
 
   useEffect(() => {
     bootstrapSession();

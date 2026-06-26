@@ -58,5 +58,20 @@ export const normalizeProduct = (item: any) => {
       item?.reward?.label ??
       item?.rewardLabel ??
       null,
+    // Different product list endpoints (most-viewed, new-arrivals, search, etc.)
+    // name these fields differently — fall back through the known variants so
+    // ProductCard's rating/review display works regardless of which API fed it.
+    rating:
+      item?.rating ??
+      item?.avg_rating ??
+      item?.average_rating ??
+      item?.rating_avg ??
+      item?.ratings,
+    reviews:
+      item?.reviews ??
+      item?.review_count ??
+      item?.reviewCount ??
+      item?.total_reviews ??
+      item?.reviews_count,
   };
 };

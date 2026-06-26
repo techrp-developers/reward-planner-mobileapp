@@ -127,14 +127,14 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
     redeemCoins,
     rp_price
   } = useMemo(() => {
-    const ratingValue = Number(item?.rating ?? 4.5);
+    const ratingValue = Number(normalizedProduct.rating ?? 4.5);
     const safeRating = Number.isFinite(ratingValue)
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
     return {
       starCount: Math.round(safeRating),
-      reviewText: item?.reviews ? `(${item.reviews})` : "",
+      reviewText: normalizedProduct.reviews ? `(${normalizedProduct.reviews})` : "",
       productTitle: [item?.product_name || item?.title, item?.brand || item?.brand_name]
         .filter(Boolean)
         .join(" "),

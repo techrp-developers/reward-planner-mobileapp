@@ -32,9 +32,9 @@ export type BBPSStackParamList = {
 
 const Stack = createNativeStackNavigator<BBPSStackParamList>();
 
-function BBPSHomeStack() {
+const BBPSHomeStack = React.memo(() => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ freezeOnBlur: true }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="ProductScreen"
@@ -100,6 +100,6 @@ function BBPSHomeStack() {
       />
     </Stack.Navigator>
   );
-}
+});
 
 export default BBPSHomeStack;

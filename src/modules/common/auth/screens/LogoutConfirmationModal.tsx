@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, memo } from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -10,7 +10,7 @@ type LogoutConfirmationModalProps = {
   isLoading?: boolean;
 };
 
-export const LogoutConfirmationModal = ({
+const LogoutConfirmationModalComponent = ({
   visible,
   onConfirm,
   onCancel,
@@ -84,6 +84,8 @@ export const LogoutConfirmationModal = ({
     </Modal>
   );
 };
+
+export const LogoutConfirmationModal = memo(LogoutConfirmationModalComponent);
 
 const styles = StyleSheet.create({
   overlay: {

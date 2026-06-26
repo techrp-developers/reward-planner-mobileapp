@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../../../common/auth/navigation/types";
 import { activateAccount } from "../api/AuthAPI";
 import { useAlert } from "../../../ecommerce/components/alerts";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 type LoginAccountNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -28,6 +28,7 @@ type LoginAccountNavigationProp = NativeStackNavigationProp<
 function AccountActivate() {
   const navigation = useNavigation<LoginAccountNavigationProp>();
   const alert = useAlert();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -65,46 +66,58 @@ function AccountActivate() {
           showsVerticalScrollIndicator={false}
         >
 
-      <View style={styles.logoWrap}>
-        <Logo width={180} height={180} />
-      </View>
+          <View style={styles.logoWrap}>
+            <Logo width={180} height={180} />
+          </View>
 
-      <View style={styles.card}>
+          <View style={styles.card}>
 
-        <Text style={styles.title}>Activate Your Account</Text>
+            <Text style={styles.title}>Activate Your Account</Text>
 
-        {/* Email Input */}
-        <View style={styles.inputWrap}>
-          <MaterialCommunityIcons
-            name="email-outline"
-            size={18}
-            color="#999"
-            style={styles.inputIcon}
-          />
-          <TextInput
-            placeholder="Email Address"
-            placeholderTextColor="#999"
-            style={styles.input}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
+            {/* Email Input */}
+            <View style={styles.inputWrap}>
+              <MaterialCommunityIcons
+                name="email-outline"
+                size={18}
+                color="#999"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                placeholder="Email Address"
+                placeholderTextColor="#999"
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
 
-        <TouchableOpacity activeOpacity={0.85} onPress={handleActivate} disabled={loading}>
-          <LinearGradient
-            colors={["#FC8BAD", "#A654CD"]}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 0 }}
-            style={styles.loginBtn}
-          >
-            <Text style={styles.loginText}>{loading ? "Sending OTP..." : "Send OTP"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleActivate} disabled={loading}>
+              <LinearGradient
+                colors={["#FC8BAD", "#A654CD"]}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 0 }}
+                style={styles.loginBtn}
+              >
+                <Text style={styles.loginText}>{loading ? "Sending OTP..." : "Send OTP"}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
+        <View style={[styles.bottomWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <View style={styles.bottomRow}>
+            <Text style={styles.bottomText}>Already have an account?</Text>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Login")}
+            >
+              <Text style={styles.signUp}>Login Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
+
     </SafeAreaView>
   );
 }
@@ -176,7 +189,9 @@ const styles = StyleSheet.create({
   },
   bottomWrap: {
     backgroundColor: "#F5F0FF",
-    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#E8DCF7",
+    paddingTop: 16,
     alignItems: "center",
     paddingHorizontal: 20,
   },
@@ -192,6 +207,7 @@ const styles = StyleSheet.create({
   signUp: {
     color: "#7B2CBF",
     fontWeight: "bold",
+    paddingVertical: 4,
   },
   modalOverlay: {
     flex: 1,
