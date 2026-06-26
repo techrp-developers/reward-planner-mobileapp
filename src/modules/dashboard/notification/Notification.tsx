@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import LinearGradient from "react-native-linear-gradient";
 
 import OrderHeading from "../../ecommerce/constants/heading/OrderHeading";
 import {
@@ -46,6 +47,32 @@ function getIconName(icon?: string | null, module?: string) {
   if (module === "fitness") return "target";
   if (module === "bbps") return "receipt-text-outline";
   return "bell-outline";
+}
+
+function getModuleMeta(module?: string, highPriority = false) {
+  if (highPriority) {
+    return {
+      label: "Urgent",
+      color: "#DC2626",
+      bg: "#FEF2F2",
+      border: "#FECACA",
+    };
+  }
+
+  switch (module) {
+    case "ecommerce":
+      return { label: "Order", color: "#7C3AED", bg: "#F4F0FF", border: "#DDD6FE" };
+    case "service":
+      return { label: "Service", color: "#2563EB", bg: "#EFF6FF", border: "#BFDBFE" };
+    case "wallet":
+      return { label: "Wallet", color: "#0F766E", bg: "#ECFDF5", border: "#99F6E4" };
+    case "fitness":
+      return { label: "Fitness", color: "#16A34A", bg: "#F0FDF4", border: "#BBF7D0" };
+    case "bbps":
+      return { label: "Payment", color: "#D97706", bg: "#FFFBEB", border: "#FDE68A" };
+    default:
+      return { label: "Update", color: "#6D5AE6", bg: "#F4F0FF", border: "#E9D5FF" };
+  }
 }
 
 function formatNotificationTime(value: string) {
@@ -218,6 +245,7 @@ function Notification() {
   const renderNotification = ({ item }: { item: NotificationItem }) => {
     const unread = isUnread(item);
     const highPriority = item.priority === "high";
+    const meta = getModuleMeta(item.module, highPriority);
 
     return (
       <TouchableOpacity
@@ -226,27 +254,44 @@ function Notification() {
         onPress={() => handleNotificationPress(item)}
         onLongPress={() => handleDeleteNotification(item)}
       >
-        <View style={[styles.iconWrap, highPriority && styles.iconWrapHigh]}>
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: meta.bg, borderColor: meta.border },
+          ]}
+        >
           <MaterialCommunityIcons
             name={getIconName(item.icon, item.module)}
-            size={20}
-            color={highPriority ? "#DC2626" : "#6D5AE6"}
+            size={21}
+            color={meta.color}
           />
         </View>
 
         <View style={styles.contentWrap}>
+          <View style={styles.metaRow}>
+            <View style={[styles.modulePill, { backgroundColor: meta.bg }]}>
+              <Text style={[styles.moduleText, { color: meta.color }]}>
+                {meta.label}
+              </Text>
+            </View>
+            <Text style={styles.time}>{formatNotificationTime(item.created_at)}</Text>
+          </View>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
               {item.title}
             </Text>
-            <Text style={styles.time}>{formatNotificationTime(item.created_at)}</Text>
           </View>
           <Text style={styles.message} numberOfLines={2}>
             {item.message}
           </Text>
         </View>
 
-        {unread ? <View style={styles.unreadDot} /> : null}
+        <View style={styles.cardAction}>
+          {unread ? <View style={styles.unreadDot} /> : null}
+          {item.action_url ? (
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#C4B5FD" />
+          ) : null}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -288,28 +333,63 @@ function Notification() {
             />
           }
           ListHeaderComponent={
-            <View style={styles.summaryCard}>
-              <MaterialCommunityIcons name="bell-badge" size={20} color="#6D5AE6" />
-              <Text style={styles.summaryText}>
-                {badgeCount > 0
-                  ? `${badgeCount} new notification${badgeCount > 1 ? "s" : ""}`
-                  : "No New Notification"}
-              </Text>
-              {badgeCount > 0 ? (
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={styles.markAllButton}
-                  onPress={handleMarkAllRead}
-                >
-                  <Text style={styles.markAllText}>Mark all read</Text>
-                </TouchableOpacity>
+            <View>
+              <LinearGradient
+                colors={["#2F225F", "#6D5AE6", "#8B5CF6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryCard}
+              >
+                <View style={styles.summaryIcon}>
+                  <MaterialCommunityIcons
+                    name={badgeCount > 0 ? "bell-ring-outline" : "bell-check-outline"}
+                    size={23}
+                    color="#FFFFFF"
+                  />
+                </View>
+                <View style={styles.summaryCopy}>
+                  <Text style={styles.summaryKicker}>NOTIFICATION CENTER</Text>
+                  <Text style={styles.summaryText}>
+                    {badgeCount > 0
+                      ? `${badgeCount} new notification${badgeCount > 1 ? "s" : ""}`
+                      : "You are all caught up"}
+                  </Text>
+                </View>
+              </LinearGradient>
+              {notifications.length > 0 ? (
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Recent updates</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.78}
+                    disabled={badgeCount <= 0}
+                    style={[
+                      styles.markAllButton,
+                      badgeCount <= 0 && styles.markAllButtonDisabled,
+                    ]}
+                    onPress={handleMarkAllRead}
+                  >
+                    <Text
+                      style={[
+                        styles.markAllText,
+                        badgeCount <= 0 && styles.markAllTextDisabled,
+                      ]}
+                    >
+                      Mark all read
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : null}
             </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <MaterialCommunityIcons name="bell-outline" size={34} color="#9CA3AF" />
-              <Text style={styles.emptyText}>No notifications yet</Text>
+              <View style={styles.emptyIconWrap}>
+                <MaterialCommunityIcons name="bell-sleep-outline" size={34} color="#7C3AED" />
+              </View>
+              <Text style={styles.emptyTitle}>No notifications yet</Text>
+              <Text style={styles.emptyText}>
+                Important order, wallet, and service updates will appear here.
+              </Text>
             </View>
           }
         />
@@ -323,112 +403,196 @@ export default Notification;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F8F8FC",
+    backgroundColor: "#F5F3FA",
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 26,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 30,
   },
   summaryCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E9E6F7",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    minHeight: 82,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     marginBottom: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    shadowColor: "#2F225F",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  summaryIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.17)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 13,
+  },
+  summaryCopy: {
+    flex: 1,
+  },
+  summaryKicker: {
+    color: "rgba(255,255,255,0.68)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 5,
   },
   summaryText: {
-    fontSize: 13,
-    color: "#4B5563",
-    fontWeight: "600",
-    flex: 1,
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "800",
+    letterSpacing: 0,
+  },
+  sectionHeader: {
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   markAllButton: {
     borderRadius: 999,
     backgroundColor: "#F2EDFF",
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 6,
+  },
+  markAllButtonDisabled: {
+    backgroundColor: "#ECE8F4",
   },
   markAllText: {
     fontSize: 11,
     color: "#6D5AE6",
     fontWeight: "700",
   },
+  markAllTextDisabled: {
+    color: "#A19AAD",
+  },
+  sectionTitle: {
+    marginLeft: 2,
+    fontSize: 12,
+    color: "#7C728B",
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#ECECF0",
-    padding: 14,
+    borderColor: "#ECE8F4",
+    padding: 15,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "flex-start",
+    shadowColor: "#2F225F",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
   cardUnread: {
-    borderColor: "#DED8FF",
-    backgroundColor: "#FEFEFF",
+    borderColor: "#CFC5FF",
+    backgroundColor: "#FFFEFF",
   },
   iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F2EDFF",
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
-  },
-  iconWrapHigh: {
-    backgroundColor: "#FEF2F2",
+    marginRight: 12,
   },
   contentWrap: {
     flex: 1,
   },
-  titleRow: {
+  metaRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    justifyContent: "space-between",
+    marginBottom: 6,
     gap: 8,
   },
+  modulePill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  moduleText: {
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 5,
+  },
   title: {
-    fontSize: 14,
-    color: "#111827",
-    fontWeight: "700",
+    fontSize: 15,
+    color: "#1F1738",
+    fontWeight: "800",
     flex: 1,
+    letterSpacing: 0,
   },
   time: {
     fontSize: 11,
-    color: "#9CA3AF",
-    fontWeight: "600",
+    color: "#9B92A9",
+    fontWeight: "700",
   },
   message: {
-    fontSize: 12,
-    color: "#6B7280",
-    lineHeight: 18,
+    fontSize: 13,
+    color: "#6F667D",
+    lineHeight: 19,
+    fontWeight: "500",
+  },
+  cardAction: {
+    alignItems: "center",
+    justifyContent: "space-between",
+    alignSelf: "stretch",
+    marginLeft: 8,
   },
   unreadDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: "#6D5AE6",
-    marginLeft: 8,
     marginTop: 4,
   },
   emptyWrap: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
+    paddingVertical: 58,
+    paddingHorizontal: 20,
+  },
+  emptyIconWrap: {
+    width: 74,
+    height: 74,
+    borderRadius: 25,
+    backgroundColor: "#F1ECFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    color: "#1F1738",
+    fontWeight: "800",
+    marginBottom: 6,
   },
   emptyText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6B7280",
+    fontSize: 13,
+    color: "#7C728B",
     fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 19,
   },
   centered: {
     flex: 1,
@@ -439,7 +603,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 13,
-    color: "#6B7280",
+    color: "#7C728B",
     fontWeight: "600",
   },
   errorText: {
