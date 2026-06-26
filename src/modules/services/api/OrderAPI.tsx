@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
-import { BASE_API_URL } from "./api";
+import { BASE_API_URL, BASE_IMAGE_URL } from "./api";
 
 /* =========================================================
    TYPES
@@ -98,6 +98,17 @@ export interface ServiceCancellation {
 export interface ServiceCancellationReason {
   reason_id: number;
   reason_text: string;
+}
+
+export interface ServiceInvoiceDetails {
+  id: number;
+  parent_order_id: string;
+  invoice_number: string;
+  invoice_url: string;
+  total_amount: string;
+  created_at: string;
+  url: string;
+  download_url: string;
 }
 
 export interface ServiceItem {
@@ -392,6 +403,52 @@ export const requestServiceOrderCancellation = async (payload: {
     }
 
     console.error("Request Service Cancellation Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 8. Get Service Invoice Details
+// ==============================
+export const getServiceInvoiceDetails = async (
+  parent_order_id: string
+): Promise<{
+  success: boolean;
+  data: ServiceInvoiceDetails;
+}> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    if (!parent_order_id) {
+      throw new Error("parent_order_id is required");
+    }
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/invoice-details/${parent_order_id}`,
+      { headers }
+    );
+
+    const invoice = res.data?.data;
+    const relativeUrl = String(invoice?.url || "").trim();
+    const downloadUrl = relativeUrl
+      ? relativeUrl.startsWith("http")
+        ? relativeUrl
+        : `${BASE_IMAGE_URL}/api/crm${relativeUrl.startsWith("/") ? relativeUrl : `/${relativeUrl}`}`
+      : "";
+
+    return {
+      success: Boolean(res.data?.success),
+      data: {
+        ...invoice,
+        download_url: downloadUrl,
+      },
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Invoice Details Error:", error?.response || error);
     throw error?.response?.data || error;
   }
 };

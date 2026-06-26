@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -25,6 +26,7 @@ import ServiceBundleCard from './ServiceBundleCard';
 
 // ── API & types ──────────────────────────────────────────────────────────────
 import {
+  getServiceInvoiceDetails,
   getServiceOrderDetails,
   type ServiceOrderDetails,
   type ServiceItem,
@@ -78,6 +80,7 @@ export default function ServiceOrderDetail() {
   const [order, setOrder] = useState<ServiceOrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [invoiceDownloading, setInvoiceDownloading] = useState(false);
   const [error, setError] = useState('');
 
   // ── API call ───────────────────────────────────────────────────────────────
@@ -121,6 +124,28 @@ export default function ServiceOrderDetail() {
   const handleFeedbackItem = (item: ServiceItem) => {
     // TODO: navigate to feedback screen when available
     Alert.alert('Feedback', `Rate your experience with "${item.service_name}".`);
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setInvoiceDownloading(true);
+      const res = await getServiceInvoiceDetails(parent_order_id);
+      const invoiceUrl = res?.data?.download_url;
+
+      if (!res?.success || !invoiceUrl) {
+        Alert.alert('Invoice unavailable', 'Unable to find invoice for this order.');
+        return;
+      }
+
+      await Linking.openURL(invoiceUrl);
+    } catch (err: any) {
+      Alert.alert(
+        'Download failed',
+        err?.message || 'Unable to download invoice. Please try again.'
+      );
+    } finally {
+      setInvoiceDownloading(false);
+    }
   };
 
   // ── Loading / error states ────────────────────────────────────────────────
@@ -306,6 +331,10 @@ export default function ServiceOrderDetail() {
             rewardRedeemed={0}
             paymentMethod="Online"
           />
+          <InvoiceDownloadRow
+            downloading={invoiceDownloading}
+            onDownload={handleDownloadInvoice}
+          />
         </SectionCard>
 
        
@@ -406,6 +435,43 @@ function OrderDocumentsCard({
 
 
 // ── Styles ────────────────────────────────────────────────────────────────────
+function InvoiceDownloadRow({
+  downloading,
+  onDownload,
+}: {
+  downloading: boolean;
+  onDownload: () => void;
+}) {
+  return (
+    <View style={styles.invoiceRow}>
+      <View style={styles.invoiceIcon}>
+        <MaterialCommunityIcons name="file-pdf-box" size={24} color={PURPLE} />
+      </View>
+
+      <View style={styles.invoiceCopy}>
+        <Text style={styles.invoiceTitle}>Service invoice</Text>
+        <Text style={styles.invoiceText}>Download your payment invoice as a PDF</Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.invoiceButton, downloading && styles.invoiceButtonDisabled]}
+        activeOpacity={0.82}
+        onPress={onDownload}
+        disabled={downloading}
+      >
+        {downloading ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <>
+            <Text style={styles.invoiceButtonText}>Download</Text>
+            <MaterialCommunityIcons name="download" size={15} color="#FFF" />
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6F5FB' },
 
@@ -511,6 +577,57 @@ const styles = StyleSheet.create({
   documentsDoneText: { fontSize: 10, color: '#16A34A', fontWeight: '800' },
   uploadDocumentsButton: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PURPLE, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
   uploadDocumentsText: { fontSize: 11, color: '#FFF', fontWeight: '800' },
+  invoiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F1EEF8',
+  },
+  invoiceIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0ECFF',
+  },
+  invoiceCopy: {
+    flex: 1,
+    marginLeft: 11,
+    marginRight: 8,
+  },
+  invoiceTitle: {
+    fontSize: 13,
+    color: '#251B40',
+    fontWeight: '900',
+  },
+  invoiceText: {
+    fontSize: 11,
+    color: '#817A91',
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  invoiceButton: {
+    minWidth: 96,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: PURPLE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+  },
+  invoiceButtonDisabled: {
+    opacity: 0.65,
+  },
+  invoiceButtonText: {
+    fontSize: 11,
+    color: '#FFF',
+    fontWeight: '900',
+  },
 
   centered: {
     flex: 1,
