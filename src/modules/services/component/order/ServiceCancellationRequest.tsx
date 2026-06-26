@@ -107,16 +107,23 @@ export default function ServiceCancellationRequest() {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.confirmScroll}>
+          <LinearGradient
+            colors={['#30205F', '#5B3CB4', '#7C3AED']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.confirmTop}
+          >
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => navigation.navigate('ServiceOrderDetail', { parent_order_id })}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <MaterialCommunityIcons name="close" size={30} color="#111827" />
+            <MaterialCommunityIcons name="close" size={24} color="#FFF" />
           </TouchableOpacity>
 
           <View style={styles.confirmHero}>
             <View style={styles.confirmCopy}>
+              <Text style={styles.confirmEyebrow}>REQUEST SUBMITTED</Text>
               <Text style={styles.confirmTitle}>Cancellation Requested</Text>
               <Text style={styles.confirmSubtitle}>
                 We’ve received your request and our team will review it shortly.
@@ -127,7 +134,7 @@ export default function ServiceCancellationRequest() {
                 onPress={() => navigation.navigate('ServiceOrderDetail', { parent_order_id })}
               >
                 <Text style={styles.confirmLinkText}>View Request Details</Text>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#6D5AE6" />
+                <MaterialCommunityIcons name="chevron-right" size={22} color="#FFF" />
               </TouchableOpacity>
             </View>
 
@@ -138,15 +145,37 @@ export default function ServiceCancellationRequest() {
               <MaterialCommunityIcons
                 name="star-four-points"
                 size={22}
-                color={PURPLE}
+                color="#FFF"
                 style={styles.sparkleOne}
               />
               <MaterialCommunityIcons
                 name="star-four-points"
                 size={18}
-                color={PURPLE}
+                color="#FFF"
                 style={styles.sparkleTwo}
               />
+            </View>
+          </View>
+          </LinearGradient>
+
+          <View style={styles.confirmContent}>
+            <ServiceSummaryCard
+              serviceName={service_name}
+              variantName={variant_name}
+              orderRef={order_ref}
+              imageUrl={image_url}
+            />
+
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewIcon}>
+                <MaterialCommunityIcons name="progress-clock" size={22} color={PURPLE} />
+              </View>
+              <View style={styles.reviewCopy}>
+                <Text style={styles.reviewTitle}>Request under review</Text>
+                <Text style={styles.reviewText}>
+                  Your service remains in request status until the cancellation is reviewed.
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -663,63 +692,87 @@ const styles = StyleSheet.create({
   },
   confirmScroll: {
     flexGrow: 1,
-    paddingTop: 34,
-    backgroundColor: '#FFFEFC',
+    backgroundColor: '#F6F5FB',
+    paddingBottom: 32,
+  },
+  confirmTop: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 72,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   closeButton: {
-    width: 54,
-    height: 54,
-    marginLeft: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   confirmHero: {
-    flexDirection: 'row',
+    marginTop: 22,
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 72,
   },
   confirmCopy: {
-    flex: 1,
-    paddingRight: 12,
+    alignItems: 'center',
+  },
+  confirmEyebrow: {
+    marginTop: 18,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.66)',
+    fontWeight: '900',
+    letterSpacing: 1.2,
   },
   confirmTitle: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '900',
-    color: '#171717',
+    color: '#FFF',
     letterSpacing: -0.7,
+    marginTop: 5,
+    textAlign: 'center',
   },
   confirmSubtitle: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#6B7280',
+    color: 'rgba(255,255,255,0.76)',
     fontWeight: '600',
-    marginTop: 12,
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 10,
   },
   confirmLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 22,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
   confirmLinkText: {
-    color: '#6D5AE6',
-    fontSize: 18,
+    color: '#FFF',
+    fontSize: 13,
     fontWeight: '900',
   },
   successBadge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 116,
+    height: 116,
+    borderRadius: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDE9FE',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
   },
   successCircle: {
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: PURPLE,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -733,23 +786,73 @@ const styles = StyleSheet.create({
     right: 12,
     bottom: 24,
   },
-  confirmActions: {
-    marginTop: 80,
-    marginHorizontal: 24,
+  confirmContent: {
+    marginTop: -46,
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  reviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingHorizontal: 2,
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#ECE8F3',
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  reviewIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0ECFF',
+    marginRight: 12,
+  },
+  reviewCopy: {
+    flex: 1,
+  },
+  reviewTitle: {
+    fontSize: 14,
+    color: '#251B40',
+    fontWeight: '900',
+  },
+  reviewText: {
+    fontSize: 12,
+    color: '#817A91',
+    fontWeight: '600',
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  confirmActions: {
+    marginTop: 14,
+    marginHorizontal: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#ECE8F3',
+    shadowColor: '#35245F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
   },
   confirmActionRow: {
-    minHeight: 60,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   confirmActionText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#4B4B4F',
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#251B40',
   },
   confirmDivider: {
     height: 1,

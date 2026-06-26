@@ -16,9 +16,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import LinearGradient from 'react-native-linear-gradient';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
-import OrderStatusJourney, {
-  type OrderStatusItem,
-} from '../../../../modules/common/order/OrderStatusJourney';
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
 import PriceDetailsCard from '../../../../modules/common/order/PriceDetailsCard';
 
@@ -54,13 +51,6 @@ const ORDER_STATUS_COLOR: Record<string, string> = {
 const PURPLE = '#7C3AED';
 
 // ── Data transforms ──────────────────────────────────────────────────────────
-function buildStatusJourney(order: ServiceOrderDetails): OrderStatusItem[] {
-  return order.timeline.map(step => ({
-    label: step.status,
-    completed: step.completed,
-  }));
-}
-
 function buildAddressLine(order: ServiceOrderDetails): string {
   const a = order.address;
   if (!a) return '';
@@ -164,7 +154,6 @@ export default function ServiceOrderDetail() {
   // ── Derived data (transforms live in parent, not in components) ───────────
   const statusLabel  = ORDER_STATUS_LABEL[order.status]  || order.status;
   const statusColor  = ORDER_STATUS_COLOR[order.status]  || '#6B7280';
-  const journeySteps = buildStatusJourney(order);
   const addressLine  = buildAddressLine(order);
   const hasStandaloneItems = order.items.length > 0;
   const hasBundles         = order.bundles.length > 0;
@@ -292,12 +281,6 @@ export default function ServiceOrderDetail() {
           />
         )}
 
-        <SectionCard>
-          <OrderStatusJourney
-            headerText="Overall order progress"
-            statuses={journeySteps}
-          />
-        </SectionCard>
 
         {/* ── Address (reused ecommerce component) ──────────────────── */}
         {order.address ? (
