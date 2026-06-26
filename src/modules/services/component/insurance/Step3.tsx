@@ -550,6 +550,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
                 title={loading ? "Searching..." : "Get Free Quotes"}
                 onPress={handleSubmit}
                 disabled={!isFormValid || loading}
+                style={styles.quoteButton}
               />
             </View>
           </View>
@@ -675,6 +676,12 @@ const styles = StyleSheet.create({
     borderTopColor: "#F2F2F7",
   },
   footerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  quoteButton: {
+    height: 52,
+    marginTop: 0,
+    justifyContent: "center",
+    padding: 0,
+  },
   backButton: {
     width: 52,
     height: 52,
@@ -758,7 +765,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     elevation: 4,
   },
-  cityLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  cityLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 10,
+  },
   cityIconCircle: {
     width: 52,
     height: 52,
@@ -769,7 +782,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   cityIconCircleActive: { backgroundColor: "#EBE5FF" },
-  cityTextContainer: { justifyContent: "center" },
+  cityTextContainer: { flex: 1, justifyContent: "center", minWidth: 0 },
   cityLabel: { fontSize: 16, fontWeight: "700", color: "#1A1A2E", letterSpacing: -0.3 },
   citySubLabel: { fontSize: 12, color: "#8E8E93", marginTop: 2 },
 
@@ -781,10 +794,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EBEBF5",
     paddingHorizontal: 12,
-    minWidth: 140,
+    width: 124,
     height: 44,
     justifyContent: "space-between",
-    gap: 8,
+    gap: 4,
   },
   cityInputActive: { borderColor: "#8665FF", backgroundColor: "#F9F8FF" },
   cityInputText: { fontSize: 15, fontWeight: "600", color: "#1A1A2E", flex: 1 },
