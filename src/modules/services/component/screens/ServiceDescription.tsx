@@ -437,7 +437,7 @@
                         headerImageUrl={headerImageUrl}
                         mainTitle={serviceData?.service?.name}
                         subText={serviceData?.service?.description}
-                        rating={Number(serviceData?.service?.rating) || 4.3}
+                        rating={Number(serviceData?.service?.rating ?? 0)}
                         variants={serviceCartVariants}
                         showVariantSelector={hasMultipleVariants}
                         onVariantChange={(v) => {

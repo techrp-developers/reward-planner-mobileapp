@@ -35,7 +35,7 @@ export default function ServiceCart({
     headerImageUrl,
     mainTitle,
     subText,
-    rating = 4.3,
+    rating = 0,
     variants,
     onVariantChange,
     showVariantSelector = true,
@@ -78,7 +78,9 @@ export default function ServiceCart({
         : ImageHeader;
 
     const parsedRating = Number(rating);
-    const numericRating = Number.isFinite(parsedRating) && parsedRating > 0 ? parsedRating : 4.3;
+    const numericRating = Number.isFinite(parsedRating)
+        ? Math.min(5, Math.max(0, parsedRating))
+        : 0;
 
     const primaryButtonText = primaryButtonTextProp ?? (() => {
         const rawPrice = selectedService?.price;
@@ -141,11 +143,22 @@ export default function ServiceCart({
 
                     <View style={styles.ratingRow}>
                         <Text style={styles.ratingText}>{numericRating.toFixed(1)}</Text>
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star-half-full" size={16} color="#FBBF24" />
+                        {[1, 2, 3, 4, 5].map((star) => {
+                            const iconName = numericRating >= star
+                                ? 'star'
+                                : numericRating >= star - 0.5
+                                    ? 'star-half-full'
+                                    : 'star-outline';
+
+                            return (
+                                <MaterialCommunityIcons
+                                    key={star}
+                                    name={iconName}
+                                    size={16}
+                                    color="#FBBF24"
+                                />
+                            );
+                        })}
                     </View>
                 </View>
 

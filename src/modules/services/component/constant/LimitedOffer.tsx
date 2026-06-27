@@ -96,7 +96,7 @@ export default function LimitedOffer() {
                       : undefined
                   }
                   rating={item.rating}
-                  users="18.9K"
+                  users={String(item.total_orders ?? 0)}
                   coins={coinsText}
                   discount={discount}
                   onPress={() =>
