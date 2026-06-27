@@ -8,16 +8,26 @@ export default function HomeStack() {
   return (
     <Stack.Navigator
       id="HomeStack"
-      detachInactiveScreens={true}
       screenOptions={{
         headerShown: false,
         animation: "slide_from_right",
         gestureEnabled: true,
+        contentStyle: { backgroundColor: "#FFFFFF" },
       }}
     >
       <Stack.Screen name="Home" getComponent={() => require("../screens/homescreen").default} />
       <Stack.Screen name="Category" getComponent={() => require("../components/product/product_section/Categories_Product").default} />
-      <Stack.Screen name="ProductDescription" getComponent={() => require("../screens/product_description_screen").default} />
+      <Stack.Screen
+        name="ProductDescription"
+        getComponent={() => require("../screens/product_description_screen").default}
+        options={{
+          animation: "slide_from_right",
+          // Keep Home attached behind this opaque screen so popping cannot
+          // briefly expose the outgoing product image while Home reattaches.
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
       <Stack.Screen name="Cart" getComponent={() => require("../screens/cartScreen").default} />
       <Stack.Screen name="AddressSelect" getComponent={() => require("../components/ItemCardAddress/AddressSelectScreen").default} />
       <Stack.Screen name="WithAddress" getComponent={() => require("../components/ItemCardAddress/WithAddress").default} />

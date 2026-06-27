@@ -4,7 +4,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -22,6 +21,7 @@ import {
   PROMO_CARD_GAP,
   PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
+import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
 
 const CACHE_TTL_MS = 30 * 1000;
 const NEW_ARRIVALS_QUERY_KEY = ["ecommerce", "promotion", "new-arrivals"] as const;
@@ -163,11 +163,7 @@ function NewArrivals() {
 
   
   if (isLoading && products.length === 0) {
-    return (
-      <View style={styles.loaderWrap}>
-        <ActivityIndicator size="small" color="#FF3F6C" />
-      </View>
-    );
+    return <HomeSectionSkeleton height={350} backgroundColor="#FFFBF5" />;
   }
 
   if (products.length === 0) return null;

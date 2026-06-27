@@ -149,9 +149,18 @@ export default function
       setLoading(true);
     }
 
+    // Start the network request immediately. Rendering the heavier product
+    // content still waits for the native screen transition to finish below.
+    const productRequest = fetchProductDetailsByID(productId)
+      .then((raw) => ({ raw, error: null }))
+      .catch((error) => ({ raw: null, error }));
+
     const interactionTask = InteractionManager.runAfterInteractions(async () => {
       try {
-        const raw = await fetchProductDetailsByID(productId);
+        const result = await productRequest;
+        if (result.error) throw result.error;
+
+        const raw = result.raw;
 
         if (!raw || typeof raw !== "object") {
           throw new Error("Product details response is empty");

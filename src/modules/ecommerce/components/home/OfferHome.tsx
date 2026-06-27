@@ -12,6 +12,7 @@ import {
   Linking,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import HomeSectionSkeleton from "./HomeSectionSkeleton";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
@@ -269,11 +270,7 @@ export default function OfferHome() {
   };
 
   if (isProductsLoading || isCampaignLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading offers...</Text>
-      </View>
-    );
+    return <HomeSectionSkeleton height={390} />;
   }
 
   return (

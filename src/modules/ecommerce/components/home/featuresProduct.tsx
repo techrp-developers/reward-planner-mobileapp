@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import React, { useCallback, useMemo } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import ProductCard from "../../constants/product_cart/ProductCard";
@@ -15,6 +15,7 @@ import {
   PROMO_CARD_GAP,
   PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
+import HomeSectionSkeleton from "./HomeSectionSkeleton";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -48,7 +49,6 @@ const getProductList = (payload: any) => {
 
 export default function FeaturesProduct() {
   const navigation = useNavigation<Nav>();
-  const [refreshSeed, setRefreshSeed] = useState(0);
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ["ecommerce", "home", "features-products"],
@@ -61,15 +61,9 @@ export default function FeaturesProduct() {
     placeholderData: (previousData) => previousData,
   });
 
-  useFocusEffect(
-    useCallback(() => {
-      setRefreshSeed((value) => value + 1);
-    }, [])
-  );
-
   const randomProducts = useMemo(
     () => pickRandomProducts(allProducts, FEATURED_LIMIT),
-    [allProducts, refreshSeed]
+    [allProducts]
   );
 
   const firstRow = useMemo(() => randomProducts.slice(0, 5), [randomProducts]);
@@ -87,11 +81,7 @@ export default function FeaturesProduct() {
   );
 
   if (isLoading && allProducts.length === 0) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="small" color="#5B47A3" />
-      </View>
-    );
+    return <HomeSectionSkeleton height={620} backgroundColor="#FFF0DA" />;
   }
 
   if (randomProducts.length === 0) return null;

@@ -22,7 +22,7 @@ import {
     PROMO_CARD_GAP,
     PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
-// import { queryClient } from "../../../../query/queryClient";
+import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -72,7 +72,11 @@ const RecentProduct = () => {
         []
     );
 
-    if (!isAuthenticated || (isLoading && products.length === 0) || products.length === 0) return null;
+    if (isAuthenticated && isLoading && products.length === 0) {
+        return <HomeSectionSkeleton height={350} backgroundColor="#F0E5FF" />;
+    }
+
+    if (!isAuthenticated || products.length === 0) return null;
 
     return (
         <View style={styles.sectionWrapper}>
@@ -102,8 +106,6 @@ const RecentProduct = () => {
         </View>
     );
 };
-
-// ... prefetchRecentProductSection remains the same ...
 
 const styles = StyleSheet.create({
     sectionWrapper: {

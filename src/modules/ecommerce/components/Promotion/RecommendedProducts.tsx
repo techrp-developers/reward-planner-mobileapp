@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +16,7 @@ import {
     PROMO_CARD_GAP,
     PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
+import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -76,11 +77,7 @@ function RecommendedProducts() {
     );
 
     if (isLoading && products.length === 0) {
-        return (
-            <View style={styles.loadingWrap}>
-                <ActivityIndicator size="small" color="#5B47A3" />
-            </View>
-        );
+        return <HomeSectionSkeleton height={350} />;
     }
 
     if (authRequired || products.length === 0) {
