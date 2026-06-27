@@ -19,8 +19,7 @@ type VerticalServiceCardProps = {
   description: string;
   image: string | React.ComponentType<{ width?: number; height?: number }>;
   priceText?: string;
-  days?: string; 
-  rating?: number;
+  days?: string;
 };
 
 function CategoryCard({
@@ -104,7 +103,7 @@ function CategoryCard({
           <View style={styles.metaRow}>
             <View style={styles.ratingChip}>
               <MaterialIcons name="star" size={13} color="#F59E0B" />
-              <Text style={styles.ratingChipText}>4.8</Text>
+              <Text style={styles.ratingChipText}>0.0</Text>
             </View>
             {!!days && (
               <View style={styles.daysChip}>
