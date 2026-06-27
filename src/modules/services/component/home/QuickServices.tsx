@@ -13,13 +13,11 @@ import Card from '../constant/Card';
 
 const HORIZONTAL_PADDING = 16;
 
-// Professional sizing: Card occupies 78% of width, allowing next card to peek in
-const navigation = useNavigation<any>();
-
 // Fixed typo from 'assete' to 'assets'
 const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
 
 export default function QuickServices() {
+  const navigation = useNavigation<any>();
   const { data: homeData, isLoading, error } = useServiceHome();
 
   // Extract the Quick Services section
@@ -77,6 +75,7 @@ export default function QuickServices() {
           image={getImageSource(item)}
           price={`${item.price}`}
           oldPrice={item.mrp ? `${item.mrp}` : `${item.price}`}
+          rating={item.rating}
           users={orders}
           coins={coinsText}
           discount={discount}

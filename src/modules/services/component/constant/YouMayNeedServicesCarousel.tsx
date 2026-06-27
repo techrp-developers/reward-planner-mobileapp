@@ -65,6 +65,7 @@ const YouMayNeedServicesCarousel = () => {
                   ? `₹${item.mrp}`
                   : undefined
               }
+              rating={item.rating}
               users="18.9K"
               coins={coinsText}
               discount={discount}

@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Reward from '../../../../assets/product/rewards.svg';
 import { HomeStackParamList } from '../../navigation/type';
@@ -11,7 +12,7 @@ type Props = {
   image: any;
   price: string;
   oldPrice?: string;
-  rating?: string;
+  rating?: number | string;
   users?: string;
   offerPrice?: string;
   coins?: string;
@@ -24,6 +25,7 @@ function Card({
   image,
   price,
   oldPrice,
+  rating,
   users,
   offerPrice,
   coins,
@@ -32,6 +34,8 @@ function Card({
 }: Props) {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
   const [imgError, setImgError] = useState(false);
+  const parsedRating = Number(rating);
+  const hasRating = rating !== undefined && rating !== null && Number.isFinite(parsedRating);
 
   // ✅ Hybrid press handler (BEST PRACTICE)
   const handlePress = () => {
@@ -78,11 +82,16 @@ function Card({
             )}
           </View>
 
-          {/* USERS */}
-          {!!users && (
+          {/* RATING & ORDERS */}
+          {(hasRating || !!users) && (
             <View style={styles.ratingRow}>
-              <Text style={styles.stars}>⭐⭐⭐⭐⭐</Text>
-              <Text style={styles.users}>({users})</Text>
+              {hasRating && (
+                <>
+                  <MaterialIcons name="star" size={14} color="#F59E0B" />
+                  <Text style={styles.ratingText}>{parsedRating.toFixed(1)}</Text>
+                </>
+              )}
+              {!!users && <Text style={styles.users}>({users})</Text>}
             </View>
           )}
 
@@ -193,9 +202,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 10,
   },
-  stars: {
-    fontSize: 10,
-    letterSpacing: -2,
+  ratingText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '700',
+    marginLeft: 2,
   },
   users: {
     fontSize: 12,
