@@ -218,14 +218,6 @@ function Profile() {
 
                         {/* Right Section */}
                         <View style={styles.rightRow}>
-                            {/* <MaterialIcons name="settings" size={22} color="#333" />
-                        <MaterialCommunityIcons
-                            name="bell-outline"
-                            size={22}
-                            color="#333"
-                            style={styles.bellIcon}
-                        /> */}
-
                             {/* <View style={styles.langRow}>
                             <Text style={styles.flagText}>🇮🇳</Text>
                             <Text style={styles.langText}>EN</Text>

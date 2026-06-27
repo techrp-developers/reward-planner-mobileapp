@@ -16,6 +16,7 @@ type Props = {
   title?: string;
   onBackPress?: () => void;
   onHelpPress?: () => void;
+  showHelp?: boolean;
 };
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
@@ -24,6 +25,7 @@ export default function OrderHeading({
   title = "My Orders",
   onBackPress,
   onHelpPress,
+  showHelp = true,
 }: Props) {
   const navigation = useNavigation<Nav>();
 
@@ -69,20 +71,21 @@ export default function OrderHeading({
           {title}
         </Text>
 
-        {/* Help Button */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handleHelp}
-          style={styles.helpBtn}
-        >
-          <MaterialCommunityIcons
-            name="chat-outline"
-            size={16}
-            color="#EC4899"
-            style={styles.helpIcon}
-          />
-          <Text style={styles.helpText}>Help</Text>
-        </TouchableOpacity>
+        {showHelp ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleHelp}
+            style={styles.helpBtn}
+          >
+            <MaterialCommunityIcons
+              name="chat-outline"
+              size={16}
+              color="#EC4899"
+              style={styles.helpIcon}
+            />
+            <Text style={styles.helpText}>Help</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </SafeAreaView>
   );

@@ -138,16 +138,37 @@ interface FooterProps extends Props {
 const ListHeader = memo<Props>(({ navigation }) => (
   <>
     <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
+      colors={['#24174E', '#5B3CB4', '#8B5CF6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.heroSection}
     >
-     
+      <View style={styles.heroGlowOne} />
+      <View style={styles.heroGlowTwo} />
+      <View style={styles.heroBadge}>
+        <MaterialCommunityIcons name="chart-timeline-variant-shimmer" size={14} color="#FFFFFF" />
+        <Text style={styles.heroBadgeText}>SMART WEALTH TOOLS</Text>
+      </View>
       <Text style={styles.heroTitle}>Smart Investment{'\n'}Planner</Text>
       <Text style={styles.heroSubtitle}>
         Calculate returns, learn the basics, and track your financial future.
       </Text>
+      <View style={styles.heroStatsRow}>
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>{CALCULATORS.length}</Text>
+          <Text style={styles.heroStatLabel}>Calculators</Text>
+        </View>
+        <View style={styles.heroStatDivider} />
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>FAQ</Text>
+          <Text style={styles.heroStatLabel}>Guides</Text>
+        </View>
+        <View style={styles.heroStatDivider} />
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>MF</Text>
+          <Text style={styles.heroStatLabel}>Learning</Text>
+        </View>
+      </View>
     </LinearGradient>
 
     <FAQSection navigation={navigation} />
@@ -206,9 +227,8 @@ const ListFooter = memo<FooterProps>(
 
       {/* Learn Section Divider */}
       <View style={styles.learnSection}>
-         <MFBeginners navigation={navigation} />
-      <MFInformedInvestors navigation={navigation} />
-
+        <MFBeginners navigation={navigation} />
+        <MFInformedInvestors navigation={navigation} />
       </View>     
       <View style={styles.bottomPad} />
     </View>
@@ -280,10 +300,15 @@ const MFScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F7F4FF" />
 
       {/* ── Top Header ──────────────────────────────────────── */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={['#FFFFFF', '#F7F4FF']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
@@ -302,7 +327,7 @@ const MFScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.badgeCount}>{CALCULATORS.length}</Text>
           <Text style={styles.badgeLabel}>Tools</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* ── Content ─────────────────────────────────────────── */}
       <FlatList
@@ -330,7 +355,7 @@ export default MFScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F7F4FF',
   },
 
   // ── Header ──────────────────────────────────────────────────
@@ -338,51 +363,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SCREEN_PADDING,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    paddingTop: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(124,58,237,0.08)',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: '#5B47A3',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 4,
       },
-      android: { elevation: 2 },
+      android: { elevation: 3 },
     }),
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(124,58,237,0.08)',
   },
   headerTextBlock: { flex: 1 },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1F2937',
+    color: '#241C3B',
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#7A718A',
     marginTop: 1,
     fontWeight: '500',
   },
 
   // ── Badge ────────────────────────────────────────────────────
   badge: {
-    backgroundColor: '#F0EDFF',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
     alignItems: 'center',
     minWidth: 48,
+    borderWidth: 1,
+    borderColor: 'rgba(124,58,237,0.12)',
   },
   badgeCount: {
     fontSize: 17,
@@ -400,11 +429,11 @@ const styles = StyleSheet.create({
 
   // ── Hero ─────────────────────────────────────────────────────
   heroSection: {
-    borderRadius: 20,
+    borderRadius: 28,
     paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 26,
-    marginBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 22,
+    marginBottom: 18,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -416,29 +445,49 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
+  heroGlowOne: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    right: -40,
+    top: -48,
+  },
+  heroGlowTwo: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    left: -42,
+    bottom: -46,
+  },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     marginBottom: 12,
-    gap: 4,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   heroBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.4,
   },
   heroTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -0.5,
-    lineHeight: 32,
+    lineHeight: 35,
     marginBottom: 10,
   },
   heroSubtitle: {
@@ -448,14 +497,44 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     paddingRight: 16,
   },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  heroStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  heroStatValue: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 26,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
 
   // ── Section Headings ─────────────────────────────────────────
   sectionHeadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
-            paddingTop: 12,
-
+    paddingTop: 12,
   },
   sectionHeadingLeft: {
     flexDirection: 'row',
@@ -466,14 +545,16 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#1F2937',
+    color: '#241C3B',
     letterSpacing: -0.3,
   },
   sectionBadge: {
-    backgroundColor: '#F0EDFF',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(134,101,255,0.16)',
   },
   sectionBadgeText: {
     fontSize: 12,
@@ -498,14 +579,23 @@ const styles = StyleSheet.create({
 
   // ── View More ─────────────────────────────────────────────────
   viewMoreOuter: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#5B47A3',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+      },
+      android: { elevation: 5 },
+    }),
   },
   viewMoreGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 16,
     gap: 10,
   },

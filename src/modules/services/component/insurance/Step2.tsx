@@ -225,7 +225,12 @@ export default function Step2({ data, setData, onNext, onBack }: Props) {
             <MaterialIcons name="arrow-back" size={20} color="#8665FF" />
           </TouchableOpacity>
           <View style={styles.buttonWrapper}>
-            <GradientButton title="Next" onPress={onNext} disabled={isNextDisabled} />
+            <GradientButton
+              title="Next"
+              onPress={onNext}
+              disabled={isNextDisabled}
+              style={styles.nextButton}
+            />
           </View>
         </View>
       </View>
@@ -249,7 +254,7 @@ const styles = StyleSheet.create({
 
   dropdownContainer: {
     alignSelf: "flex-end",
-    width: 150,
+    width: 128,
     backgroundColor: "#FFF",
     borderRadius: 14,
     borderWidth: 1,
@@ -291,6 +296,12 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: { flex: 1 },
   buttonRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  nextButton: {
+    height: 52,
+    marginTop: 0,
+    justifyContent: "center",
+    padding: 0,
+  },
   backBtn: {
     width: 52,
     height: 52,
@@ -324,7 +335,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  memberLeft: { flexDirection: "row", alignItems: "center" },
+  memberLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+    paddingRight: 10,
+  },
   iconCircle: {
     width: 52,
     height: 52,
@@ -337,7 +354,7 @@ const styles = StyleSheet.create({
   iconCircleActive: { backgroundColor: "#EBE5FF" },
   iconImage: { width: 32, height: 32, resizeMode: "contain" },
 
-  textContainer: { justifyContent: "center" },
+  textContainer: { flex: 1, justifyContent: "center", minWidth: 0 },
   memberLabel: { fontSize: 16, fontWeight: "700", color: "#111111", letterSpacing: -0.3 },
   memberSubLabel: { fontSize: 12, color: "#1F2937", marginTop: 2 },
 
@@ -349,10 +366,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EBEBF5",
     paddingHorizontal: 12,
-    width: 150,
+    width: 128,
     height: 44,
     justifyContent: "center",
-    gap: 8,
+    gap: 4,
   },
   ageInputActive: { borderColor: "#8665FF", backgroundColor: "#F9F8FF" },
   ageInput: {

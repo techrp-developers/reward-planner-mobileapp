@@ -58,11 +58,30 @@ export type HomeStackParamList = {
     title?: string;
     description?: string;
     enquiryId?: string;
+    /** When true, auto-navigates to the Services home screen after redirectDelayMs. */
+    redirectToHome?: boolean;
+    redirectDelayMs?: number;
   };
   CartScreen: undefined;
   Profile: undefined;
   MyOrder: undefined;
   ServiceOrderDetail: { parent_order_id: string };
+  ServiceCancellationRequest: {
+    service_order_id: number;
+    parent_order_id: string;
+    order_ref: string;
+    service_name: string;
+    variant_name?: string;
+    image_url?: string | null;
+  };
+  ServiceFeedback: {
+    service_order_id: number;
+    parent_order_id: string;
+    order_ref: string;
+    service_name: string;
+    variant_name?: string;
+    image_url?: string | null;
+  };
   WalletHistory: undefined;
   TodoList: undefined;
   AddAddressMap: undefined;
@@ -79,8 +98,8 @@ export type HomeStackParamList = {
     mode?: 'buy_now' | 'cart';
     service_id?: number;
     variant_id?: number;
-    bundle_id?: number; // ✅ ADD THIS
-    previewData?: any; // 👈 TEMP (recommended)
+    bundle_id?: number; 
+    previewData?: any; 
   };
 };
 

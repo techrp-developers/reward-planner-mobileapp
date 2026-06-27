@@ -7,6 +7,7 @@ import HomeStack from "../modules/ecommerce/navigation/HomeStack";
 import type { MainTabParamList } from "../modules/ecommerce/navigation/types";
 import BottomTabs from "./BottomTabs";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
+import { useCart } from "../modules/ecommerce/context/CartContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -16,6 +17,7 @@ type CustomTabBarProps = {
 };
 
 function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
+  const { totalQuantity } = useCart();
   const goTo = React.useCallback(
     (screen: string) => {
       navigation.navigate("HomeTab", { screen });
@@ -37,6 +39,7 @@ function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
 
   return (
     <BottomTabs
+      cartCount={totalQuantity}
       onTabPress={(tab) => {
         switch (tab) {
           case "Home":

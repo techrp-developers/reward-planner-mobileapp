@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 
@@ -46,10 +47,15 @@ export default function MostBookedServices() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.loaderContainer]}>
+      <LinearGradient
+        colors={['#5B6CFF', '#4F6BFF', '#3F4FE0']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.container, styles.loaderContainer]}
+      >
         <Text style={styles.title}>Most Booked Services</Text>
         <ActivityIndicator size="large" color="#FFFFFF" />
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -58,8 +64,21 @@ export default function MostBookedServices() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Most Booked Services</Text>
+    <LinearGradient
+      colors={['#5B6CFF', '#4F6BFF', '#3F4FE0']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.title}>Most Booked Services</Text>
+          <Text style={styles.subtitle}>Trusted by thousands of customers</Text>
+        </View>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Trending</Text>
+        </View>
+      </View>
 
       <FlatList
         horizontal
@@ -98,7 +117,8 @@ export default function MostBookedServices() {
                   ? `₹${item.mrp}`
                   : undefined
               }
-              users="18.9K"
+              rating={item.rating}
+              users={String(item.total_orders ?? 0)}
               coins={coinsText}
               discount={discount}
               onPress={() =>
@@ -123,33 +143,64 @@ export default function MostBookedServices() {
           />
         ))}
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#4F6BFF', // Integrated your explicit theme color
-    marginTop: 20,
-
-    paddingTop: 20,
-    paddingBottom: 16,
+    marginTop: 24,
+    marginHorizontal: 16,
+    borderRadius: 28,
+    paddingTop: 22,
+    paddingBottom: 20,
     overflow: 'hidden',
+    shadowColor: '#3F4FE0',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: CONTAINER_PADDING,
+    marginBottom: 18,
   },
 
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF', // High contrast white for dark theme background
-    marginBottom: 16,
-    textAlign: 'left', // Centers heading visually within your brand card element
+    color: '#FFFFFF',
+    textAlign: 'left',
     letterSpacing: -0.2,
-    paddingLeft: CONTAINER_PADDING,
+  },
 
+  subtitle: {
+    fontSize: 12.5,
+    color: 'rgba(255, 255, 255, 0.78)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+
+  badge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   listContent: {
     paddingLeft: CONTAINER_PADDING,
+    paddingRight: 6,
   },
 
   loaderContainer: {
@@ -162,7 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 18,
     gap: 6,
   },
   card: {

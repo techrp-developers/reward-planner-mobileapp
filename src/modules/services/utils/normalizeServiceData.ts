@@ -74,6 +74,34 @@ export function normalizeVariants(variants: unknown): NormalizedVariant[] {
   return variants.map((item) => normalizeVariant((item || {}) as ServiceVariantRaw));
 }
 
+function normalizeFieldOptions(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) {
+    const cleaned = raw.map((item) => String(item).trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : null;
+  }
+
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    // Backend may send options as a JSON-encoded array string, e.g. '["Male","Female"]'.
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return normalizeFieldOptions(parsed);
+      } catch {
+        // fall through to comma-separated parsing below
+      }
+    }
+
+    // Or as a plain comma-separated string, e.g. "Male,Female,Other".
+    const cleaned = trimmed.split(',').map((item) => item.trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : null;
+  }
+
+  return null;
+}
+
 function normalizeEnquiryFields(fields: unknown): EnquiryField[] {
   if (!Array.isArray(fields)) return [];
 
@@ -92,7 +120,7 @@ function normalizeEnquiryFields(fields: unknown): EnquiryField[] {
       label: String(raw?.label || fieldName),
       field_name: fieldName,
       field_type: String(raw?.field_type || 'text'),
-      options: Array.isArray(raw?.options) ? raw.options.map(String) : null,
+      options: normalizeFieldOptions(raw?.options),
       is_required: Number(raw?.is_required || 0) === 1 ? 1 : 0,
     });
   }

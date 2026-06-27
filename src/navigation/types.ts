@@ -20,6 +20,7 @@ export type RootStackParamList = {
   Orders: undefined;
   Address: undefined;
   WalletHistory: undefined;
+  Notification: undefined;
   SearchScreen: undefined;
   BBPSHomeStack: undefined;
   ExploreModule: undefined;

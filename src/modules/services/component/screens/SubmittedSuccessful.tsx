@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import Successfully from '../constant/Successfully';
 
 type SubmittedSuccessfulRoute = RouteProp<HomeStackParamList, 'SubmittedSuccessful'>;
 
+const DEFAULT_REDIRECT_DELAY_MS = 3000;
+
 function SubmittedSuccessful({ navigation }: any) {
   const route = useRoute<SubmittedSuccessfulRoute>();
 
@@ -16,6 +18,27 @@ function SubmittedSuccessful({ navigation }: any) {
   const description =
     route.params?.description ?? 'Our team will review the details and get back to you shortly.';
   const enquiryId = route.params?.enquiryId ?? '#RP-ENQ-19472';
+  const redirectToHome = route.params?.redirectToHome ?? false;
+  const redirectDelayMs = route.params?.redirectDelayMs ?? DEFAULT_REDIRECT_DELAY_MS;
+
+  const [secondsLeft, setSecondsLeft] = useState(Math.ceil(redirectDelayMs / 1000));
+
+  useEffect(() => {
+    if (!redirectToHome) return;
+
+    const tick = setInterval(() => {
+      setSecondsLeft((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    const redirect = setTimeout(() => {
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }, redirectDelayMs);
+
+    return () => {
+      clearInterval(tick);
+      clearTimeout(redirect);
+    };
+  }, [redirectToHome, redirectDelayMs, navigation]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -34,6 +57,12 @@ function SubmittedSuccessful({ navigation }: any) {
           description={description}
           enquiryId={enquiryId}
         />
+
+        {redirectToHome && (
+          <Text style={styles.redirectText}>
+            Redirecting to home in {secondsLeft}s…
+          </Text>
+        )}
 
         {/* APP RATING CARD */}
         <View style={styles.wrapper}>
@@ -54,6 +83,14 @@ function SubmittedSuccessful({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  redirectText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: -8,
+    marginBottom: 8,
+  },
   backButton: {
     position: 'absolute',
     top: 20, 

@@ -10,18 +10,28 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 import type { ServiceItem } from '../../api/OrderAPI';
 import ServiceTimelineCard from './ServiceTimelineCard';
-import ServiceDocumentsCard from './ServiceDocumentsCard';
 import ServiceFeedbackCard from './ServiceFeedbackCard';
 import ServiceCancellationCard from './ServiceCancellationCard';
 
 const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
   pending:              { color: '#D97706', bg: '#FFFBEB', label: 'Pending' },
+  pending_payment:      { color: '#D97706', bg: '#FFFBEB', label: 'Payment Pending' },
+  payment_done:         { color: '#16A34A', bg: '#F0FDF4', label: 'Payment Done' },
   pending_documents:    { color: '#D97706', bg: '#FFFBEB', label: 'Docs Pending' },
+  documents_pending:    { color: '#D97706', bg: '#FFFBEB', label: 'Docs Pending' },
   documents_uploaded:   { color: '#7C3AED', bg: '#EDE9FE', label: 'Docs Uploaded' },
   in_progress:          { color: '#2563EB', bg: '#EFF6FF', label: 'In Progress' },
   completed:            { color: '#16A34A', bg: '#F0FDF4', label: 'Completed' },
   cancelled:            { color: '#DC2626', bg: '#FEF2F2', label: 'Cancelled' },
 };
+
+const CANCELLABLE_STATUSES = new Set([
+  'pending_payment',
+  'payment_done',
+  'documents_pending',
+  'documents_uploaded',
+  'in_progress',
+]);
 
 type Props = {
   item: ServiceItem;
@@ -86,12 +96,10 @@ export default function ServiceOrderItemCard({
         <View style={styles.body}>
           {item.timeline.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Progress</Text>
+              <Text style={styles.sectionLabel}>Service progress</Text>
               <ServiceTimelineCard steps={item.timeline} />
             </>
           )}
-
-          <ServiceDocumentsCard documents={item.documents} />
 
           <ServiceFeedbackCard
             feedback={item.feedback}
@@ -101,6 +109,7 @@ export default function ServiceOrderItemCard({
           <ServiceCancellationCard
             cancellation={item.cancellation}
             serviceName={item.service_name}
+            canCancelByStatus={CANCELLABLE_STATUSES.has(item.status)}
             onCancelPress={() => onCancelPress(item)}
           />
         </View>

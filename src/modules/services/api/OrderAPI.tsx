@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
-import { BASE_API_URL } from "./api";
+import { BASE_API_URL, BASE_IMAGE_URL } from "./api";
 
 /* =========================================================
    TYPES
@@ -60,7 +60,9 @@ export interface OrdersResponse {
 
 export interface GetOrdersParams {
   page?: number;
+  limit?: number;
   search?: string;
+  status?: string;
   fromDate?: string;
   toDate?: string;
   timeFilter?: string;
@@ -91,6 +93,33 @@ export interface ServiceFeedback {
 
 export interface ServiceCancellation {
   can_cancel: boolean;
+}
+
+export interface ServiceCancellationReason {
+  reason_id: number;
+  reason_text: string;
+}
+
+export interface ServiceInvoiceDetails {
+  id: number;
+  parent_order_id: string;
+  invoice_number: string;
+  invoice_url: string;
+  total_amount: string;
+  created_at: string;
+  url: string;
+  download_url: string;
+}
+
+export interface SubmitServiceFeedbackPayload {
+  service_order_id: number;
+  rating: number;
+  ease_rating?: number;
+  expert_rating?: number;
+  completion_time?: string;
+  confidence?: string;
+  reuse_intent?: string;
+  comment?: string;
 }
 
 export interface ServiceItem {
@@ -132,7 +161,7 @@ export interface ServiceOrderDetails {
   parent_order_id: string;
   created_at: string;
   status: string;
-  address: ServiceAddress;
+  address: ServiceAddress | null;
   total_amount: number;
   summary: {
     total_services: number;
@@ -156,7 +185,9 @@ export const getMyServiceOrders = async (
 
     const {
       page = 1,
+      limit = 10,
       search = "",
+      status = "",
       fromDate = "",
       toDate = "",
       timeFilter = "",
@@ -168,10 +199,12 @@ export const getMyServiceOrders = async (
         headers,
         params: {
           page,
+          limit,
           search,
-          fromDate,
-          toDate,
-          timeFilter,
+          status,
+          from_date: fromDate,
+          to_date: toDate,
+          time_filter: timeFilter,
         },
       }
     );
@@ -320,6 +353,148 @@ export const checkServicePaymentStatus = async (parent_order_id: string) => {
       status: error?.response?.status,
       message: error?.response?.data?.message,
     });
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 6. Get Service Cancellation Reasons
+// ==============================
+export const getServiceCancellationReasons = async (): Promise<{
+  success: boolean;
+  reasons: ServiceCancellationReason[];
+}> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/cancellation-reasons`,
+      { headers }
+    );
+
+    return {
+      success: Boolean(res.data?.success),
+      reasons: Array.isArray(res.data?.reasons) ? res.data.reasons : [],
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Cancellation Reasons Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 7. Request Service Order Cancellation
+// ==============================
+export const requestServiceOrderCancellation = async (payload: {
+  service_order_id: number;
+  reason_id: number;
+  comment?: string;
+}) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service-orders/cancel-order-request`,
+      {
+        service_order_id: payload.service_order_id,
+        reason_id: payload.reason_id,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Request Service Cancellation Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 8. Get Service Invoice Details
+// ==============================
+export const getServiceInvoiceDetails = async (
+  parent_order_id: string
+): Promise<{
+  success: boolean;
+  data: ServiceInvoiceDetails;
+}> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    if (!parent_order_id) {
+      throw new Error("parent_order_id is required");
+    }
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/invoice-details/${parent_order_id}`,
+      { headers }
+    );
+
+    const invoice = res.data?.data;
+    const relativeUrl = String(invoice?.url || "").trim();
+    const downloadUrl = relativeUrl
+      ? relativeUrl.startsWith("http")
+        ? relativeUrl
+        : `${BASE_IMAGE_URL}/api/crm${relativeUrl.startsWith("/") ? relativeUrl : `/${relativeUrl}`}`
+      : "";
+
+    return {
+      success: Boolean(res.data?.success),
+      data: {
+        ...invoice,
+        download_url: downloadUrl,
+      },
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Invoice Details Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 9. Submit Service Feedback
+// ==============================
+export const submitServiceFeedback = async (
+  payload: SubmitServiceFeedbackPayload
+) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service/feedback`,
+      {
+        service_order_id: payload.service_order_id,
+        rating: payload.rating,
+        ease_rating: payload.ease_rating,
+        expert_rating: payload.expert_rating,
+        completion_time: payload.completion_time,
+        confidence: payload.confidence,
+        reuse_intent: payload.reuse_intent,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Submit Service Feedback Error:", error?.response || error);
     throw error?.response?.data || error;
   }
 };

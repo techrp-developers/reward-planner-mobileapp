@@ -19,11 +19,8 @@ type VerticalServiceCardProps = {
   description: string;
   image: string | React.ComponentType<{ width?: number; height?: number }>;
   priceText?: string;
-  days?: string; 
-  rating?: number;
+  days?: string;
 };
-
-const STAR_INDICES = [1, 2, 3, 4];
 
 function CategoryCard({
   serviceId,
@@ -66,7 +63,7 @@ function CategoryCard({
     : 'Get Started';
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.card}
       onPress={handlePress}
       activeOpacity={0.9}
@@ -83,15 +80,14 @@ function CategoryCard({
               style={[styles.image, imageLoading && styles.imageHidden]}
               resizeMode="cover"
               onLoadStart={handleLoadStart}
-              
               onLoadEnd={handleLoadEnd}
               onError={handleLoadError}
             />
           </>
         ) : (
           React.createElement(image, {
-            width: 120,
-            height: 120,
+            width: 96,
+            height: 96,
           })
         )}
       </View>
@@ -99,19 +95,22 @@ function CategoryCard({
       {/* RIGHT: CONTENT SECTION */}
       <View style={styles.content}>
         <View>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
           <Text style={styles.desc} numberOfLines={2}>{description}</Text>
         </View>
 
         <View style={styles.bottomSection}>
           <View style={styles.metaRow}>
-            <View style={styles.ratingRow}>
-              {STAR_INDICES.map((i) => (
-                <MaterialIcons key={i} name="star" size={18} color="#FFC107" />
-              ))}
-              <MaterialIcons name="star-half" size={18} color="#FFC107" />
+            <View style={styles.ratingChip}>
+              <MaterialIcons name="star" size={13} color="#F59E0B" />
+              <Text style={styles.ratingChipText}>0.0</Text>
             </View>
-            <Text style={styles.reviewCount}>({days || '12.2K'})</Text>
+            {!!days && (
+              <View style={styles.daysChip}>
+                <MaterialIcons name="schedule" size={12} color="#6B7280" />
+                <Text style={styles.daysChipText}>{days}</Text>
+              </View>
+            )}
           </View>
 
           <LinearGradient
@@ -121,9 +120,7 @@ function CategoryCard({
             style={styles.ctaButton}
           >
             <Text style={styles.ctaText}>{primaryButtonText}</Text>
-            {hasPositivePrice && (
-               <View style={styles.coinIcon} />
-            )}
+            {hasPositivePrice && <View style={styles.coinIcon} />}
           </LinearGradient>
         </View>
       </View>
@@ -136,17 +133,22 @@ export default memo(CategoryCard);
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: 'transparent', // Ensures no background interference
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
   },
   imageBox: {
-    width: 120,
-    height: 120,
-    borderRadius: 18, // More rounded for the "modern" look
+    width: 96,
+    height: 96,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F4F5FA',
   },
   image: {
     width: '100%',
@@ -158,27 +160,26 @@ const styles = StyleSheet.create({
   },
   imageSkeleton: {
     width: '100%',
-    height: 120,
-    borderRadius: 18,
+    height: 96,
+    borderRadius: 16,
     backgroundColor: '#ECECEC',
   },
   content: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 14,
     justifyContent: 'space-between',
-    paddingVertical: 2,
   },
   title: {
-    fontSize: 17,
+    fontSize: 15.5,
     fontWeight: '700',
     color: '#1A1C1E',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   desc: {
-    fontSize: 14,
-    color: '#606470',
-    marginTop: 4,
-    lineHeight: 18,
+    fontSize: 12.5,
+    color: '#6B7280',
+    marginTop: 3,
+    lineHeight: 16,
     fontWeight: '400',
   },
   bottomSection: {
@@ -187,31 +188,55 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    gap: 8,
   },
-  ratingRow: {
+  ratingChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFF7E6',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    gap: 3,
   },
-  reviewCount: {
-    marginLeft: 6,
-    fontSize: 13,
-    color: '#717680',
-    fontWeight: '500',
+  ratingChipText: {
+    fontSize: 11.5,
+    color: '#92400E',
+    fontWeight: '700',
+  },
+  daysChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    gap: 3,
+  },
+  daysChipText: {
+    fontSize: 11.5,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   ctaButton: {
     borderRadius: 10,
-    height: 42,
+    height: 38,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start', // Keeps button width natural to content
-    minWidth: 140,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+    minWidth: 130,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   ctaText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '600',
   },
   coinIcon: {

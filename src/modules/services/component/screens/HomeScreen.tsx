@@ -36,11 +36,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAFC',
     paddingTop: 15,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
 });
 

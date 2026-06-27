@@ -144,6 +144,8 @@ export interface NormalizedServiceData {
 export interface CartVariantItem {
   id: string;
   title: string;
+  /** Descriptive plan title shown under the short variant label (omitted when variant_name is "Default"). */
+  planTitle?: string;
   price: string;
   oldPrice: string;
   subtitle: string;

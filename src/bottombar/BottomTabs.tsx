@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { useCart } from "../modules/ecommerce/context/CartContext";
 
 import ProfileIcon from "../assets/menu/profile.svg";
 import HomeIcon from "../assets/menu/Home.svg";
@@ -129,10 +128,10 @@ function BottomTabs({
   onTabPress,
   isDashboard = false,
   activeTabKey,
+  cartCount = 0,
   onCenterPress,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const { totalQuantity: cartCount } = useCart();
   const bottomInset = Math.max(insets.bottom, 8);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.

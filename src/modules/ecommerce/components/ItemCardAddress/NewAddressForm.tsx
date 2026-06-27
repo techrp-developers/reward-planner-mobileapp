@@ -56,7 +56,6 @@ export default function AddressDetailsSheetWrapper() {
         title={mode === "edit" ? "Edit Address" : "Add Address"}
         onBackPress={() => navigation.goBack()}
         onSearchPress={() => alert.info("Search", "Search functionality coming soon")}
-        onBellPress={() => alert.info("Notifications", "Notifications coming soon")}
       />
       <View style={styles.spacer} />
 

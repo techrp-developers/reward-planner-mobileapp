@@ -107,9 +107,9 @@ function normalizePreview(
         service_id: null,
         variant_id: null,
 
-        service_name: `Bundle (${bundleItems.length} Services)`,
+        service_name: bundle.bundle_name || `Bundle (${bundleItems.length} Services)`,
         variant_name: 'Bundle Pack',
-        description: `${bundleItems.length} services included`,
+        description: bundle.bundle_description || `${bundleItems.length} services included`,
 
         price: Number(bundle.bundle_total || 0),
         mrp: Number(bundle.bundle_total || 0),
@@ -140,7 +140,7 @@ function normalizePreview(
 
         service_name: bundle.bundle_name || 'Bundle',
         variant_name: 'Bundle Pack',
-        description: `${bundleItems.length} services included`,
+        description: bundle.bundle_description || `${bundleItems.length} services included`,
 
         price: Number(bundle.bundle_total || 0),
         mrp: Number(bundle.bundle_total || 0),
@@ -245,7 +245,11 @@ const serviceCheckoutQueryKey = (
 
 export default function ServiceCheckoutScreen() {
   const navigation = useNavigation<NavProps>();
-  const stickyCTA = useStickyBottomCTA();
+  // MainLayout already reserves space for the services-module bottom bar via
+  // paddingBottom on the content wrapper, so the CTA must not also offset by
+  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
+  // the bottom bar with a visible gap instead of sitting right on top of it.
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
   const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};
@@ -424,7 +428,7 @@ export default function ServiceCheckoutScreen() {
       if (mode === "buy_now" && bundle_id) {
         const selected_items = items
           .flatMap((item) => item.bundle_items ?? [])
-          .map((i: any) => Number(i.id))
+          .map((i: any) => Number(i.bundle_item_id))
           .filter((id) => Number.isFinite(id) && id > 0);
 
         orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
@@ -826,7 +830,8 @@ export default function ServiceCheckoutScreen() {
         disabled={isAddressFetching}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
-        bottomOffset={stickyCTA.bottomOffset}
+        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
+        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

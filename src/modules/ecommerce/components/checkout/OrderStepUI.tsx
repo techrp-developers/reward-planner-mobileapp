@@ -867,7 +867,6 @@ if (
           title="Cart"
           onBackPress={() => navigation.goBack()}
           onSearchPress={() => Alert.alert("Search", "Open search")}
-          onBellPress={() => Alert.alert("Notifications", "Open notifications")}
         />
         <EmptyCart
           message="Your cart is empty. Add products to continue."
@@ -883,7 +882,6 @@ if (
         title="Checkout"
         onBackPress={() => navigation.goBack()}
         onSearchPress={() => Alert.alert("Search", "Open search")}
-        onBellPress={() => Alert.alert("Notifications", "Open notifications")}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}

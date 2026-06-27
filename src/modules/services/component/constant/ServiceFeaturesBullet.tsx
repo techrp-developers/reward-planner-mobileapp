@@ -63,8 +63,8 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
         ))}
       </View>
 
-      {/* ====== BLOCK 2 : GRADIENT TITLE + BULLETS ====== */}
-      <View style={styles.card}>
+      {/* ====== BLOCK 2 : GRADIENT TITLE + TIMELINE ====== */}
+      <View style={[styles.card, styles.journeyCard]}>
         <MaskedView
           maskElement={
             <Text style={[styles.header, styles.transparentBg]}>
@@ -80,12 +80,26 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
         </MaskedView>
 
         <View style={styles.middlePointsWrap}>
-          {middlePoints.map((item, index) => (
-            <View key={index} style={styles.row}>
-              <View style={styles.dot} />
-              <Text style={styles.text}>{item}</Text>
-            </View>
-          ))}
+          {middlePoints.map((item, index) => {
+            const separatorIndex = item.indexOf(':');
+            const hasDetail = separatorIndex > -1;
+            const heading = hasDetail ? item.slice(0, separatorIndex).trim() : item;
+            const detail = hasDetail ? item.slice(separatorIndex + 1).trim() : '';
+            const isLast = index === middlePoints.length - 1;
+
+            return (
+              <View key={index} style={styles.timelineRow}>
+                <View style={styles.timelineMarkerCol}>
+                  <View style={styles.timelineDot} />
+                  {!isLast && <View style={styles.timelineLine} />}
+                </View>
+                <View style={[styles.timelineContent, !isLast && styles.timelineContentSpacing]}>
+                  <Text style={styles.timelineHeading}>{heading}</Text>
+                  {!!detail && <Text style={styles.timelineDetail}>{detail}</Text>}
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
 
@@ -96,10 +110,13 @@ const ServiceFeaturesBullet: React.FC<Props> = ({
           style={styles.statsCard}
         >
           {stats.map((item, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
+            <React.Fragment key={index}>
+              {index > 0 && <View style={styles.statDivider} />}
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{item.value}</Text>
+                <Text style={styles.statLabel}>{item.label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </LinearGradient>
       )}
@@ -139,11 +156,15 @@ export default ServiceFeaturesBullet;
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFF',
-    padding: 16,
+    padding: 18,
     marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F1F1F1',
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   featureRow: {
@@ -173,25 +194,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  row: {
+  journeyCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#5B47A3',
+  },
+
+  timelineRow: {
     flexDirection: 'row',
+  },
+
+  timelineMarkerCol: {
+    width: 22,
     alignItems: 'center',
-    marginBottom: 12,
   },
 
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#8665FF',
-    marginRight: 10,
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#F3E8FF',
+    borderWidth: 2,
+    borderColor: '#B794F6',
   },
 
-  text: {
-    fontSize: 14,
-    color: '#4B5563',
-    fontWeight: '500',
+  timelineLine: {
+    width: 2,
     flex: 1,
+    marginTop: 2,
+    backgroundColor: '#E5D9FF',
+  },
+
+  timelineContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  timelineContentSpacing: {
+    paddingBottom: 18,
+  },
+
+  timelineHeading: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '700',
+  },
+
+  timelineDetail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+    lineHeight: 18,
   },
 
   header: {
@@ -218,8 +270,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 16,
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   safetyTitle: {
@@ -248,29 +305,45 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 10,
     marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 16,
+    marginBottom: 14,
+    borderRadius: 18,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    elevation: 3,
   },
 
   statItem: {
     alignItems: 'center',
     flex: 1,
+    paddingHorizontal: 10,
+  },
+
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(109, 91, 255, 0.18)',
+    marginHorizontal: 6,
   },
 
   statValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#6D5BFF',
   },
 
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',
+    lineHeight: 14,
   },
 
 });

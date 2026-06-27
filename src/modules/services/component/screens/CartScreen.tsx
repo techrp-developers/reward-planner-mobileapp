@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
-import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview, getCheckoutPreview } from '../../api/CartAPI';
+import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview } from '../../api/CartAPI';
 import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCard';
 import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import CheckoutSummary from '../../../ecommerce/components/ItemCardAddress/CheckoutSummary';
@@ -79,8 +79,11 @@ type ServiceCartItem = {
 // };
 
 const normalizeCartItems = (response: any): ServiceCartItem[] => {
-  const bundles = response?.data?.bundles || [];
-  const individualItems = response?.data?.individual_items || [];
+  // getServiceCartItems() returns a flat { bundles, individual_items } shape;
+  // getCheckoutPreview() nests the same shape under .data. Handle both.
+  const data = response?.data ?? response ?? {};
+  const bundles = data?.bundles || [];
+  const individualItems = data?.individual_items || [];
 
   const normalized: ServiceCartItem[] = [];
 
@@ -107,13 +110,13 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       service_id: null,
       variant_id: null,
 
-      // ✅ Better title
-      service_name: `Bundle (${bundleItems.length} Services)`,
+      // ✅ Real bundle name from backend, falling back to a generic label
+      service_name: bundle.bundle_name || `Bundle (${bundleItems.length} Services)`,
 
       variant_name: "Bundle Pack",
 
-      // ✅ Cleaner description
-      description: `${bundleItems.length} services included`,
+      // ✅ Real bundle description, falling back to item count
+      description: bundle.bundle_description || `${bundleItems.length} services included`,
 
       price: Number(bundle.bundle_total || 0),
       mrp: Number(bundle.bundle_total || 0),
@@ -149,7 +152,11 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
-  const stickyCTA = useStickyBottomCTA();
+  // MainLayout already reserves space for the services-module bottom bar via
+  // paddingBottom on the content wrapper, so the CTA must not also offset by
+  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
+  // the bottom bar with a visible gap instead of sitting right on top of it.
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
@@ -193,35 +200,8 @@ function CartScreen() {
         setLoading(true);
       }
 
-      // Prefer checkout-preview: it includes service_id & variant_id (needed for Buy Now).
-      // Fall back to cart-items endpoint if preview fails or returns empty.
-      let response: any;
-      try {
-        response = await getCheckoutPreview();
-      } catch {
-        response = await getServiceCartItems();
-      }
-
-      let normalized = normalizeCartItems(response);
-
-      // checkout-preview may report empty if the cart was consumed by an order.
-      // In that case, fall back to cart-items so the screen still shows products.
-      if (normalized.length === 0) {
-        try {
-          const cartResponse = await getServiceCartItems();
-          const fallback = normalizeCartItems(cartResponse);
-          if (fallback.length > 0) {
-            setItems(fallback);
-            queryClient.setQueryData(serviceCartItemsQueryKey, cartResponse);
-            setError('');
-            return;
-          }
-          normalized = fallback;
-          response = cartResponse;
-        } catch {
-          // ignore fallback errors; keep normalized as empty
-        }
-      }
+      const response = await getServiceCartItems();
+      const normalized = normalizeCartItems(response);
 
       setItems(normalized);
       queryClient.setQueryData(serviceCartItemsQueryKey, response);
@@ -263,7 +243,7 @@ function CartScreen() {
         return;
       }
 
-      const selected_items = item.bundle_items.map((i: any) => Number(i.id));
+      const selected_items = item.bundle_items.map((i: any) => Number(i.bundle_item_id));
 
       console.log("📦 Bundle Buy Now:", {
         bundle_id: item.bundle_id,
@@ -321,12 +301,12 @@ function CartScreen() {
     try {
       setBusyItemId(item.id as any);
 
-      if (item.isBundle && item.bundle_items) {
-        await Promise.all(
-          item.bundle_items.map((i: any) =>
-            removeServiceCartItem(i.id)
-          )
-        );
+      if (item.isBundle && item.bundle_items && item.bundle_items.length > 0) {
+        // Removing any one bundle item deletes the whole bundle server-side
+        // (see serviceCartModel.removeItem) — calling this per item in
+        // parallel just races duplicate deletes against an already-removed
+        // row, producing spurious 404s. One call is enough.
+        await removeServiceCartItem(item.bundle_items[0].id);
       } else {
         await removeServiceCartItem(item.id as number);
       }
@@ -387,6 +367,7 @@ function CartScreen() {
 
   const footer = useMemo(() => (
     <>
+      {/* ── Coupons & Offers (temporarily disabled) ──────────────────────
       <View style={styles.wrapper}>
         <View style={styles.headerRow}>
           <Text style={styles.headerText}>Coupons and Offers</Text>
@@ -396,6 +377,7 @@ function CartScreen() {
         </View>
         <CouponsSection coupons={showAllCoupons ? SERVICE_COUPONS : SERVICE_COUPONS.slice(0, 1)} />
       </View>
+      ── end Coupons & Offers ───────────────────────────────────────── */}
       <BillDetailsCard
         subtotal={totals.subtotal}
         totalDiscount={totals.discount}
@@ -403,7 +385,7 @@ function CartScreen() {
       />
       <View style={styles.listBottomSpace} />
     </>
-  ), [showAllCoupons, totals]);
+  ), [totals]);
 
   if (!loading && !error && !refreshing && items.length === 0) {
     return (
@@ -472,7 +454,8 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
-        bottomOffset={stickyCTA.bottomOffset}
+        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
+        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

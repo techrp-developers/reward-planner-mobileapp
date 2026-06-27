@@ -8,7 +8,6 @@ import {
   Image,
   Animated,
   Platform,
-  AppState,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
@@ -70,81 +69,13 @@ type NavStateLike = {
 type NavbarUserSnapshot = {
   displayName: string;
   displayAddress: string;
-  rewardPoints?: number;
+  rewardPoints: number;
   ts: number;
 };
 
 const NAVBAR_USER_TTL_MS = 60_000;
 let navbarUserCache: NavbarUserSnapshot | null = null;
 let navbarUserInFlight: Promise<NavbarUserSnapshot> | null = null;
-
-// --- Reward points fetch hardening -----------------------------------------
-// fetchUserInfo()'s response shape has drifted across backend revisions, so a
-// raw `userInfo.user.rewardPoints` access silently resolves to 0 whenever the
-// API responds with a different key — this is the same class of bug fixed in
-// NewArrivals/Categories_Product. toNumber/fetchWithRetry/extractRewardPoints
-// stay at module scope so they're shared by both the mount fetch and the
-// AppState-foreground refresh below, and so they're never recreated on render.
-const toNumber = (value: unknown, fallback = 0): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-};
-
-const fetchWithRetry = async <T,>(fn: () => Promise<T>, retries = 3): Promise<T> => {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (attempt === retries - 1) throw err;
-      await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 8000)));
-    }
-  }
-  // Unreachable — the loop above always either returns or throws on the last attempt.
-  throw new Error("fetchWithRetry: exhausted retries");
-};
-
-const extractRewardPoints = (res: any): number => {
-  if (__DEV__) {
-    console.log("[WalletBadge] raw reward response:", {
-      keys: Object.keys(res ?? {}),
-      rewardCoins: res?.rewardCoins,
-      reward_coins: res?.reward_coins,
-      rewardPoints: res?.rewardPoints,
-      reward_points: res?.reward_points,
-      coins: res?.coins,
-      points: res?.points,
-      dataKeys: Object.keys(res?.data ?? {}),
-      dataRewardCoins: res?.data?.rewardCoins,
-      dataRewardPoints: res?.data?.rewardPoints,
-      dataCoins: res?.data?.coins,
-      userRewardCoins: res?.user?.rewardCoins,
-      walletCoins: res?.wallet?.coins,
-    });
-  }
-
-  return toNumber(
-    res?.rewardCoins ??
-      res?.reward_coins ??
-      res?.rewardPoints ??
-      res?.reward_points ??
-      res?.coins ??
-      res?.points ??
-      res?.data?.rewardCoins ??
-      res?.data?.reward_coins ??
-      res?.data?.rewardPoints ??
-      res?.data?.reward_points ??
-      res?.data?.coins ??
-      res?.data?.points ??
-      res?.user?.rewardCoins ??
-      res?.user?.reward_coins ??
-      res?.user?.rewardPoints ??
-      res?.user?.coins ??
-      res?.wallet?.coins ??
-      res?.wallet?.points ??
-      res?.wallet?.rewardCoins,
-    0
-  );
-};
 
 const PRODUCT_ROUTES = new Set(["Home", "Explore", "ProductScreen", "Cart"]);
 const PRODUCT_MODULE_ROUTES = new Set(["ProductModule"]);
@@ -304,19 +235,7 @@ export default function Navbar() {
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
-  // Seed from the module-level cache so a remounted Navbar (e.g. after a stack
-  // reset) shows the last known value instead of flashing back to 0.
-  const lastKnownPoints = React.useRef(navbarUserCache?.rewardPoints ?? 0);
-  const [rewardPoints, setRewardPoints] = React.useState(
-    () => navbarUserCache?.rewardPoints ?? 0
-  );
-  const updatePoints = React.useCallback((value: number) => {
-    lastKnownPoints.current = value;
-    setRewardPoints(value);
-    if (navbarUserCache) {
-      navbarUserCache.rewardPoints = value;
-    }
-  }, []);
+  const [rewardPoints, setRewardPoints] = React.useState(0);
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
     if (points >= 100000) return `${Math.floor(points / 1000)}k`;
@@ -375,18 +294,15 @@ export default function Navbar() {
     React.useState("Address not set");
   const hasAddress = String(displayAddress || "").trim() !== "Address not set";
 
-  const applyUserSnapshot = React.useCallback(
-    (snapshot: NavbarUserSnapshot) => {
-      setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
-      setDisplayAddress((prev) =>
-        prev === snapshot.displayAddress ? prev : snapshot.displayAddress
-      );
-      if (snapshot.rewardPoints !== undefined) {
-        updatePoints(snapshot.rewardPoints);
-      }
-    },
-    [updatePoints]
-  );
+  const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
+    setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
+    setDisplayAddress((prev) =>
+      prev === snapshot.displayAddress ? prev : snapshot.displayAddress
+    );
+    setRewardPoints((prev) =>
+      prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
+    );
+  }, []);
 
   const navigateToScreen = React.useCallback(
     (screen: string, params?: any) => {
@@ -448,6 +364,10 @@ export default function Navbar() {
     navigateToScreen("AddAddressMap", { fromSource: "newAddress" });
   }, [navigateToScreen]);
 
+  const navigateToChangeAddress = React.useCallback(() => {
+    navigateToScreen("AddressSelect");
+  }, [navigateToScreen]);
+
   const loadNavbarUser = React.useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated) {
       applyUserSnapshot({
@@ -479,10 +399,11 @@ export default function Navbar() {
     navbarUserInFlight = (async () => {
       try {
         const storedName = await getStoredUserName();
-        const userInfo = await fetchWithRetry(() => fetchUserInfo());
+        const userInfo = await fetchUserInfo();
         const user = userInfo?.user || null;
-        const points = extractRewardPoints(userInfo);
-        updatePoints(points);
+        const fetchedRewardPoints = Number(
+          user?.rewardPoints || userInfo?.data?.rewardPoints || 0
+        );
         const userName =
           userInfo?.name ||
           user?.name ||
@@ -514,7 +435,7 @@ export default function Navbar() {
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
           displayAddress: addressText || "Address not set",
-          rewardPoints: points,
+          rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
 
@@ -523,9 +444,9 @@ export default function Navbar() {
       } catch (error) {
         console.warn("Failed to load navbar user info:", error);
         return {
-          displayName: "User",
-          displayAddress: "Address not set",
-          rewardPoints: lastKnownPoints.current,
+          displayName: navbarUserCache?.displayName || "User",
+          displayAddress: navbarUserCache?.displayAddress || "Address not set",
+          rewardPoints: navbarUserCache?.rewardPoints || 0,
           ts: Date.now(),
         } as NavbarUserSnapshot;
       } finally {
@@ -535,32 +456,7 @@ export default function Navbar() {
 
     const snapshot = await navbarUserInFlight;
     applyUserSnapshot(snapshot);
-  }, [applyUserSnapshot, isAuthenticated, updatePoints]);
-
-  // Dedicated, independently-callable reward points refresh — used when the
-  // app returns to the foreground so the badge self-heals from a cold-load
-  // failure without requiring a full navbar user/address refresh or a
-  // server restart.
-  const fetchRewardPoints = React.useCallback(async () => {
-    if (!isAuthenticated) return;
-
-    try {
-      const res = await fetchWithRetry(() => fetchUserInfo());
-      const points = extractRewardPoints(res);
-      updatePoints(points);
-    } catch (err) {
-      if (__DEV__) {
-        console.warn("[WalletBadge] fetchRewardPoints failed:", err);
-      }
-    }
-  }, [isAuthenticated, updatePoints]);
-
-  React.useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") fetchRewardPoints();
-    });
-    return () => sub.remove();
-  }, [fetchRewardPoints]);
+  }, [applyUserSnapshot, isAuthenticated]);
 
   React.useEffect(() => {
     loadNavbarUser(false);
@@ -632,20 +528,32 @@ export default function Navbar() {
           pointerEvents={showLocation ? "auto" : "none"}
         >
           <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-          <Text style={styles.locationText} numberOfLines={1}>
+          <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
             <Text style={styles.homeBold}>HOME- </Text>
             {displayName}
-            {hasAddress ? `, ${displayAddress}` : ", "}
-            {!hasAddress ? (
-              <Text style={styles.addAddressLink} onPress={navigateToAddAddress}>
-                Add Address
-              </Text>
-            ) : null}
+            {hasAddress ? `, ${displayAddress}` : ""}
           </Text>
+          {hasAddress ? (
+            <Text
+              style={styles.addAddressLink}
+              numberOfLines={1}
+              onPress={navigateToChangeAddress}
+            >
+              {" "}Change
+            </Text>
+          ) : (
+            <Text
+              style={styles.addAddressLink}
+              numberOfLines={1}
+              onPress={navigateToAddAddress}
+            >
+              {" "}Add Address
+            </Text>
+          )}
         </View>
       </View>
 
-      {/* SEARCH + WALLET + NOTIFICATION */}
+      {/* SEARCH + WALLET */}
       <View style={styles.searchRow}>
         <TouchableOpacity
           activeOpacity={0.9}
@@ -682,15 +590,6 @@ export default function Navbar() {
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.85}
-          onPress={() => navigateToScreen("Notification")}
-        >
-          <MaterialCommunityIcons name="bell-outline" size={22} color="#111827" />
-          <View style={styles.badgeDot} />
         </TouchableOpacity>
       </View>
     </View>
@@ -775,7 +674,7 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    maxWidth: "72%",
     marginRight: 10,
   },
 
@@ -800,7 +699,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
-    gap: 10,
+    gap: 12,
     marginBottom: 15,
     marginTop: 10,
   },
@@ -811,15 +710,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 48,
     borderColor: "rgba(0,0,0,0.10)",
     borderWidth: 1,
     ...shadow,
   },
 
   fakePlaceholder: {
-    marginLeft: 8,
+    flex: 1,
+    marginLeft: 9,
     color: "#6B7280",
     fontSize: 14,
     fontWeight: "600",
@@ -868,32 +768,11 @@ const styles = StyleSheet.create({
     maxWidth: 34,
   },
 
-  iconCircle: {
-    width: 48,
-    height: 48,
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    ...shadow,
-  },
-  badgeDot: {
-    position: "absolute",
-    top: 9,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "#FF3B30",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-
   addAddressLink: {
     color: "#2563EB",
     textDecorationLine: "underline",
     fontWeight: "800",
+    fontSize: 14,
+    flexShrink: 0,
   },
 });

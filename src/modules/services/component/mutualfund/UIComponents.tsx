@@ -16,7 +16,7 @@ const PRIMARY_DARK = '#5B47A3';
 const TEXT_DARK = '#1F2937';
 const TEXT_SECONDARY = '#6B7280';
 const TEXT_MUTED = '#9CA3AF';
-const INPUT_BG = '#F8F9FA';
+const INPUT_BG = '#FFFFFF';
 const BORDER = 'rgba(134,101,255,0.22)';
 const BORDER_LIGHT = '#F0F0F0';
 const ACCENT_LIGHT = 'rgba(134,101,255,0.15)';
@@ -326,12 +326,12 @@ export const DonutSummary: React.FC<DonutProps> = ({
 
 const styles = StyleSheet.create({
   // ── Gradient Button
-  gradientBtn: { borderRadius: 999, overflow: 'hidden', marginTop: 14 },
+  gradientBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 14 },
   gradientBtnInner: {
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 18,
   },
   gradientBtnText: {
     color: '#fff',
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: INPUT_BG,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: BORDER,
     paddingHorizontal: 14,
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: TRACK_H,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#E6DDFC',
     borderRadius: 999,
   },
   trackFill: {
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#F3F0FF',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -494,12 +494,21 @@ const styles = StyleSheet.create({
 
   // ── Result Card
   resultCard: {
-    backgroundColor: INPUT_BG,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: BORDER,
     marginTop: 14,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#4C2F91',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+      },
+      android: { elevation: 2 },
+    }),
   },
   resultRow: {
     flexDirection: 'row',
@@ -520,12 +529,12 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     gap: 12,
   },
-  sectionAccent: { width: 4, height: 36, borderRadius: 999 },
+  sectionAccent: { width: 5, height: 38, borderRadius: 999 },
   sectionTextWrap: { flex: 1 },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: TEXT_DARK,
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#241C3B',
     letterSpacing: -0.3,
   },
   sectionSubtitle: { fontSize: 13, color: TEXT_SECONDARY, marginTop: 2 },

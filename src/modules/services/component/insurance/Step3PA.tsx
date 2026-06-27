@@ -453,6 +453,7 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
               title={loading ? "Searching..." : "Get Free Quotes"}
               onPress={handleSubmit}
               disabled={!isFormValid || loading}
+              style={styles.submitButton}
             />
           </View>
         </View>
@@ -631,6 +632,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerButtonWrapper: { flex: 1 },
+  submitButton: { marginTop: 0, height: 56, justifyContent: "center" },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalContent: {

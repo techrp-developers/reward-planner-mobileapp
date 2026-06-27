@@ -22,7 +22,10 @@ const YouMayNeedServicesCarousel = () => {
   if (isLoading) {
     return (
       <View style={styles.wrapper}>
-        <Text style={styles.heading}>You may also need</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.heading}>You may also need</Text>
+          <Text style={styles.subheading}>Handy add-ons for this service</Text>
+        </View>
         <ActivityIndicator size="small" color="#8665FF" style={styles.loader} />
       </View>
     );
@@ -32,7 +35,10 @@ const YouMayNeedServicesCarousel = () => {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.heading}>You may also need</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>You may also need</Text>
+        <Text style={styles.subheading}>Handy add-ons for this service</Text>
+      </View>
 
       <ScrollView
         horizontal
@@ -59,7 +65,8 @@ const YouMayNeedServicesCarousel = () => {
                   ? `₹${item.mrp}`
                   : undefined
               }
-              users="18.9K"
+              rating={item.rating}
+              users={String(item.total_orders ?? 0)}
               coins={coinsText}
               discount={discount}
               onPress={() =>
@@ -80,14 +87,23 @@ export default YouMayNeedServicesCarousel;
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 16,
+    marginTop: 22,
+  },
+  headerRow: {
+    marginHorizontal: 16,
+    marginBottom: 14,
   },
   heading: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111111',
-    marginHorizontal: 16,
-    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: 12.5,
+    color: '#6B7280',
+    marginTop: 3,
+    fontWeight: '500',
   },
   scroll: {
     paddingHorizontal: 16,
