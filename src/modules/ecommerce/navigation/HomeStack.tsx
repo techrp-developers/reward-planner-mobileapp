@@ -28,7 +28,15 @@ export default function HomeStack() {
           contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       />
-      <Stack.Screen name="Cart" getComponent={() => require("../screens/cartScreen").default} />
+      <Stack.Screen
+        name="Cart"
+        getComponent={() => require("../screens/cartScreen").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
       <Stack.Screen name="AddressSelect" getComponent={() => require("../components/ItemCardAddress/AddressSelectScreen").default} />
       <Stack.Screen name="WithAddress" getComponent={() => require("../components/ItemCardAddress/WithAddress").default} />
       <Stack.Screen name="OrderStepUI" getComponent={() => require("../components/checkout/OrderStepUI").default} />
@@ -38,7 +46,15 @@ export default function HomeStack() {
       <Stack.Screen name="Coupan" getComponent={() => require("../constants/coupan/CouponsPage").default} />
       <Stack.Screen name="CategoriesScreen" getComponent={() => require("../screens/CategoriesScreen").default} />
       <Stack.Screen name="Explore" getComponent={() => require("../screens/Explore").default} />
-      <Stack.Screen name="SearchScreen" getComponent={() => require("../screens/SearchScreen").default} />
+      <Stack.Screen
+        name="SearchScreen"
+        getComponent={() => require("../screens/SearchScreen").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
       <Stack.Screen name="WishList" getComponent={() => require("../screens/WishlistScreen").default} />
       <Stack.Screen name="AddAddressMap" getComponent={() => require("../components/ItemCardAddress/AddAddressMapScreen").default} />
       <Stack.Screen name="ReviewScreen" getComponent={() => require("../screens/ReviewScreen").default} />
@@ -46,8 +62,24 @@ export default function HomeStack() {
       <Stack.Screen name="ProductScreen" getComponent={() => require("../screens/ProductScreen").default} />
       <Stack.Screen name="TermsAndConditions" getComponent={() => require("../profile/TermsandCondition").default} />
       <Stack.Screen name="PrivacyPolicy" getComponent={() => require("../profile/PrivacyPolicy").default} />
-      <Stack.Screen name="TodoList" getComponent={() => require("../profile/TodoList").default} />
-      <Stack.Screen name="Profile" getComponent={() => require("../profile/Profile").default} />
+      <Stack.Screen
+        name="TodoList"
+        getComponent={() => require("../profile/TodoList").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
+      <Stack.Screen
+        name="Profile"
+        getComponent={() => require("../profile/Profile").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
 
       <Stack.Screen
         name="AddressDetails"
