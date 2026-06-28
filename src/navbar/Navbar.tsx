@@ -582,6 +582,11 @@ export default function Navbar() {
           onPress={() => {
             if (activeTab === "Services") {
               navigateToScreen("ServiceSearch");
+            } else if (activeTab === "Payments") {
+              (navigation as any).navigate("Home", {
+                screen: "PaymentsModule",
+                params: { screen: "Search" },
+              });
             } else {
               navigateToScreen("SearchScreen");
             }

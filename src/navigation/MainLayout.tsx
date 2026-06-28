@@ -61,7 +61,7 @@ const shouldShowNavbar = (routeChain: string[]): boolean => {
   }
 
   if (moduleRoute === "PaymentsModule") {
-    return ["PaymentsModule", "Home", "Search"].includes(leafRoute);
+    return ["PaymentsModule", "Home"].includes(leafRoute);
   }
 
   if (moduleRoute === "DineOutModule") {
