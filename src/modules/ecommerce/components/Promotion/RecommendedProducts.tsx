@@ -66,7 +66,7 @@ function RecommendedProducts() {
     const authRequired = !isAuthenticated || (error as any)?.response?.status === 401;
 
     const handleExplore = useCallback(() => {
-        navigation.navigate("ProductScreen");
+        navigation.navigate("ProductScreen", { source: "recommended" });
     }, [navigation]);
 
     const renderCard = useCallback(

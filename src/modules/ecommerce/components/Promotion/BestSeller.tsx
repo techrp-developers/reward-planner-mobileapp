@@ -78,7 +78,7 @@ function BestSeller() {
   }, [pulse]);
 
   const handleViewAll = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "bestSellers" });
   }, [navigation]);
 
   const renderCard = useCallback(

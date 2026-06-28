@@ -1,6 +1,15 @@
 // src/navigation/types.ts
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+export type ProductCollectionSource =
+  | 'all'
+  | 'bestSellers'
+  | 'newArrivals'
+  | 'mostViewed'
+  | 'recommended'
+  | 'recent'
+  | 'topRated';
+
 export type HomeStackParamList = {
   Home: undefined;
   Category: {
@@ -18,7 +27,7 @@ export type HomeStackParamList = {
   CategoriesScreen: undefined;
   OrderReceipt:  undefined;
   Explore : undefined;
-  ProductScreen: undefined;
+  ProductScreen: { source: ProductCollectionSource } | undefined;
   ReviewScreen: {
     product_id: number;
     variant_id: number;

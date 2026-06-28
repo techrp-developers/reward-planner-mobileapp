@@ -23,6 +23,7 @@ type Props = {
   cartCount?: number;
   isDashboard?: boolean;
   activeTabKey?: TabKey;
+  layoutMode?: "overlay" | "navigator";
   // Navigation for the center button is delegated to the parent so BottomTabs
   // works correctly in both the MainLayout context (Dashboard) and the
   // MainTabs/HomeStack context, which have different navigation scopes.
@@ -130,6 +131,7 @@ function BottomTabs({
   activeTabKey,
   cartCount = 0,
   onCenterPress,
+  layoutMode = "overlay",
 }: Props) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 8);
@@ -249,7 +251,12 @@ function BottomTabs({
   }
 
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[
+        layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
+        { height: TAB_BAR_HEIGHT + bottomInset },
+      ]}
+    >
       <View
         style={[
           styles.bar,
@@ -350,6 +357,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  navigatorWrap: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
   },
   bar: {
     backgroundColor: "#fff",

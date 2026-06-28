@@ -1,37 +1,112 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  Animated,
   ActivityIndicator,
+  Animated,
   FlatList,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import ProductHeadColor from "../constants/heading/Poduct_Head_Color";
 import ProductCard from "../constants/product_cart/ProductCard";
 import { fetchAllProducts } from "../api/ProductApi";
+import {
+  fetchBestSellers,
+  fetchMostViewedProducts,
+  fetchNewArrivals,
+  fetchTopRatedProducts,
+  getRecentProducts,
+  getRecommendedProducts,
+} from "../api/PromotionalApi";
 import { normalizeProduct } from "../utils/normalizeProduct";
-import type { HomeStackParamList } from "../navigation/types";
+import type {
+  HomeStackParamList,
+  ProductCollectionSource,
+} from "../navigation/types";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+type ProductScreenRoute = RouteProp<HomeStackParamList, "ProductScreen">;
 
 const PAGE_SIZE = 10;
 
+const COLLECTION_TITLES: Record<ProductCollectionSource, string> = {
+  all: "All Products",
+  bestSellers: "Best Sellers",
+  newArrivals: "New Arrivals",
+  mostViewed: "Most Viewed",
+  recommended: "You May Like This",
+  recent: "Recently Viewed",
+  topRated: "Top Rated",
+};
+
+type CollectionPage = {
+  products: any[];
+  hasMore: boolean;
+  nextOffset: number;
+};
+
+const toCollectionPage = (response: any, offset: number): CollectionPage => {
+  const rawProducts =
+    (Array.isArray(response?.products) && response.products) ||
+    (Array.isArray(response?.data?.products) && response.data.products) ||
+    (Array.isArray(response?.data) && response.data) ||
+    [];
+  const products = rawProducts.map(normalizeProduct);
+  const hasMore = Boolean(response?.hasMore ?? response?.data?.hasMore ?? false);
+
+  return {
+    products,
+    hasMore,
+    nextOffset: Number(response?.nextOffset ?? offset + products.length),
+  };
+};
+
+const fetchCollectionPage = async (
+  source: ProductCollectionSource,
+  offset: number
+): Promise<CollectionPage> => {
+  switch (source) {
+    case "bestSellers":
+      return toCollectionPage(await fetchBestSellers(offset), offset);
+    case "newArrivals":
+      return toCollectionPage(await fetchNewArrivals(offset), offset);
+    case "mostViewed":
+      return toCollectionPage(await fetchMostViewedProducts(offset), offset);
+    case "recommended":
+      return toCollectionPage(await getRecommendedProducts(offset), offset);
+    case "recent":
+      return toCollectionPage(await getRecentProducts(offset), offset);
+    case "topRated":
+      return toCollectionPage(await fetchTopRatedProducts(offset), offset);
+    case "all":
+    default: {
+      const page = Math.floor(offset / PAGE_SIZE) + 1;
+      const response = await fetchAllProducts({ page, pageSize: PAGE_SIZE });
+      const result = toCollectionPage(response, offset);
+      const hasMore = Boolean(response?.hasMore ?? result.products.length === PAGE_SIZE);
+
+      return {
+        ...result,
+        hasMore,
+        nextOffset: offset + result.products.length,
+      };
+    }
+  }
+};
+
 function ProductScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<ProductScreenRoute>();
   const { width } = useWindowDimensions();
   const pulse = useRef(new Animated.Value(0)).current;
-
-  const [products, setProducts] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const source = route.params?.source ?? "all";
+  const title = COLLECTION_TITLES[source];
 
   const gap = 12;
   const horizontalPadding = 16;
@@ -52,55 +127,48 @@ function ProductScreen() {
     return () => animation.stop();
   }, [pulse]);
 
-  const fetchPage = useCallback(async (pageNum: number) => {
-    try {
-      if (pageNum === 1) setLoading(true);
-      else setLoadingMore(true);
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["ecommerce", "product-collection", source],
+    queryFn: ({ pageParam }) => fetchCollectionPage(source, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore && lastPage.nextOffset > 0 ? lastPage.nextOffset : undefined,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-      const res = await fetchAllProducts({ page: pageNum, pageSize: PAGE_SIZE });
+  const products = useMemo(() => {
+    const uniqueProducts = new Map<string, any>();
 
-      const rawList = res?.products ?? [];
-      const normalized = rawList.map(normalizeProduct);
+    (data?.pages ?? []).forEach((page) => {
+      page.products.forEach((product: any, index: number) => {
+        const key = String(
+          product?.id ?? product?.product_id ?? product?.productId ?? `${page.nextOffset}-${index}`
+        );
+        uniqueProducts.set(key, product);
+      });
+    });
 
-      // Fisher-Yates shuffle
-      const shuffled = [...normalized];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-
-      setProducts((prev) => (pageNum === 1 ? shuffled : [...prev, ...shuffled]));
-      setCurrentPage(pageNum);
-      setHasMore(res?.hasMore ?? false);
-      setError(null);
-    } catch (err: any) {
-      console.error("ProductScreen Fetch Error:", err?.message || err);
-      setError(err?.message || "Failed to load products");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setProducts([]);
-      setCurrentPage(1);
-      setHasMore(true);
-      fetchPage(1);
-    }, [fetchPage])
-  );
+    return Array.from(uniqueProducts.values());
+  }, [data?.pages]);
 
   const handleLoadMore = useCallback(() => {
-    if (loading || loadingMore || !hasMore) return;
-    fetchPage(currentPage + 1);
-  }, [loading, loadingMore, hasMore, currentPage, fetchPage]);
+    if (!hasNextPage || isFetchingNextPage) return;
+    fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <View style={styles.screen}>
-      <ProductHeadColor title="All Products" onBackPress={() => navigation.goBack()} />
+      <ProductHeadColor title={title} onBackPress={() => navigation.goBack()} />
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.skeletonWrap}>
           <View style={styles.skeletonRow}>
             {Array.from({ length: 6 }).map((_, index) => (
@@ -114,12 +182,14 @@ function ProductScreen() {
         </View>
       ) : error && products.length === 0 ? (
         <View style={styles.centerWrap}>
-          <Text style={styles.emptyText}>{error}</Text>
+          <Text style={styles.emptyText}>
+            {(error as Error)?.message || `Failed to load ${title.toLowerCase()}.`}
+          </Text>
         </View>
       ) : (
         <FlatList
           data={products}
-          keyExtractor={(item, index) => String(item?.id ?? index)}
+          keyExtractor={(item, index) => String(item?.id ?? item?.product_id ?? index)}
           numColumns={2}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
@@ -127,10 +197,10 @@ function ProductScreen() {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.35}
           renderItem={({ item }) => (
-            <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage={true} />
+            <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage />
           )}
           ListFooterComponent={
-            loadingMore && hasMore ? (
+            isFetchingNextPage ? (
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color="#5B47A3" />
               </View>
@@ -138,7 +208,7 @@ function ProductScreen() {
           }
           ListEmptyComponent={
             <View style={styles.centerWrap}>
-              <Text style={styles.emptyText}>No products found.</Text>
+              <Text style={styles.emptyText}>No {title.toLowerCase()} found.</Text>
             </View>
           }
         />
@@ -155,6 +225,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   listContent: {
+    flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 18,
@@ -167,10 +238,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 24,
   },
   skeletonWrap: {
+    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
+    overflow: "hidden",
   },
   skeletonRow: {
     flexDirection: "row",
@@ -193,5 +267,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     fontWeight: "500",
+    textAlign: "center",
   },
 });

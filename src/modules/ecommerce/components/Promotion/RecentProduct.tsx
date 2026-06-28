@@ -58,7 +58,7 @@ const RecentProduct = () => {
     });
 
     const handlePressAll = React.useCallback(() => {
-        navigation.navigate("ProductScreen");
+        navigation.navigate("ProductScreen", { source: "recent" });
     }, [navigation]);
 
     const renderCard = React.useCallback(

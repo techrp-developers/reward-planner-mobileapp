@@ -151,7 +151,7 @@ function NewArrivals() {
   });
 
   const handleViewAll = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "newArrivals" });
   }, [navigation]);
 
   const renderCard = useCallback(

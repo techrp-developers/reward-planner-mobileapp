@@ -105,7 +105,7 @@ function TopRated() {
   }, [pulse]);
 
   const handleExplore = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "topRated" });
   }, [navigation]);
 
   const renderCard = useCallback(

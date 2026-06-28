@@ -80,7 +80,7 @@ function MostView() {
   });
 
   const handleExplore = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "mostViewed" });
   }, [navigation]);
 
   const renderCard = useCallback(

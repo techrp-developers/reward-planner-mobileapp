@@ -39,6 +39,7 @@ function CustomTabBar({ navigation, isAuthenticated }: CustomTabBarProps) {
 
   return (
     <BottomTabs
+      layoutMode="navigator"
       cartCount={totalQuantity}
       onTabPress={(tab) => {
         switch (tab) {
