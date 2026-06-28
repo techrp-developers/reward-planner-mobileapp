@@ -436,14 +436,16 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               DEFAULT ADDRESS
           ════════════════════════════════════ */}
-          {(profileContext === 'ecommerce' || profileContext === 'services') && (
+          {(profileContext === 'ecommerce' || profileContext === 'services' || profileContext === 'bbps') && (
             <>
-              <SectionHead title={profileContext === 'ecommerce' ? 'Shop' : 'Services'} isDark={isDark} />
+              <SectionHead title={profileContext === 'services' ? 'Services' : 'Shop'} isDark={isDark} />
               <View style={[styles.card, cardColor(isDark, theme)]}>
             {/* My Orders — expandable dropdown */}
             <TouchableOpacity
               style={[styles.mrow, { borderBottomWidth: profileContext === 'ecommerce' ? 0.5 : 0, borderBottomColor: 'rgba(15,23,42,0.07)' }]}
-              onPress={() => navigation.navigate('MyOrder' as any)}
+              onPress={() => navigation.navigate(
+                (profileContext === 'bbps' ? 'OrderHistory' : 'MyOrder') as any
+              )}
               activeOpacity={0.7}
             >
               <View style={[styles.micon, { backgroundColor: '#EEF2FF' }]}>

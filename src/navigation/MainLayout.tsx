@@ -116,6 +116,7 @@ function MainLayout() {
   const activeTabKey = React.useMemo(() => {
     const leafRoute = routeChain[routeChain.length - 1];
     if (leafRoute === "Cart") return "Cart";
+    if (leafRoute === "OrderHistory") return "History";
     if (leafRoute === "Profile") return "Profile";
     if (leafRoute === "Search" || leafRoute === "ServiceSearch") return "Search";
     return "Home";
@@ -123,7 +124,14 @@ function MainLayout() {
 
   const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
-    (tab: "Home" | "Search" | "Notes" | "Cart" | "Profile") => {
+    (tab: "Home" | "Search" | "Notes" | "Cart" | "History" | "Profile") => {
+      if (tab === "History") {
+        if (activeMode === "Payments") {
+          navigation.navigate("PaymentsModule", { screen: "OrderHistory" });
+        }
+        return;
+      }
+
       if (tab === "Cart") {
         if (activeMode === "Services") {
           navigation.navigate("ServicesModule", { screen: "CartScreen" });
