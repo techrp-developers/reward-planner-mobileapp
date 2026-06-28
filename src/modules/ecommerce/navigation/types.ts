@@ -20,7 +20,7 @@ export type HomeStackParamList = {
   };
   ProductDescription: { productId: number | string };
   Cart: undefined;
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   WithAddress: undefined;
   WalletHistory: undefined;
   Coupan: undefined;
@@ -53,12 +53,13 @@ export type HomeStackParamList = {
   TodoList: undefined;
     Profile : undefined;
 
-  AddAddressMap: { fromCart?: boolean } | undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails:
     | undefined
     | {
         mode?: "add" | "edit";
         addressId?: number;
+        manageOnly?: boolean;
         initialData?: {
           saveAs?: "Home" | "Work" | "Other";
           flatHouseBuilding?: string;

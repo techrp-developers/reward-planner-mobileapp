@@ -78,6 +78,10 @@ export default function ServiceHomeStack() {
                 getComponent={() => require("../../ecommerce/components/ItemCardAddress/AddressSelectScreen").default}
             />
             <Stack.Screen
+                name="AddressDetails"
+                getComponent={() => require("../../ecommerce/components/ItemCardAddress/NewAddressForm").default}
+            />
+            <Stack.Screen
                 name="DocumentUpload"
                 getComponent={() => require("../component/cart/DocumentUpload").default}
             />

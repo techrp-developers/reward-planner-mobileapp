@@ -48,7 +48,7 @@ function Profile() {
     };
     const OpenAddressDetails = () => {
         // direct app-level navigation (AddAddressMap is now in AppStack)
-        navigation.navigate("AddressSelect");
+        navigation.navigate("AddressSelect", { manageOnly: true });
     };
 
 

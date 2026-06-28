@@ -38,7 +38,7 @@ export type AppStackParamList = {
   MyOrder: undefined;
   WishList: undefined;
   PrivacyPolicy: undefined;
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   ChangePassword: undefined;
   Profile: undefined;
   ServiceStack: undefined;

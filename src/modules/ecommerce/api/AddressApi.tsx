@@ -84,7 +84,7 @@ export const fetchAllAddress = async () => {
 
 export const updateAddress = async (
   address_id: number,
-  payload: AddToAddressPayload
+  payload: Partial<AddToAddressPayload>
 ) => {
   const headers = await getAuthHeaders();
   const res = await axios.put(
@@ -112,7 +112,32 @@ export const fetchAddressByID = async (address_id: string | number) => {
   );
   return res.data.data; 
 };
-export const fetchAllStates = async () => {
-  const res = await axios.get(`${API_BASE_URL}/auth/all-states`);
-  return res.data;
+let statesCache: any[] | null = null;
+let statesRequest: Promise<{ success: boolean; data: any[] }> | null = null;
+
+export const fetchAllStates = async (forceRefresh = false) => {
+  if (!forceRefresh && statesCache) {
+    return { success: true, data: statesCache };
+  }
+
+  if (!forceRefresh && statesRequest) {
+    return statesRequest;
+  }
+
+  statesRequest = axios
+    .get(`${API_BASE_URL}/v1/auth/states`)
+    .then(res => {
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      statesCache = data;
+      return { success: true, data };
+    })
+    .catch(error => {
+      statesCache = null;
+      throw error;
+    })
+    .finally(() => {
+      statesRequest = null;
+    });
+
+  return statesRequest;
 };

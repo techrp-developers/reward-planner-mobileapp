@@ -492,7 +492,7 @@ const ProfileScreen: React.FC = () => {
             )}
 
             <AccountRow icon="heart-outline"         label="Wishlist"       isDark={isDark} theme={theme} onPress={() => navigation.navigate('WishList' as any)} />
-            <AccountRow icon="map-marker-outline"    label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect' as any)} />
+            <AccountRow icon="map-marker-outline"    label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect', { manageOnly: true } as any)} />
           </View>
 
           {/* ════════════════════════════════════

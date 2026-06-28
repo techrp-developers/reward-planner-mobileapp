@@ -18,10 +18,12 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
-import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
+import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
@@ -294,6 +296,37 @@ export default function Navbar() {
     React.useState("Address not set");
   const hasAddress = String(displayAddress || "").trim() !== "Address not set";
 
+  // Shares the same query cache the address screens invalidate after add/edit/
+  // delete/set-default, so the navbar address updates immediately instead of
+  // only refreshing once per 60s cache window on mount.
+  const { data: liveAddressData } = useQuery({
+    queryKey: addressesQueryKey,
+    queryFn: fetchAllAddress,
+    enabled: isAuthenticated,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  React.useEffect(() => {
+    if (!isAuthenticated || !liveAddressData) return;
+
+    const list: ApiAddress[] = Array.isArray(liveAddressData?.data) ? liveAddressData.data : [];
+    const selectedAddress =
+      list.find((item) => Number(item?.is_default) === 1) || list[0];
+
+    const addressText = [
+      selectedAddress?.address1,
+      selectedAddress?.address2,
+      selectedAddress?.city,
+      selectedAddress?.state,
+      selectedAddress?.zipcode,
+    ]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    setDisplayAddress(addressText || "Address not set");
+  }, [isAuthenticated, liveAddressData]);
+
   const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
     setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
     setDisplayAddress((prev) =>
@@ -412,29 +445,12 @@ export default function Navbar() {
           storedName ||
           "User";
 
-        const addressRes = await fetchAllAddress();
-        const addresses: ApiAddress[] = Array.isArray(addressRes?.data)
-          ? addressRes.data
-          : [];
-
-        const selectedAddress =
-          addresses.find((item) => Number(item?.is_default) === 1) ||
-          addresses[0];
-
-        const addressText = [
-          selectedAddress?.address1,
-          selectedAddress?.address2,
-          selectedAddress?.city,
-          selectedAddress?.state,
-          selectedAddress?.zipcode,
-        ]
-          .map((part) => String(part || "").trim())
-          .filter(Boolean)
-          .join(", ");
-
+        // Address is now sourced reactively from the shared addresses query
+        // (see liveAddressData above), which updates instantly whenever an
+        // address is added/edited/deleted/set-default anywhere in the app.
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
-          displayAddress: addressText || "Address not set",
+          displayAddress: navbarUserCache?.displayAddress || "Address not set",
           rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
