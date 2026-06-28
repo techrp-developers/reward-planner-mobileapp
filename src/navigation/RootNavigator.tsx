@@ -153,6 +153,11 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/components/home/Wallet_History").default
         }
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
       />
       <AppStack.Screen name="ServiceStack" component={ServiceHomeStack} />
       <AppStack.Screen name="RewardStack" component={RewardHomeStack} />

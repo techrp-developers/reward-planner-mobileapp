@@ -16,7 +16,15 @@ export default function HomeStack() {
       }}
     >
       <Stack.Screen name="Home" getComponent={() => require("../screens/homescreen").default} />
-      <Stack.Screen name="Category" getComponent={() => require("../components/product/product_section/Categories_Product").default} />
+      <Stack.Screen
+        name="Category"
+        getComponent={() => require("../components/product/product_section/Categories_Product").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
       <Stack.Screen
         name="ProductDescription"
         getComponent={() => require("../screens/product_description_screen").default}
@@ -44,7 +52,15 @@ export default function HomeStack() {
       <Stack.Screen name="OrderReceipt" getComponent={() => require("../../common/order/OrderReceipt").default} />
       <Stack.Screen name="MyOrder" getComponent={() => require("../components/order/MyOrder").default} />
       <Stack.Screen name="Coupan" getComponent={() => require("../constants/coupan/CouponsPage").default} />
-      <Stack.Screen name="CategoriesScreen" getComponent={() => require("../screens/CategoriesScreen").default} />
+      <Stack.Screen
+        name="CategoriesScreen"
+        getComponent={() => require("../screens/CategoriesScreen").default}
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
+      />
       <Stack.Screen name="Explore" getComponent={() => require("../screens/Explore").default} />
       <Stack.Screen
         name="SearchScreen"
