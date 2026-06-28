@@ -14,6 +14,8 @@ type Props = {
   finalTotal?: number
   bagDiscount?: number
   shippingCharges?: number
+  showShippingCharges?: boolean
+  rewardCoinsAvailable?: number
   onPayableChange?: (amount: number) => void
 }
 
@@ -30,6 +32,8 @@ export default function BillDetailsCard({
   finalTotal,
   bagDiscount = 0,
   shippingCharges = 0,
+  showShippingCharges = true,
+  rewardCoinsAvailable,
   onPayableChange,
 }: Props) {
   const safeCartTotal = useMemo(() => Math.max(0, Number(cartTotal ?? subtotal ?? 0)), [cartTotal, subtotal])
@@ -38,12 +42,14 @@ export default function BillDetailsCard({
   const safeRedeemed = useMemo(() => Math.max(0, Number(totalRedeemed || 0)), [totalRedeemed])
   const safeBagDiscount = useMemo(() => Math.max(0, Number(bagDiscount || 0)), [bagDiscount])
   const safeShipping = useMemo(() => Math.max(0, Number(shippingCharges || 0)), [shippingCharges])
+  const safeAvailableRewards = useMemo(
+    () => Math.max(0, Number(rewardCoinsAvailable ?? safeRedeemed)),
+    [rewardCoinsAvailable, safeRedeemed]
+  )
 
   const rewardDiscount = useRewards ? safeRedeemed : 0
   const payableAmount = safeFinalPayable
-  // When rewards are OFF the API returns redeemCoins=0, so we must not lock
-  // the switch based on that zero — allow re-enabling whenever rewards are off.
-  const canUseRewards = !useRewards || safeRedeemed > 0 || safeRewardEarn > 0
+  const canUseRewards = safeAvailableRewards > 0
 
   useEffect(() => {
     onPayableChange?.(payableAmount)
@@ -60,9 +66,11 @@ export default function BillDetailsCard({
         </View>
 
         <View style={styles.switchRow}>
-          <Text style={styles.coinValue}>{formatAmount(safeRedeemed)}</Text>
+          <Text style={styles.coinValue}>
+            {formatAmount(useRewards ? safeRedeemed : safeAvailableRewards)}
+          </Text>
           <Switch
-            value={canUseRewards ? useRewards : false}
+            value={canUseRewards && useRewards}
             onValueChange={onUseRewardsChange ?? (() => {})}
             disabled={!canUseRewards}
             trackColor={{ false: '#E5E7EB', true: '#22C55E' }}
@@ -88,7 +96,9 @@ export default function BillDetailsCard({
         />
       )}
 
-      <MemoRow label="Shipping Charges" value={formatAmount(safeShipping)} />
+      {showShippingCharges && (
+        <MemoRow label="Shipping Charges" value={formatAmount(safeShipping)} />
+      )}
 
       <View style={styles.divider} />
 
