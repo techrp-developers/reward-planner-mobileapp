@@ -362,8 +362,10 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               CONTACT INFO
           ════════════════════════════════════ */}
-          <SectionHead title="User Info" isDark={isDark} />
-          <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
+          {isDashboardProfile && (
+            <>
+              <SectionHead title="User Info" isDark={isDark} />
+              <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
             <InfoGroupTitle title="Contact Info" isDark={isDark} />
             <InfoTableRow
                 icon="phone-outline"
@@ -421,7 +423,9 @@ const ProfileScreen: React.FC = () => {
                   last
                 />
               )}
-          </View>
+              </View>
+            </>
+          )}
 
           {/* ════════════════════════════════════
               EMPLOYEE INFO
