@@ -178,8 +178,9 @@ function MainLayout() {
           initialRouteName="ProductModule"
           screenOptions={{
             headerShown: false,
-            animation: "fade",
+            animation: "none",
             gestureEnabled: true,
+            contentStyle: { backgroundColor: "#FFFFFF" },
           }}
         >
           <ModuleStack.Screen

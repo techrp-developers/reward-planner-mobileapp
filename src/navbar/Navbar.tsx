@@ -5,7 +5,6 @@ import {
   StyleSheet,
   StatusBar,
   TouchableOpacity,
-  Image,
   Animated,
   Platform,
 } from "react-native";
@@ -265,31 +264,35 @@ export default function Navbar() {
   );
   const showLocation = activeTab === "Product";
 
-  const bgSource = React.useMemo(() => BG_MAP[activeTab], [activeTab]);
   const activeThemeColor = React.useMemo(
     () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
     [activeTab]
   );
   const isNavigatingRef = React.useRef(false);
+  const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
+    Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
+    Services: new Animated.Value(activeTab === "Services" ? 1 : 0),
+    Payments: new Animated.Value(activeTab === "Payments" ? 1 : 0),
+    DineOut: new Animated.Value(activeTab === "DineOut" ? 1 : 0),
+  }).current;
 
   // Cross-fade the background instead of remounting the Image on every tab
   // switch — remounting could briefly leave the previous module's background
   // visible underneath while the content below had already switched, and
   // felt like a hard cut rather than a smooth transition.
-  const [prevBgSource, setPrevBgSource] = React.useState(bgSource);
-  const bgFade = React.useRef(new Animated.Value(1)).current;
-
   React.useEffect(() => {
-    if (bgSource === prevBgSource) return;
-    bgFade.setValue(0);
-    Animated.timing(bgFade, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) setPrevBgSource(bgSource);
+    const animations = TOP_TABS.map((tab) => {
+      backgroundOpacities[tab].stopAnimation();
+      return Animated.timing(backgroundOpacities[tab], {
+        toValue: tab === activeTab ? 1 : 0,
+        duration: 150,
+        useNativeDriver: true,
+      });
     });
-  }, [bgSource, prevBgSource, bgFade]);
+
+    Animated.parallel(animations).start();
+    return () => animations.forEach((animation) => animation.stop());
+  }, [activeTab, backgroundOpacities]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
@@ -487,19 +490,21 @@ export default function Navbar() {
       />
 
       {/* ✅ Background cross-fades smoothly between modules */}
-      <View style={styles.bgWrapper} pointerEvents="none">
-        <Image
-          source={prevBgSource}
-          style={[styles.absoluteFill, { top: -insets.top }]}
-          resizeMode="cover"
-        />
-        {bgSource !== prevBgSource && (
+      <View
+        style={[styles.bgWrapper, { backgroundColor: activeThemeColor }]}
+        pointerEvents="none"
+      >
+        {TOP_TABS.map((tab) => (
           <Animated.Image
-            source={bgSource}
-            style={[styles.absoluteFill, { top: -insets.top, opacity: bgFade }]}
+            key={tab}
+            source={BG_MAP[tab]}
+            style={[
+              styles.absoluteFill,
+              { top: -insets.top, opacity: backgroundOpacities[tab] },
+            ]}
             resizeMode="cover"
           />
-        )}
+        ))}
       </View>
 
       {/* TOP 4 ICON TABS */}
@@ -635,7 +640,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 280,
-    zIndex: -1,
     overflow: "hidden",
   },
 
