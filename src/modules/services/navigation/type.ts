@@ -63,7 +63,7 @@ export type HomeStackParamList = {
     redirectDelayMs?: number;
   };
   CartScreen: undefined;
-  Profile: undefined;
+  Profile: { context?: 'services' } | undefined;
   MyOrder: undefined;
   ServiceOrderDetail: { parent_order_id: string };
   ServiceCancellationRequest: {
@@ -87,6 +87,8 @@ export type HomeStackParamList = {
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
+  HelpForm: undefined;
+  ChangePassword: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
   CommonQuestionsScreen: undefined;
   ArticleDetails: { articleId: number; sectionId: number };

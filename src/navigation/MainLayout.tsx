@@ -136,6 +136,8 @@ function MainLayout() {
       if (tab === "Profile") {
         if (activeMode === "Services") {
           navigation.navigate("ServicesModule", { screen: "Profile" });
+        } else if (activeMode === "Payments") {
+          navigation.navigate("PaymentsModule", { screen: "Profile" });
         } else {
           navigation.navigate("Profile");
         }

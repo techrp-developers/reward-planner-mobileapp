@@ -51,7 +51,7 @@ export type HomeStackParamList = {
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   TodoList: undefined;
-    Profile : undefined;
+    Profile : { context?: 'ecommerce' } | undefined;
 
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails:
@@ -88,6 +88,7 @@ OrderConfirmedScreen: {
   Settings: undefined;
   Privacy: undefined;
   Support: undefined;
+  HelpForm: undefined;
   ChangePassword: undefined;
 };
 

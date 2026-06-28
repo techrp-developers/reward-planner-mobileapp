@@ -28,7 +28,11 @@ export default function ServiceHomeStack() {
                 getComponent={() => require("../component/screens/ServiceDescription").default}
             />
             <Stack.Screen name="CartScreen" getComponent={() => require("../component/screens/CartScreen").default} />
-            <Stack.Screen name="Profile" getComponent={() => require("../component/screens/Profile").default} />
+            <Stack.Screen
+                name="Profile"
+                getComponent={() => require("../../ecommerce/profile/ProfileScreen").default}
+                initialParams={{ context: "services" }}
+            />
             <Stack.Screen
                 name="MyOrder"
                 getComponent={() => require("../component/order/MyOrder").default}
@@ -64,6 +68,14 @@ export default function ServiceHomeStack() {
             <Stack.Screen
                 name="TermsAndConditions"
                 getComponent={() => require("../../ecommerce/profile/TermsandCondition").default}
+            />
+            <Stack.Screen
+                name="HelpForm"
+                getComponent={() => require("../../ecommerce/constants/Support/HelpForm").default}
+            />
+            <Stack.Screen
+                name="ChangePassword"
+                getComponent={() => require("../../common/auth/screens/ChangePasswordScreen").default}
             />
             <Stack.Screen
                 name="OrderConfirmedScreen"

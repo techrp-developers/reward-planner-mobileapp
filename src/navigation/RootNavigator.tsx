@@ -39,8 +39,10 @@ export type AppStackParamList = {
   WishList: undefined;
   PrivacyPolicy: undefined;
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   ChangePassword: undefined;
-  Profile: undefined;
+  Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
@@ -223,6 +225,18 @@ function AppNavigator() {
         name="AddressSelect"
         getComponent={() =>
           require("../modules/ecommerce/components/ItemCardAddress/AddressSelectScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="AddAddressMap"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/AddAddressMapScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="AddressDetails"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
         }
       />
       <AppStack.Screen

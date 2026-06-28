@@ -94,7 +94,7 @@ function Dashbord() {
           navigation.navigate('GlobalSearchScreen');
           break;
         case 'Profile':
-          navigation.navigate('Profile');
+          navigation.navigate('Profile', { context: 'dashboard' });
           break;
         // 'Home' is Dashboard itself — already here, no-op
       }
