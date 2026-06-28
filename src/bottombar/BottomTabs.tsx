@@ -144,7 +144,6 @@ function BottomTabs({
 
   const handlePress = useCallback(
     (tab: TabKey) => {
-      if (tab === activeTabRef.current) return;
       activeTabRef.current = tab;
       setActiveTab(tab);
       onTabPress?.(tab);
