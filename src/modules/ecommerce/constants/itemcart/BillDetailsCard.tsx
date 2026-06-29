@@ -14,7 +14,10 @@ type Props = {
   finalTotal?: number
   bagDiscount?: number
   shippingCharges?: number
+  shippingLabel?: string
   showShippingCharges?: boolean
+  handlingFees?: number
+  showHandlingFees?: boolean
   rewardCoinsAvailable?: number
   onPayableChange?: (amount: number) => void
 }
@@ -32,7 +35,10 @@ export default function BillDetailsCard({
   finalTotal,
   bagDiscount = 0,
   shippingCharges = 0,
+  shippingLabel = 'Shipping Charges',
   showShippingCharges = true,
+  handlingFees = 0,
+  showHandlingFees = false,
   rewardCoinsAvailable,
   onPayableChange,
 }: Props) {
@@ -42,6 +48,7 @@ export default function BillDetailsCard({
   const safeRedeemed = useMemo(() => Math.max(0, Number(totalRedeemed || 0)), [totalRedeemed])
   const safeBagDiscount = useMemo(() => Math.max(0, Number(bagDiscount || 0)), [bagDiscount])
   const safeShipping = useMemo(() => Math.max(0, Number(shippingCharges || 0)), [shippingCharges])
+  const safeHandlingFees = useMemo(() => Math.max(0, Number(handlingFees || 0)), [handlingFees])
   const safeAvailableRewards = useMemo(
     () => Math.max(0, Number(rewardCoinsAvailable ?? safeRedeemed)),
     [rewardCoinsAvailable, safeRedeemed]
@@ -97,7 +104,11 @@ export default function BillDetailsCard({
       )}
 
       {showShippingCharges && (
-        <MemoRow label="Shipping Charges" value={formatAmount(safeShipping)} />
+        <MemoRow label={shippingLabel} value={formatAmount(safeShipping)} />
+      )}
+
+      {showHandlingFees && (
+        <MemoRow label="Handling Fees" value={formatAmount(safeHandlingFees)} />
       )}
 
       <View style={styles.divider} />
@@ -113,7 +124,7 @@ export default function BillDetailsCard({
         </Text>
       )}
 
-      {useRewards && safeRewardEarn > 0 && (
+      {safeRewardEarn > 0 && (
         <View style={styles.rewardBanner}>
           <MaterialIcons name="auto-awesome" size={18} color="#7C3AED" />
           <Text style={styles.rewardText}>
