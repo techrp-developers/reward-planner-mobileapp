@@ -566,21 +566,26 @@ export default function OrderStepUI() {
 
       let orderRes;
       if (mode === "buy_now" && product_id && variant_id) {
-        orderRes = await addBuyNowOrder({
+        const buyNowOrderPayload = {
           product_id: safeToNumber(product_id),
           variant_id: safeToNumber(variant_id),
+          quantity: buyNowQty,
           address_id: safeToNumber(selectedAddressId),
-          expected_total: safeToNumber(latestSummary.payableAmount),
+          expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
-        });
+        };
+        console.log("📤 Buy Now order payload:", buyNowOrderPayload);
+        orderRes = await addBuyNowOrder(buyNowOrderPayload);
       } else {
-        orderRes = await addCartOrder({
+        const cartOrderPayload = {
           address_id: safeToNumber(selectedAddressId),
-          expected_total: safeToNumber(latestSummary.payableAmount),
+          expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
-        });
+        };
+        console.log("📤 Cart order payload:", cartOrderPayload);
+        orderRes = await addCartOrder(cartOrderPayload);
         createdCartOrder = true;
       }
 
