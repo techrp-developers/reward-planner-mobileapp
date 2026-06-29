@@ -103,14 +103,14 @@ export default function AddressSelectScreen() {
     }
   }, [alert]);
 
-  // Load on mount, then reload on focus
-  useEffect(() => {
-    loadAddresses();
-  }, [loadAddresses]);
-
+  // `useFocusEffect` already fires once when the screen is first focused
+  // (i.e. as soon as it's opened) and again every time it regains focus —
+  // which covers "on open" and "after Add/Edit/Delete navigates back" in a
+  // single place. A separate mount `useEffect` here used to double-fetch on
+  // open, and combined with `alert`/`loadAddresses` not being referentially
+  // stable, it turned into a continuous fetch loop.
   useFocusEffect(
     React.useCallback(() => {
-      // Reload addresses when screen comes into focus
       loadAddresses();
     }, [loadAddresses])
   );
