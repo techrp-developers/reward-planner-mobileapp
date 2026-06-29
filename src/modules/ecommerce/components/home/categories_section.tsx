@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   Image,
-  ActivityIndicator,
   FlatList,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HomeStackParamList } from "../../navigation/types";
 import { fetchAllCategories, getProductImageUrl } from "../../api/ProductApi";
+import HomeSectionSkeleton from "./HomeSectionSkeleton";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -177,11 +177,7 @@ export default function CategoriesSection() {
   );
 
   if (loading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="small" color="#A654CD" />
-      </View>
-    );
+    return <HomeSectionSkeleton height={240} />;
   }
 
   return (

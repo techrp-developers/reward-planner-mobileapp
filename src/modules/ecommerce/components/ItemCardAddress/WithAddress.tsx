@@ -102,7 +102,7 @@ const CartRow = React.memo(function CartRow({
 
 export default function WithAddress() {
   const navigation = useNavigation<Nav>()
-  const stickyCTA = useStickyBottomCTA()
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current
@@ -136,12 +136,16 @@ export default function WithAddress() {
     return () => animation.stop()
   }, [pulse])
 
-  const { data: cartData, isFetching: isCartFetching } = useQuery({
+  const {
+    data: cartData,
+    isFetchedAfterMount: isCartFetchedAfterMount,
+  } = useQuery({
     queryKey: cartItemsQueryKey,
     queryFn: fetchCartItems,
     enabled: isAuthenticated,
-    staleTime: TEN_MINUTES,
+    staleTime: 0,
     gcTime: THIRTY_MINUTES,
+    refetchOnMount: 'always',
   })
 
   const { data: addressData, isFetching: isAddressFetching } = useQuery({
@@ -156,14 +160,30 @@ export default function WithAddress() {
     return Array.isArray(cartData?.items) ? cartData.items : []
   }, [cartData?.items])
 
-  const { data: cartSummaryData, isFetching: isCartSummaryFetching } = useQuery({
-    queryKey: cartSummaryQueryKey(useRewards),
-    queryFn: () => fetchCartSummary(useRewards),
+  const rewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(true),
+    queryFn: () => fetchCartSummary(true),
     enabled: isAuthenticated && items.length > 0,
-    placeholderData: previousData => previousData,
-    staleTime: TEN_MINUTES,
+    staleTime: 0,
     gcTime: THIRTY_MINUTES,
+    refetchOnMount: 'always',
   })
+
+  const noRewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(false),
+    queryFn: () => fetchCartSummary(false),
+    enabled: isAuthenticated && items.length > 0 && !useRewards,
+    staleTime: 0,
+    gcTime: THIRTY_MINUTES,
+    refetchOnMount: 'always',
+  })
+
+  const cartSummaryData = useRewards
+    ? rewardSummaryQuery.data
+    : noRewardSummaryQuery.data
+  const isSummaryFetchedAfterMount = useRewards
+    ? rewardSummaryQuery.isFetchedAfterMount
+    : noRewardSummaryQuery.isFetchedAfterMount
 
   const address = useMemo(() => {
     const list = Array.isArray(addressData?.data) ? addressData.data : []
@@ -179,12 +199,24 @@ export default function WithAddress() {
     }
   }, [cartSummaryData])
 
-  const checkoutTotal = useRewards ? cartSummary.finalPayable : cartSummary.cartTotal
+  const rewardCoinsAvailable = Math.max(
+    0,
+    Number(rewardSummaryQuery.data?.totalRedeemed || 0)
+  )
+  const rewardsEnabled = useRewards && rewardCoinsAvailable > 0
+  const checkoutTotal = rewardsEnabled ? cartSummary.finalPayable : cartSummary.cartTotal
+
+  useEffect(() => {
+    if (rewardSummaryQuery.data && rewardCoinsAvailable <= 0 && useRewards) {
+      setUseRewards(false)
+    }
+  }, [rewardCoinsAvailable, rewardSummaryQuery.data, useRewards])
 
   const loading =
     isAuthenticated &&
-    ((!cartData && !addressData && (isCartFetching || isAddressFetching)) ||
-      (items.length > 0 && !cartSummaryData && isCartSummaryFetching))
+    (!isCartFetchedAfterMount ||
+      (!addressData && isAddressFetching) ||
+      (items.length > 0 && !isSummaryFetchedAfterMount))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {
@@ -334,8 +366,10 @@ export default function WithAddress() {
           finalPayable={cartSummary.finalPayable}
           totalRewardEarn={cartSummary.totalRewardEarn}
           totalRedeemed={cartSummary.totalRedeemed}
-          useRewards={useRewards}
+          useRewards={rewardsEnabled}
           onUseRewardsChange={setUseRewards}
+          rewardCoinsAvailable={rewardCoinsAvailable}
+          showShippingCharges={false}
         />
 
         <RecommendedProducts />
@@ -350,7 +384,8 @@ export default function WithAddress() {
     cartSummary.totalRedeemed,
     cartSummary.totalRewardEarn,
     // showAllCoupons,
-    useRewards,
+    rewardCoinsAvailable,
+    rewardsEnabled,
   ])
 
   if (!loading && items.length === 0) {
@@ -400,7 +435,7 @@ export default function WithAddress() {
         total={checkoutTotal}
         count={items.length}
         onProceedToBuy={() => goToCheckout()}
-        bottomOffset={stickyCTA.bottomOffset}
+        bottomOffset={0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

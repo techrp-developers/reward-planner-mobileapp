@@ -27,6 +27,14 @@ export type BBPSStackParamList = {
   TransactionStatusScreen: undefined;
   Search: undefined;
   OrderHistory: undefined;
+  Profile: { context?: 'bbps' } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  PrivacyPolicy: undefined;
+  TermsAndConditions: undefined;
+  HelpForm: undefined;
+  ChangePassword: undefined;
 
 };
 
@@ -98,6 +106,19 @@ const BBPSHomeStack = React.memo(() => {
         component={OrderHistory}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="Profile"
+        getComponent={() => require('../../ecommerce/profile/ProfileScreen').default}
+        initialParams={{ context: 'bbps' }}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen name="AddressSelect" getComponent={() => require('../../ecommerce/components/ItemCardAddress/AddressSelectScreen').default} options={{ headerShown: false }} />
+      <Stack.Screen name="AddressDetails" getComponent={() => require('../../ecommerce/components/ItemCardAddress/NewAddressForm').default} options={{ headerShown: false }} />
+      <Stack.Screen name="AddAddressMap" getComponent={() => require('../../ecommerce/components/ItemCardAddress/AddAddressMapScreen').default} options={{ headerShown: false }} />
+      <Stack.Screen name="PrivacyPolicy" getComponent={() => require('../../ecommerce/profile/PrivacyPolicy').default} options={{ headerShown: false }} />
+      <Stack.Screen name="TermsAndConditions" getComponent={() => require('../../ecommerce/profile/TermsandCondition').default} options={{ headerShown: false }} />
+      <Stack.Screen name="HelpForm" getComponent={() => require('../../ecommerce/constants/Support/HelpForm').default} options={{ headerShown: false }} />
+      <Stack.Screen name="ChangePassword" getComponent={() => require('../../common/auth/screens/ChangePasswordScreen').default} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 });

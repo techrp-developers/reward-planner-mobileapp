@@ -13,6 +13,7 @@ export type CartOrderPayload = {
 export type BuyNowPayload = {
   product_id: number;
   variant_id: number;
+  quantity: number;
   address_id: number;
 
   expected_total: number;

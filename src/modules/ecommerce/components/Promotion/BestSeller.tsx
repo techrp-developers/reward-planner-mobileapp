@@ -78,7 +78,7 @@ function BestSeller() {
   }, [pulse]);
 
   const handleViewAll = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "bestSellers" });
   }, [navigation]);
 
   const renderCard = useCallback(
@@ -91,7 +91,7 @@ function BestSeller() {
   if (isLoading && products.length === 0) {
     return (
       <View style={styles.loaderWrap}>
-        <SkeletonBox width="92%" height={100} borderRadius={12} pulse={pulse} />
+        <SkeletonBox width="92%" height={300} borderRadius={12} pulse={pulse} />
       </View>
     );
   }
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     color: "#FF3F6C",
   },
   loaderWrap: {
-    height: 80,
+    height: 350,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FAD4E5",

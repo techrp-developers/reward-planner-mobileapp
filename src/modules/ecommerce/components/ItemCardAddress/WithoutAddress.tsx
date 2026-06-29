@@ -46,8 +46,6 @@ const { height } = Dimensions.get('window')
 //   { id: 2, code: 'RPCC200', title: 'Buy for ₹7777 to avail', subtitle: 'BOB Credit Card Offer' },
 // ]
 
-const TEN_MINUTES = 10 * 60 * 1000
-
 type CartRowProps = {
   item: any
   navigation: Nav
@@ -103,7 +101,7 @@ const CartRow = React.memo(function CartRow({
 
 export default function WithoutAddress() {
   const navigation = useNavigation<Nav>()
-  const stickyCTA = useStickyBottomCTA()
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [useRewards, setUseRewards] = useState(true)
@@ -138,26 +136,46 @@ export default function WithoutAddress() {
     return () => animation.stop()
   }, [pulse])
 
-  const { data: cartData, isFetching: isCartFetching } = useQuery({
+  const {
+    data: cartData,
+    isFetchedAfterMount: isCartFetchedAfterMount,
+  } = useQuery({
     queryKey: cartItemsQueryKey,
     queryFn: fetchCartItems,
     enabled: isAuthenticated,
-    staleTime: TEN_MINUTES,
+    staleTime: 0,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: 'always',
   })
 
   const items = useMemo(() => {
     return Array.isArray(cartData?.items) ? cartData.items : []
   }, [cartData?.items])
 
-  const { data: cartSummaryData, isFetching: isCartSummaryFetching } = useQuery({
-    queryKey: cartSummaryQueryKey(useRewards),
-    queryFn: () => fetchCartSummary(useRewards),
+  const rewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(true),
+    queryFn: () => fetchCartSummary(true),
     enabled: isAuthenticated && items.length > 0,
-    placeholderData: previousData => previousData,
-    staleTime: TEN_MINUTES,
+    staleTime: 0,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: 'always',
   })
+
+  const noRewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(false),
+    queryFn: () => fetchCartSummary(false),
+    enabled: isAuthenticated && items.length > 0 && !useRewards,
+    staleTime: 0,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: 'always',
+  })
+
+  const cartSummaryData = useRewards
+    ? rewardSummaryQuery.data
+    : noRewardSummaryQuery.data
+  const isSummaryFetchedAfterMount = useRewards
+    ? rewardSummaryQuery.isFetchedAfterMount
+    : noRewardSummaryQuery.isFetchedAfterMount
 
   const cartSummary = useMemo(() => {
     return {
@@ -168,10 +186,22 @@ export default function WithoutAddress() {
     }
   }, [cartSummaryData])
 
+  const rewardCoinsAvailable = Math.max(
+    0,
+    Number(rewardSummaryQuery.data?.totalRedeemed || 0)
+  )
+  const rewardsEnabled = useRewards && rewardCoinsAvailable > 0
+
+  useEffect(() => {
+    if (rewardSummaryQuery.data && rewardCoinsAvailable <= 0 && useRewards) {
+      setUseRewards(false)
+    }
+  }, [rewardCoinsAvailable, rewardSummaryQuery.data, useRewards])
+
   const loading =
     isAuthenticated &&
-    ((!cartData && isCartFetching) ||
-      (items.length > 0 && !cartSummaryData && isCartSummaryFetching))
+    (!isCartFetchedAfterMount ||
+      (items.length > 0 && !isSummaryFetchedAfterMount))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {
@@ -321,8 +351,10 @@ export default function WithoutAddress() {
           finalPayable={cartSummary.finalPayable}
           totalRewardEarn={cartSummary.totalRewardEarn}
           totalRedeemed={cartSummary.totalRedeemed}
-          useRewards={useRewards}
+          useRewards={rewardsEnabled}
           onUseRewardsChange={setUseRewards}
+          rewardCoinsAvailable={rewardCoinsAvailable}
+          showShippingCharges={false}
         />
 
         <RecommendedProducts />
@@ -336,7 +368,8 @@ export default function WithoutAddress() {
     cartSummary.finalPayable,
     cartSummary.totalRedeemed,
     cartSummary.totalRewardEarn,
-    useRewards,
+    rewardCoinsAvailable,
+    rewardsEnabled,
   ])
 
   if (!loading && items.length === 0) {
@@ -380,7 +413,7 @@ export default function WithoutAddress() {
         showsVerticalScrollIndicator={false}
       />
 
-      <StickyBottomCTA bottomOffset={stickyCTA.bottomOffset} onLayout={stickyCTA.onCtaLayout}>
+      <StickyBottomCTA bottomOffset={0} onLayout={stickyCTA.onCtaLayout}>
       <View style={styles.bottomBar}>
         <TouchableOpacity onPress={() => navigation.navigate('AddressSelect')}>
           <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.button}>

@@ -38,9 +38,11 @@ export type AppStackParamList = {
   MyOrder: undefined;
   WishList: undefined;
   PrivacyPolicy: undefined;
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   ChangePassword: undefined;
-  Profile: undefined;
+  Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
@@ -153,6 +155,11 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/components/home/Wallet_History").default
         }
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "#FFFFFF" },
+        }}
       />
       <AppStack.Screen name="ServiceStack" component={ServiceHomeStack} />
       <AppStack.Screen name="RewardStack" component={RewardHomeStack} />
@@ -218,6 +225,18 @@ function AppNavigator() {
         name="AddressSelect"
         getComponent={() =>
           require("../modules/ecommerce/components/ItemCardAddress/AddressSelectScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="AddAddressMap"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/AddAddressMapScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="AddressDetails"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
         }
       />
       <AppStack.Screen

@@ -6,6 +6,7 @@ export type OrderStatusItem = {
   label: string;
   date?: string;
   completed?: boolean;
+  current?: boolean;
 };
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   headerText?: string;
   statuses: OrderStatusItem[];
   onCancelPress?: () => void;
+  tone?: "success" | "danger";
 };
 
 export default function OrderStatusJourney({
@@ -20,13 +22,15 @@ export default function OrderStatusJourney({
   headerText,
   statuses,
   onCancelPress,
+  tone = "success",
 }: Props) {
   const title = headerText || (arrivingBy ? `Status: ${arrivingBy}` : "Order status");
+  const isDanger = tone === "danger";
 
   return (
     <View style={styles.card}>
       {/* Header */}
-      <Text style={styles.arrivalText}>
+      <Text style={[styles.arrivalText, isDanger && styles.dangerText]}>
         {title}
       </Text>
 
@@ -35,6 +39,8 @@ export default function OrderStatusJourney({
         {statuses.map((item, index) => {
           const isLast = index === statuses.length - 1;
           const isDone = item.completed;
+          const isCurrent = item.current && !isDone;
+          const isHighlighted = isDone || isCurrent;
 
           return (
             <View key={index} style={styles.row}>
@@ -43,7 +49,8 @@ export default function OrderStatusJourney({
                 <View
                   style={[
                     styles.circle,
-                    isDone && styles.circleDone,
+                    isHighlighted && styles.circleDone,
+                    isHighlighted && isDanger && styles.circleDanger,
                   ]}
                 >
                   {isDone && (
@@ -53,8 +60,11 @@ export default function OrderStatusJourney({
                       color="#fff"
                     />
                   )}
+                  {isCurrent && <View style={styles.currentDot} />}
                 </View>
-                {!isLast && <View style={styles.line} />}
+                {!isLast && (
+                  <View style={[styles.line, isDanger && styles.lineDanger]} />
+                )}
               </View>
 
               {/* Right content */}
@@ -62,7 +72,9 @@ export default function OrderStatusJourney({
                 <Text
                   style={[
                     styles.label,
-                    isDone && styles.labelDone,
+                    isHighlighted && styles.labelDone,
+                    isCurrent && styles.labelCurrent,
+                    isHighlighted && isDanger && styles.dangerText,
                   ]}
                 >
                   {item.label}
@@ -129,7 +141,18 @@ const styles = StyleSheet.create({
   },
 
   circleDone: {
-    backgroundColor: "#16A34A", // ✅ FIXED (no gradient string bug)
+    backgroundColor: "#16A34A",
+  },
+
+  circleDanger: {
+    backgroundColor: "#DC2626",
+  },
+
+  currentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#FFFFFF",
   },
 
   line: {
@@ -137,6 +160,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#CBD5E1",
     marginTop: 2,
+  },
+
+  lineDanger: {
+    backgroundColor: "#DC2626",
   },
 
   content: {
@@ -160,6 +187,14 @@ const styles = StyleSheet.create({
 
   labelDone: {
     fontWeight: "600",
+  },
+
+  labelCurrent: {
+    color: "#16A34A",
+  },
+
+  dangerText: {
+    color: "#DC2626",
   },
 
   date: {

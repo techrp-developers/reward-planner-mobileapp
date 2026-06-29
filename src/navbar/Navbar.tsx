@@ -5,7 +5,6 @@ import {
   StyleSheet,
   StatusBar,
   TouchableOpacity,
-  Image,
   Animated,
   Platform,
 } from "react-native";
@@ -18,10 +17,12 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
-import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
+import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
@@ -263,36 +264,71 @@ export default function Navbar() {
   );
   const showLocation = activeTab === "Product";
 
-  const bgSource = React.useMemo(() => BG_MAP[activeTab], [activeTab]);
   const activeThemeColor = React.useMemo(
     () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
     [activeTab]
   );
   const isNavigatingRef = React.useRef(false);
+  const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
+    Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
+    Services: new Animated.Value(activeTab === "Services" ? 1 : 0),
+    Payments: new Animated.Value(activeTab === "Payments" ? 1 : 0),
+    DineOut: new Animated.Value(activeTab === "DineOut" ? 1 : 0),
+  }).current;
 
   // Cross-fade the background instead of remounting the Image on every tab
   // switch — remounting could briefly leave the previous module's background
   // visible underneath while the content below had already switched, and
   // felt like a hard cut rather than a smooth transition.
-  const [prevBgSource, setPrevBgSource] = React.useState(bgSource);
-  const bgFade = React.useRef(new Animated.Value(1)).current;
-
   React.useEffect(() => {
-    if (bgSource === prevBgSource) return;
-    bgFade.setValue(0);
-    Animated.timing(bgFade, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) setPrevBgSource(bgSource);
+    const animations = TOP_TABS.map((tab) => {
+      backgroundOpacities[tab].stopAnimation();
+      return Animated.timing(backgroundOpacities[tab], {
+        toValue: tab === activeTab ? 1 : 0,
+        duration: 150,
+        useNativeDriver: true,
+      });
     });
-  }, [bgSource, prevBgSource, bgFade]);
+
+    Animated.parallel(animations).start();
+    return () => animations.forEach((animation) => animation.stop());
+  }, [activeTab, backgroundOpacities]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
     React.useState("Address not set");
   const hasAddress = String(displayAddress || "").trim() !== "Address not set";
+
+  // Shares the same query cache the address screens invalidate after add/edit/
+  // delete/set-default, so the navbar address updates immediately instead of
+  // only refreshing once per 60s cache window on mount.
+  const { data: liveAddressData } = useQuery({
+    queryKey: addressesQueryKey,
+    queryFn: fetchAllAddress,
+    enabled: isAuthenticated,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  React.useEffect(() => {
+    if (!isAuthenticated || !liveAddressData) return;
+
+    const list: ApiAddress[] = Array.isArray(liveAddressData?.data) ? liveAddressData.data : [];
+    const selectedAddress =
+      list.find((item) => Number(item?.is_default) === 1) || list[0];
+
+    const addressText = [
+      selectedAddress?.address1,
+      selectedAddress?.address2,
+      selectedAddress?.city,
+      selectedAddress?.state,
+      selectedAddress?.zipcode,
+    ]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    setDisplayAddress(addressText || "Address not set");
+  }, [isAuthenticated, liveAddressData]);
 
   const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
     setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
@@ -412,29 +448,12 @@ export default function Navbar() {
           storedName ||
           "User";
 
-        const addressRes = await fetchAllAddress();
-        const addresses: ApiAddress[] = Array.isArray(addressRes?.data)
-          ? addressRes.data
-          : [];
-
-        const selectedAddress =
-          addresses.find((item) => Number(item?.is_default) === 1) ||
-          addresses[0];
-
-        const addressText = [
-          selectedAddress?.address1,
-          selectedAddress?.address2,
-          selectedAddress?.city,
-          selectedAddress?.state,
-          selectedAddress?.zipcode,
-        ]
-          .map((part) => String(part || "").trim())
-          .filter(Boolean)
-          .join(", ");
-
+        // Address is now sourced reactively from the shared addresses query
+        // (see liveAddressData above), which updates instantly whenever an
+        // address is added/edited/deleted/set-default anywhere in the app.
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
-          displayAddress: addressText || "Address not set",
+          displayAddress: navbarUserCache?.displayAddress || "Address not set",
           rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
@@ -471,19 +490,21 @@ export default function Navbar() {
       />
 
       {/* ✅ Background cross-fades smoothly between modules */}
-      <View style={styles.bgWrapper} pointerEvents="none">
-        <Image
-          source={prevBgSource}
-          style={[styles.absoluteFill, { top: -insets.top }]}
-          resizeMode="cover"
-        />
-        {bgSource !== prevBgSource && (
+      <View
+        style={[styles.bgWrapper, { backgroundColor: activeThemeColor }]}
+        pointerEvents="none"
+      >
+        {TOP_TABS.map((tab) => (
           <Animated.Image
-            source={bgSource}
-            style={[styles.absoluteFill, { top: -insets.top, opacity: bgFade }]}
+            key={tab}
+            source={BG_MAP[tab]}
+            style={[
+              styles.absoluteFill,
+              { top: -insets.top, opacity: backgroundOpacities[tab] },
+            ]}
             resizeMode="cover"
           />
-        )}
+        ))}
       </View>
 
       {/* TOP 4 ICON TABS */}
@@ -561,6 +582,11 @@ export default function Navbar() {
           onPress={() => {
             if (activeTab === "Services") {
               navigateToScreen("ServiceSearch");
+            } else if (activeTab === "Payments") {
+              (navigation as any).navigate("Home", {
+                screen: "PaymentsModule",
+                params: { screen: "Search" },
+              });
             } else {
               navigateToScreen("SearchScreen");
             }
@@ -619,7 +645,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 280,
-    zIndex: -1,
     overflow: "hidden",
   },
 

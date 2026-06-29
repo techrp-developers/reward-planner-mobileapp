@@ -55,11 +55,6 @@ export default function CheckoutSummary({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.freeBanner}>
-        <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
-        <Text style={styles.freeText}>Yay! You got FREE Delivery</Text>
-      </View>
-
       <View style={styles.bottomBar}>
         <View>
           <Text style={styles.price}>₹{total}</Text>

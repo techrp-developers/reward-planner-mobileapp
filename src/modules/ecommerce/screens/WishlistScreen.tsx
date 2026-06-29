@@ -169,8 +169,20 @@ const WishlistScreen = () => {
     const imageUrl = normalizeImage(item);
     const brand = getProductField(item, "brand_name") || item?.brand || item?.product?.brand || "BRAND";
     const name = getProductField(item, "product_name") || item?.title || item?.product?.title || "Product";
-    const ratingText = getProductField(item, "rating") ? `${getProductField(item, "rating")}` : "4.5";
-    const reviewText = getProductField(item, "reviews") ? `(${getProductField(item, "reviews")})` : "(0)";
+    const rawRating =
+      getProductField(item, "rating") ??
+      getProductField(item, "avg_rating") ??
+      0;
+    const parsedRating = Number(rawRating);
+    const rating = Number.isFinite(parsedRating)
+      ? Math.min(5, Math.max(0, parsedRating))
+      : 0;
+    const reviewCount = Number(
+      getProductField(item, "reviews") ??
+      getProductField(item, "total_reviews") ??
+      0
+    );
+    const reviewText = `(${Number.isFinite(reviewCount) ? reviewCount : 0})`;
 
     return (
       <TouchableOpacity 
@@ -206,7 +218,7 @@ const WishlistScreen = () => {
                 key={star}
                 name="star"
                 size={12}
-                color={star <= Math.round(Number(ratingText)) ? "#F5B400" : "#E5E7EB"}
+                color={star <= Math.round(rating) ? "#F5B400" : "#E5E7EB"}
               />
             ))}
             <Text style={styles.reviewText}>{reviewText}</Text>

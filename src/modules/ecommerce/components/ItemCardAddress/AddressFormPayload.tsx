@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Dropdown } from "react-native-element-dropdown";
 import {
   View,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,8 +21,6 @@ type AddressTag = "Home" | "Work" | "Other";
 type StateOption = {
   state_id: number;
   state_name: string;
-  status?: number;
-  created_at?: string;
 };
 
 export type AddressFormPayload = {
@@ -45,15 +44,76 @@ type Props = {
   defaultName?: string;
   defaultPhone?: string;
   initialValues?: Partial<AddressFormPayload>;
+  submitLabel?: string;
   onClose: () => void;
   onSubmit: (payload: AddressFormPayload) => Promise<void> | void;
 };
 
-const chipIcon = (tag: AddressTag) => {
+const ADDRESS_TAGS: AddressTag[] = ["Home", "Work", "Other"];
+
+const tagIcon = (tag: AddressTag) => {
   if (tag === "Home") return "⌂";
   if (tag === "Work") return "⌁";
   return "◎";
 };
+
+function useStates() {
+  const [states, setStates] = useState<StateOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = React.useCallback(async (forceRefresh = false) => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetchAllStates(forceRefresh);
+      setStates(Array.isArray(res?.data) ? res.data : []);
+    } catch {
+      setStates([]);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { states, loading, error, retry: () => load(true) };
+}
+
+type FormFields = {
+  saveAs: AddressTag;
+  flatHouseBuilding: string;
+  areaLocality: string;
+  landmark: string;
+  name: string;
+  phone: string;
+  pincode: string;
+  city: string;
+  stateId: number | null;
+  stateName: string;
+};
+
+function buildInitialFields(
+  initialValues: Partial<AddressFormPayload> | undefined,
+  defaultName?: string,
+  defaultPhone?: string
+): FormFields {
+  return {
+    saveAs: initialValues?.saveAs ?? "Home",
+    flatHouseBuilding: initialValues?.flatHouseBuilding ?? "",
+    areaLocality: initialValues?.areaLocality ?? "",
+    landmark: initialValues?.landmark ?? "",
+    name: initialValues?.name ?? defaultName ?? "",
+    phone: initialValues?.phone ?? defaultPhone ?? "",
+    pincode: initialValues?.pincode ?? "",
+    city: initialValues?.city ?? "",
+    stateId: initialValues?.state_id ?? null,
+    stateName: initialValues?.state ?? "",
+  };
+}
 
 function AddressDetailsSheet({
   visible,
@@ -61,77 +121,60 @@ function AddressDetailsSheet({
   defaultName,
   defaultPhone,
   initialValues,
+  submitLabel = "Save address",
   onClose,
   onSubmit,
 }: Props) {
   const insets = useSafeAreaInsets();
   const alert = useAlert();
-  const [saveAs, setSaveAs] = useState<AddressTag>(initialValues?.saveAs ?? "Home");
-  const [flatHouseBuilding, setFlatHouseBuilding] = useState(initialValues?.flatHouseBuilding ?? "");
-  const [areaLocality, setAreaLocality] = useState(initialValues?.areaLocality ?? "");
-  const [landmark, setLandmark] = useState(initialValues?.landmark ?? "");
-  const [name, setName] = useState(initialValues?.name ?? defaultName ?? "");
-  const [phone, setPhone] = useState(initialValues?.phone ?? defaultPhone ?? "");
-  const [pincode, setPincode] = useState(initialValues?.pincode ?? "");
-  const [city, setCity] = useState(initialValues?.city ?? "");
-  const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
+  const { states, loading: statesLoading, error: statesError, retry: retryStates } = useStates();
+
+  const [fields, setFields] = useState<FormFields>(() =>
+    buildInitialFields(initialValues, defaultName, defaultPhone)
+  );
+  const [isDefault] = useState(initialValues?.isDefault ?? false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [states, setStates] = useState<StateOption[]>([]);
-  const [stateId, setStateId] = useState<number | null>(null);
-  const [stateName, setStateName] = useState("");
 
+  // Re-sync fields if the record being edited changes while the sheet stays mounted.
   useEffect(() => {
-    loadStates();
-  }, []);
-
-  const loadStates = async () => {
-    try {
-      const res = await fetchAllStates();
-      const statesData = Array.isArray(res?.data) ? res.data : [];
-      setStates(statesData);
-    } catch (error) {
-      console.log("State Error:", error);
-      setStates([]);
-    }
-  };
-  useEffect(() => {
-    if (!pincode && fullAddress) {
-      const m = fullAddress.match(/(\d{6})/);
-      if (m) setPincode(m[1]);
-    }
-  }, [fullAddress, pincode]);
-
-  useEffect(() => {
-    if (!initialValues) return;
-
-    if (initialValues.saveAs) setSaveAs(initialValues.saveAs);
-    setFlatHouseBuilding(initialValues.flatHouseBuilding ?? "");
-    setAreaLocality(initialValues.areaLocality ?? "");
-    setLandmark(initialValues.landmark ?? "");
-    setName(initialValues.name ?? defaultName ?? "");
-    setPhone(initialValues.phone ?? defaultPhone ?? "");
-    setPincode(initialValues.pincode ?? "");
-    setCity(initialValues.city ?? "");
-    setStateId(initialValues.state_id ?? null);
-    setStateName(initialValues.state ?? "");
+    setFields(buildInitialFields(initialValues, defaultName, defaultPhone));
   }, [initialValues, defaultName, defaultPhone]);
 
+  // Backfill pincode from a freeform address string (e.g. picked from the map) if not already set.
   useEffect(() => {
-    if (!stateName || states.length === 0) return;
-    const matchedState = states.find(
-      (item) => item.state_name.toLowerCase() === stateName.toLowerCase()
+    if (fields.pincode || !fullAddress) return;
+    const match = fullAddress.match(/(\d{6})/);
+    if (match) {
+      setFields(prev => ({ ...prev, pincode: match[1] }));
+    }
+  }, [fullAddress, fields.pincode]);
+
+  // If only a state name was supplied (no id), resolve it once the states list loads.
+  useEffect(() => {
+    if (fields.stateId !== null || !fields.stateName || states.length === 0) return;
+    const matched = states.find(
+      s => s.state_name.toLowerCase() === fields.stateName.toLowerCase()
     );
-    if (matchedState) setStateId(matchedState.state_id);
-  }, [stateName, states]);
+    if (matched) {
+      setFields(prev => ({ ...prev, stateId: matched.state_id }));
+    }
+  }, [fields.stateId, fields.stateName, states]);
+
+  const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
+    setFields(prev => ({ ...prev, [key]: value }));
+  };
+
+  const markTouched = (key: string) => setTouched(prev => ({ ...prev, [key]: true }));
 
   const errors = useMemo(() => {
-    const e: { [k: string]: string } = {};
-    if (!flatHouseBuilding.trim()) e.flatHouseBuilding = "Required";
-    if (!areaLocality.trim()) e.areaLocality = "Required";
-    if (!pincode.trim()) e.pincode = "Required";
-    if (!city.trim()) e.city = "Required";
+    const e: Record<string, string> = {};
+    if (!fields.flatHouseBuilding.trim()) e.flatHouseBuilding = "Required";
+    if (!fields.areaLocality.trim()) e.areaLocality = "Required";
+    if (!fields.pincode.trim()) e.pincode = "Required";
+    if (!fields.city.trim()) e.city = "Required";
     return e;
-  }, [flatHouseBuilding, areaLocality, pincode, city]);
+  }, [fields.flatHouseBuilding, fields.areaLocality, fields.pincode, fields.city]);
 
   const canSubmit = Object.keys(errors).length === 0 && !submitting;
 
@@ -150,17 +193,18 @@ function AddressDetailsSheet({
     try {
       setSubmitting(true);
       await onSubmit({
-        saveAs,
-        flatHouseBuilding: flatHouseBuilding.trim(),
-        areaLocality: areaLocality.trim(),
+        saveAs: fields.saveAs,
+        flatHouseBuilding: fields.flatHouseBuilding.trim(),
+        areaLocality: fields.areaLocality.trim(),
         fullAddress,
-        landmark: landmark.trim() || undefined,
-        name: name.trim() || undefined,
-        phone: phone.trim() || undefined,
-        pincode: pincode.trim(),
-        city: city.trim(),
-        state_id: stateId ?? undefined,
-        state: stateName.trim() || undefined,
+        landmark: fields.landmark.trim() || undefined,
+        name: fields.name.trim() || undefined,
+        phone: fields.phone.trim() || undefined,
+        pincode: fields.pincode.trim(),
+        city: fields.city.trim(),
+        state_id: fields.stateId ?? undefined,
+        state: fields.stateName.trim() || undefined,
+        isDefault,
       });
     } catch (err: any) {
       console.error("Failed to save address:", err);
@@ -169,6 +213,12 @@ function AddressDetailsSheet({
       setSubmitting(false);
     }
   };
+
+  const statePlaceholder = statesLoading
+    ? "Loading states..."
+    : statesError
+    ? "Couldn't load states - tap to retry"
+    : "Select State";
 
   return (
     <View style={styles.overlay}>
@@ -191,16 +241,16 @@ function AddressDetailsSheet({
         >
           <Text style={styles.label}>Save Address as</Text>
           <View style={styles.chipRow}>
-            {(["Home", "Work", "Other"] as AddressTag[]).map((tag) => {
-              const active = saveAs === tag;
+            {ADDRESS_TAGS.map(tag => {
+              const active = fields.saveAs === tag;
               return (
                 <TouchableOpacity
                   key={tag}
-                  onPress={() => setSaveAs(tag)}
+                  onPress={() => setField("saveAs", tag)}
                   style={[styles.chip, active && styles.chipActive]}
                 >
                   <Text style={[styles.chipIcon, active && styles.chipTextActive]}>
-                    {chipIcon(tag)}
+                    {tagIcon(tag)}
                   </Text>
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>{tag}</Text>
                 </TouchableOpacity>
@@ -210,14 +260,14 @@ function AddressDetailsSheet({
 
           <Text style={styles.label}>Flat / House no / Building Name*</Text>
           <TextInput
-            value={flatHouseBuilding}
-            onChangeText={setFlatHouseBuilding}
+            value={fields.flatHouseBuilding}
+            onChangeText={t => setField("flatHouseBuilding", t)}
             placeholder="Enter here"
             style={[
               styles.input,
               touched.flatHouseBuilding && errors.flatHouseBuilding ? styles.inputError : null,
             ]}
-            onBlur={() => setTouched((p) => ({ ...p, flatHouseBuilding: true }))}
+            onBlur={() => markTouched("flatHouseBuilding")}
           />
           {touched.flatHouseBuilding && errors.flatHouseBuilding ? (
             <Text style={styles.errorText}>{errors.flatHouseBuilding}</Text>
@@ -225,66 +275,84 @@ function AddressDetailsSheet({
 
           <Text style={styles.label}>Area / Sector / Locality*</Text>
           <TextInput
-            value={areaLocality}
-            onChangeText={setAreaLocality}
+            value={fields.areaLocality}
+            onChangeText={t => setField("areaLocality", t)}
             placeholder="Enter here"
             style={[
               styles.input,
               touched.areaLocality && errors.areaLocality ? styles.inputError : null,
             ]}
-            onBlur={() => setTouched((p) => ({ ...p, areaLocality: true }))}
+            onBlur={() => markTouched("areaLocality")}
           />
           {touched.areaLocality && errors.areaLocality ? (
             <Text style={styles.errorText}>{errors.areaLocality}</Text>
           ) : null}
 
           <Text style={styles.label}>Nearby Landmark (Optional)</Text>
-          <TextInput value={landmark} onChangeText={setLandmark} placeholder="Enter here" style={styles.input} />
+          <TextInput
+            value={fields.landmark}
+            onChangeText={t => setField("landmark", t)}
+            placeholder="Enter here"
+            style={styles.input}
+          />
 
           <Text style={styles.label}>Pincode*</Text>
           <TextInput
-            value={pincode}
-            onChangeText={setPincode}
+            value={fields.pincode}
+            onChangeText={t => setField("pincode", t)}
             keyboardType="number-pad"
             maxLength={6}
             placeholder="Enter pincode"
             style={[styles.input, touched.pincode && errors.pincode && styles.inputError]}
-            onBlur={() => setTouched((p) => ({ ...p, pincode: true }))}
+            onBlur={() => markTouched("pincode")}
           />
           {touched.pincode && errors.pincode ? <Text style={styles.errorText}>{errors.pincode}</Text> : null}
 
           <Text style={styles.label}>City*</Text>
           <TextInput
-            value={city}
-            onChangeText={setCity}
+            value={fields.city}
+            onChangeText={t => setField("city", t)}
             placeholder="Enter city"
             style={[styles.input, touched.city && errors.city && styles.inputError]}
-            onBlur={() => setTouched((p) => ({ ...p, city: true }))}
+            onBlur={() => markTouched("city")}
           />
           {touched.city && errors.city ? <Text style={styles.errorText}>{errors.city}</Text> : null}
 
           <Text style={styles.label}>State</Text>
-
           <Dropdown
-            style={styles.input}
+            style={[styles.input, statesLoading && styles.inputDisabled]}
             data={states}
             labelField="state_name"
             valueField="state_id"
-            placeholder="Select State"
-            value={stateId}
+            placeholder={statePlaceholder}
+            value={fields.stateId}
+            disable={statesLoading}
             onChange={item => {
-              setStateId(item.state_id);
-              setStateName(item.state_name);
+              setField("stateId", item.state_id);
+              setField("stateName", item.state_name);
             }}
+            renderRightIcon={() =>
+              statesLoading ? <ActivityIndicator size="small" color="#7c3aed" /> : null
+            }
           />
+          {statesError ? (
+            <TouchableOpacity onPress={retryStates}>
+              <Text style={styles.retryText}>Couldn't load states. Tap to retry.</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <Text style={styles.label}>Name</Text>
-          <TextInput value={name} onChangeText={setName} placeholder="Enter name" style={styles.input} />
+          <TextInput
+            value={fields.name}
+            onChangeText={t => setField("name", t)}
+            placeholder="Enter name"
+            style={styles.input}
+          />
 
           <Text style={styles.label}>Phone Number</Text>
           <TextInput
-            value={phone}
-            onChangeText={(t) => setPhone(t.replace(/[^\d]/g, ""))}
+            value={fields.phone}
+            onChangeText={t => setField("phone", t.replace(/[^\d]/g, ""))}
             placeholder="Enter phone"
             keyboardType="number-pad"
             maxLength={10}
@@ -303,7 +371,7 @@ function AddressDetailsSheet({
               end={{ x: 1, y: 0.5 }}
               style={[styles.cta, (!canSubmit || submitting) && styles.ctaDisabled]}
             >
-              <Text style={styles.ctaText}>{submitting ? "Saving..." : "Update address and proceed"}</Text>
+              <Text style={styles.ctaText}>{submitting ? "Saving..." : submitLabel}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </ScrollView>
@@ -314,7 +382,6 @@ function AddressDetailsSheet({
 
 export default AddressDetailsSheet;
 
-/* styles omitted for brevity — keep your existing styles (no change required) */
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end", backgroundColor: "transparent" },
   sheet: { height: "78%", backgroundColor: "white", borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: "hidden" },
@@ -341,36 +408,29 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: "700" },
   chipTextActive: { color: "#7c3aed" },
   input: { borderWidth: 1, borderColor: "#e6e6e6", backgroundColor: "white", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, fontSize: 13 },
+  inputDisabled: { opacity: 0.6 },
   inputError: { borderColor: "#ef4444" },
   errorText: { marginTop: 6, color: "#ef4444", fontSize: 11, fontWeight: "700" },
-  readonlyBox: { borderWidth: 1, borderColor: "#e6e6e6", borderRadius: 12, padding: 12, minHeight: 56, justifyContent: "center", backgroundColor: "#fafafa" },
-  readonlyText: { fontSize: 12, fontWeight: "600", color: "#444" },
+  retryText: { marginTop: 6, color: "#7c3aed", fontSize: 11, fontWeight: "700" },
   ctaWrapper: {
     marginTop: 18,
     alignSelf: "center",
-
   },
-
   cta: {
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
     width: 238,
-
   },
-
   ctaDisabled: {
     opacity: 0.5,
   },
-
   ctaText: {
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 16,
     lineHeight: 20,
     textAlign: "center",
-
   },
-
 });
