@@ -1003,7 +1003,7 @@ if (
         count={checkoutItemCount}
         loading={placing}
         onPlaceOrder={handlePlaceOrder}
-        bottomOffset={stickyCTA.bottomOffset}
+        bottomOffset={0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

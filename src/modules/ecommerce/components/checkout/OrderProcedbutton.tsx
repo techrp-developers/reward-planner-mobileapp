@@ -1,7 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
 
@@ -34,11 +33,6 @@ export default function OrderProcedbutton({
   return (
     <StickyBottomCTA bottomOffset={resolvedBottomOffset} onLayout={resolvedOnLayout}>
     <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}> 
-      <View style={styles.freeBanner}>
-        <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
-        <Text style={styles.freeText}>Yay! You got FREE Delivery</Text>
-      </View>
-
       <View style={styles.bottomBar}>
         <View>
           <Text style={styles.price}>₹{safeTotal}</Text>
@@ -98,21 +92,6 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     fontWeight: '600',
     fontSize: 13,
-  },
-  freeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  freeText: {
-    marginLeft: 6,
-    color: '#15803D',
-    fontSize: 12,
-    fontWeight: '500',
   },
   bottomBar: {
     flexDirection: 'row',
