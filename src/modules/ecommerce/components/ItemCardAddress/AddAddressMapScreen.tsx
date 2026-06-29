@@ -12,7 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -21,7 +22,9 @@ import Geolocation from '@react-native-community/geolocation';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ProductHeadColor from '../../constants/heading/Poduct_Head_Color';
 import { HomeStackParamList } from '../../navigation/types';
-import { addAddress, fetchAllAddress, fetchCountries, fetchStatesByCountry } from '../../api/AddressApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { addAddress, fetchAddressByID, fetchAllAddress, fetchCountries, fetchStatesByCountry } from '../../api/AddressApi';
+import { addressesQueryKey } from '../../navigation/navigationPerformance';
 
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 const NOMINATIM_USER_AGENT = 'RewardPlannersApp/1.0 (support@rewardplanners.com)';
@@ -34,6 +37,7 @@ const DEFAULT_REGION: Region = {
 };
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
+type AddAddressMapRoute = RouteProp<HomeStackParamList, 'AddAddressMap'>;
 
 type Coordinates = {
   latitude: number;
@@ -147,6 +151,9 @@ function buildRegion(latitude: number, longitude: number, delta = 0.03): Region 
 
 export default function AddAddressMapScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<AddAddressMapRoute>();
+  const manageOnly = route.params?.manageOnly === true;
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const safeBottom = Math.max(insets.bottom, 16);
   const mapRef = useRef<MapView | null>(null);
@@ -421,11 +428,12 @@ export default function AddAddressMapScreen() {
       };
 
       await addAddress(payload);
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
 
       Alert.alert('Address Saved', 'Your selected location has been saved successfully.', [
         {
           text: 'Add Details',
-          onPress: () => navigation.navigate('AddressDetails', { mode: 'add' }),
+          onPress: () => navigation.navigate('AddressDetails', { mode: 'add', manageOnly }),
         },
         {
           text: 'Done',
@@ -441,16 +449,42 @@ export default function AddAddressMapScreen() {
   };
 
   const handleChangeAddress = () => {
-    navigation.navigate('AddressSelect', { fromCart: true });
+    navigation.navigate('AddressSelect', { fromCart: !manageOnly, manageOnly });
   };
 
-  const handleAddMoreDetails = () => {
-    if (existingAddress?.address_id) {
-      navigation.navigate('AddressDetails', { mode: 'edit', addressId: existingAddress.address_id });
+  const handleAddMoreDetails = async () => {
+    if (!existingAddress?.address_id) {
+      navigation.navigate('AddressDetails', { mode: 'add', manageOnly });
       return;
     }
 
-    navigation.navigate('AddressDetails', { mode: 'add' });
+    try {
+      const apiAddress = await fetchAddressByID(existingAddress.address_id);
+      const normalizedType = String(apiAddress?.address_type || 'other').toLowerCase();
+      const saveAs = normalizedType === 'home' ? 'Home' : normalizedType === 'work' ? 'Work' : 'Other';
+
+      navigation.navigate('AddressDetails', {
+        mode: 'edit',
+        addressId: existingAddress.address_id,
+        manageOnly,
+        initialData: {
+          saveAs,
+          flatHouseBuilding: apiAddress?.address1 || '',
+          areaLocality: apiAddress?.address2 || '',
+          landmark: apiAddress?.landmark || '',
+          name: apiAddress?.contact_name || '',
+          phone: apiAddress?.contact_phone || '',
+          pincode: String(apiAddress?.zipcode || ''),
+          city: apiAddress?.city || '',
+          state: apiAddress?.state || '',
+          state_id: Number(apiAddress?.state_id) || undefined,
+          isDefault: Number(apiAddress?.is_default) === 1,
+        },
+      });
+    } catch (error) {
+      console.warn('Failed to load existing address for editing:', error);
+      Alert.alert('Error', 'Could not load address details for editing. Please try again.');
+    }
   };
 
   const clearResolvedAddress = () => {

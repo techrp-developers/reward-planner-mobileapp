@@ -205,23 +205,24 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#D0D5DD',
         borderRadius: 6,
-        height: 32,
-        marginLeft: 8,
+        height: 28,
+        marginLeft: 6,
     },
 
     qtyBtn: {
-        width: 28,
+        width: 24,
         justifyContent: 'center',
         alignItems: 'center',
     },
 
     qtyText: {
-        fontSize: 18,
+        fontSize: 16,
         color: '#333',
     },
 
     qty: {
-        width: 24,
+        width: 20,
+        fontSize: 12,
         textAlign: 'center',
         fontWeight: '600',
     },

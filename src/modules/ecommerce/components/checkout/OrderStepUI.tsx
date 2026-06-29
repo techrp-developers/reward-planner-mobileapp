@@ -90,12 +90,8 @@ const emptyCheckoutSummary = (): CheckoutSummary => ({
   },
 });
 
-const getCheckoutPayableAmount = (summary: CheckoutSummary, rewardsEnabled: boolean) => {
-  const productTotal = Number(summary.productTotal || 0);
-  const shippingTotal = Number(summary.shippingTotal || 0);
-  const payableAmount = Number(summary.payableAmount || 0);
-  return rewardsEnabled ? payableAmount : productTotal + shippingTotal;
-};
+const getCheckoutPayableAmount = (summary: CheckoutSummary) =>
+  Number(summary.payableAmount || 0);
 
 const formatPhoneForRazorpay = (phone: string | undefined): string => {
   if (!phone) return "";
@@ -143,6 +139,7 @@ export default function OrderStepUI() {
   const pulse = useRef(new Animated.Value(0)).current;
   const queryClient = useQueryClient();
   const skipItemsRefresh = useRef(false);
+  const lastRedeemableCoins = useRef(0);
 
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const handleUnauthorized = useCallback(async () => {
@@ -228,9 +225,18 @@ export default function OrderStepUI() {
         data?.productTotal ??
         res?.productTotal
       );
+      const shippingBreakdown =
+        (Array.isArray(data?.shippingBreakdown) && data.shippingBreakdown) ||
+        (Array.isArray(res?.shippingBreakdown) && res.shippingBreakdown) ||
+        [];
+      const breakdownShippingTotal = shippingBreakdown.reduce(
+        (sum: number, entry: any) => sum + toAmount(entry?.shipping_charges),
+        0
+      );
       const shippingTotal = toAmount(
         data?.shippingTotal ??
-        res?.shippingTotal
+        res?.shippingTotal ??
+        breakdownShippingTotal
       );
       const payableAmount = toAmount(
         data?.payableAmount ??
@@ -241,7 +247,12 @@ export default function OrderStepUI() {
         shippingTotal,
         payableAmount,
         reward: {
-          redeemCoins: toAmount(reward?.redeemCoins),
+          redeemCoins: toAmount(
+            reward?.redeemCoins ??
+            reward?.redeemedCoins ??
+            data?.totalDiscount ??
+            res?.totalDiscount
+          ),
           earnCoins: toAmount(reward?.earnCoins),
         },
       };
@@ -386,8 +397,27 @@ export default function OrderStepUI() {
   }, [checkoutData]);
 
   const checkoutPayableAmount = useMemo(() => {
-    return getCheckoutPayableAmount(cartSummary, useRewards);
-  }, [cartSummary, useRewards]);
+    return getCheckoutPayableAmount(cartSummary);
+  }, [cartSummary]);
+
+  const latestRedeemableCoins = Math.max(
+    0,
+    Number(checkoutData?.summary?.reward?.redeemCoins ?? cartSummary.reward.redeemCoins ?? 0)
+  );
+
+  if (useRewards && checkoutData) {
+    lastRedeemableCoins.current = latestRedeemableCoins;
+  }
+
+  const rewardCoinsAvailable = useRewards
+    ? latestRedeemableCoins
+    : lastRedeemableCoins.current;
+
+  useEffect(() => {
+    if (checkoutData && useRewards && checkoutData.summary.reward.redeemCoins <= 0) {
+      setUseRewards(false);
+    }
+  }, [checkoutData, useRewards]);
 
   const relatedProductId = mode === "buy_now" ? product_id : undefined;
 
@@ -524,7 +554,7 @@ export default function OrderStepUI() {
         staleTime: 30_000,
       });
       const latestSummary = parseCheckoutResponse(latestCheckoutData).summary;
-      const expectedPrice = getCheckoutPayableAmount(latestSummary, useRewards);
+      const expectedPrice = getCheckoutPayableAmount(latestSummary);
 
       console.log("🧾 Checkout expected price:", {
         expectedPrice,
@@ -536,21 +566,26 @@ export default function OrderStepUI() {
 
       let orderRes;
       if (mode === "buy_now" && product_id && variant_id) {
-        orderRes = await addBuyNowOrder({
+        const buyNowOrderPayload = {
           product_id: safeToNumber(product_id),
           variant_id: safeToNumber(variant_id),
+          quantity: buyNowQty,
           address_id: safeToNumber(selectedAddressId),
-          expected_total: safeToNumber(latestSummary.payableAmount),
+          expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
-        });
+        };
+        console.log("📤 Buy Now order payload:", buyNowOrderPayload);
+        orderRes = await addBuyNowOrder(buyNowOrderPayload);
       } else {
-        orderRes = await addCartOrder({
+        const cartOrderPayload = {
           address_id: safeToNumber(selectedAddressId),
-          expected_total: safeToNumber(latestSummary.payableAmount),
+          expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
-        });
+        };
+        console.log("📤 Cart order payload:", cartOrderPayload);
+        orderRes = await addCartOrder(cartOrderPayload);
         createdCartOrder = true;
       }
 
@@ -974,6 +1009,11 @@ if (
             totalRedeemed={cartSummary.reward.redeemCoins}
             totalRewardEarn={cartSummary.reward.earnCoins}
             shippingCharges={cartSummary.shippingTotal}
+            shippingLabel="Shipping Fee"
+            bagDiscount={0}
+            handlingFees={0}
+            showHandlingFees
+            rewardCoinsAvailable={rewardCoinsAvailable}
             useRewards={useRewards}
             onUseRewardsChange={setUseRewards}
           />
@@ -1003,7 +1043,7 @@ if (
         count={checkoutItemCount}
         loading={placing}
         onPlaceOrder={handlePlaceOrder}
-        bottomOffset={stickyCTA.bottomOffset}
+        bottomOffset={0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

@@ -228,6 +228,7 @@ export default function OrderConfirmedScreen() {
             return progress.steps.map((step, index) => ({
                 label: step.label,
                 completed: step.completed,
+                current: step.current || index === progress.current_step,
                 date: index === 0 ? formatDisplayDate(orderData?.order?.created_at) : undefined,
             }));
         }
@@ -272,6 +273,15 @@ export default function OrderConfirmedScreen() {
             },
         ];
     }, [orderData?.order?.created_at, orderData?.order?.status, orderData?.order_progress, orderData?.shipments]);
+
+    const isCancelledOrder = useMemo(() => {
+        const orderStatus = orderData?.order?.status?.toLowerCase();
+
+        return orderStatus === "cancelled" || orderData?.shipments?.some((shipment) =>
+            shipment.shipping_status?.toLowerCase() === "cancelled" ||
+            shipment.special_state?.type?.toLowerCase() === "cancelled"
+        ) === true;
+    }, [orderData?.order?.status, orderData?.shipments]);
 
     const journeyHeader = useMemo(() => {
         const orderStatus = orderData?.order?.status;
@@ -374,6 +384,7 @@ export default function OrderConfirmedScreen() {
                 <OrderStatusJourney
                     headerText={journeyHeader}
                     statuses={orderStatuses}
+                    tone={isCancelledOrder ? "danger" : "success"}
                     onCancelPress={canCancelOrder ? () => setModalVisible(true) : undefined}
                 />
                 <DeliveryDetailsCard

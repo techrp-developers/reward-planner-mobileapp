@@ -1,6 +1,15 @@
 // src/navigation/types.ts
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+export type ProductCollectionSource =
+  | 'all'
+  | 'bestSellers'
+  | 'newArrivals'
+  | 'mostViewed'
+  | 'recommended'
+  | 'recent'
+  | 'topRated';
+
 export type HomeStackParamList = {
   Home: undefined;
   Category: {
@@ -11,14 +20,14 @@ export type HomeStackParamList = {
   };
   ProductDescription: { productId: number | string };
   Cart: undefined;
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   WithAddress: undefined;
   WalletHistory: undefined;
   Coupan: undefined;
   CategoriesScreen: undefined;
   OrderReceipt:  undefined;
   Explore : undefined;
-  ProductScreen: undefined;
+  ProductScreen: { source: ProductCollectionSource } | undefined;
   ReviewScreen: {
     product_id: number;
     variant_id: number;
@@ -42,14 +51,15 @@ export type HomeStackParamList = {
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   TodoList: undefined;
-    Profile : undefined;
+    Profile : { context?: 'ecommerce' } | undefined;
 
-  AddAddressMap: { fromCart?: boolean } | undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails:
     | undefined
     | {
         mode?: "add" | "edit";
         addressId?: number;
+        manageOnly?: boolean;
         initialData?: {
           saveAs?: "Home" | "Work" | "Other";
           flatHouseBuilding?: string;
@@ -78,6 +88,7 @@ OrderConfirmedScreen: {
   Settings: undefined;
   Privacy: undefined;
   Support: undefined;
+  HelpForm: undefined;
   ChangePassword: undefined;
 };
 

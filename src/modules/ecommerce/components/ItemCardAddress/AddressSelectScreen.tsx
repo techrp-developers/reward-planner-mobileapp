@@ -19,11 +19,15 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
-import { deleteAddress, fetchAddressByID, fetchAllAddress } from "../../api/AddressApi";
+import { deleteAddress, fetchAddressByID, fetchAllAddress, updateAddress } from "../../api/AddressApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { useQueryClient } from "@tanstack/react-query";
+import { addressesQueryKey } from "../../navigation/navigationPerformance";
 import { useAlert } from "../alerts";
+import StickyBottomCTA from "../../../../bottombar/StickyBottomCTA";
+import { useStickyBottomCTA } from "../../../../bottombar/hooks/useStickyBottomCTA";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'AddressSelect'>;
@@ -40,7 +44,12 @@ type ApiAddress = {
   is_default: number;
   address1: string;
   address2?: string | null;
+  landmark?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
   city: string;
+  state?: string | null;
+  state_id?: number | null;
   zipcode: string;
 };
 
@@ -49,12 +58,16 @@ export default function AddressSelectScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const alert = useAlert();
+  const queryClient = useQueryClient();
   const fromCart = route.params?.fromCart === true;
+  const manageOnly = route.params?.manageOnly === true;
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 });
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const rawAddressesRef = useRef<Map<string, ApiAddress>>(new Map());
 
   const loadAddresses = useCallback(async () => {
     try {
@@ -62,6 +75,10 @@ export default function AddressSelectScreen() {
 
       const res = await fetchAllAddress();
       const list = Array.isArray(res.data) ? res.data : [];
+
+      rawAddressesRef.current = new Map(
+        list.map((a: ApiAddress) => [String(a.address_id), a])
+      );
 
       const mapped: AddressItem[] = list.map((a: ApiAddress) => ({
         id: String(a.address_id),
@@ -102,32 +119,117 @@ export default function AddressSelectScreen() {
   const onDeleteAddress = async () => {
     if (!sheetItem) return;
 
+    const deletedId = sheetItem.id;
+    const previousAddresses = addresses;
+    const previousSelectedId = selectedId;
+
+    // Close immediately and update the list optimistically so the UI doesn't
+    // sit there waiting on two sequential network calls (delete + full reload).
+    closeSheet();
+    setAddresses(prev => prev.filter(a => a.id !== deletedId));
+    setSelectedId(prev => (prev === deletedId ? "" : prev));
+
     try {
-      await deleteAddress(Number(sheetItem.id));
-      await loadAddresses();
-      closeSheet();
+      await deleteAddress(Number(deletedId));
+      rawAddressesRef.current.delete(deletedId);
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
       alert.success("Deleted", "Address deleted successfully");
     } catch {
+      setAddresses(previousAddresses);
+      setSelectedId(previousSelectedId);
       alert.error("Error", "Could not delete address");
+    }
+  };
+
+  const applyDefaultToQueryCache = (targetId: string) => {
+    queryClient.setQueryData(addressesQueryKey, (old: any) => {
+      if (!old || !Array.isArray(old.data)) return old;
+      return {
+        ...old,
+        data: old.data.map((a: ApiAddress) => ({
+          ...a,
+          is_default: String(a.address_id) === targetId ? 1 : 0,
+        })),
+      };
+    });
+  };
+
+  const setAddressAsDefault = async (targetId: string): Promise<boolean> => {
+    const previousAddresses = addresses;
+
+    setAddresses(prev =>
+      prev.map(a => ({ ...a, isDefault: a.id === targetId }))
+    );
+    // Write straight into the shared query cache so the cart/checkout/navbar
+    // update instantly, instead of waiting on a background refetch round-trip.
+    applyDefaultToQueryCache(targetId);
+
+    try {
+      await updateAddress(Number(targetId), { is_default: 1 });
+
+      const cached = rawAddressesRef.current.get(targetId);
+      if (cached) rawAddressesRef.current.set(targetId, { ...cached, is_default: 1 });
+      rawAddressesRef.current.forEach((value, key) => {
+        if (key !== targetId && value.is_default === 1) {
+          rawAddressesRef.current.set(key, { ...value, is_default: 0 });
+        }
+      });
+
+      // Quietly re-sync with the server in the background for eventual consistency.
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
+      return true;
+    } catch {
+      setAddresses(previousAddresses);
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
+      return false;
+    }
+  };
+
+  const onSetDefaultAddress = async () => {
+    if (!sheetItem || sheetItem.isDefault) return;
+
+    const targetId = sheetItem.id;
+    closeSheet();
+
+    const success = await setAddressAsDefault(targetId);
+    if (success) {
+      alert.success("Default address updated", "This address is now your default");
+    } else {
+      alert.error("Error", "Could not set this address as default");
     }
   };
 
   const canSubmit = !!selectedId;
 
   const handleUseCurrentLocation = () => {
-    navigation.navigate("AddAddressMap", { fromCart });
+    navigation.navigate("AddAddressMap", { fromCart, manageOnly });
   };
 
 
 
   const handleSubmit = () => {
-    if (selectedId) {
-      if (fromCart) {
-        navigation.navigate('Home');
-      } else {
-        navigation.navigate('WithAddress');
-      }
+    if (!selectedId) return;
+
+    const selected = addresses.find(a => a.id === selectedId);
+
+    // Make the chosen address the default so the cart/checkout actually uses
+    // it for the order, instead of always falling back to whichever address
+    // was previously default. Apply locally + to the shared cache right away
+    // and navigate back immediately - the network call finishes in the
+    // background instead of making the user wait on the round-trip before
+    // the cart even reflects the change.
+    if (selected && !selected.isDefault) {
+      setAddressAsDefault(selectedId).then(success => {
+        if (!success) {
+          alert.error("Error", "Could not save your selected address. Please try again.");
+        }
+      });
     }
+
+    // Go back to whichever screen pushed this one (cart, checkout, service
+    // checkout, etc.) instead of hardcoding an ecommerce-only destination -
+    // this screen is shared across the ecommerce and services stacks.
+    navigation.goBack();
   };
 
 
@@ -185,8 +287,14 @@ export default function AddressSelectScreen() {
   const onEditAddress = async () => {
     if (!sheetItem) return;
 
+    const sheetItemId = sheetItem.id;
+    closeSheet();
+
     try {
-      const apiAddress = await fetchAddressByID(sheetItem.id);
+      // Use the already-fetched address data instead of hitting the network again,
+      // which was causing a noticeable delay before the edit screen opened.
+      const cached = rawAddressesRef.current.get(sheetItemId);
+      const apiAddress = cached ?? (await fetchAddressByID(sheetItemId));
 
       const normalizedType = String(apiAddress?.address_type || "other").toLowerCase();
       const saveAs =
@@ -196,10 +304,10 @@ export default function AddressSelectScreen() {
           ? "Work"
           : "Other";
 
-      closeSheet();
       navigation.navigate("AddressDetails", {
         mode: "edit",
         addressId: Number(sheetItem.id),
+        manageOnly,
         initialData: {
           saveAs,
           flatHouseBuilding: apiAddress?.address1 || "",
@@ -222,7 +330,7 @@ export default function AddressSelectScreen() {
   // -------------------- Header actions (UI only) --------------------
 
   const handleAddNewAddress = () => {
-    navigation.navigate("AddressDetails");
+    navigation.navigate("AddressDetails", { manageOnly });
   };
   return (
     <SafeAreaView style={styles.safe}>
@@ -314,7 +422,11 @@ export default function AddressSelectScreen() {
 
         {/* List */}
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 200 + insets.bottom }}
+          contentContainerStyle={{
+            paddingBottom: manageOnly || !canSubmit
+              ? 16 + insets.bottom
+              : stickyCTA.scrollContentPaddingBottom,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {filtered.map((item) => {
@@ -374,27 +486,29 @@ export default function AddressSelectScreen() {
           })}
         </ScrollView>
 
-        {/* Bottom CTA */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            activeOpacity={0.9}
-            style={[styles.ctaWrapper, { marginBottom: insets.bottom + 14 }]}
-          >
-            <LinearGradient
-              colors={["#8665FF", "#5B47A3"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={[styles.cta, !canSubmit && styles.ctaDisabled]}
-            >
-              <Text style={styles.ctaText}>
-                {fromCart ? "Update address" : "Continue to checkout and buy"}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
       </View>
+
+      {/* Bottom CTA - hidden when managing addresses (no checkout context) or when there's no address yet */}
+      {!manageOnly && canSubmit && (
+        <StickyBottomCTA bottomOffset={stickyCTA.bottomOffset} onLayout={stickyCTA.onCtaLayout}>
+          <View style={styles.bottomBar}>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              activeOpacity={0.9}
+              style={styles.ctaWrapper}
+            >
+              <LinearGradient
+                colors={["#8665FF", "#5B47A3"]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.cta}
+              >
+                <Text style={styles.ctaText}>Select address</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </StickyBottomCTA>
+      )}
 
       {/* -------------------- Bottom Sheet Modal -------------------- */}
       <Modal
@@ -422,12 +536,27 @@ export default function AddressSelectScreen() {
             </TouchableOpacity>
           </View>
 
+          {!sheetItem?.isDefault && (
+            <TouchableOpacity
+              style={styles.sheetRow}
+              activeOpacity={0.9}
+              onPress={onSetDefaultAddress}
+            >
+              <Text style={styles.sheetRowText}>Set as Default</Text>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color="#B2B2BD"
+              />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.sheetRow}
             activeOpacity={0.9}
-            onPress={onDeleteAddress}
+            onPress={onEditAddress}
           >
-            <Text style={styles.sheetRowText}>Delete Address</Text>
+            <Text style={styles.sheetRowText}>Edit Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -438,9 +567,9 @@ export default function AddressSelectScreen() {
           <TouchableOpacity
             style={styles.sheetRow}
             activeOpacity={0.9}
-            onPress={onEditAddress}
+            onPress={onDeleteAddress}
           >
-            <Text style={styles.sheetRowText}>Edit Address</Text>
+            <Text style={styles.sheetRowText}>Delete Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -642,11 +771,11 @@ const styles = StyleSheet.create({
   },
 
   bottomBar: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 100,
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: "#FFFFFF",
   },
 
   buttonText: { color: '#FFF', fontSize: 16, fontWeight: '600', },
@@ -660,7 +789,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaDisabled: { opacity: 0.5, },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: {
     color: "#FFFFFF",
     fontSize: 16,

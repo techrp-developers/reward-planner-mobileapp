@@ -6,6 +6,8 @@ import { addAddress, AddToAddressPayload, updateAddress } from "../../api/Addres
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { addressesQueryKey } from '../../navigation/navigationPerformance';
 import { useAlert } from '../alerts';
 
 export default function AddressDetailsSheetWrapper() {
@@ -14,11 +16,13 @@ export default function AddressDetailsSheetWrapper() {
   const navigation = useNavigation<Nav>();
   const route = useRoute();
   const alert = useAlert();
+  const queryClient = useQueryClient();
 
   const params = (route.params || {}) as HomeStackParamList["AddressDetails"];
   const mode = params?.mode === "edit" ? "edit" : "add";
   const addressId = params?.addressId;
   const initialData = params?.initialData;
+  const submitLabel = mode === "edit" ? "Update address" : "Save address";
 
   const handleSubmit = async (payload: AddressFormPayload) => {
     try {
@@ -41,12 +45,14 @@ export default function AddressDetailsSheetWrapper() {
         await addAddress(apiPayload);
       }
 
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
       alert.success("Success", mode === "edit" ? "Address updated successfully" : "Address added successfully");
       setOpen(false);
       navigation.goBack();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save address failed:", err);
-      alert.error("Error", mode === "edit" ? "Failed to update address. Please try again." : "Failed to add address. Please try again.");
+      const fallback = mode === "edit" ? "Failed to update address. Please try again." : "Failed to add address. Please try again.";
+      alert.error("Error", err?.response?.data?.message || fallback);
     }
   };
 
@@ -63,6 +69,7 @@ export default function AddressDetailsSheetWrapper() {
         visible={open}
         fullAddress=""
         initialValues={initialData}
+        submitLabel={submitLabel}
         onClose={() => setOpen(false)}
         onSubmit={handleSubmit}
       />

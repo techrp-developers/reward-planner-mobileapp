@@ -105,7 +105,7 @@ function TopRated() {
   }, [pulse]);
 
   const handleExplore = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "topRated" });
   }, [navigation]);
 
   const renderCard = useCallback(
@@ -118,7 +118,7 @@ function TopRated() {
   if (isLoading && products.length === 0) {
     return (
       <View style={styles.loaderWrap}>
-        <SkeletonBox width="92%" height={140} borderRadius={12} pulse={pulse} />
+        <SkeletonBox width="92%" height={300} borderRadius={12} pulse={pulse} />
       </View>
     );
   }
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   loaderWrap: {
-    height: 80,
+    height: 350,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FFFFFF",

@@ -3,7 +3,7 @@
 // API:    GET /v1/auth/user-info  (via getAuthHeaders)
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Image, ActivityIndicator, Alert, Platform, Linking, Switch,
@@ -12,14 +12,14 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../navigation/types';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import { LightTheme } from '../../../theme/colors';
 import { getStoredUserName, deleteCustomer, getAuthHeaders, updateProfile } from '../../common/auth/api/AuthAPI';
-import { fetchHistory } from '../api/OrderApi';
 import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirmationModal';
 import { rs, fs } from '../../../utils/responsive';
 import axios from 'axios';
@@ -28,7 +28,20 @@ import Reward from '../../../assets/product/rewards.svg';
 const API_BASE_URL = 'https://rewardplanners.com/api/crm';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
-type RootNav = NativeStackNavigationProp<RootStackParamList>;
+
+export type ProfileContext = 'dashboard' | 'ecommerce' | 'services' | 'bbps';
+
+const findRootNavigation = (navigation: any): NativeStackNavigationProp<RootStackParamList> => {
+  let current = navigation;
+  let parent = current?.getParent?.();
+
+  while (parent) {
+    current = parent;
+    parent = current.getParent?.();
+  }
+
+  return current;
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Company {
@@ -85,8 +98,13 @@ const formatDate = (dateStr: string): string => {
 // ── Component ─────────────────────────────────────────────────────────────────
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
-  const rootNavigation = navigation.getParent() as RootNav | undefined;
-  const { isDark, theme, toggleTheme } = useAppTheme();
+  const route = useRoute<any>();
+  const rootNavigation = findRootNavigation(navigation);
+  const { isDark: appIsDark, theme: appTheme, toggleTheme } = useAppTheme();
+  const profileContext: ProfileContext = route.params?.context ?? 'dashboard';
+  const isDashboardProfile = profileContext === 'dashboard';
+  const isDark = isDashboardProfile && appIsDark;
+  const theme = isDashboardProfile ? appTheme : LightTheme;
   const { isAuthenticated, user: authUser, logout } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -95,17 +113,8 @@ const ProfileScreen: React.FC = () => {
   const [avatarUri, setAvatarUri]         = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading]             = useState(true);
-  const [_orders, setOrders]            = useState<any[]>([]);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [logoutLoading, setLogoutLoading]           = useState(false);
-  const [showOrderMenu, setShowOrderMenu]           = useState(false);
-
-  const om = useMemo(() => ({
-    parentBorder: { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)' },
-    parentIconBg: { backgroundColor: isDark ? 'rgba(129,140,248,0.12)' : '#EEF2FF' },
-    subRowBg:     { borderBottomWidth: 0.5 as const, borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)', backgroundColor: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(238,242,255,0.55)' },
-    subIconBg:    { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' },
-  }), [isDark]);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -145,16 +154,6 @@ const ProfileScreen: React.FC = () => {
   useFocusEffect(useCallback(() => { loadUser(); }, [loadUser]));
 
   // ── Fetch orders ─────────────────────────────────────────────────────────
-  const loadOrders = useCallback(async () => {
-    if (!isAuthenticated) { setOrders([]); return; }
-    try {
-      const res = await fetchHistory();
-      setOrders(res?.success ? (res.orders ?? []) : []);
-    } catch { setOrders([]); }
-  }, [isAuthenticated]);
-
-  useEffect(() => { loadOrders(); }, [loadOrders]);
-
   // ── Image picker + upload ────────────────────────────────────────────────
   const handlePickImage = useCallback(() => {
     launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async res => {
@@ -363,8 +362,10 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               CONTACT INFO
           ════════════════════════════════════ */}
-          <SectionHead title="User Info" isDark={isDark} />
-          <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
+          {isDashboardProfile && (
+            <>
+              <SectionHead title="User Info" isDark={isDark} />
+              <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
             <InfoGroupTitle title="Contact Info" isDark={isDark} />
             <InfoTableRow
                 icon="phone-outline"
@@ -422,7 +423,9 @@ const ProfileScreen: React.FC = () => {
                   last
                 />
               )}
-          </View>
+              </View>
+            </>
+          )}
 
           {/* ════════════════════════════════════
               EMPLOYEE INFO
@@ -433,66 +436,35 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               DEFAULT ADDRESS
           ════════════════════════════════════ */}
-          <SectionHead title="Shop" isDark={isDark} />
-          <View style={[styles.card, cardColor(isDark, theme)]}>
+          {(profileContext === 'ecommerce' || profileContext === 'services' || profileContext === 'bbps') && (
+            <>
+              <SectionHead title={profileContext === 'services' ? 'Services' : 'Shop'} isDark={isDark} />
+              <View style={[styles.card, cardColor(isDark, theme)]}>
             {/* My Orders — expandable dropdown */}
             <TouchableOpacity
-              style={[styles.mrow, om.parentBorder]}
-              onPress={() => setShowOrderMenu(p => !p)}
+              style={[styles.mrow, { borderBottomWidth: profileContext === 'ecommerce' ? 0.5 : 0, borderBottomColor: 'rgba(15,23,42,0.07)' }]}
+              onPress={() => navigation.navigate(
+                (profileContext === 'bbps' ? 'OrderHistory' : 'MyOrder') as any
+              )}
               activeOpacity={0.7}
             >
-              <View style={[styles.micon, om.parentIconBg]}>
-                <MaterialCommunityIcons name="shopping-outline" size={17} color="#4F46E5" />
+              <View style={[styles.micon, { backgroundColor: '#EEF2FF' }]}>
+                <MaterialCommunityIcons name={profileContext === 'services' ? 'briefcase-check-outline' : 'shopping-outline'} size={17} color="#4F46E5" />
               </View>
               <View style={styles.flex1}>
                 <Text style={[styles.rowVal, { color: theme.text }]}>My Orders</Text>
               </View>
-              <MaterialCommunityIcons
-                name={showOrderMenu ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={isDark ? '#52525B' : '#CBD5E1'}
-              />
+              <MaterialCommunityIcons name="chevron-right" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
-            {showOrderMenu && (
-              <>
-                <TouchableOpacity
-                  style={[styles.mrow, styles.subRow, om.subRowBg]}
-                  onPress={() => { setShowOrderMenu(false); navigation.navigate('MyOrder' as any); }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.micon, om.subIconBg]}>
-                    <MaterialCommunityIcons name="cart-outline" size={16} color="#4F46E5" />
-                  </View>
-                  <View style={styles.flex1}>
-                    <Text style={[styles.rowVal, { color: theme.text }]}>Ecommerce Orders</Text>
-                    <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Products & shopping</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
-                </TouchableOpacity>
+                {profileContext === 'ecommerce' && <AccountRow icon="heart-outline" label="Wishlist" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('WishList' as any)} />}
+              </View>
+            </>
+          )}
 
-                <TouchableOpacity
-                  style={[styles.mrow, styles.subRow, om.subRowBg]}
-                  onPress={() => {
-                    setShowOrderMenu(false);
-                    (navigation as any).navigate('ServiceStack', { screen: 'MyOrder' });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.micon, om.subIconBg]}>
-                    <MaterialCommunityIcons name="briefcase-check-outline" size={16} color="#4F46E5" />
-                  </View>
-                  <View style={styles.flex1}>
-                    <Text style={[styles.rowVal, { color: theme.text }]}>Service Orders</Text>
-                    <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>Insurance, docs & more</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
-                </TouchableOpacity>
-              </>
-            )}
-
-            <AccountRow icon="heart-outline"         label="Wishlist"       isDark={isDark} theme={theme} onPress={() => navigation.navigate('WishList' as any)} />
-            <AccountRow icon="map-marker-outline"    label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect' as any)} />
+          <SectionHead title="Address" isDark={isDark} />
+          <View style={[styles.card, cardColor(isDark, theme)]}>
+            <AccountRow icon="map-marker-outline" label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect', { manageOnly: true } as any)} />
           </View>
 
           {/* ════════════════════════════════════
@@ -500,7 +472,7 @@ const ProfileScreen: React.FC = () => {
           ════════════════════════════════════ */}
           <SectionHead title="Others" isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
-            <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />
+            {isDashboardProfile && <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />}
             <AccountRow icon="file-document-outline" label="Terms & Conditions" isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />

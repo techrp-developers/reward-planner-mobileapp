@@ -1,6 +1,5 @@
 import React, { useCallback } from "react";
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,6 +21,7 @@ import {
   PROMO_CARD_GAP,
   PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
+import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -80,7 +80,7 @@ function MostView() {
   });
 
   const handleExplore = useCallback(() => {
-    navigation.navigate("ProductScreen");
+    navigation.navigate("ProductScreen", { source: "mostViewed" });
   }, [navigation]);
 
   const renderCard = useCallback(
@@ -91,11 +91,7 @@ function MostView() {
   );
 
   if (isLoading && products.length === 0) {
-    return (
-      <View style={styles.loaderWrap}>
-        <ActivityIndicator size="small" color="#5B47A3" />
-      </View>
-    );
+    return <HomeSectionSkeleton height={350} />;
   }
 
   if (products.length === 0) return null;

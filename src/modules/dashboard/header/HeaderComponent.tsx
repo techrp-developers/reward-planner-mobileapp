@@ -223,7 +223,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <View style={styles.topRow}>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => navigation.navigate('Profile', { context: 'dashboard' })}
             activeOpacity={0.8}
           >
             <View style={[styles.avatarRing, { backgroundColor: tk.avatarRingBg }]}>

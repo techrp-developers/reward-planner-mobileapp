@@ -13,6 +13,7 @@ import {
 import { useInfiniteQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ProductCard from "../../../constants/product_cart/ProductCard";
 import ProductHead from "../../../constants/heading/Product_Head_Img";
@@ -64,7 +65,9 @@ export default function Categories_Product() {
   const route = useRoute<CategoryRouteProp>();
   const { categoryId, title, subcategoryId } = route.params;
   const { width } = useWindowDimensions();
-  const HEADER_HEIGHT = Math.round(width * 0.25);
+  const insets = useSafeAreaInsets();
+  const topSpacing = Math.max(insets.top, 8);
+  const HEADER_HEIGHT = Math.round(width * 0.25) + topSpacing;
 
   const [categories, setCategories] = useState<CategoryWithSubcategories[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | number | null>(null);
@@ -321,7 +324,7 @@ export default function Categories_Product() {
   return (
     <View style={styles.container}>
       <View style={[styles.fixedHeader, { height: HEADER_HEIGHT }]}>
-        <ProductHead headerHeight={HEADER_HEIGHT} />
+        <ProductHead headerHeight={HEADER_HEIGHT} topSpacing={topSpacing} />
       </View>
 
       <View style={[styles.mainContainer, { marginTop: HEADER_HEIGHT }]}>

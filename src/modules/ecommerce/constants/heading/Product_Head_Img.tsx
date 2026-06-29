@@ -26,12 +26,14 @@ export default function ProductHead({
   onBackPress,
   onSearchPress,
   onCartPress,
+  topSpacing = 0,
   // cartCount = 0,
 }: {
   headerHeight?: number;
   onBackPress?: () => void;
   onSearchPress?: () => void;
   onCartPress?: () => void;
+  topSpacing?: number;
   cartCount?: number;
 }) {
   const navigation = useNavigation<Nav>();
@@ -91,11 +93,14 @@ export default function ProductHead({
         />
       </View>
 
-      {/* 🔥 Top Bar */}
+      {/*  Top Bar */}
       <View
         style={[
           styles.topBar,
-          { marginTop: HEADER_HEIGHT * 0.38, paddingHorizontal: width * 0.055 },
+          {
+            marginTop: (HEADER_HEIGHT - topSpacing) * 0.38 + topSpacing,
+            paddingHorizontal: width * 0.055,
+          },
         ]}
       >
         <AppIconButton

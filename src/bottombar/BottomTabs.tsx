@@ -10,12 +10,13 @@ import dashbord_menu from "../assets/menu/dashbord_home.png";
 import CartIcon from "../assets/menu/Cart.svg";
 import ExploreIcon from "../assets/menu/Explore.svg";
 import SearchIcon from "../assets/menu/Search.svg";
+import HistoryIcon from "../assets/menu/History.svg";
 
 export const TAB_BAR_HEIGHT = 68;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-export type TabKey = "Home" | "Notes" | "Cart" | "Profile" | "Search";
+export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search";
 
 type Props = {
   activeMode?: AppMode;
@@ -23,6 +24,7 @@ type Props = {
   cartCount?: number;
   isDashboard?: boolean;
   activeTabKey?: TabKey;
+  layoutMode?: "overlay" | "navigator";
   // Navigation for the center button is delegated to the parent so BottomTabs
   // works correctly in both the MainLayout context (Dashboard) and the
   // MainTabs/HomeStack context, which have different navigation scopes.
@@ -56,6 +58,13 @@ const TABS: TabConfig[] = [
   { key: "Home", label: "Home", Icon: HomeIcon },
   { key: "Search", label: "Search", Icon: SearchIcon },
   { key: "Cart", label: "Cart", Icon: CartIcon },
+  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+];
+
+const PAYMENT_TABS: TabConfig[] = [
+  { key: "Home", label: "Home", Icon: HomeIcon },
+  { key: "Search", label: "Search", Icon: SearchIcon },
+  { key: "History", label: "History", Icon: HistoryIcon },
   { key: "Profile", label: "Profile", Icon: ProfileIcon },
 ];
 
@@ -125,11 +134,13 @@ const CenterButton = React.memo(function CenterButton({
 CenterButton.displayName = "CenterButton";
 
 function BottomTabs({
+  activeMode = "Product",
   onTabPress,
   isDashboard = false,
   activeTabKey,
   cartCount = 0,
   onCenterPress,
+  layoutMode = "overlay",
 }: Props) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 8);
@@ -142,7 +153,6 @@ function BottomTabs({
 
   const handlePress = useCallback(
     (tab: TabKey) => {
-      if (tab === activeTabRef.current) return;
       activeTabRef.current = tab;
       setActiveTab(tab);
       onTabPress?.(tab);
@@ -150,7 +160,11 @@ function BottomTabs({
     [onTabPress], // no activeTab dep — ref handles the guard
   );
 
-  const tabs = isDashboard ? DASHBOARD_TABS : TABS;
+  const tabs = isDashboard
+    ? DASHBOARD_TABS
+    : activeMode === "Payments"
+      ? PAYMENT_TABS
+      : TABS;
 
   const animateDashboardIndicator = useCallback((index: number) => {
     Animated.spring(dashboardIndicatorX, {
@@ -181,6 +195,7 @@ function BottomTabs({
       Notes: () => handlePress("Notes"),
       Search: () => handlePress("Search"),
       Cart: () => handlePress("Cart"),
+      History: () => handlePress("History"),
       Profile: () => handlePress("Profile"),
     }),
     [handlePress],
@@ -249,7 +264,12 @@ function BottomTabs({
   }
 
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[
+        layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
+        { height: TAB_BAR_HEIGHT + bottomInset },
+      ]}
+    >
       <View
         style={[
           styles.bar,
@@ -350,6 +370,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  navigatorWrap: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
   },
   bar: {
     backgroundColor: "#fff",

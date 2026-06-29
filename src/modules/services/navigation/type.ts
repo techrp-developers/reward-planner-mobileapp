@@ -63,7 +63,7 @@ export type HomeStackParamList = {
     redirectDelayMs?: number;
   };
   CartScreen: undefined;
-  Profile: undefined;
+  Profile: { context?: 'services' } | undefined;
   MyOrder: undefined;
   ServiceOrderDetail: { parent_order_id: string };
   ServiceCancellationRequest: {
@@ -84,15 +84,37 @@ export type HomeStackParamList = {
   };
   WalletHistory: undefined;
   TodoList: undefined;
-  AddAddressMap: undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
+  HelpForm: undefined;
+  ChangePassword: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
   CommonQuestionsScreen: undefined;
   ArticleDetails: { articleId: number; sectionId: number };
   MFInvestorsDetail: { categoryId: number };
   MFSectionArticles: { sectionId: number; sectionTitle: string };
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddressDetails:
+    | undefined
+    | {
+        mode?: "add" | "edit";
+        addressId?: number;
+        manageOnly?: boolean;
+        initialData?: {
+          saveAs?: "Home" | "Work" | "Other";
+          flatHouseBuilding?: string;
+          areaLocality?: string;
+          landmark?: string;
+          name?: string;
+          phone?: string;
+          pincode?: string;
+          city?: string;
+          state?: string;
+          state_id?: number;
+          isDefault?: boolean;
+        };
+      };
 
   ServiceCheckoutScreen: {
     mode?: 'buy_now' | 'cart';

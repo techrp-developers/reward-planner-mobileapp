@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import {  useNavigation, useNavigationState } from "@react-navigation/native";
+import { useNavigation, useNavigationState, useRoute } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -28,6 +28,28 @@ type RouteStateLike = {
 };
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
+
+const MODULE_MODE_BY_ROUTE: Record<keyof ModuleStackParamList, AppMode> = {
+  ProductModule: "Product",
+  ServicesModule: "Services",
+  PaymentsModule: "Payments",
+  DineOutModule: "DineOut",
+};
+
+const getRequestedMode = (params?: {
+  screen?: string;
+  moduleName?: string;
+}): AppMode | null => {
+  if (params?.screen && params.screen in MODULE_MODE_BY_ROUTE) {
+    return MODULE_MODE_BY_ROUTE[params.screen as keyof ModuleStackParamList];
+  }
+
+  if (["Product", "Services", "Payments", "DineOut"].includes(params?.moduleName ?? "")) {
+    return params?.moduleName as AppMode;
+  }
+
+  return null;
+};
 
 const getActiveRouteChain = (state?: RouteStateLike): string[] => {
   if (!state?.routes?.length) return [];
@@ -61,7 +83,7 @@ const shouldShowNavbar = (routeChain: string[]): boolean => {
   }
 
   if (moduleRoute === "PaymentsModule") {
-    return ["PaymentsModule", "Home", "Search"].includes(leafRoute);
+    return ["PaymentsModule", "Home"].includes(leafRoute);
   }
 
   if (moduleRoute === "DineOutModule") {
@@ -84,6 +106,7 @@ const shouldShowBottomTabs = (activeMode: AppMode): boolean => {
 
 function MainLayout() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const navigationState = useNavigationState((state) => state);
   const insets = useSafeAreaInsets();
 
@@ -92,7 +115,25 @@ function MainLayout() {
     [navigationState]
   );
 
-  const activeMode = React.useMemo(() => getActiveMode(routeChain), [routeChain]);
+  const routeChainMode = React.useMemo(() => getActiveMode(routeChain), [routeChain]);
+  const requestedMode = React.useMemo(
+    () => getRequestedMode(route.params),
+    [route.params]
+  );
+  const [activeMode, setActiveMode] = React.useState<AppMode>(
+    () => requestedMode ?? routeChainMode
+  );
+
+  React.useLayoutEffect(() => {
+    if (requestedMode) setActiveMode(requestedMode);
+  }, [requestedMode]);
+
+  const moduleScreenListeners = React.useCallback(
+    ({ route: moduleRoute }: { route: { name: keyof ModuleStackParamList } }) => ({
+      focus: () => setActiveMode(MODULE_MODE_BY_ROUTE[moduleRoute.name]),
+    }),
+    []
+  );
   const showNavbar = React.useMemo(() => shouldShowNavbar(routeChain), [routeChain]);
   const showBottomTabs = React.useMemo(
     () => shouldShowBottomTabs(activeMode),
@@ -116,6 +157,7 @@ function MainLayout() {
   const activeTabKey = React.useMemo(() => {
     const leafRoute = routeChain[routeChain.length - 1];
     if (leafRoute === "Cart") return "Cart";
+    if (leafRoute === "OrderHistory") return "History";
     if (leafRoute === "Profile") return "Profile";
     if (leafRoute === "Search" || leafRoute === "ServiceSearch") return "Search";
     return "Home";
@@ -123,7 +165,14 @@ function MainLayout() {
 
   const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
-    (tab: "Home" | "Search" | "Notes" | "Cart" | "Profile") => {
+    (tab: "Home" | "Search" | "Notes" | "Cart" | "History" | "Profile") => {
+      if (tab === "History") {
+        if (activeMode === "Payments") {
+          navigation.navigate("PaymentsModule", { screen: "OrderHistory" });
+        }
+        return;
+      }
+
       if (tab === "Cart") {
         if (activeMode === "Services") {
           navigation.navigate("ServicesModule", { screen: "CartScreen" });
@@ -136,6 +185,8 @@ function MainLayout() {
       if (tab === "Profile") {
         if (activeMode === "Services") {
           navigation.navigate("ServicesModule", { screen: "Profile" });
+        } else if (activeMode === "Payments") {
+          navigation.navigate("PaymentsModule", { screen: "Profile" });
         } else {
           navigation.navigate("Profile");
         }
@@ -174,10 +225,12 @@ function MainLayout() {
       <View style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
         <ModuleStack.Navigator
           initialRouteName="ProductModule"
+          screenListeners={moduleScreenListeners}
           screenOptions={{
             headerShown: false,
-            animation: "fade",
+            animation: "none",
             gestureEnabled: true,
+            contentStyle: { backgroundColor: "#FFFFFF" },
           }}
         >
           <ModuleStack.Screen

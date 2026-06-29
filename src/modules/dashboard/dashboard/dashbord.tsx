@@ -41,6 +41,10 @@ function Dashbord() {
   const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
   const [thought, setThought] = useState<string>('');
+  const [stepGoal, setStepGoal] = useState<number>(() => {
+    const initialGoal = Number((user as any)?.steps?.goal_steps);
+    return Number.isFinite(initialGoal) && initialGoal > 0 ? initialGoal : 5000;
+  });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
@@ -64,6 +68,11 @@ function Dashbord() {
         if (d.userImage)     setHeaderUserImage(d.userImage);
         if (d.company?.logo) setHeaderCompanyLogo(d.company.logo);
         if (d.thought)       setThought(d.thought);
+
+        const apiStepGoal = Number(d.steps?.goal_steps);
+        if (Number.isFinite(apiStepGoal) && apiStepGoal > 0) {
+          setStepGoal(apiStepGoal);
+        }
 
         const raw: any[] = Array.isArray(d.birthday_employees) ? d.birthday_employees : [];
         setBirthdays(raw.map((b) => ({
@@ -94,7 +103,7 @@ function Dashbord() {
           navigation.navigate('GlobalSearchScreen');
           break;
         case 'Profile':
-          navigation.navigate('Profile');
+          navigation.navigate('Profile', { context: 'dashboard' });
           break;
         // 'Home' is Dashboard itself — already here, no-op
       }
@@ -196,7 +205,7 @@ function Dashbord() {
           </Pressable>
         )}
         <Pressable onPress={dismissSearch}>
-          <Home_Chart />
+          <Home_Chart goalSteps={stepGoal} />
           <ServicesModule />
           <ModuleBanner />
           <RewardsOverview />
