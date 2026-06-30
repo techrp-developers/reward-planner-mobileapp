@@ -50,7 +50,13 @@ const matchesTimeFilter = (dateValue: string, filter: BBPSOrderTime) => {
   return date >= cutoff && date <= now;
 };
 
-const OrderCard = ({ order }: { order: TemporaryOrder }) => (
+const OrderCard = ({
+  order,
+  onRepeat,
+}: {
+  order: TemporaryOrder;
+  onRepeat: (order: TemporaryOrder) => void;
+}) => (
   <View style={styles.orderCard}>
     <View style={styles.logoWrap}>
       <Image source={order.icon} style={styles.operatorLogo} resizeMode="contain" />
@@ -64,7 +70,11 @@ const OrderCard = ({ order }: { order: TemporaryOrder }) => (
       <Text style={styles.orderDate}>{order.dateLabel}</Text>
     </View>
     {order.repeatable && (
-      <TouchableOpacity style={styles.repeatButton} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.repeatButton}
+        activeOpacity={0.8}
+        onPress={() => onRepeat(order)}
+      >
         <Text style={styles.repeatText}>Repeat</Text>
       </TouchableOpacity>
     )}
@@ -76,6 +86,11 @@ function OrderHistory({ navigation }: any) {
   const [statusFilter, setStatusFilter] = useState<BBPSOrderStatus>('');
   const [timeFilter, setTimeFilter] = useState<BBPSOrderTime>('');
   const [filterVisible, setFilterVisible] = useState(false);
+  const handleRepeat = (order: TemporaryOrder) => {
+    navigation.navigate('ReachargeHomeScreen', {
+      mobileNumber: order.id.replace('-dec', ''),
+    });
+  };
 
   const groupedOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -148,7 +163,9 @@ function OrderHistory({ navigation }: any) {
                 <Text style={styles.monthText}>{group.month}</Text>
                 <Text style={styles.monthTotal}>{`\u20B9${total.toLocaleString('en-IN')}`}</Text>
               </View>
-              {group.orders.map((order) => <OrderCard key={order.id} order={order} />)}
+              {group.orders.map((order) => (
+                <OrderCard key={order.id} order={order} onRepeat={handleRepeat} />
+              ))}
             </View>
           );
         })}

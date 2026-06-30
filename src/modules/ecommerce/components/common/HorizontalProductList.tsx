@@ -48,7 +48,7 @@ function HorizontalProductList<T extends ListItemBase>({
   keyExtractor,
   renderCard,
 }: HorizontalProductListProps<T>) {
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const [loadedImageKeys, setLoadedImageKeys] = useState<Set<string>>(new Set());
   const ListComponent = FlashListComponent ?? FlatList;
   const listIsFlashList = Boolean(FlashListComponent);
 
@@ -69,7 +69,11 @@ function HorizontalProductList<T extends ListItemBase>({
     data.slice(0, initialVisibleCount).forEach((item, index) => {
       nextKeys.add(resolveKey(item, index));
     });
-    setVisibleKeys(nextKeys);
+    setLoadedImageKeys((previous) => {
+      const merged = new Set(previous);
+      nextKeys.forEach((key) => merged.add(key));
+      return merged;
+    });
   }, [data, initialVisibleCount, resolveKey]);
 
   const onViewableItemsChanged = useRef(
@@ -85,7 +89,18 @@ function HorizontalProductList<T extends ListItemBase>({
       });
 
       if (nextKeys.size > 0) {
-        setVisibleKeys(nextKeys);
+        setLoadedImageKeys((previous) => {
+          let didChange = false;
+          const merged = new Set(previous);
+          nextKeys.forEach((key) => {
+            if (!merged.has(key)) {
+              merged.add(key);
+              didChange = true;
+            }
+          });
+
+          return didChange ? merged : previous;
+        });
       }
     }
   ).current;
@@ -105,12 +120,12 @@ function HorizontalProductList<T extends ListItemBase>({
           {renderCard({
             item,
             index,
-            shouldLoadImage: visibleKeys.has(itemKey),
+            shouldLoadImage: loadedImageKeys.has(itemKey),
           })}
         </View>
       );
     },
-    [itemWidth, renderCard, resolveKey, visibleKeys]
+    [itemWidth, loadedImageKeys, renderCard, resolveKey]
   );
 
   const listProps = useMemo(

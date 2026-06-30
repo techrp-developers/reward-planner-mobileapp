@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
-  Animated,
   View,
   Text,
   StyleSheet,
@@ -10,11 +9,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
-import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
 type RewardItem = { id: string; title: string; sub: string; image: string; brand: string };
-
-const SKELETON_DATA = ['s1', 's2', 's3', 's4'];
 
 const REWARDS: RewardItem[] = [
   { id: '1', title: 'Minimalist', sub: 'Free Vitamin B5 Moisturizer worth 199', image: 'https://via.placeholder.com/150', brand: 'Minimalist' },
@@ -27,41 +23,8 @@ const REWARDS: RewardItem[] = [
 
 const ProductScreenComponent = () => {
   const navigation = useNavigation();
-  const [loading, setLoading] = useState(true);
-  const pulse = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
-      ])
-    );
-    anim.start();
-
-    const timer = setTimeout(() => setLoading(false), 900);
-
-    return () => {
-      clearTimeout(timer);
-      anim.stop();
-    };
-  }, [pulse]);
-
-  const renderItem = useCallback(({ item }: { item: RewardItem | string }) => {
-    if (loading) {
-      return (
-        <View style={styles.cardContainer}>
-          <SkeletonBox pulse={pulse} width="100%" height={130} borderRadius={0} />
-          <View style={styles.detailsSection}>
-            <SkeletonBox pulse={pulse} width="70%" height={14} borderRadius={8} />
-            <SkeletonBox pulse={pulse} width="90%" height={12} borderRadius={8} style={styles.skeletonLineGap} />
-          </View>
-        </View>
-      );
-    }
-
-    const reward = item as RewardItem;
-
+  const renderItem = useCallback(({ item: reward }: { item: RewardItem }) => {
     return (
       <View style={styles.cardContainer}>
         {/* Top Image Section with Brand Badge */}
@@ -81,12 +44,11 @@ const ProductScreenComponent = () => {
         </View>
       </View>
     );
-  }, [loading, pulse]);
+  }, []);
 
   const keyExtractor = useCallback(
-    (item: RewardItem | string, index: number) =>
-      loading ? `${item}-${index}` : (item as RewardItem).id,
-    [loading]
+    (item: RewardItem) => item.id,
+    []
   );
 
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
@@ -100,7 +62,7 @@ const ProductScreenComponent = () => {
       />
 
       <FlatList
-        data={loading ? SKELETON_DATA : REWARDS}
+        data={REWARDS}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={2}

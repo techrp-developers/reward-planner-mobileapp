@@ -19,7 +19,7 @@ import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
 import ModuleBanner from '../explore/ModuleBanner';
 import { rs, fs } from '../../../utils/responsive';
-import ServicesModule from '../explore/ServicesModule';
+import ServicesModule, { type ExploreServiceTab } from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
 // import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
 import { useCart } from '../../ecommerce/context/CartContext';
@@ -28,6 +28,20 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
+
+const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
+  Product: 'ProductModule',
+  Services: 'ServicesModule',
+  Payments: 'PaymentsModule',
+  DineOut: 'DineOutModule',
+};
+
+const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
+  Product: '#5F341A',
+  Services: '#4F6BFF',
+  Payments: '#7C3AED',
+  DineOut: '#DC2626',
+};
 
 
 function Dashbord() {
@@ -49,6 +63,7 @@ function Dashbord() {
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
+  const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
 
   const loadHeaderInfo = useCallback(async () => {
@@ -86,9 +101,62 @@ function Dashbord() {
     } catch { }
   }, [isAuthenticated]);
 
-  useEffect(() => { loadHeaderInfo(); }, [loadHeaderInfo]);
+  // Warm the ecommerce route shortly after the first dashboard paint. A timer
+  // is intentional here: InteractionManager may never become idle while the
+  // dashboard has looping animations, leaving the first Product tap cold.
+  useEffect(() => {
+    const ecommerceWarmupTimer = setTimeout(() => {
+      require('../../ecommerce/navigation/HomeStack');
+      require('../../ecommerce/screens/homescreen');
 
-  useFocusEffect(useCallback(() => { loadHeaderInfo(); }, [loadHeaderInfo]));
+      const { prefetchCategoriesSection } = require('../../ecommerce/components/home/categories_section');
+      const { prefetchBestSellerSection } = require('../../ecommerce/components/Promotion/BestSeller');
+      const { prefetchTopRatedSection } = require('../../ecommerce/components/Promotion/TopRated');
+
+      Promise.allSettled([
+        prefetchCategoriesSection(),
+        prefetchBestSellerSection(),
+        prefetchTopRatedSection(),
+      ]).catch(() => {
+        // Navigation must remain available even if background warmup fails.
+      });
+    }, 350);
+
+    const remainingModulesWarmupTimer = setTimeout(() => {
+      require('../../services/navigation/ServiceHomeStack');
+      require('../../services/component/screens/HomeScreen');
+      require('../../bbps/navigation/BBPSHomeStack');
+      require('../../bbps/screen/HomePage');
+      require('../../step_counter/navigation/RewardHomeStack');
+      require('../../step_counter/component/fitness/StepWelcome');
+      require('../../ecommerce/constants/ComingSoon');
+    }, 900);
+
+    return () => {
+      clearTimeout(ecommerceWarmupTimer);
+      clearTimeout(remainingModulesWarmupTimer);
+    };
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    setOpeningModule(null);
+    loadHeaderInfo();
+  }, [loadHeaderInfo]));
+
+  const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
+    setOpeningModule(tab);
+
+    // Let the lightweight module shell paint before mounting the destination.
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        navigation.navigate('Home', {
+          screen: MODULE_ROUTE[tab],
+          params: { moduleName: tab },
+          moduleName: tab,
+        });
+      }, 0);
+    });
+  }, [navigation]);
 
   const handleTabPress = useCallback(
     (tab: TabKey) => {
@@ -151,6 +219,7 @@ function Dashbord() {
         scrollEnabled={!isSearchOpen}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={Platform.OS === 'android'}
         bounces
       >
         <LinearGradient
@@ -206,7 +275,7 @@ function Dashbord() {
         )}
         <Pressable onPress={dismissSearch}>
           <Home_Chart goalSteps={stepGoal} />
-          <ServicesModule />
+          <ServicesModule onModulePress={handleExploreModulePress} />
           <ModuleBanner />
           <RewardsOverview />
         </Pressable>
@@ -237,6 +306,21 @@ function Dashbord() {
         onTabPress={handleTabPress}
         onCenterPress={handleCenterPress}
       />
+      {openingModule && (
+        <View
+          style={[
+            styles.moduleLaunchOverlay,
+            { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
+          ]}
+        >
+          <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
+          <View style={styles.moduleLaunchContent}>
+            <View style={styles.moduleLaunchLineWide} />
+            <View style={styles.moduleLaunchLine} />
+            <View style={styles.moduleLaunchCard} />
+          </View>
+        </View>
+      )}
       {/* <FloatingBottomBar/> */}
     </LinearGradient>
   );
@@ -340,5 +424,45 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontWeight: '600',
     letterSpacing: 0,
+  },
+  moduleLaunchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 500,
+    elevation: 50,
+    paddingTop: rs(72),
+  },
+  moduleLaunchTitle: {
+    color: '#FFFFFF',
+    fontSize: fs(22),
+    fontWeight: '800',
+    paddingHorizontal: rs(20),
+    paddingBottom: rs(20),
+  },
+  moduleLaunchContent: {
+    flex: 1,
+    padding: rs(18),
+    borderTopLeftRadius: rs(28),
+    borderTopRightRadius: rs(28),
+    backgroundColor: '#F8FAFC',
+  },
+  moduleLaunchLineWide: {
+    width: '58%',
+    height: rs(18),
+    borderRadius: rs(9),
+    backgroundColor: '#E2E8F0',
+    marginBottom: rs(12),
+  },
+  moduleLaunchLine: {
+    width: '34%',
+    height: rs(12),
+    borderRadius: rs(6),
+    backgroundColor: '#E2E8F0',
+    marginBottom: rs(22),
+  },
+  moduleLaunchCard: {
+    width: '100%',
+    height: rs(210),
+    borderRadius: rs(18),
+    backgroundColor: '#E2E8F0',
   },
 });

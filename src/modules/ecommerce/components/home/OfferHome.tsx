@@ -1,6 +1,7 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   ScrollView,
   View,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   Image as RNImage,
   Alert,
   Linking,
+  ViewToken,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
@@ -44,7 +46,13 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>;
 // ---------------------------------------------------------------------
 // Product Card Component
 // ---------------------------------------------------------------------
-const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
+const FlashOfferProductCard = React.memo(({
+  item,
+  shouldLoadImage,
+}: {
+  item: any;
+  shouldLoadImage: boolean;
+}) => {
   const navigation = useNavigation<Nav>();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
@@ -141,7 +149,11 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
   return (
     <TouchableOpacity style={styles.cardContainer} activeOpacity={0.9} onPress={handlePress}>
       <View style={styles.imageBox}>
-        <RNImage source={{ uri: displayData.imageUrl }} style={styles.productImage} />
+        {shouldLoadImage ? (
+          <RNImage source={{ uri: displayData.imageUrl }} style={styles.productImage} />
+        ) : (
+          <View style={styles.productImagePlaceholder} />
+        )}
 
         {displayData.discountPercent !== "0%" && (
           <LinearGradient
@@ -208,6 +220,7 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
+  const [visibleProductKeys, setVisibleProductKeys] = useState<Set<string>>(new Set());
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: ["ecommerce", "home", "campaign-home"],
@@ -269,6 +282,69 @@ export default function OfferHome() {
     }
   };
 
+  const resolveProductKey = useCallback((item: any, index: number) => {
+    return String(item?.id ?? item?.product_id ?? index);
+  }, []);
+
+  useEffect(() => {
+    const nextKeys = new Set<string>();
+    products.slice(0, 2).forEach((item: any, index: number) => {
+      nextKeys.add(resolveProductKey(item, index));
+    });
+    setVisibleProductKeys((previous) => {
+      const merged = new Set(previous);
+      nextKeys.forEach((key) => merged.add(key));
+      return merged;
+    });
+  }, [products, resolveProductKey]);
+
+  const onViewableProductsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      const nextKeys = new Set<string>();
+
+      viewableItems.forEach((entry) => {
+        const item = entry.item as any;
+        if (!item) return;
+        nextKeys.add(resolveProductKey(item, entry.index ?? 0));
+      });
+
+      if (nextKeys.size > 0) {
+        setVisibleProductKeys((previous) => {
+          let didChange = false;
+          const merged = new Set(previous);
+          nextKeys.forEach((key) => {
+            if (!merged.has(key)) {
+              merged.add(key);
+              didChange = true;
+            }
+          });
+
+          return didChange ? merged : previous;
+        });
+      }
+    }
+  ).current;
+
+  const productViewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 35,
+    minimumViewTime: 60,
+  }).current;
+
+  const renderFlashProduct = useCallback(
+    ({ item, index }: { item: any; index: number }) => {
+      const itemKey = resolveProductKey(item, index);
+      return (
+        <FlashOfferProductCard
+          item={item}
+          shouldLoadImage={visibleProductKeys.has(itemKey)}
+        />
+      );
+    },
+    [resolveProductKey, visibleProductKeys],
+  );
+
+  const flashProductSeparator = useCallback(() => <View style={styles.flashProductGap} />, []);
+
   if (isProductsLoading || isCampaignLoading) {
     return <HomeSectionSkeleton height={390} />;
   }
@@ -309,19 +385,24 @@ export default function OfferHome() {
             )}
           </View>
 
-          <ScrollView
+          <FlatList
+            data={products}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.innerProductsScroll}
-            snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
+            keyExtractor={resolveProductKey}
+            renderItem={renderFlashProduct}
+            ItemSeparatorComponent={flashProductSeparator}
+            onViewableItemsChanged={onViewableProductsChanged}
+            viewabilityConfig={productViewabilityConfig}
+            initialNumToRender={2}
+            maxToRenderPerBatch={2}
+            updateCellsBatchingPeriod={80}
+            windowSize={3}
+            removeClippedSubviews={true}
+            snapToInterval={CARD_WIDTH + CARD_MARGIN}
             decelerationRate="fast"
-          >
-            <View style={{ width: CARD_MARGIN }} />
-            {products.map((item: any, index: number) => (
-              <FlashOfferProductCard key={item.id ?? index} item={item} />
-            ))}
-            <View style={{ width: CARD_MARGIN }} />
-          </ScrollView>
+          />
         </View>
       </View>
     </View>
@@ -390,14 +471,17 @@ const styles = StyleSheet.create({
   },
   innerProductsScroll: {
     alignItems: "center",
-    paddingRight: 20,
+    paddingLeft: CARD_MARGIN,
+    paddingRight: CARD_MARGIN + 20,
+  },
+  flashProductGap: {
+    width: CARD_MARGIN,
   },
   cardContainer: {
     width: CARD_WIDTH,
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 8,
-    marginHorizontal: CARD_MARGIN,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -418,6 +502,12 @@ const styles = StyleSheet.create({
     width: "85%",
     height: "85%",
     resizeMode: "contain",
+  },
+  productImagePlaceholder: {
+    width: "85%",
+    height: "85%",
+    borderRadius: 10,
+    backgroundColor: "#F2E8CC",
   },
   discountBadgeTopLeft: {
     position: "absolute",

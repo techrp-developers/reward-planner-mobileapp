@@ -12,6 +12,7 @@ export default function ServiceHomeStack() {
                 headerShown: false,
                 animation: "slide_from_right",
                 gestureEnabled: true,
+                freezeOnBlur: true,
             }}
         >
             <Stack.Screen name="Home" getComponent={() => require("../component/screens/HomeScreen").default} />

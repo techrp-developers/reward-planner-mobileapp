@@ -16,8 +16,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HomeStackParamList } from "../../navigation/types";
 import { fetchAllCategories, getProductImageUrl } from "../../api/ProductApi";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
+import { queryClient } from "../../../../query/queryClient";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+const CATEGORIES_QUERY_KEY = ["ecommerce", "home", "categories-section"] as const;
+const CATEGORIES_STALE_TIME = 10 * 60 * 1000;
 
 type Category = {
   id: number;
@@ -42,17 +45,26 @@ const getCategoryList = (payload: any): Category[] => {
   return candidates.find(Array.isArray) ?? [];
 };
 
+const fetchCategoriesData = async (): Promise<Category[]> => {
+  const response = await fetchAllCategories();
+  return getCategoryList(response);
+};
+
+export const prefetchCategoriesSection = () =>
+  queryClient.prefetchQuery({
+    queryKey: CATEGORIES_QUERY_KEY,
+    queryFn: fetchCategoriesData,
+    staleTime: CATEGORIES_STALE_TIME,
+  });
+
 export default function CategoriesSection() {
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
 
   const { data: categories = [], isLoading: loading } = useQuery<Category[]>({
-    queryKey: ["ecommerce", "home", "categories-section"],
-    queryFn: async () => {
-      const res = await fetchAllCategories();
-      return getCategoryList(res);
-    },
-    staleTime: 10 * 60 * 1000,
+    queryKey: CATEGORIES_QUERY_KEY,
+    queryFn: fetchCategoriesData,
+    staleTime: CATEGORIES_STALE_TIME,
     gcTime: 30 * 60 * 1000,
     placeholderData: (previousData) => previousData,
   });

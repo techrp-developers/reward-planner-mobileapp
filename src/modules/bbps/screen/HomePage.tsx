@@ -1,113 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, View, ScrollView, StyleSheet } from 'react-native';
-// import { Text, ImageBackground } from 'react-native'; // used by the commented-out Balance card below
-// import { useNavigation } from '@react-navigation/native'; // only used by the commented-out handleRechargePress below
-// import BillsCard from '../component/home/BillsCard';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import RechargeBill from '../component/home/ReachargeBill';
-// import Balance from '../assets/BBPS_Service/Balance.png';
-// import RechargeModal from '../constatnt/RechargeModal'; // Verify this path!
-import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
 function HomePageComponent() {
-    // const navigation = useNavigation<any>(); // only used by the commented-out handleRechargePress below
-    const [loading, setLoading] = useState(true);
-    // const [showPopup, setShowPopup] = useState(false); // drives the commented-out RechargeModal below
-    const pulse = useRef(new Animated.Value(0)).current;
-
-    // const handleClosePopup = () => {
-    //     setShowPopup(false);
-    // };
-
-    // const handleRechargePress = () => {
-    //     setShowPopup(false);
-    //     navigation.navigate('ReachargeHomeScreen');
-    // };
-
-    useEffect(() => {
-        // Pulse Animation for Skeletons
-        const anim = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-                Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
-            ])
-        );
-        anim.start();
-
-        // Loading Timer
-        const timer = setTimeout(() => {
-            setLoading(false);
-            // Show popup 500ms after loading finishes to ensure UI is ready
-            // — disabled along with the commented-out RechargeModal below.
-            // setTimeout(() => {
-            //     setShowPopup(true);
-            // }, 500);
-        }, 900);
-
-        return () => {
-            clearTimeout(timer);
-            anim.stop();
-        };
-    }, [pulse]);
-
-    return (
-        <View style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {loading ? (
-                    <View>
-                        <View style={styles.balanceContainer}>
-                            <SkeletonBox pulse={pulse} width="100%" height={120} borderRadius={16} />
-                        </View>
-                        <View style={styles.skeletonCard}>
-                            <SkeletonBox pulse={pulse} width="40%" height={20} borderRadius={8} />
-                            <SkeletonBox pulse={pulse} width="100%" height={18} borderRadius={8} style={styles.skeletonGap} />
-                            <SkeletonBox pulse={pulse} width="90%" height={18} borderRadius={8} style={styles.skeletonGap} />
-                        </View>
-                    </View>
-                ) : (
-                    <>
-                        {/* <View style={styles.balanceContainer}>
-                            <ImageBackground
-                                source={Balance}
-                                style={styles.balanceImage}
-                                imageStyle={styles.balanceImageStyle}
-                                resizeMode="stretch"
-                            >
-                                <View style={styles.textOverlay}>
-                                    <Text style={styles.spentLabel}>Spent this Month</Text>
-                                    <Text style={styles.amountText}>₹0</Text>
-                                </View>
-                            </ImageBackground>
-                        </View> */}
-
-                        {/* <BillsCard /> */}
-                        <RechargeBill />
-                        {/* <RewardProductCard /> */}
-                    </>
-                )}
-            </ScrollView>
-
-            {/* CRITICAL: Keep Modal outside the ScrollView at the very bottom */}
-            {/* <RechargeModal
-                visible={showPopup}
-                onClose={handleClosePopup}
-                onRecharge={handleRechargePress}
-            /> */}
-
-        </View>
-    );
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        <RechargeBill />
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FE' },
-    balanceContainer: { marginHorizontal: 16, marginTop: 10, elevation: 5 },
-    balanceImage: { width: '100%', height: 120, justifyContent: 'center', alignItems: 'center' },
-    balanceImageStyle: { borderRadius: 16 },
-    textOverlay: { alignItems: 'center' },
-    spentLabel: { color: '#FFFFFF', fontSize: 16, opacity: 0.9 },
-    amountText: { color: '#FFFFFF', fontSize: 32, fontWeight: '700' },
-    skeletonCard: { backgroundColor: '#FFFFFF', marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 16 },
-    skeletonGap: { marginTop: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FE',
+  },
+  content: {
+    paddingBottom: 24,
+  },
 });
 
-const HomePage = React.memo(HomePageComponent);
-export default HomePage;
+export default React.memo(HomePageComponent);

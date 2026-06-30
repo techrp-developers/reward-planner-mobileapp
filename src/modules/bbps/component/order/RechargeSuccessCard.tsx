@@ -1,9 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Share, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient'; // Ensure this package is installed
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-const RechargeSuccessCard = () => {
+type RechargeSuccessCardProps = {
+  onPayAnother?: () => void;
+};
+
+const RechargeSuccessCard = ({ onPayAnother }: RechargeSuccessCardProps) => {
+  const handleShare = () => {
+    Share.share({
+      title: 'Recharge successful',
+      message: 'DTH recharge of customer 736263728 was successful.',
+    }).catch(() => {});
+  };
+
   return (
     <View style={styles.screenContainer}>
       {/* Main Card with specified top-to-bottom gradient */}
@@ -50,7 +61,7 @@ const RechargeSuccessCard = () => {
           {/* Buttons Row */}
           <View style={styles.buttonRow}>
             {/* "Pay Another Bill" with specified gradient */}
-            <TouchableOpacity activeOpacity={0.8}>
+            <TouchableOpacity activeOpacity={0.8} onPress={onPayAnother}>
               <LinearGradient
                 start={{ x: 1, y: 0.5 }}
                 end={{ x: 0, y: 0.5 }}
@@ -62,7 +73,7 @@ const RechargeSuccessCard = () => {
             </TouchableOpacity>
 
             {/* Share Button */}
-            <TouchableOpacity style={styles.shareButton}>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareText}>Share</Text>
             </TouchableOpacity>
           </View>

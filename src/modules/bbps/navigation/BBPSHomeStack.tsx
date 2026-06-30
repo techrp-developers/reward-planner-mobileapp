@@ -1,17 +1,5 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screen/HomePage';
-import ProductScreen from '../screen/ProductScreen';
-import BillerSelectScreen from '../screen/BillerSelectScreen';
-import BillDetailsScreen from '../screen/BillDetailsScreen';
-import PaymentConfirmationScreen from '../screen/PaymentConfirmationScreen';
-import RechargeConfirmationScreen from '../screen/RechargeConfirmationScreen';
-import TransactionStatusScreen from '../screen/TransactionStatusScreen';
-import OrderSuccessful from '../screen/OrderSuccessful';
-import ReachargeHomeScreen from '../component/recharge/ReachargeHomeScreen';
-import RechargeSection from '../component/recharge/RechargeSection';
-import Search from '../constatnt/Search';
-import OrderHistory from '../component/order/OrderHistory';
 
 export type BBPSStackParamList = {
   Home: undefined;
@@ -42,69 +30,57 @@ const Stack = createNativeStackNavigator<BBPSStackParamList>();
 
 const BBPSHomeStack = React.memo(() => {
   return (
-    <Stack.Navigator screenOptions={{ freezeOnBlur: true }}>
-      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+    <Stack.Navigator screenOptions={{ headerShown: false, freezeOnBlur: true }}>
+      <Stack.Screen name="Home" getComponent={() => require('../screen/HomePage').default} />
       <Stack.Screen
         name="ProductScreen"
-        component={ProductScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/ProductScreen').default}
       />
       <Stack.Screen
         name="BillerSelectScreen"
-        component={BillerSelectScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/BillerSelectScreen').default}
       />
 
 
       <Stack.Screen
         name="BillDetailsScreen"
-        component={BillDetailsScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/BillDetailsScreen').default}
       />
       <Stack.Screen
         name="PaymentConfirmationScreen"
-        component={PaymentConfirmationScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/PaymentConfirmationScreen').default}
       />
       <Stack.Screen
         name="OrderSuccessful"
-        component={OrderSuccessful}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/OrderSuccessful').default}
       />
       <Stack.Screen
         name="ReachargeHomeScreen"
-        component={ReachargeHomeScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../component/recharge/ReachargeHomeScreen').default}
       />
       <Stack.Screen
         name="RechargeSection"
-        component={RechargeSection}
-        options={{ headerShown: false }}
+        getComponent={() => require('../component/recharge/RechargeSection').default}
       />
       <Stack.Screen
         name="RechargePlanScreen"
-        component={RechargeSection}
-        options={{ headerShown: false }}
+        getComponent={() => require('../component/recharge/RechargeSection').default}
       />
       <Stack.Screen
         name="RechargeConfirmationScreen"
-        component={RechargeConfirmationScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/RechargeConfirmationScreen').default}
       />
       <Stack.Screen
         name="TransactionStatusScreen"
-        component={TransactionStatusScreen}
-        options={{ headerShown: false }}
+        getComponent={() => require('../screen/TransactionStatusScreen').default}
       />
       <Stack.Screen
         name="Search"
-        component={Search}
-        options={{ headerShown: false }}
+        getComponent={() => require('../constatnt/Search').default}
       />
       <Stack.Screen
         name="OrderHistory"
-        component={OrderHistory}
-        options={{ headerShown: false }}
+        getComponent={() => require('../component/order/OrderHistory').default}
       />
       <Stack.Screen
         name="Profile"

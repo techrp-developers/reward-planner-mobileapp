@@ -33,7 +33,7 @@ async function fetchServiceCartCounts(): Promise<ServiceCartCounts> {
  * Kept separate from the ecommerce CartContext so the services cart badge
  * never reflects products added in the ecommerce module (and vice versa).
  */
-export function useServiceCartCount(): number {
+export function useServiceCartCount(enabled = true): number {
   const { isAuthenticated } = useAuth();
 
   const { data } = useQuery({
@@ -45,9 +45,9 @@ export function useServiceCartCount(): number {
     // continue to trigger a refetch here too.
     queryKey: [...SERVICE_CART_QUERY_KEY, 'count'],
     queryFn: fetchServiceCartCounts,
-    enabled: isAuthenticated,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled: isAuthenticated && enabled,
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: false,
   });
 
   return (data?.bundles ?? 0) + (data?.individual_items ?? 0);

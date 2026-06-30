@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,16 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
 
-type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
+export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
+type TopTab = ExploreServiceTab;
+
+type ServicesModuleProps = {
+  onModulePress?: (tab: ExploreServiceTab) => void;
+};
 
 const Categories1 = require('../../../assets/sampleImages/Categories(1).png');
 const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
@@ -46,10 +51,12 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
   DineOut:  { screen: 'DineOutModule',  moduleName: 'DineOut'  },
 };
 
-export default function ServicesModule() {
+export default function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
+  const isNavigatingRef = useRef(false);
+  const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const CARD_WIDTH  = (width - rs(52)) / 3.3;
   const CARD_HEIGHT = CARD_WIDTH * 1.08;
@@ -61,20 +68,33 @@ export default function ServicesModule() {
 
   const handleCategoryPress = useCallback(
     (tab: TopTab) => {
+      if (isNavigatingRef.current) return;
+      isNavigatingRef.current = true;
+
       const target = TAB_TO_MODULE[tab];
-      navigation.dispatch(
-        CommonActions.navigate({
-          name: 'Home',
-          params: {
-            screen: target.screen,
-            params: { moduleName: target.moduleName },
-            moduleName: target.moduleName,
-          },
-        })
-      );
+      if (onModulePress) {
+        onModulePress(tab);
+      } else {
+        navigation.navigate('Home', {
+          screen: target.screen,
+          params: { moduleName: target.moduleName },
+          moduleName: target.moduleName,
+        });
+      }
+
+      navigationUnlockTimerRef.current = setTimeout(() => {
+        isNavigatingRef.current = false;
+        navigationUnlockTimerRef.current = null;
+      }, 1000);
     },
-    [navigation],
+    [navigation, onModulePress],
   );
+
+  useEffect(() => () => {
+    if (navigationUnlockTimerRef.current) {
+      clearTimeout(navigationUnlockTimerRef.current);
+    }
+  }, []);
 
   const handleViewAll = useCallback(() => {
     navigation.navigate('ExploreModule');
@@ -102,6 +122,7 @@ export default function ServicesModule() {
           <TouchableOpacity
             key={i}
             activeOpacity={0.88}
+            accessibilityRole="button"
             onPress={() => handleCategoryPress(item.tab)}
           >
             <Image

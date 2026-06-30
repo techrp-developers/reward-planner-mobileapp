@@ -34,8 +34,8 @@ function SearchScreen() {
     useEffect(() => {
         const animation = Animated.loop(
             Animated.sequence([
-                Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-                Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+                Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
             ])
         );
 

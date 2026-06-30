@@ -89,11 +89,7 @@ function ArticleDetails() {
                             tagsStyles={htmlTagStyles}
                         />
 
-                        {!!article.cta_text && (
-                            <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.85}>
-                                <Text style={styles.ctaText}>{article.cta_text}</Text>
-                            </TouchableOpacity>
-                        )}
+                        {!!article.cta_text && <Text style={styles.ctaText}>{article.cta_text}</Text>}
                     </View>
                 </ScrollView>
             )}
