@@ -51,6 +51,14 @@ const BRAND = {
 
 type OptionalProvider = 'Samsung Health' | 'Google Fit';
 
+function hasStepsPermission(permissions: any[]): boolean {
+  return permissions.some(p => {
+    const recordType = p.recordType ?? p.permission?.recordType;
+    const accessType = String(p.accessType ?? p.permission?.accessType ?? '').toLowerCase();
+    return recordType === 'Steps' && accessType === 'read';
+  });
+}
+
 // ─── Permission guide (animated accordion) ────────────────────────────────────
 
 type GuideStep = { icon: string; title: string; desc: string };
@@ -178,7 +186,7 @@ export default function StepsTrackerScreen() {
   const {
     healthConnectStatus, grantedPermissions,
     healthConnectError, isSetupComplete,
-    openHealthConnect, totalSteps, refreshStatus,
+    openHealthConnect, requestStepsPermission, totalSteps, refreshStatus,
   } = useStepTracker();
 
   const navigation = useNavigation<any>();
@@ -191,13 +199,13 @@ export default function StepsTrackerScreen() {
   const [altGuideOpen,             setAltGuideOpen]              = useState(false);
 
   const isHCInstalled = healthConnectStatus !== '0' && healthConnectStatus !== String(SdkAvailabilityStatus.SDK_UNAVAILABLE);
-  const hasStepsPerm  = grantedPermissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
+  const hasStepsPerm  = hasStepsPermission(grantedPermissions);
   const isHCReady     = healthConnectStatus === String(SdkAvailabilityStatus.SDK_AVAILABLE) && hasStepsPerm;
   const showGuide     = isHCInstalled && !hasStepsPerm;
   const canProceed    = isHCReady && selectedOptional !== null && totalSteps > 0;
 
   useEffect(() => { checkApps(); }, []);
-  useEffect(() => { if (isSetupComplete && isHCReady) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, navigation]);
+  useEffect(() => { if (isSetupComplete && isHCReady && totalSteps > 0) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, totalSteps, navigation]);
   useEffect(() => { setGuideOpen(showGuide); }, [showGuide]);
 
   const checkApps = async () => {
@@ -233,7 +241,7 @@ export default function StepsTrackerScreen() {
     } catch {}
   };
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = useCallback(async () => {
     if (!isHCReady) {
       alert.warning(
         !isHCInstalled ? 'Health Connect Required' : 'Permission Missing',
@@ -252,8 +260,10 @@ export default function StepsTrackerScreen() {
       alert.info('Select a Fitness App', 'Choose Samsung Health or Google Fit to continue.');
       return;
     }
+    const setupReady = await requestStepsPermission();
+    if (!setupReady) return;
     navigation.navigate('StepForm');
-  }, [isHCReady, isHCInstalled, totalSteps, selectedOptional, navigation, alert, refreshStatus]);
+  }, [isHCReady, isHCInstalled, totalSteps, selectedOptional, requestStepsPermission, navigation, alert, refreshStatus]);
 
   return (
     <SafeAreaView style={ss.safe} edges={['top', 'bottom']}>

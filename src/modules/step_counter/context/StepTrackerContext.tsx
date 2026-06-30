@@ -97,15 +97,17 @@ function buildPayload(steps: number) {
 }
 
 function sumStepRecords(records: any[]): number {
-  const originOf = (record: any) => String(record.metadata?.dataOrigin ?? '').toLowerCase();
-  const googleRecords = records.filter(record => originOf(record).includes('fit') || originOf(record).includes('google'));
-  const samsungRecords = records.filter(record => originOf(record).includes('samsung') || originOf(record).includes('shealth'));
-  const selectedRecords =
-    googleRecords.length > 0 ? googleRecords :
-    samsungRecords.length > 0 ? samsungRecords :
-    records;
-
-  return selectedRecords.reduce((sum, record) => sum + (Number(record.count) || 0), 0);
+  // Group by data origin and take the highest single-origin total.
+  // This avoids double-counting when two apps (e.g. Google Fit + Samsung Health)
+  // both sync the same physical steps to Health Connect, while still using
+  // whichever source recorded the most steps.
+  const byOrigin = new Map<string, number>();
+  for (const record of records) {
+    const origin = String(record.metadata?.dataOrigin ?? 'unknown');
+    byOrigin.set(origin, (byOrigin.get(origin) ?? 0) + (Number(record.count) || 0));
+  }
+  if (byOrigin.size === 0) return 0;
+  return Math.max(...byOrigin.values());
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -118,12 +120,13 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   // ── Refs: never cause re-renders, always current ──────────────────────────
-  const initialized     = useRef(false);
-  const isSyncing       = useRef(false);  // sync lock — prevents concurrent API calls
-  const lastSyncedSteps = useRef(-1);     // -1 = never synced this session
-  const lastSyncedDate  = useRef<string | null>(null);
-  const lastSyncTime    = useRef(0);
-  const stepsRef        = useRef(0);      // mirror of steps state for closures
+  const initialized       = useRef(false);
+  const isSyncing         = useRef(false);  // sync lock — prevents concurrent API calls
+  const lastSyncedSteps   = useRef(-1);     // -1 = never synced this session
+  const lastSyncedDate    = useRef<string | null>(null);
+  const lastSyncTime      = useRef(0);
+  const stepsRef          = useRef(0);      // mirror of steps state for closures
+  const stepDataStateRef  = useRef<StepDataState>('loading'); // sync mirror so callbacks read fresh state
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [steps,               setSteps]               = useState(0);
@@ -167,10 +170,18 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   const shouldSync = (count: number): boolean => {
     const today = localDateString(new Date());
     if (count <= 0) return false;
-    if (isSyncing.current) return false;                              // already in flight
-    if (lastSyncedDate.current !== today) return true;                // first sync today
-    if (lastSyncedSteps.current === -1) return true;                  // first sync ever
-    if (count <= lastSyncedSteps.current) return false;               // no increase
+    if (isSyncing.current) return false;
+
+    if (lastSyncedDate.current !== today) {
+      // New day — skip cooldown (fresh start) but still require MIN_STEP_DIFF
+      // so a midnight wakeup with 2 steps doesn't fire an API call.
+      return count >= MIN_STEP_DIFF;
+    }
+    if (lastSyncedSteps.current === -1) {
+      // First sync ever in this session — same threshold applies.
+      return count >= MIN_STEP_DIFF;
+    }
+    if (count <= lastSyncedSteps.current) return false;                // no increase
     if (count - lastSyncedSteps.current < MIN_STEP_DIFF) return false; // < 100 new steps
     if (Date.now() - lastSyncTime.current < COOLDOWN_MS) return false; // inside 15-min window
     return true;
@@ -198,10 +209,12 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         setCelebrationData(res.data);
       }
 
+      setHealthConnectError(null);
       queryClient.invalidateQueries({ queryKey: fitnessQueryKeys.all });
       console.log(`[Steps] Synced ${count} steps ✓`);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[Steps] Sync failed:', e);
+      setHealthConnectError(`Steps sync failed: ${e?.message || 'network error'}`);
     } finally {
       isSyncing.current = false;
     }
@@ -260,11 +273,14 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
           });
           hasHistory = broad.records.length > 0;
         } catch {}
-        setStepDataState(hasHistory ? 'no_steps_today' : 'no_source');
+        const nextState: StepDataState = hasHistory ? 'no_steps_today' : 'no_source';
+        stepDataStateRef.current = nextState;
+        setStepDataState(nextState);
         setSteps(0);
         return 0;
       }
 
+      stepDataStateRef.current = 'ok';
       setStepDataState('ok');
       setSteps(total);
       await doSync(total);
@@ -357,6 +373,10 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   const requestStepsPermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Ensure SDK is initialized before calling requestPermission.
+      // On first launch the mount-effect's initAndCheck() may not have completed yet.
+      await initAndCheck();
+
       const perms: Permission[] = [{ accessType: 'read', recordType: 'Steps' }];
       await requestPermission(perms);
       await new Promise<void>(r => setTimeout(r, 1000));
@@ -372,9 +392,21 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       }
 
       await readAndSync();
-      // Permission is granted — mark setup complete regardless of current step count.
-      // Steps may be 0 because the user hasn't walked yet today or the source
-      // hasn't synced; that is not a reason to block onboarding.
+
+      // If no fitness app is writing steps to Health Connect at all, keep the user
+      // in onboarding so they can connect a source — completing setup now would
+      // leave them permanently stuck with 0 steps and no way back.
+      // Use the ref (not state) because React state updates are async and would
+      // be stale at this point in the same async call chain.
+      if (stepDataStateRef.current === 'no_source') {
+        setHealthConnectError(
+          'No step data found. Open Google Fit or Samsung Health, enable Health Connect sync, then tap Continue.',
+        );
+        return false;
+      }
+
+      // Permission is granted and we have a usable data source — mark setup complete.
+      // Steps may still be 0 for today (user hasn't walked yet); that's fine.
       await AsyncStorage.setItem(STORAGE_SETUP, 'true');
       setIsSetupComplete(true);
       setHealthConnectError(null);
@@ -383,12 +415,17 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       setHealthConnectError(err?.message || String(err));
       return false;
     }
-  }, [readAndSync]);
+  }, [initAndCheck, readAndSync]);
 
   const openHealthConnect = useCallback(async () => {
     try {
+      // Mirror the same two-package fallback used in initAndCheck so Android 9-13
+      // users (standalone HC app) are sent to the data management screen, not the Play Store.
       let status: number = SdkAvailabilityStatus.SDK_UNAVAILABLE;
       try { status = await getSdkStatus(HC_PACKAGE); } catch {}
+      if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+        try { status = await getSdkStatus('com.google.android.apps.healthdata'); } catch {}
+      }
 
       if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) {
         try {
