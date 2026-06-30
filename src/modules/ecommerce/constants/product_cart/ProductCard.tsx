@@ -15,10 +15,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { HomeStackParamList } from "../../navigation/types";
 import PointsButton from "./PointsButton";
-import { setWishlistState } from "../../api/WishlistApi";
+import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
 import OptimizedImage from "../../components/common/OptimizedImage";
 import RPpriceBadge from "./RPpriceBadge";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import { fetchProductDetailsByID } from "../../api/ProductApi";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -34,6 +35,12 @@ type Props = {
 };
 
 const getProductId = (item: any) => item?.id ?? item?.product_id ?? item?.productId;
+const getVariantId = (item: any) =>
+  item?.variant_id ??
+  item?.variantId ??
+  item?.default_variant_id ??
+  item?.variants?.[0]?.variant_id ??
+  item?.variants?.[0]?.id;
 const getProductImage = (item: any) =>
   item?.image ??
   item?.image_url ??
@@ -60,16 +67,13 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
   const navigation = useNavigation<Nav>();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
+  const [resolvedVariantId, setResolvedVariantId] = useState<any>(() => getVariantId(item));
 
   const usedCardWidth = cardWidth ?? CARD_WIDTH;
   const normalizedProduct = useMemo(() => normalizeProduct(item), [item]);
 
   const productId = getProductId(item);
-  const variantId =
-    item?.variant_id ??
-    item?.variantId ??
-    item?.default_variant_id ??
-    item?.variants?.[0]?.variant_id;
+  const variantId = getVariantId(item);
 
   // Responsive size calculations based on actual card width
   const calculations = useMemo(() => ({
@@ -101,16 +105,88 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
 
   useEffect(() => {
     setWishlisted(Boolean(item?.is_wishlisted));
+    setResolvedVariantId(variantId);
   }, [item?.is_wishlisted, productId, variantId]);
+
+  useEffect(() => {
+    const parsedProductId = Number(productId);
+    const initialVariantId = Number(variantId);
+
+    if (!shouldLoadImage || !parsedProductId || Number.isNaN(parsedProductId)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncWishlistState = async () => {
+      const candidateVariantIds: number[] = [];
+      const addCandidate = (value: unknown) => {
+        const parsed = Number(value);
+        if (parsed && !Number.isNaN(parsed) && !candidateVariantIds.includes(parsed)) {
+          candidateVariantIds.push(parsed);
+        }
+      };
+
+      addCandidate(initialVariantId);
+
+      if (candidateVariantIds.length === 0) {
+        try {
+          const details = await fetchProductDetailsByID(parsedProductId);
+          addCandidate(details?.default_variant_id);
+          addCandidate(details?.variant_id);
+
+          const variants = Array.isArray(details?.variants) ? details.variants : [];
+          variants.forEach((variant: any) => addCandidate(variant?.variant_id ?? variant?.id));
+        } catch {
+          return;
+        }
+      }
+
+      for (const candidateVariantId of candidateVariantIds) {
+        try {
+          const response = await checkWishlist(parsedProductId, candidateVariantId);
+
+          if (cancelled) return;
+
+          if (isWishlistPresent(response)) {
+            setResolvedVariantId(candidateVariantId);
+            setWishlisted(true);
+            return;
+          }
+        } catch {
+          // Ignore auth/check failures and keep the list-provided flag.
+        }
+      }
+
+      if (!cancelled && item?.is_wishlisted === undefined) {
+        setWishlisted(false);
+      }
+
+      if (!cancelled && candidateVariantIds[0]) {
+        setResolvedVariantId(candidateVariantIds[0]);
+      }
+    };
+
+    syncWishlistState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.is_wishlisted, productId, shouldLoadImage, variantId]);
 
   const handleWishlist = useCallback(async () => {
     if (wishLoading) return;
 
     const parsedProductId = Number(productId);
-    const parsedVariantId = Number(variantId ?? parsedProductId);
+    const parsedVariantId = Number(resolvedVariantId ?? variantId);
 
     if (!parsedProductId || Number.isNaN(parsedProductId)) {
       Alert.alert("Wishlist", "Invalid product");
+      return;
+    }
+
+    if (!parsedVariantId || Number.isNaN(parsedVariantId)) {
+      Alert.alert("Wishlist", "Product variant is missing");
       return;
     }
 
@@ -122,12 +198,13 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
+        error?.message ||
         "Failed to update wishlist";
       Alert.alert("Wishlist", String(message));
     } finally {
       setWishLoading(false);
     }
-  }, [productId, variantId, wishLoading, wishlisted]);
+  }, [productId, resolvedVariantId, variantId, wishLoading, wishlisted]);
 
   const handleWishlistPress = useCallback(
     (event: GestureResponderEvent) => {

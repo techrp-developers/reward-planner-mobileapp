@@ -18,7 +18,7 @@ import ProductVariants from "../components/cart/productvariants";
 import AddToCartSheet from "../components/cart/AddToCartSheet";
 import CustomerReviewsView from "../components/product/product_section/CustomerReviewsView";
 import ProductGrid from "../components/home/productgrid";
-import { setWishlistState } from "../api/WishlistApi";
+import { checkWishlist, isWishlistPresent, setWishlistState } from "../api/WishlistApi";
 import { useAuth } from "../../common/auth/context/AuthContext";
 import { useAlert } from "../components/alerts";
 import { useCart } from "../context/CartContext";
@@ -137,7 +137,7 @@ export default function
         setProduct({ ...p, variants });
         setSelectedVariant(defaultVariant);
         setSelectedAttrs(defaultVariant?.variant_attributes ?? {});
-        setWishlisted(Boolean(p?.is_wishlisted));
+        setWishlisted(Boolean(defaultVariant?.is_wishlisted ?? p?.is_wishlisted));
       });
     };
 
@@ -236,8 +236,33 @@ export default function
   }, [selectedVariant]);
 
   useEffect(() => {
-    setWishlisted(Boolean(product?.is_wishlisted));
-  }, [product?.is_wishlisted, productId]);
+    setWishlisted(Boolean(selectedVariant?.is_wishlisted ?? product?.is_wishlisted));
+  }, [product?.is_wishlisted, productId, selectedVariant?.is_wishlisted]);
+
+  useEffect(() => {
+    const parsedProductId = Number(product?.product_id ?? productId);
+    const parsedVariantId = Number(selectedVariant?.variant_id ?? product?.default_variant_id);
+
+    if (!isAuthenticated || !parsedProductId || !parsedVariantId) {
+      return;
+    }
+
+    let mounted = true;
+
+    checkWishlist(parsedProductId, parsedVariantId)
+      .then((response) => {
+        if (mounted) {
+          setWishlisted(isWishlistPresent(response));
+        }
+      })
+      .catch(() => {
+        // Keep the product-details flag if the check endpoint is unavailable.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, product?.default_variant_id, product?.product_id, productId, selectedVariant?.variant_id]);
 
   useEffect(() => {
     if (!selectedVariant?.variant_id) return;
@@ -305,11 +330,16 @@ export default function
 
     const parsedProductId = Number(product?.product_id ?? productId);
     const parsedVariantId = Number(
-      selectedVariant?.variant_id ?? product?.default_variant_id ?? parsedProductId
+      selectedVariant?.variant_id ?? product?.default_variant_id
     );
 
     if (!parsedProductId || Number.isNaN(parsedProductId)) {
       Alert.alert("Wishlist", "Invalid product");
+      return;
+    }
+
+    if (!parsedVariantId || Number.isNaN(parsedVariantId)) {
+      Alert.alert("Wishlist", "Product variant is missing");
       return;
     }
 
@@ -321,6 +351,7 @@ export default function
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
+        error?.message ||
         "Failed to update wishlist";
       Alert.alert("Wishlist", String(message));
     } finally {
