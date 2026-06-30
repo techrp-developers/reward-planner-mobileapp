@@ -25,6 +25,7 @@ const WHITE_CARD = '#FFFFFF';
 const COLOR_DARK = '#1F2937';
 const COLOR_LIGHT = '#6B7280';
 const COLOR_SUCCESS = '#22C55E';
+const PAYMENT_MESSAGE_DURATION_MS = 10000;
 
 type ConfirmationRouteParams = {
   operatorName?: string;
@@ -139,7 +140,11 @@ const PaymentConfirmationScreenComponent = () => {
       const response = await createBillPayOrder(payload);
 
       if (response.success === false) {
-        alert.warning('Order Failed', response.message || 'Unable to create bill payment order.');
+        alert.warning(
+          'Order Failed',
+          response.message || 'Unable to create bill payment order.',
+          PAYMENT_MESSAGE_DURATION_MS
+        );
         return;
       }
 
@@ -147,7 +152,7 @@ const PaymentConfirmationScreenComponent = () => {
       const order = response.data;
 
       if (!order?.key || !order?.orderId) {
-        alert.warning('Payment Failed', 'Payment order details are missing.');
+        alert.warning('Payment Failed', 'Payment order details are missing.', PAYMENT_MESSAGE_DURATION_MS);
         return;
       }
 
@@ -177,7 +182,11 @@ const PaymentConfirmationScreenComponent = () => {
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
 
       if (!verifyResponse?.success) {
-        alert.warning('Payment Verification Failed', verifyResponse?.message || 'Unable to verify payment.');
+        alert.warning(
+          'Payment Verification Failed',
+          verifyResponse?.message || 'Unable to verify payment.',
+          PAYMENT_MESSAGE_DURATION_MS
+        );
         return;
       }
 
@@ -185,7 +194,7 @@ const PaymentConfirmationScreenComponent = () => {
         transactionId: order.transaction_id,
       });
     } catch (error: any) {
-      alert.error('Error', error?.message || 'Could not create bill payment order.');
+      alert.error('Error', error?.message || 'Could not create bill payment order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {
       setProcessing(false);
     }

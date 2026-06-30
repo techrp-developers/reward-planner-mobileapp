@@ -33,6 +33,7 @@ type OrderFailure = {
 
 const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
+const PAYMENT_MESSAGE_DURATION_MS = 10000;
 
 const getPlanId = (plan: any) =>
   String(plan?.planId || plan?.plan_id || plan?.id || plan?.recharge_plan_id || '');
@@ -154,7 +155,8 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       if (!verifyResponse?.success) {
         alert.warning(
           'Payment Verification Failed',
-          verifyResponse?.message || 'Unable to verify payment.'
+          verifyResponse?.message || 'Unable to verify payment.',
+          PAYMENT_MESSAGE_DURATION_MS
         );
         return;
       }
@@ -164,7 +166,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       });
     } catch (error: any) {
       // Razorpay checkout cancellation/failure or verify-payment network error.
-      alert.error('Error', error?.message || 'Could not create recharge order.');
+      alert.error('Error', error?.message || 'Could not create recharge order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {
       setLoading(false);
     }
