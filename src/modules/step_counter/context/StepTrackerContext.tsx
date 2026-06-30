@@ -68,7 +68,12 @@ const HC_PACKAGE = 'com.google.android.healthconnect.controller';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function hasStepsPerm(permissions: any[]): boolean {
-  return permissions.some(p => p.recordType === 'Steps' && p.accessType === 'read');
+  return permissions.some(p => {
+    // Handle both nested and flat permission shapes, and any casing of accessType
+    const rt = p.recordType ?? p.permission?.recordType;
+    const at = String(p.accessType ?? p.permission?.accessType ?? '').toLowerCase();
+    return rt === 'Steps' && at === 'read';
+  });
 }
 
 // toISOString() returns the UTC date, which can be a day off from the
@@ -233,10 +238,15 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       }
 
       if (total <= 0) {
-        const result = await readRecords('Steps', { timeRangeFilter });
-        records = Array.isArray(result.records) ? result.records : [];
-        total = sumStepRecords(records);
-        console.log(`[Steps] Raw read ${total} steps today (${records.length} records)`);
+        try {
+          const result = await readRecords('Steps', { timeRangeFilter });
+          records = Array.isArray(result?.records) ? result.records :
+                    Array.isArray(result) ? result as any[] : [];
+          total = sumStepRecords(records);
+          console.log(`[Steps] Raw read ${total} steps today (${records.length} records, origins: ${records.map((r: any) => r?.metadata?.dataOrigin).join(', ')})`);
+        } catch (readError: any) {
+          console.warn('[Steps] readRecords failed:', readError?.message);
+        }
       }
 
       if (total <= 0) {
@@ -273,11 +283,25 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
     try {
       if (!initialized.current) {
         console.log('[Steps] Initializing Health Connect SDK (once)');
-        await initialize();
+        // Try Android 14+ built-in HC package first, fall back to standalone app package
+        let ok = await initialize(HC_PACKAGE).catch(() => false as boolean);
+        if (!ok) {
+          ok = await initialize('com.google.android.apps.healthdata').catch(() => false as boolean);
+        }
+        if (!ok) {
+          setHealthConnectError('Health Connect could not be initialized');
+          setStepDataState('no_permission');
+          setLoading(false);
+          return [];
+        }
         initialized.current = true;
       }
 
-      const sdkStatus = await getSdkStatus(HC_PACKAGE);
+      // Check both provider packages: Android 14+ built-in and the standalone app
+      let sdkStatus = await getSdkStatus(HC_PACKAGE).catch(() => SdkAvailabilityStatus.SDK_UNAVAILABLE);
+      if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+        sdkStatus = await getSdkStatus('com.google.android.apps.healthdata').catch(() => SdkAvailabilityStatus.SDK_UNAVAILABLE);
+      }
       setHealthConnectStatus(String(sdkStatus));
 
       if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) {
@@ -347,18 +371,14 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const count = await readAndSync();
-      if (count > 0) {
-        await AsyncStorage.setItem(STORAGE_SETUP, 'true');
-        setIsSetupComplete(true);
-        setHealthConnectError(null);
-        return true;
-      }
-
-      setHealthConnectError(
-        'No step data yet. Open Google Fit or Samsung Health, enable Health Connect sync, walk a few steps, then tap Continue.',
-      );
-      return false;
+      await readAndSync();
+      // Permission is granted — mark setup complete regardless of current step count.
+      // Steps may be 0 because the user hasn't walked yet today or the source
+      // hasn't synced; that is not a reason to block onboarding.
+      await AsyncStorage.setItem(STORAGE_SETUP, 'true');
+      setIsSetupComplete(true);
+      setHealthConnectError(null);
+      return true;
     } catch (err: any) {
       setHealthConnectError(err?.message || String(err));
       return false;
