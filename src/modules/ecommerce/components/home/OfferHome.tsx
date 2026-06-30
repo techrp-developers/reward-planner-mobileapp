@@ -27,7 +27,7 @@ import {
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
-import { setWishlistState } from "../../api/WishlistApi";
+import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
 import {
   handleNavigateWithPrefetch,
   productDetailsQueryKey,
@@ -58,11 +58,84 @@ const FlashOfferProductCard = React.memo(({
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
 
   const productId = item.product_id ?? item.id;
-  const variantId = item?.variant_id ?? item?.variantId ?? item?.default_variant_id ?? item?.variants?.[0]?.variant_id;
+  const variantId =
+    item?.variant_id ??
+    item?.variantId ??
+    item?.default_variant_id ??
+    item?.variants?.[0]?.variant_id ??
+    item?.variants?.[0]?.id;
+  const [resolvedVariantId, setResolvedVariantId] = useState<any>(variantId);
 
   useEffect(() => {
     setWishlisted(Boolean(item?.is_wishlisted));
-  }, [item?.is_wishlisted]);
+    setResolvedVariantId(variantId);
+  }, [item?.is_wishlisted, variantId]);
+
+  useEffect(() => {
+    const parsedProductId = Number(productId);
+    const initialVariantId = Number(variantId);
+
+    if (!shouldLoadImage || !parsedProductId || Number.isNaN(parsedProductId)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncWishlistState = async () => {
+      const candidateVariantIds: number[] = [];
+      const addCandidate = (value: unknown) => {
+        const parsed = Number(value);
+        if (parsed && !Number.isNaN(parsed) && !candidateVariantIds.includes(parsed)) {
+          candidateVariantIds.push(parsed);
+        }
+      };
+
+      addCandidate(initialVariantId);
+
+      if (candidateVariantIds.length === 0) {
+        try {
+          const details = await fetchProductDetailsByID(parsedProductId);
+          addCandidate(details?.default_variant_id);
+          addCandidate(details?.variant_id);
+
+          const variants = Array.isArray(details?.variants) ? details.variants : [];
+          variants.forEach((variant: any) => addCandidate(variant?.variant_id ?? variant?.id));
+        } catch {
+          return;
+        }
+      }
+
+      for (const candidateVariantId of candidateVariantIds) {
+        try {
+          const response = await checkWishlist(parsedProductId, candidateVariantId);
+
+          if (cancelled) return;
+
+          if (isWishlistPresent(response)) {
+            setResolvedVariantId(candidateVariantId);
+            setWishlisted(true);
+            return;
+          }
+        } catch {
+          // Ignore auth/check failures and keep the list-provided flag.
+        }
+      }
+
+      if (!cancelled && item?.is_wishlisted === undefined) {
+        setWishlisted(false);
+      }
+
+      if (!cancelled && candidateVariantIds[0]) {
+        setResolvedVariantId(candidateVariantIds[0]);
+      }
+    };
+
+    syncWishlistState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.is_wishlisted, productId, shouldLoadImage, variantId]);
 
   const displayData = useMemo(() => {
     // Parse price values from API response (format: "₹1349" or 1349)
@@ -128,10 +201,15 @@ const FlashOfferProductCard = React.memo(({
   const handleWishlist = async () => {
     if (wishLoading) return;
     const parsedProductId = Number(productId);
-    const parsedVariantId = Number(variantId ?? parsedProductId);
+    const parsedVariantId = Number(resolvedVariantId ?? variantId);
 
     if (!parsedProductId || isNaN(parsedProductId)) {
       Alert.alert("Wishlist", "Invalid product");
+      return;
+    }
+
+    if (!parsedVariantId || isNaN(parsedVariantId)) {
+      Alert.alert("Wishlist", "Product variant is missing");
       return;
     }
 
@@ -140,7 +218,13 @@ const FlashOfferProductCard = React.memo(({
       const result = await setWishlistState(parsedProductId, parsedVariantId, !wishlisted);
       setWishlisted(result.wishlisted);
     } catch (error: any) {
-      Alert.alert("Wishlist", error?.response?.data?.message || "Failed to update wishlist");
+      Alert.alert(
+        "Wishlist",
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to update wishlist"
+      );
     } finally {
       setWishLoading(false);
     }
