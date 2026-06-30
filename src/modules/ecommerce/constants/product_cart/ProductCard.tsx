@@ -25,8 +25,6 @@ const { width: screenWidth } = Dimensions.get("window");
 const PADDING = screenWidth * 0.03;
 const GAP = screenWidth * 0.02;
 const CARD_WIDTH = (screenWidth - PADDING * 2 - GAP * 2) / 3;
-const STAR_ARRAY = [1, 2, 3, 4, 5];
-
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 type Props = {
@@ -34,6 +32,29 @@ type Props = {
   cardWidth?: number;
   shouldLoadImage?: boolean;
 };
+
+const getProductId = (item: any) => item?.id ?? item?.product_id ?? item?.productId;
+const getProductImage = (item: any) =>
+  item?.image ??
+  item?.image_url ??
+  item?.thumbnail ??
+  (Array.isArray(item?.images) ? item.images[0] : undefined);
+
+const StarRating = React.memo(function StarRating({
+  starCount,
+}: {
+  starCount: number;
+}) {
+  const filledStars = "★".repeat(starCount);
+  const emptyStars = "★".repeat(Math.max(0, 5 - starCount));
+
+  return (
+    <Text style={styles.starText} numberOfLines={1}>
+      <Text style={styles.starTextFilled}>{filledStars}</Text>
+      <Text style={styles.starTextEmpty}>{emptyStars}</Text>
+    </Text>
+  );
+});
 
 const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props) => {
   const navigation = useNavigation<Nav>();
@@ -43,7 +64,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
   const usedCardWidth = cardWidth ?? CARD_WIDTH;
   const normalizedProduct = useMemo(() => normalizeProduct(item), [item]);
 
-  const productId = item?.id ?? item?.product_id ?? item?.productId;
+  const productId = getProductId(item);
   const variantId =
     item?.variant_id ??
     item?.variantId ??
@@ -209,15 +230,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
         </View>
 
         <View style={styles.ratingRow}>
-          {STAR_ARRAY.map((star) => (
-            <FontAwesome
-              key={star}
-              name="star"
-              size={10}
-              color={star <= starCount ? "#FFC514" : "#E5E7EB"}
-              style={styles.starIcon}
-            />
-          ))}
+          <StarRating starCount={starCount} />
           <Text style={[styles.reviews, { fontSize: calculations.fontSizeReview }]}>
             {reviewText}
           </Text>
@@ -269,21 +282,32 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
 
 // Memoized export
 const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
-  const prevNormalized = normalizeProduct(prevProps.item);
-  const nextNormalized = normalizeProduct(nextProps.item);
+  const prevItem = prevProps.item;
+  const nextItem = nextProps.item;
 
   return (
-    prevProps.item?.id === nextProps.item?.id &&
-    prevProps.item?.is_wishlisted === nextProps.item?.is_wishlisted &&
+    getProductId(prevItem) === getProductId(nextItem) &&
+    prevItem?.is_wishlisted === nextItem?.is_wishlisted &&
     prevProps.cardWidth === nextProps.cardWidth &&
-    prevProps.item?.discount === nextProps.item?.discount &&
-    prevProps.item?.rp_price === nextProps.item?.rp_price &&
-    prevProps.item?.price === nextProps.item?.price &&
-    prevProps.item?.originalPrice === nextProps.item?.originalPrice &&
-    prevNormalized.rewardCoins === nextNormalized.rewardCoins &&
-    prevNormalized.redeem_coins === nextNormalized.redeem_coins &&
-    prevProps.item?.image === nextProps.item?.image &&
-    prevProps.item?.product_name === nextProps.item?.product_name &&
+    prevItem?.discount === nextItem?.discount &&
+    prevItem?.discount_percent === nextItem?.discount_percent &&
+    prevItem?.rp_price === nextItem?.rp_price &&
+    prevItem?.rpPrice === nextItem?.rpPrice &&
+    prevItem?.price === nextItem?.price &&
+    prevItem?.selling_price === nextItem?.selling_price &&
+    prevItem?.final_price === nextItem?.final_price &&
+    prevItem?.originalPrice === nextItem?.originalPrice &&
+    prevItem?.original_price === nextItem?.original_price &&
+    prevItem?.mrp === nextItem?.mrp &&
+    prevItem?.rewardCoins === nextItem?.rewardCoins &&
+    prevItem?.reward_coins === nextItem?.reward_coins &&
+    prevItem?.redeem_coins === nextItem?.redeem_coins &&
+    prevItem?.redeemCoins === nextItem?.redeemCoins &&
+    getProductImage(prevItem) === getProductImage(nextItem) &&
+    prevItem?.product_name === nextItem?.product_name &&
+    prevItem?.title === nextItem?.title &&
+    prevItem?.brand === nextItem?.brand &&
+    prevItem?.brand_name === nextItem?.brand_name &&
     prevProps.shouldLoadImage === nextProps.shouldLoadImage
   );
 });
@@ -344,8 +368,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  starIcon: {
-    marginRight: 1,
+  starText: {
+    fontSize: 10,
+    lineHeight: 12,
+    includeFontPadding: false,
+    letterSpacing: -0.5,
+  },
+  starTextFilled: {
+    color: "#FFC514",
+  },
+  starTextEmpty: {
+    color: "#E5E7EB",
   },
   reviews: {
     color: "#9CA3AF",

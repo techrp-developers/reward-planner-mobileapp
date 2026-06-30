@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Linking, View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 const StartConversationAvatars = require('../../assete/service/Gov_Conversation.png');
 
@@ -31,7 +31,11 @@ export default function NeedHelpBanner() {
           <Text style={styles.phoneNumber}>+91 7798 612243</Text>
         </View>
 
-        <TouchableOpacity style={styles.talkSection} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.talkSection}
+          activeOpacity={0.8}
+          onPress={() => Linking.openURL('tel:+917798612243')}
+        >
           <Text style={styles.talkText}>Talk To Us</Text>
         </TouchableOpacity>
       </View>

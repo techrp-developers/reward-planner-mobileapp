@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
@@ -53,7 +53,9 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
 function ExploreModule() {
   const { isDark, theme } = useAppTheme();
   const { width } = useWindowDimensions();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const isNavigatingRef = useRef(false);
+  const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const CARD_WIDTH  = width - rs(32);
   const CARD_HEIGHT = Math.round(CARD_WIDTH * 0.4);
@@ -68,20 +70,29 @@ function ExploreModule() {
 
   const handleCategoryPress = useCallback(
     (tab: TopTab) => {
+      if (isNavigatingRef.current) return;
+      isNavigatingRef.current = true;
+
       const target = TAB_TO_MODULE[tab];
-      navigation.dispatch(
-        CommonActions.navigate({
-          name: 'Home',
-          params: {
-            screen: target.screen,
-            params: { moduleName: target.moduleName },
-            moduleName: target.moduleName,
-          },
-        })
-      );
+      navigation.navigate('Home', {
+        screen: target.screen,
+        params: { moduleName: target.moduleName },
+        moduleName: target.moduleName,
+      });
+
+      navigationUnlockTimerRef.current = setTimeout(() => {
+        isNavigatingRef.current = false;
+        navigationUnlockTimerRef.current = null;
+      }, 1000);
     },
     [navigation],
   );
+
+  useEffect(() => () => {
+    if (navigationUnlockTimerRef.current) {
+      clearTimeout(navigationUnlockTimerRef.current);
+    }
+  }, []);
 
   return (
     <SafeAreaView style={[styles.safeArea, t.safeArea]}>
@@ -108,6 +119,7 @@ function ExploreModule() {
           <TouchableOpacity
             key={i}
             activeOpacity={0.9}
+            accessibilityRole="button"
             style={[
               styles.exploreItem,
               t.exploreItem,

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Share, View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SelectableServiceCard from '../government/SelectableServiceCard';
@@ -14,6 +14,9 @@ type VariantItem = {
     subtitle?: string;
     rawVariant?: any;
 };
+
+const DEFAULT_VARIANTS: VariantItem[] = [];
+const ImageHeader = require('../../assete/service/FolderService.png');
 
 
 
@@ -93,6 +96,13 @@ export default function ServiceCart({
         return `${rawPrice} + Get Start`;
     })();
 
+    const handleShare = () => {
+        Share.share({
+            title: mainTitle || 'Service',
+            message: [mainTitle, subText].filter(Boolean).join('\n'),
+        }).catch(() => {});
+    };
+
     return (
         <ScrollView style={styles.mainContainer}>
             {/* 1. Main Image Section with Discount Badge */}
@@ -111,7 +121,7 @@ export default function ServiceCart({
                     <Text style={styles.discountText}>Upto 48% Off</Text>
                 </LinearGradient>
 
-                <TouchableOpacity style={styles.shareButton}>
+                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
                     <MaterialCommunityIcons name="share-variant-outline" size={24} color="#374151" />
                 </TouchableOpacity>
             </View>

@@ -52,7 +52,7 @@ export default function ProductGrid({
   ListFooterComponent = null,
 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
-  const visibleProductIdsRef = useRef<Set<string>>(new Set());
+  const loadedProductIdsRef = useRef<Set<string>>(new Set());
   const [, forceVisibleTick] = React.useState(0);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -62,8 +62,8 @@ export default function ProductGrid({
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
     animation.start();
@@ -189,20 +189,17 @@ export default function ProductGrid({
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
-      const nextVisible = new Set<string>();
+      let didChange = false;
       viewableItems.forEach((entry) => {
         const product = entry.item as any;
         const key = String(product?.id ?? product?.product_id ?? product?._id ?? "");
-        if (key) nextVisible.add(key);
+        if (key && !loadedProductIdsRef.current.has(key)) {
+          loadedProductIdsRef.current.add(key);
+          didChange = true;
+        }
       });
-      const previousVisible = visibleProductIdsRef.current;
-      const didChange =
-        previousVisible.size !== nextVisible.size ||
-        [...nextVisible].some((key) => !previousVisible.has(key));
 
       if (!didChange) return;
-
-      visibleProductIdsRef.current = nextVisible;
       forceVisibleTick((prev) => prev + 1);
     }
   ).current;
@@ -215,7 +212,7 @@ export default function ProductGrid({
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
       const itemKey = String(item?.id ?? item?.product_id ?? item?._id ?? "");
-      const shouldLoadImage = visibleProductIdsRef.current.has(itemKey);
+      const shouldLoadImage = loadedProductIdsRef.current.has(itemKey);
       return (
         <View style={[styles.itemWrap, { width: cardWidth }]}>
           <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage={shouldLoadImage} />

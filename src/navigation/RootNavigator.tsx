@@ -6,9 +6,6 @@ import { checkAppVersion } from "../modules/common/versionupdate/checkAppVersion
 import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
 import { RewardModal } from "../modules/common/reward/RewardModal";
 
-import ServiceHomeStack from "../modules/services/navigation/ServiceHomeStack";
-import RewardHomeStack from "../modules/step_counter/navigation/RewardHomeStack";
-import BBPSHomeStack from "../modules/bbps/navigation/BBPSHomeStack";
 // import Dashbord from "../modules/dashboard/dashboard";
 import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
 
@@ -79,6 +76,7 @@ const defaultScreenOptions = {
   headerShown: false,
   animation: "slide_from_right" as const,
   gestureEnabled: true,
+  freezeOnBlur: true,
 };
 
 // ─── Auth Navigator ───────────────────────────────────────────────────────────
@@ -106,7 +104,11 @@ function AppNavigator() {
     <AppStack.Navigator screenOptions={defaultScreenOptions}>
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
-      <AppStack.Screen name="Home" component={MainLayout} />
+      <AppStack.Screen
+        name="Home"
+        component={MainLayout}
+        options={{ animation: "none" }}
+      />
 
       <AppStack.Screen
         name="Checkout"
@@ -161,9 +163,18 @@ function AppNavigator() {
           contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       />
-      <AppStack.Screen name="ServiceStack" component={ServiceHomeStack} />
-      <AppStack.Screen name="RewardStack" component={RewardHomeStack} />
-      <AppStack.Screen name="BBPSHomeStack" component={BBPSHomeStack} />
+      <AppStack.Screen
+        name="ServiceStack"
+        getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
+      />
+      <AppStack.Screen
+        name="RewardStack"
+        getComponent={() => require("../modules/step_counter/navigation/RewardHomeStack").default}
+      />
+      <AppStack.Screen
+        name="BBPSHomeStack"
+        getComponent={() => require("../modules/bbps/navigation/BBPSHomeStack").default}
+      />
       <AppStack.Screen
         name="HelpForm"
         getComponent={() =>

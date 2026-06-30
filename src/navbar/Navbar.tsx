@@ -38,7 +38,12 @@ import Reward from "../assets/product/rewards.svg";
 import type { RootStackParamList } from "@/navigation/types";
 
 // --- Types & Constants ---
-type TopTab = "Product" | "Services" | "Payments" | "DineOut";
+export type TopTab = "Product" | "Services" | "Payments" | "DineOut";
+
+type NavbarProps = {
+  activeModule?: TopTab;
+  onModuleChange?: (tab: TopTab) => void;
+};
 
 type ApiAddress = {
   address_type?: string;
@@ -75,6 +80,7 @@ type NavbarUserSnapshot = {
 };
 
 const NAVBAR_USER_TTL_MS = 60_000;
+const EMPTY_ADDRESS_LABEL = "Address not set";
 let navbarUserCache: NavbarUserSnapshot | null = null;
 let navbarUserInFlight: Promise<NavbarUserSnapshot> | null = null;
 
@@ -230,7 +236,7 @@ const TopIconWithLabel = React.memo(
   }
 );
 
-export default function Navbar() {
+export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
@@ -257,11 +263,12 @@ export default function Navbar() {
   const routeModuleName = route?.params?.moduleName;
   const moduleName = routeModuleName ?? deepestRoute.moduleName;
 
-  const activeTab = React.useMemo<TopTab>(
+  const detectedActiveTab = React.useMemo<TopTab>(
     () =>
       getActiveTab(deepestRoute.routeName || route.name, moduleName, activeModuleTab),
     [deepestRoute.routeName, route.name, moduleName, activeModuleTab]
   );
+  const activeTab = activeModule ?? detectedActiveTab;
   const showLocation = activeTab === "Product";
 
   const activeThemeColor = React.useMemo(
@@ -296,8 +303,8 @@ export default function Navbar() {
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
-    React.useState("Address not set");
-  const hasAddress = String(displayAddress || "").trim() !== "Address not set";
+    React.useState(EMPTY_ADDRESS_LABEL);
+  const hasAddress = String(displayAddress || "").trim() !== EMPTY_ADDRESS_LABEL;
 
   // Shares the same query cache the address screens invalidate after add/edit/
   // delete/set-default, so the navbar address updates immediately instead of
@@ -327,14 +334,24 @@ export default function Navbar() {
       .filter(Boolean)
       .join(", ");
 
-    setDisplayAddress(addressText || "Address not set");
+    const nextDisplayAddress = addressText || EMPTY_ADDRESS_LABEL;
+    setDisplayAddress(nextDisplayAddress);
+    if (navbarUserCache) {
+      navbarUserCache = {
+        ...navbarUserCache,
+        displayAddress: nextDisplayAddress,
+      };
+    }
   }, [isAuthenticated, liveAddressData]);
 
   const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
     setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
-    setDisplayAddress((prev) =>
-      prev === snapshot.displayAddress ? prev : snapshot.displayAddress
-    );
+    setDisplayAddress((prev) => {
+      if (prev !== EMPTY_ADDRESS_LABEL && snapshot.displayAddress === EMPTY_ADDRESS_LABEL) {
+        return prev;
+      }
+      return prev === snapshot.displayAddress ? prev : snapshot.displayAddress;
+    });
     setRewardPoints((prev) =>
       prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
     );
@@ -384,16 +401,20 @@ export default function Navbar() {
       // then navigates inside ModuleStack) and from within MainLayout (already on Home –
       // React Navigation detects the screen is focused and updates the nested state directly).
       // No handleNavigateWithPrefetch wrapper so the switch is instant (<1 frame).
-      (navigation as any).navigate("Home", {
-        screen: SCREEN[tab],
-        params: { moduleName: tab },
-      });
+       if (onModuleChange) {
+         onModuleChange(tab);
+       } else {
+         (navigation as any).navigate("Home", {
+           screen: SCREEN[tab],
+           params: { moduleName: tab },
+         });
+       }
 
       requestAnimationFrame(() => {
         isNavigatingRef.current = false;
       });
     },
-    [activeTab, navigation]
+    [activeTab, navigation, onModuleChange]
   );
 
   const navigateToAddAddress = React.useCallback(() => {
@@ -408,7 +429,7 @@ export default function Navbar() {
     if (!isAuthenticated) {
       applyUserSnapshot({
         displayName: "Guest",
-        displayAddress: "Address not set",
+        displayAddress: EMPTY_ADDRESS_LABEL,
         rewardPoints: 0,
         ts: Date.now(),
       });
@@ -453,7 +474,7 @@ export default function Navbar() {
         // address is added/edited/deleted/set-default anywhere in the app.
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
-          displayAddress: navbarUserCache?.displayAddress || "Address not set",
+          displayAddress: navbarUserCache?.displayAddress || EMPTY_ADDRESS_LABEL,
           rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
@@ -464,7 +485,7 @@ export default function Navbar() {
         console.warn("Failed to load navbar user info:", error);
         return {
           displayName: navbarUserCache?.displayName || "User",
-          displayAddress: navbarUserCache?.displayAddress || "Address not set",
+          displayAddress: navbarUserCache?.displayAddress || EMPTY_ADDRESS_LABEL,
           rewardPoints: navbarUserCache?.rewardPoints || 0,
           ts: Date.now(),
         } as NavbarUserSnapshot;
@@ -560,7 +581,7 @@ export default function Navbar() {
               numberOfLines={1}
               onPress={navigateToChangeAddress}
             >
-              {" "}Change
+              {" "}Change Address
             </Text>
           ) : (
             <Text

@@ -1,17 +1,46 @@
-import React, { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  FlatList,
+  InteractionManager,
+  Platform,
+  StyleSheet,
+  View,
+  ViewToken,
+} from 'react-native';
 import CategoriesSection from '../components/home/categories_section';
-import FeaturesProduct from '../components/home/featuresProduct';
-import ProductCategory from './ProductCategoriesScreen';
 import HomeBanner from '../components/home/HomeBanner';
-import OfferHome from '../components/home/OfferHome';
+import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
-import RecentProduct from '../components/Promotion/RecentProduct';
-import NewArrivals from '../components/Promotion/NewArrivals';
-import BestSeller from '../components/Promotion/BestSeller';
-import TopRated from '../components/Promotion/TopRated';
-import RecommendedProducts from '../components/Promotion/RecommendedProducts';
-import MostView from '../components/Promotion/MostView';
+
+// Keep only the immediately visible banner and categories in the cold-open
+// bundle. Every lower section is evaluated only when FlatList reaches it.
+const LazyBestSeller = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/BestSeller').default }),
+);
+const LazyTopRated = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/TopRated').default }),
+);
+const LazyOfferHome = React.lazy(() =>
+  Promise.resolve({ default: require('../components/home/OfferHome').default }),
+);
+const LazyNewArrivals = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/NewArrivals').default }),
+);
+const LazyMostView = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/MostView').default }),
+);
+const LazyRecommendedProducts = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/RecommendedProducts').default }),
+);
+const LazyFeaturesProduct = React.lazy(() =>
+  Promise.resolve({ default: require('../components/home/featuresProduct').default }),
+);
+const LazyRecentProduct = React.lazy(() =>
+  Promise.resolve({ default: require('../components/Promotion/RecentProduct').default }),
+);
+const LazyProductCategory = React.lazy(() =>
+  Promise.resolve({ default: require('./ProductCategoriesScreen').default }),
+);
 
 type SectionKey =
   | 'banner'
@@ -44,42 +73,51 @@ const HOME_SECTIONS: HomeSection[] = [
   { key: 'productCategory' },
 ];
 
+const INITIAL_VISIBLE_SECTIONS = new Set<SectionKey>(['banner', 'categories']);
+
 const MemoHomeBanner = React.memo(HomeBanner);
 const MemoCategoriesSection = React.memo(CategoriesSection);
-const MemoBestSeller = React.memo(BestSeller);
-const MemoTopRated = React.memo(TopRated);
-const MemoOfferHome = React.memo(OfferHome);
-const MemoNewArrivals = React.memo(NewArrivals);
-const MemoMostView = React.memo(MostView);
-const MemoRecommendedProducts = React.memo(RecommendedProducts);
-const MemoFeaturesProduct = React.memo(FeaturesProduct);
-const MemoRecentProduct = React.memo(RecentProduct);
-const MemoProductCategory = React.memo(ProductCategory);
 
-const SectionContent = React.memo(({ sectionKey }: { sectionKey: SectionKey }) => {
+const LazySection = ({ children }: { children: React.ReactNode }) => (
+  <React.Suspense fallback={<HomeSectionSkeleton height={320} />}>
+    {children}
+  </React.Suspense>
+);
+
+const SectionContent = React.memo(({
+  sectionKey,
+  isReady,
+}: {
+  sectionKey: SectionKey;
+  isReady: boolean;
+}) => {
+  if (!isReady) {
+    return <HomeSectionSkeleton height={320} />;
+  }
+
   switch (sectionKey) {
     case 'banner':
       return <MemoHomeBanner />;
     case 'categories':
       return <MemoCategoriesSection />;
     case 'bestSeller':
-      return <MemoBestSeller />;
+      return <LazySection><LazyBestSeller /></LazySection>;
     case 'topRated':
-      return <MemoTopRated />;
+      return <LazySection><LazyTopRated /></LazySection>;
     case 'offerHome':
-      return <MemoOfferHome />;
+      return <LazySection><LazyOfferHome /></LazySection>;
     case 'newArrivals':
-      return <MemoNewArrivals />;
+      return <LazySection><LazyNewArrivals /></LazySection>;
     case 'mostView':
-      return <MemoMostView />;
+      return <LazySection><LazyMostView /></LazySection>;
     case 'recommended':
-      return <MemoRecommendedProducts />;
+      return <LazySection><LazyRecommendedProducts /></LazySection>;
     case 'features':
-      return <MemoFeaturesProduct />;
+      return <LazySection><LazyFeaturesProduct /></LazySection>;
     case 'recent':
-      return <MemoRecentProduct />;
+      return <LazySection><LazyRecentProduct /></LazySection>;
     case 'productCategory':
-      return <MemoProductCategory />;
+      return <LazySection><LazyProductCategory /></LazySection>;
     default:
       return null;
   }
@@ -92,9 +130,45 @@ const ListFooterSpacer = React.memo(() => <View style={styles.footerSpacer} />);
 ListFooterSpacer.displayName = 'HomeListFooterSpacer';
 
 function HomeScreen() {
+  const [readySections, setReadySections] = useState<Set<SectionKey>>(
+    () => new Set(INITIAL_VISIBLE_SECTIONS),
+  );
+  const pendingReadySections = useRef<Set<SectionKey>>(new Set(INITIAL_VISIBLE_SECTIONS));
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      const nextKeys = viewableItems
+        .map((entry) => (entry.item as HomeSection | undefined)?.key)
+        .filter((key): key is SectionKey => Boolean(key));
+
+      const keysToAdd = nextKeys.filter((key) => !pendingReadySections.current.has(key));
+      if (keysToAdd.length === 0) return;
+
+      keysToAdd.forEach((key) => pendingReadySections.current.add(key));
+
+      InteractionManager.runAfterInteractions(() => {
+        setReadySections((previous) => {
+          const next = new Set(previous);
+          keysToAdd.forEach((key) => next.add(key));
+          return next;
+        });
+      });
+    }
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 8,
+    minimumViewTime: 80,
+  }).current;
+
   const renderItem = useCallback(
-    ({ item }: { item: HomeSection }) => <SectionContent sectionKey={item.key} />,
-    []
+    ({ item }: { item: HomeSection }) => (
+      <SectionContent
+        sectionKey={item.key}
+        isReady={readySections.has(item.key)}
+      />
+    ),
+    [readySections]
   );
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
 
@@ -106,11 +180,13 @@ function HomeScreen() {
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        initialNumToRender={HOME_SECTIONS.length}
-        maxToRenderPerBatch={HOME_SECTIONS.length}
-        updateCellsBatchingPeriod={16}
-        windowSize={HOME_SECTIONS.length}
-        removeClippedSubviews={false}
+        initialNumToRender={2}
+        maxToRenderPerBatch={2}
+        updateCellsBatchingPeriod={32}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListFooterComponent={ListFooterSpacer}
       />
     </View>

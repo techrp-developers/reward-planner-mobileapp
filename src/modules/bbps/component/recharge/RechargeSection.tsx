@@ -348,10 +348,10 @@ function RechargeSection({ navigation, route }: any) {
               </View>
 
               <View style={styles.tabContainer}>
-                <TouchableOpacity style={styles.activeTab}>
+                <View style={styles.activeTab}>
                   <Text style={styles.activeTabText}>Recommended Packs</Text>
                   <View style={styles.activeTabUnderline} />
-                </TouchableOpacity>
+                </View>
               </View>
 
               {!selectedLocation ? (

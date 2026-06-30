@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
-  Animated,
   View,
   Text,
   StyleSheet,
@@ -15,7 +14,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import RazorpayCheckout from 'react-native-razorpay';
 import BBPSHead from '../constatnt/BBPSHead';
-import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
 import { useAlert } from '../../ecommerce/components/alerts';
 
@@ -88,9 +86,7 @@ const PaymentConfirmationScreenComponent = () => {
   const route = useRoute<any>();
   const alert = useAlert();
 
-  const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const pulse = useRef(new Animated.Value(0)).current;
 
   // Memoizing Parameter Dependencies To Eradicate Hook Warnings
   const params = useMemo(() => (route.params || {}) as ConfirmationRouteParams, [route.params]);
@@ -125,23 +121,6 @@ const PaymentConfirmationScreenComponent = () => {
   const isProceedDisabled = useMemo(() => processing || !billAmount, [processing, billAmount]);
   const headerTitle = useMemo(() => `Pay ${categoryName}`, [categoryName]);
   const logoText = useMemo(() => operatorName.slice(0, 2).toUpperCase() || 'BB', [operatorName]);
-
-  // Pulse & Initial Load Animation Hooks
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
-      ])
-    );
-    anim.start();
-    const timer = setTimeout(() => setLoading(false), 900);
-
-    return () => {
-      clearTimeout(timer);
-      anim.stop();
-    };
-  }, [pulse]);
 
   // Handle Order Generation & Verification Execution
   const handleProceed = useCallback(async () => {
@@ -213,33 +192,6 @@ const PaymentConfirmationScreenComponent = () => {
   }, [billFetchId, customer.operatorId, operatorName, customerName, consumerNumber, alert, navigation]);
 
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
-
-  // Loading State UI Render Block
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <BBPSHead title={headerTitle} onBackPress={handleBackPress} />
-        <View style={styles.mainContainer}>
-          <View style={styles.skeletonPremiumCard}>
-            <View style={styles.shimmerHeaderBlock}>
-              <SkeletonBox pulse={pulse} width={52} height={52} borderRadius={26} />
-              <View style={styles.skeletonHeaderTextWrap}>
-                <SkeletonBox pulse={pulse} width={180} height={16} borderRadius={8} />
-                <SkeletonBox pulse={pulse} width={130} height={12} borderRadius={8} style={styles.skeletonTopGap} />
-              </View>
-            </View>
-            <View style={styles.shimmerGrid}>
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-            </View>
-          </View>
-          <SkeletonBox pulse={pulse} width="100%" height={90} borderRadius={20} style={styles.skeletonTopGap} />
-          <SkeletonBox pulse={pulse} width="100%" height={54} borderRadius={12} style={styles.skeletonTopGap} />
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

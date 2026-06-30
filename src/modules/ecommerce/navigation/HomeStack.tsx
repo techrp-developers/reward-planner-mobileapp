@@ -12,6 +12,7 @@ export default function HomeStack() {
         headerShown: false,
         animation: "slide_from_right",
         gestureEnabled: true,
+        freezeOnBlur: true,
         contentStyle: { backgroundColor: "#FFFFFF" },
       }}
     >

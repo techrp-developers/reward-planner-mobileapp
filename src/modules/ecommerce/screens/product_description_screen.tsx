@@ -63,8 +63,8 @@ export default function
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
 
@@ -522,12 +522,14 @@ export default function
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 18,
-    marginBottom: 170,
-
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
 
-  content: { backgroundColor: "#FFFFFF" },
+  content: {
+    backgroundColor: "#FFFFFF",
+    paddingBottom: 16,
+  },
   skeletonContent: { paddingHorizontal: 14, paddingBottom: 24, backgroundColor: "#FFFFFF" },
   skeletonGap: { marginTop: 14 },
   skeletonTextGap: { marginTop: 10 },

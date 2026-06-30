@@ -50,11 +50,6 @@ type BillDetailsScreenProps = {
 
 type FormValues = Record<string, string>;
 
-const getFieldMaxLength = (regex?: string) => {
-  const match = regex?.match(/\{(\d+)\}/);
-  return match ? Number(match[1]) : undefined;
-};
-
 const isNumericField = (field: OperatorField) =>
   field.param_type?.toLowerCase() === 'numeric';
 
@@ -298,27 +293,22 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
                 ))}
               </>
             ) : (
-              fields.map((field, index) => {
-                const maxLength = getFieldMaxLength(field.regex);
-
-                return (
-                  <View key={field.param_id || field.param_name} style={index > 0 && styles.mobileLabel}>
-                    <Text style={styles.label}>{field.param_label}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder={`Enter ${field.param_label}`}
-                      placeholderTextColor="#AAA"
-                      keyboardType={isNumericField(field) ? 'numeric' : 'default'}
-                      maxLength={maxLength}
-                      value={formValues[field.param_name] || ''}
-                      onChangeText={(value) => updateFieldValue(field, value)}
-                    />
-                    <Text style={styles.helperText}>
-                      {field.error_message || `Enter ${field.param_label}`}
-                    </Text>
-                  </View>
-                );
-              })
+              fields.map((field, index) => (
+                <View key={field.param_id || field.param_name} style={index > 0 && styles.mobileLabel}>
+                  <Text style={styles.label}>{field.param_label}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={`Enter ${field.param_label}`}
+                    placeholderTextColor="#AAA"
+                    keyboardType={isNumericField(field) ? 'numeric' : 'default'}
+                    value={formValues[field.param_name] || ''}
+                    onChangeText={(value) => updateFieldValue(field, value)}
+                  />
+                  <Text style={styles.helperText}>
+                    {field.error_message || `Enter ${field.param_label}`}
+                  </Text>
+                </View>
+              ))
             )}
           </View>
 

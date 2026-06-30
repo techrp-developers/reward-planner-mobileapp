@@ -3,17 +3,24 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import RecommendedServices from '../component/order/RecommendedServices';
 import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
 function OrderSuccessfulComponent() {
+  const navigation = useNavigation<any>();
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
       <View style={styles.sectionMargin}>
-        <RechargeSuccessCard />
+        <RechargeSuccessCard onPayAnother={() => navigation.navigate('Home')} />
       </View>
 
       {/* 24/7 Help & Support Section */}
-      <TouchableOpacity style={styles.helpContainer} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.helpContainer}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('HelpForm')}
+      >
         <View style={styles.helpContent}>
           <MaterialIcons name="headset-mic" size={20} color="#5B47A3" />
           <Text style={styles.helpText}>24/7 Help & Support</Text>
