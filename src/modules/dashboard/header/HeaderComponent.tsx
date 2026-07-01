@@ -118,34 +118,30 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     setHeaderHeight(e.nativeEvent.layout.height);
   }, []);
 
-  useEffect(() => {
-    const sweepLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(searchSweep, { toValue: 1, duration: 1800, useNativeDriver: true }),
-        Animated.timing(searchSweep, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ]),
-    );
-
-    sweepLoop.start();
-    return () => sweepLoop.stop();
-  }, [searchSweep]);
-
   // ── Search animation ──────────────────────────────────────────────────────
 
   const openSearch = useCallback(() => {
     setSearchActive(true);
     onSearchActiveChange?.(true);
+    searchSweep.stopAnimation();
+    searchSweep.setValue(0);
+    Animated.timing(searchSweep, {
+      toValue: 1,
+      duration: 1800,
+      useNativeDriver: true,
+    }).start();
     Animated.parallel([
       Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
       Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 10 }),
     ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide, searchScale, onSearchActiveChange]);
+  }, [dateFade, searchFade, searchSlide, searchScale, searchSweep, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
     if (!searchActive) return;
     inputRef.current?.blur();
+    searchSweep.stopAnimation();
     onSearchActiveChange?.(false);
     Animated.parallel([
       Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
@@ -157,7 +153,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, reset, onSearchActiveChange]);
+  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, searchSweep, reset, onSearchActiveChange]);
 
   useEffect(() => {
     onSearchDropdownChange?.(showDropdown);
