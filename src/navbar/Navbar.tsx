@@ -27,6 +27,7 @@ import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navi
 import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
 import PaymentTop from "./assete/Payment_BG.png";
+import LinearGradient from "react-native-linear-gradient";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
@@ -34,10 +35,17 @@ import Services from "../assets/menu/Services.svg";
 import Payments from "../assets/menu/Payments.svg";
 import Dine_Out from "../assets/menu/Dine_Out.svg";
 import Reward from "../assets/product/rewards.svg";
+import HealthTopIcon from "../modules/health/assets/icons/health_icon.svg";
+import GamesTopIcon from "../modules/health/assets/icons/games_icon.svg";
+import CommunityTopIcon from "../modules/health/assets/icons/community_icon.svg";
+import DineoutTopIcon from "../modules/health/assets/icons/dineout_icon.svg";
 
 import type { RootStackParamList } from "@/navigation/types";
 
-// --- Types & Constants ---
+type NavbarProps = {
+  topTabsVariant?: "default" | "health";
+};
+
 type TopTab = "Product" | "Services" | "Payments" | "DineOut";
 
 type ApiAddress = {
@@ -70,6 +78,7 @@ type NavStateLike = {
 type NavbarUserSnapshot = {
   displayName: string;
   displayAddress: string;
+  userImage?: string | null;
   rewardPoints?: number;
   ts: number;
 };
@@ -78,13 +87,6 @@ const NAVBAR_USER_TTL_MS = 60_000;
 let navbarUserCache: NavbarUserSnapshot | null = null;
 let navbarUserInFlight: Promise<NavbarUserSnapshot> | null = null;
 
-// --- Reward points fetch hardening -----------------------------------------
-// fetchUserInfo()'s response shape has drifted across backend revisions, so a
-// raw `userInfo.user.rewardPoints` access silently resolves to 0 whenever the
-// API responds with a different key — this is the same class of bug fixed in
-// NewArrivals/Categories_Product. toNumber/fetchWithRetry/extractRewardPoints
-// stay at module scope so they're shared by both the mount fetch and the
-// AppState-foreground refresh below, and so they're never recreated on render.
 const toNumber = (value: unknown, fallback = 0): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
@@ -99,7 +101,7 @@ const fetchWithRetry = async <T,>(fn: () => Promise<T>, retries = 3): Promise<T>
       await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 8000)));
     }
   }
-  // Unreachable — the loop above always either returns or throws on the last attempt.
+
   throw new Error("fetchWithRetry: exhausted retries");
 };
 
@@ -153,6 +155,7 @@ const SERVICE_ROUTES = new Set([
   "ServiceStack",
   "ServicesModule",
   "ServicesHome",
+  "HealthStack",
   "Government_Document_Screen",
   "PackScreen",
   "PackEnquiryForm",
@@ -178,7 +181,7 @@ const BG_MAP: Record<TopTab, any> = {
 const TAB_THEME: Record<TopTab, { bgColor: string }> = {
   Product: { bgColor: "#5F341A" },
   Services: { bgColor: "#4F6BFF" },
-  Payments: { bgColor: "#7C3AED" }, // looks closer to your screenshot (purple)
+  Payments: { bgColor: "#7C3AED" },
   DineOut: { bgColor: "#DC2626" },
 };
 
@@ -189,13 +192,6 @@ const isTopTab = (value?: string): value is TopTab => {
   return TOP_TABS.includes(value as TopTab);
 };
 
-// --- Helpers ---
-
-/**
- * Detects which module (ProductModule, ServicesModule, PaymentsModule, DineOutModule)
- * is currently active in the ModuleStack by traversing the navigation state.
- * Most reliable source for activeTab since it's independent of nested route names.
- */
 const getActiveModuleFromState = (state?: NavStateLike): TopTab | null => {
   if (!state?.routes?.length) return null;
 
@@ -209,9 +205,6 @@ const getActiveModuleFromState = (state?: NavStateLike): TopTab | null => {
     if (focused?.name === "DineOutModule") return "DineOut";
     if (focused?.name === "Dashboard") return "Product";
 
-    // When navigate('Home', { screen: 'ServicesModule' }) fires, Home.state may be
-    // undefined for the first render tick before ModuleStack processes the nested params.
-    // Check params.screen as an immediate signal so the correct tab highlights without flash.
     const paramsScreen = focused?.params?.screen as string | undefined;
     if (paramsScreen === "ProductModule") return "Product";
     if (paramsScreen === "ServicesModule") return "Services";
@@ -245,14 +238,9 @@ const getActiveTab = (
   moduleName?: string,
   moduleFromState?: TopTab | null
 ): TopTab => {
-  // Priority 1: Module detected from navigation state (most reliable)
-  // This correctly identifies the active module even for ambiguous route names like "Home"
   if (moduleFromState) return moduleFromState;
-
-  // Priority 2: moduleName param (for explicit routing)
   if (isTopTab(moduleName)) return moduleName;
 
-  // Priority 3: routeName-based detection (fallback for edge cases)
   if (PRODUCT_ROUTES.has(routeName) || PRODUCT_MODULE_ROUTES.has(routeName)) return "Product";
   if (SERVICE_ROUTES.has(routeName)) return "Services";
   if (PAYMENT_ROUTES.has(routeName)) return "Payments";
@@ -261,7 +249,6 @@ const getActiveTab = (
   return "Product";
 };
 
-// --- Sub-component (✅ tints SVG icon + label properly) ---
 const TopIconWithLabel = React.memo(
   ({
     active,
@@ -288,28 +275,38 @@ const TopIconWithLabel = React.memo(
           active && { backgroundColor: activeColor },
         ]}
       >
-        {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
-            We pass all 3 so it works in most cases. */}
         <Icon width={28} height={28} fill={tint} stroke={tint} color={tint} />
-
         <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
       </TouchableOpacity>
     );
   }
 );
 
-export default function Navbar() {
+type HealthEntry = {
+  id: "health" | "games" | "community" | "dineout";
+  label: string;
+  Icon: SvgIcon;
+  variant: "filled" | "outline";
+};
+
+const HEALTH_EXPERIENCE_TABS: HealthEntry[] = [
+  { id: "health", label: "Health", Icon: HealthTopIcon as unknown as SvgIcon, variant: "filled" },
+  { id: "games", label: "Games", Icon: GamesTopIcon as unknown as SvgIcon, variant: "outline" },
+  { id: "community", label: "Community", Icon: CommunityTopIcon as unknown as SvgIcon, variant: "outline" },
+  { id: "dineout", label: "Dine Out", Icon: DineoutTopIcon as unknown as SvgIcon, variant: "outline" },
+];
+
+export default function Navbar({ topTabsVariant = "default" }: NavbarProps) {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
-  // Seed from the module-level cache so a remounted Navbar (e.g. after a stack
-  // reset) shows the last known value instead of flashing back to 0.
   const lastKnownPoints = React.useRef(navbarUserCache?.rewardPoints ?? 0);
   const [rewardPoints, setRewardPoints] = React.useState(
     () => navbarUserCache?.rewardPoints ?? 0
   );
+
   const updatePoints = React.useCallback((value: number) => {
     lastKnownPoints.current = value;
     setRewardPoints(value);
@@ -317,13 +314,14 @@ export default function Navbar() {
       navbarUserCache.rewardPoints = value;
     }
   }, []);
+
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
     if (points >= 100000) return `${Math.floor(points / 1000)}k`;
     if (points >= 10000) return `${(points / 1000).toFixed(1)}k`;
     return points.toLocaleString("en-IN");
   }, [rewardPoints]);
-  // ✅ Get full navigation state once and derive both deepest route and active module
+
   const navigationState = useNavigationState((state) => state);
 
   const { deepestRoute, activeModuleTab } = React.useMemo(() => {
@@ -333,7 +331,6 @@ export default function Navbar() {
     };
   }, [navigationState]);
 
-  // Depend only on primitive moduleName, not route.params object
   const routeModuleName = route?.params?.moduleName;
   const moduleName = routeModuleName ?? deepestRoute.moduleName;
 
@@ -351,10 +348,6 @@ export default function Navbar() {
   );
   const isNavigatingRef = React.useRef(false);
 
-  // Cross-fade the background instead of remounting the Image on every tab
-  // switch — remounting could briefly leave the previous module's background
-  // visible underneath while the content below had already switched, and
-  // felt like a hard cut rather than a smooth transition.
   const [prevBgSource, setPrevBgSource] = React.useState(bgSource);
   const bgFade = React.useRef(new Animated.Value(1)).current;
 
@@ -373,6 +366,7 @@ export default function Navbar() {
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
     React.useState("Address not set");
+  const [displayUserImage, setDisplayUserImage] = React.useState<string | null>(null);
   const hasAddress = String(displayAddress || "").trim() !== "Address not set";
 
   const applyUserSnapshot = React.useCallback(
@@ -381,6 +375,7 @@ export default function Navbar() {
       setDisplayAddress((prev) =>
         prev === snapshot.displayAddress ? prev : snapshot.displayAddress
       );
+      setDisplayUserImage((prev) => (prev === (snapshot.userImage ?? null) ? prev : (snapshot.userImage ?? null)));
       if (snapshot.rewardPoints !== undefined) {
         updatePoints(snapshot.rewardPoints);
       }
@@ -428,10 +423,6 @@ export default function Navbar() {
         DineOut: "DineOutModule",
       };
 
-      // navigate('Home', { screen }) works from both Dashboard (AppStack – mounts MainLayout
-      // then navigates inside ModuleStack) and from within MainLayout (already on Home –
-      // React Navigation detects the screen is focused and updates the nested state directly).
-      // No handleNavigateWithPrefetch wrapper so the switch is instant (<1 frame).
       (navigation as any).navigate("Home", {
         screen: SCREEN[tab],
         params: { moduleName: tab },
@@ -442,6 +433,37 @@ export default function Navbar() {
       });
     },
     [activeTab, navigation]
+  );
+
+  const handleHealthExperienceTab = React.useCallback(
+    (tabId: HealthEntry["id"]) => {
+      if (tabId === "health") {
+        navigation.navigate("HealthStack");
+        return;
+      }
+
+      if (tabId === "games") {
+        (navigation as any).navigate("Home", {
+          screen: "ProductModule",
+          params: { moduleName: "Product" },
+        });
+        return;
+      }
+
+      if (tabId === "community") {
+        (navigation as any).navigate("Home", {
+          screen: "ServicesModule",
+          params: { moduleName: "Services" },
+        });
+        return;
+      }
+
+      (navigation as any).navigate("Home", {
+        screen: "DineOutModule",
+        params: { moduleName: "DineOut" },
+      });
+    },
+    [navigation]
   );
 
   const navigateToAddAddress = React.useCallback(() => {
@@ -490,6 +512,12 @@ export default function Navbar() {
           user?.username ||
           storedName ||
           "User";
+        const userImage =
+          userInfo?.userImage ||
+          user?.userImage ||
+          user?.image ||
+          user?.avatar ||
+          null;
 
         const addressRes = await fetchAllAddress();
         const addresses: ApiAddress[] = Array.isArray(addressRes?.data)
@@ -514,6 +542,7 @@ export default function Navbar() {
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
           displayAddress: addressText || "Address not set",
+          userImage: userImage ? String(userImage) : null,
           rewardPoints: points,
           ts: Date.now(),
         };
@@ -525,6 +554,7 @@ export default function Navbar() {
         return {
           displayName: "User",
           displayAddress: "Address not set",
+          userImage: null,
           rewardPoints: lastKnownPoints.current,
           ts: Date.now(),
         } as NavbarUserSnapshot;
@@ -537,10 +567,6 @@ export default function Navbar() {
     applyUserSnapshot(snapshot);
   }, [applyUserSnapshot, isAuthenticated, updatePoints]);
 
-  // Dedicated, independently-callable reward points refresh — used when the
-  // app returns to the foreground so the badge self-heals from a cold-load
-  // failure without requiring a full navbar user/address refresh or a
-  // server restart.
   const fetchRewardPoints = React.useCallback(async () => {
     if (!isAuthenticated) return;
 
@@ -566,15 +592,14 @@ export default function Navbar() {
     loadNavbarUser(false);
   }, [loadNavbarUser]);
 
-  return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + 8 }]}>
+  const navbarContent = (
+    <>
       <StatusBar
         barStyle="dark-content"
         translucent
         backgroundColor="transparent"
       />
 
-      {/* ✅ Background cross-fades smoothly between modules */}
       <View style={styles.bgWrapper} pointerEvents="none">
         <Image
           source={prevBgSource}
@@ -590,109 +615,222 @@ export default function Navbar() {
         )}
       </View>
 
-      {/* TOP 4 ICON TABS */}
-      <View style={styles.topIconsRow}>
-        <TopIconWithLabel
-          active={activeTab === "Product"}
-          onPress={() => handleTab("Product")}
-          Icon={Home_Nav as unknown as SvgIcon}
-          label="Product"
-          activeColor={TAB_THEME.Product.bgColor}
-        />
+      {topTabsVariant === "health" ? (
+        <View style={styles.healthTopTabsRow}>
+          {HEALTH_EXPERIENCE_TABS.map((tab) => {
+            const isActive = tab.id === "health";
 
-        <TopIconWithLabel
-          active={activeTab === "Services"}
-          onPress={() => handleTab("Services")}
-          Icon={Services as unknown as SvgIcon}
-          label="Services"
-          activeColor={TAB_THEME.Services.bgColor}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "Payments"}
-          onPress={() => handleTab("Payments")}
-          Icon={Payments as unknown as SvgIcon}
-          label="Payments"
-          activeColor={TAB_THEME.Payments.bgColor}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "DineOut"}
-          onPress={() => handleTab("DineOut")}
-          Icon={Dine_Out as unknown as SvgIcon}
-          label="Dine Out"
-          activeColor={TAB_THEME.DineOut.bgColor}
-        />
-      </View>
-
-      {/* LOCATION */}
-      <View style={styles.topRow}>
-        <View
-          style={[styles.locationRow, !showLocation && styles.locationRowHidden]}
-          pointerEvents={showLocation ? "auto" : "none"}
-        >
-          <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-          <Text style={styles.locationText} numberOfLines={1}>
-            <Text style={styles.homeBold}>HOME- </Text>
-            {displayName}
-            {hasAddress ? `, ${displayAddress}` : ", "}
-            {!hasAddress ? (
-              <Text style={styles.addAddressLink} onPress={navigateToAddAddress}>
-                Add Address
-              </Text>
-            ) : null}
-          </Text>
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                activeOpacity={0.9}
+                onPress={() => handleHealthExperienceTab(tab.id)}
+                style={[
+                  styles.healthTopTabCard,
+                  isActive ? styles.healthTopTabCardActive : styles.healthTopTabCardInactive,
+                ]}
+              >
+                <tab.Icon
+                  width={30}
+                  height={30}
+                  color={isActive ? "#22C55E" : "#6B7280"}
+                  fill={tab.variant === "filled" ? (isActive ? "#22C55E" : "#6B7280") : "none"}
+                  stroke={isActive ? "#22C55E" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.healthTopTabLabel,
+                    isActive ? styles.healthTopTabLabelActive : null,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </View>
+      ) : (
+        <View style={styles.topIconsRow}>
+          <TopIconWithLabel
+            active={activeTab === "Product"}
+            onPress={() => handleTab("Product")}
+            Icon={Home_Nav as unknown as SvgIcon}
+            label="Product"
+            activeColor={TAB_THEME.Product.bgColor}
+          />
 
-      {/* SEARCH + WALLET + NOTIFICATION */}
-      <View style={styles.searchRow}>
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.searchContainer}
-          onPress={() => {
-            if (activeTab === "Services") {
-              navigateToScreen("ServiceSearch");
-            } else {
-              navigateToScreen("SearchScreen");
-            }
-          }}
-        >
-          <MaterialCommunityIcons name="magnify" size={20} color="#111827" />
-          <Text style={styles.fakePlaceholder}>Search “Reward Planners”</Text>
-        </TouchableOpacity>
+          <TopIconWithLabel
+            active={activeTab === "Services"}
+            onPress={() => handleTab("Services")}
+            Icon={Services as unknown as SvgIcon}
+            label="Services"
+            activeColor={TAB_THEME.Services.bgColor}
+          />
 
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={styles.walletBox}
-          onPress={() => navigateToScreen("WalletHistory")}
-          hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
-        >
-          <WalletSvg width={26} height={26} />
-          <View
-            style={[
-              styles.walletTag,
-              { backgroundColor: activeThemeColor },
-            ]}
-          >
-            <View style={styles.walletTagInner}>
-              <Reward width={11} height={11} />
-              <Text style={styles.walletTagText} numberOfLines={1}>
-                {rewardPointsLabel}
+          <TopIconWithLabel
+            active={activeTab === "Payments"}
+            onPress={() => handleTab("Payments")}
+            Icon={Payments as unknown as SvgIcon}
+            label="Payments"
+            activeColor={TAB_THEME.Payments.bgColor}
+          />
+
+          <TopIconWithLabel
+            active={activeTab === "DineOut"}
+            onPress={() => handleTab("DineOut")}
+            Icon={Dine_Out as unknown as SvgIcon}
+            label="Dine Out"
+            activeColor={TAB_THEME.DineOut.bgColor}
+          />
+        </View>
+      )}
+
+      {topTabsVariant === "health" ? (
+        <View style={styles.healthProfileRow}>
+          <View style={styles.healthProfileLeft}>
+            <View style={styles.healthAvatarOuter}>
+              <View style={styles.healthAvatarInner}>
+                {displayUserImage ? (
+                  <Image
+                    source={{ uri: displayUserImage }}
+                    style={styles.healthAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <MaterialCommunityIcons name="account" size={20} color="#7C2D12" />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.healthIdentityBlock}>
+              <Text style={styles.healthGreeting} numberOfLines={1}>
+                Hello, {displayName}
+              </Text>
+              <View style={styles.healthLocationRow}>
+                <MaterialCommunityIcons name="map-marker" size={14} color="#FACC15" />
+                <Text style={styles.healthLocationText} numberOfLines={1}>
+                  {hasAddress ? displayAddress : "Add Address"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.healthActionsRight}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.healthWalletShell}
+              onPress={() => navigateToScreen("WalletHistory")}
+              hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
+            >
+              <WalletSvg width={26} height={26} />
+              <View style={styles.healthWalletMiniTag}>
+                <Reward width={10} height={10} />
+                <Text style={styles.healthWalletMiniText} numberOfLines={1}>
+                  {rewardPointsLabel}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.healthBellCircle}
+              activeOpacity={0.85}
+              onPress={() => navigateToScreen("Notification")}
+            >
+              <MaterialCommunityIcons name="bell-outline" size={22} color="#4B5563" />
+              <View style={styles.healthBadgeDot} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <>
+          <View style={styles.topRow}>
+            <View
+              style={[styles.locationRow, !showLocation && styles.locationRowHidden]}
+              pointerEvents={showLocation ? "auto" : "none"}
+            >
+              <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
+              <Text style={styles.locationText} numberOfLines={1}>
+                <Text style={styles.homeBold}>HOME- </Text>
+                {displayName}
+                {hasAddress ? `, ${displayAddress}` : ", "}
+                {!hasAddress ? (
+                  <Text style={styles.addAddressLink} onPress={navigateToAddAddress}>
+                    Add Address
+                  </Text>
+                ) : null}
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.iconCircle}
-          activeOpacity={0.85}
-          onPress={() => navigateToScreen("Notification")}
-        >
-          <MaterialCommunityIcons name="bell-outline" size={22} color="#111827" />
-          <View style={styles.badgeDot} />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.searchRow}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.searchContainer}
+              onPress={() => {
+                if (activeTab === "Services") {
+                  navigateToScreen("ServiceSearch");
+                } else {
+                  navigateToScreen("SearchScreen");
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="magnify" size={20} color="#111827" />
+              <Text style={styles.fakePlaceholder}>Search “Reward Planners”</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.walletBox}
+              onPress={() => navigateToScreen("WalletHistory")}
+              hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
+            >
+              <WalletSvg width={26} height={26} />
+              <View
+                style={[
+                  styles.walletTag,
+                  { backgroundColor: activeThemeColor },
+                ]}
+              >
+                <View style={styles.walletTagInner}>
+                  <Reward width={11} height={11} />
+                  <Text style={styles.walletTagText} numberOfLines={1}>
+                    {rewardPointsLabel}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.iconCircle}
+              activeOpacity={0.85}
+              onPress={() => navigateToScreen("Notification")}
+            >
+              <MaterialCommunityIcons name="bell-outline" size={22} color="#111827" />
+              <View style={styles.badgeDot} />
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </>
+  );
+
+  if (topTabsVariant === "health") {
+    return (
+      <LinearGradient
+        colors={["#0157BB", "#013674"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.wrapper, styles.healthWrapper, { paddingTop: insets.top + 8 }]}
+      >
+        {navbarContent}
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <View style={[styles.wrapper, { paddingTop: insets.top + 8 }]}>
+      {navbarContent}
     </View>
   );
 }
@@ -713,7 +851,9 @@ const styles = StyleSheet.create({
   wrapper: {
     paddingTop: 8,
   },
-
+  healthWrapper: {
+    paddingBottom: 12,
+  },
   bgWrapper: {
     position: "absolute",
     top: 0,
@@ -723,7 +863,6 @@ const styles = StyleSheet.create({
     zIndex: -1,
     overflow: "hidden",
   },
-
   absoluteFill: {
     position: "absolute",
     top: 0,
@@ -733,14 +872,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-
   topIconsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 18,
     marginTop: 8,
   },
-
+  healthTopTabsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    marginTop: 8,
+  },
   topTabCard: {
     width: 82,
     height: 70,
@@ -753,17 +896,162 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,0,0,0.06)",
     ...shadow,
   },
-
   topTabCardActive: {
     borderColor: "transparent",
   },
-
   topTabLabel: {
     fontSize: 12,
     fontWeight: "700",
     color: "#374151",
   },
-
+  healthTopTabCard: {
+    width: 82,
+    height: 70,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    borderWidth: 1,
+    ...shadow,
+  },
+  healthTopTabCardActive: {
+    backgroundColor: "#CCFFC1",
+    borderColor: "#BBF7D0",
+  },
+  healthTopTabCardInactive: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(148,163,184,0.24)",
+  },
+  healthTopTabLabel: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  healthTopTabLabelActive: {
+    color: "#22C55E",
+  },
+  healthProfileRow: {
+    marginTop: 14,
+    marginBottom: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  healthProfileLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+  },
+  healthAvatarOuter: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  healthAvatarInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FDE68A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  healthAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  healthIdentityBlock: {
+    flex: 1,
+  },
+  healthGreeting: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+  healthLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  healthLocationText: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 12.5,
+    fontWeight: "500",
+    marginLeft: 2,
+    flexShrink: 1,
+  },
+  healthActionsRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  healthWalletShell: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    ...shadow,
+  },
+  healthWalletMiniTag: {
+    position: "absolute",
+    bottom: -6,
+    left: "50%",
+    transform: [{ translateX: -16 }],
+    minWidth: 34,
+    height: 16,
+    borderRadius: 999,
+    backgroundColor: "#7C3AED",
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    gap: 2,
+  },
+  healthWalletMiniText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    lineHeight: 10,
+    fontWeight: "900",
+    maxWidth: 24,
+  },
+  healthBellCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow,
+  },
+  healthBadgeDot: {
+    position: "absolute",
+    top: 7,
+    right: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "#FF3B30",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -771,23 +1059,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 12,
   },
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     marginRight: 10,
   },
-
   locationRowHidden: {
     opacity: 0,
   },
-
   homeBold: {
     fontWeight: "900",
     color: "#111827",
   },
-
   locationText: {
     marginLeft: 6,
     fontSize: 14,
@@ -795,7 +1079,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     flexShrink: 1,
   },
-
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -804,7 +1087,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     marginTop: 10,
   },
-
   searchContainer: {
     flex: 1,
     flexDirection: "row",
@@ -817,14 +1099,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...shadow,
   },
-
   fakePlaceholder: {
     marginLeft: 8,
     color: "#6B7280",
     fontSize: 14,
     fontWeight: "600",
   },
-
   walletBox: {
     position: "relative",
     justifyContent: "center",
@@ -838,7 +1118,6 @@ const styles = StyleSheet.create({
     overflow: "visible",
     ...shadow,
   },
-
   walletTag: {
     position: "absolute",
     bottom: -7,
@@ -852,14 +1131,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   walletTagInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
   },
-
   walletTagText: {
     color: "#fff",
     fontWeight: "900",
@@ -867,7 +1144,6 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     maxWidth: 34,
   },
-
   iconCircle: {
     width: 48,
     height: 48,
@@ -890,7 +1166,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-
   addAddressLink: {
     color: "#2563EB",
     textDecorationLine: "underline",

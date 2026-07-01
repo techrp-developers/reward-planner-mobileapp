@@ -26,14 +26,15 @@ const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
 
 type CategoryItem = {
   image: ReturnType<typeof require>;
-  tab: TopTab;
+  tab?: TopTab;
+  stack?: 'HealthStack';
 };
 
 const categoriesData: CategoryItem[] = [
   { image: Categories1, tab: 'Product' },
   { image: Categories2, tab: 'Services' },
   { image: Categories3, tab: 'Payments' },
-  { image: Categories4, tab: 'Product' },
+  { image: Categories4, stack: 'HealthStack' },
   { image: Categories5, tab: 'Product' },
   { image: Categories6, tab: 'Product' },
   { image: Categories7, tab: 'DineOut' },
@@ -60,8 +61,15 @@ export default function ServicesModule() {
   }), [isDark]);
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
-      const target = TAB_TO_MODULE[tab];
+    (item: CategoryItem) => {
+      if (item.stack) {
+        navigation.navigate(item.stack);
+        return;
+      }
+
+      if (!item.tab) return;
+
+      const target = TAB_TO_MODULE[item.tab];
       navigation.dispatch(
         CommonActions.navigate({
           name: 'Home',
@@ -102,7 +110,7 @@ export default function ServicesModule() {
           <TouchableOpacity
             key={i}
             activeOpacity={0.88}
-            onPress={() => handleCategoryPress(item.tab)}
+            onPress={() => handleCategoryPress(item)}
           >
             <Image
               source={item.image}

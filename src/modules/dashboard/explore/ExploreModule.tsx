@@ -29,14 +29,15 @@ const Explore8 = require('../../../assets/sampleImages/ExploreSevice(8).png');
 
 type CategoryItem = {
   image: ReturnType<typeof require>;
-  tab: TopTab;
+  tab?: TopTab;
+  stack?: 'HealthStack';
 };
 
 const exploreServices: CategoryItem[] = [
   { image: Explore1, tab: 'Product' },
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
-  { image: Explore4, tab: 'Product' },
+  { image: Explore4, stack: 'HealthStack' },
   { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
   { image: Explore7, tab: 'DineOut' },
@@ -67,8 +68,15 @@ function ExploreModule() {
   }), [isDark, theme.background]);
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
-      const target = TAB_TO_MODULE[tab];
+    (item: CategoryItem) => {
+      if (item.stack) {
+        navigation.navigate(item.stack as never);
+        return;
+      }
+
+      if (!item.tab) return;
+
+      const target = TAB_TO_MODULE[item.tab];
       navigation.dispatch(
         CommonActions.navigate({
           name: 'Home',
@@ -113,7 +121,7 @@ function ExploreModule() {
               t.exploreItem,
               { width: CARD_WIDTH, height: CARD_HEIGHT },
             ]}
-            onPress={() => handleCategoryPress(item.tab)}
+            onPress={() => handleCategoryPress(item)}
           >
             <Image
               source={item.image}

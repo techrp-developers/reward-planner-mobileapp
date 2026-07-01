@@ -9,6 +9,7 @@ import { RewardModal } from "../modules/common/reward/RewardModal";
 import ServiceHomeStack from "../modules/services/navigation/ServiceHomeStack";
 import RewardHomeStack from "../modules/step_counter/navigation/RewardHomeStack";
 import BBPSHomeStack from "../modules/bbps/navigation/BBPSHomeStack";
+import HealthHomeStack from "../modules/health/navigation/HealthHomeStack";
 // import Dashbord from "../modules/dashboard/dashboard";
 import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
 
@@ -42,6 +43,7 @@ export type AppStackParamList = {
   ChangePassword: undefined;
   Profile: undefined;
   ServiceStack: undefined;
+  HealthStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
@@ -154,6 +156,7 @@ function AppNavigator() {
         }
       />
       <AppStack.Screen name="ServiceStack" component={ServiceHomeStack} />
+      <AppStack.Screen name="HealthStack" component={HealthHomeStack} />
       <AppStack.Screen name="RewardStack" component={RewardHomeStack} />
       <AppStack.Screen name="BBPSHomeStack" component={BBPSHomeStack} />
       <AppStack.Screen
