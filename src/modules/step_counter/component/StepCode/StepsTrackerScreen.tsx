@@ -53,9 +53,13 @@ type OptionalProvider = 'Samsung Health' | 'Google Fit';
 
 function hasStepsPermission(permissions: any[]): boolean {
   return permissions.some(p => {
-    const recordType = p.recordType ?? p.permission?.recordType;
+    if (typeof p === 'string') {
+      const s = p.toLowerCase();
+      return s.includes('read_steps') || (s.includes('steps') && s.includes('read'));
+    }
+    const recordType = String(p.recordType ?? p.permission?.recordType ?? '').toLowerCase();
     const accessType = String(p.accessType ?? p.permission?.accessType ?? '').toLowerCase();
-    return recordType === 'Steps' && accessType === 'read';
+    return recordType === 'steps' && accessType === 'read';
   });
 }
 

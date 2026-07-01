@@ -69,10 +69,15 @@ const HC_PACKAGE = 'com.google.android.healthconnect.controller';
 
 function hasStepsPerm(permissions: any[]): boolean {
   return permissions.some(p => {
-    // Handle both nested and flat permission shapes, and any casing of accessType
-    const rt = p.recordType ?? p.permission?.recordType;
+    // Some library versions return raw Android permission strings
+    if (typeof p === 'string') {
+      const s = p.toLowerCase();
+      return s.includes('read_steps') || (s.includes('steps') && s.includes('read'));
+    }
+    // Handle nested shape, and any casing of both fields
+    const rt = String(p.recordType ?? p.permission?.recordType ?? '').toLowerCase();
     const at = String(p.accessType ?? p.permission?.accessType ?? '').toLowerCase();
-    return rt === 'Steps' && at === 'read';
+    return rt === 'steps' && at === 'read';
   });
 }
 
@@ -330,7 +335,17 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         return [];
       }
 
-      const granted = await getGrantedPermissions();
+      let granted = await getGrantedPermissions();
+      console.log('[Steps] getGrantedPermissions raw:', JSON.stringify(granted));
+
+      // On some devices/versions the permission store needs a moment to settle
+      // after initialization — retry once with a short delay if we get nothing back.
+      if (granted.length === 0) {
+        await new Promise<void>(r => setTimeout(r, 1500));
+        granted = await getGrantedPermissions();
+        console.log('[Steps] getGrantedPermissions retry:', JSON.stringify(granted));
+      }
+
       setGrantedPermissions(granted);
 
       if (!hasStepsPerm(granted)) {
