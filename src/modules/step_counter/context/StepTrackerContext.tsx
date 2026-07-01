@@ -23,6 +23,7 @@ import {
 import type { Permission } from 'react-native-health-connect';
 
 import { syncStepsToServer, type GoalSyncData } from '../api/Stepsapi';
+import { fetchProfileStepStatus } from '../api/ProfileAPI';
 import { fitnessQueryKeys } from '../api/fitnessQueryKeys';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,7 +149,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   // ── Restore persisted state on mount ─────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(pairs => {
+    AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(async pairs => {
       const [lastSyncPair, setupPair] = pairs;
       const today = localDateString(new Date());
       const rawLastSync = lastSyncPair[1];
@@ -167,7 +168,23 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
           lastSyncedSteps.current = -1;
         }
       }
-      if (setupPair[1] === 'true') setIsSetupComplete(true);
+
+      if (setupPair[1] === 'true') {
+        setIsSetupComplete(true);
+      } else {
+        // AsyncStorage is wiped on reinstall — check the backend so users who
+        // already completed setup on a previous install skip onboarding entirely.
+        try {
+          const status = await fetchProfileStepStatus();
+          if (status.is_completed) {
+            await AsyncStorage.setItem(STORAGE_SETUP, 'true');
+            setIsSetupComplete(true);
+          }
+        } catch {
+          // Network unavailable or auth not ready — leave isSetupComplete false
+          // so the user goes through onboarding (will re-sync local flag then).
+        }
+      }
     }).catch(() => {});
   }, []);
 
