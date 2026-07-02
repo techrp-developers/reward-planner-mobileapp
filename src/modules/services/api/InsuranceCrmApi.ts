@@ -6,6 +6,7 @@
 
 import axios from 'axios';
 import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
+import { attachSessionRefreshInterceptor } from '../../common/auth/api/axios';
 
 const CRM_BASE_URL = 'https://rewardplanners.com/api/crm/v1';
 
@@ -28,6 +29,8 @@ API.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 );
+
+attachSessionRefreshInterceptor(API);
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

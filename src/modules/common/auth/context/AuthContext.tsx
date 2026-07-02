@@ -11,7 +11,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
-import { setAuthToken as setLegacyAuthToken } from "../api/AuthAPI";
+import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 
@@ -169,10 +169,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const clearLocalSession = useCallback(async () => {
     updateAccessToken(null);
     setUser(null);
-    setLegacyAuthToken(null);
     setTermsAccepted(null); // reset so next login re-checks
     setFirstLoginReward(null);
-    await secureDeleteItem(REFRESH_TOKEN_KEY);
+    await Promise.all([
+      clearAuthToken(),
+      secureDeleteItem(REFRESH_TOKEN_KEY),
+    ]);
   }, [updateAccessToken]);
 
   const fetchProfile = useCallback(async () => {
@@ -241,7 +243,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         updateAccessToken(nextAccessToken);
-        setLegacyAuthToken(nextAccessToken);
+        await persistAuthToken(nextAccessToken);
 
         await secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken);
         await fetchProfile();
@@ -301,7 +303,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       updateAccessToken(nextAccessToken);
-      setLegacyAuthToken(nextAccessToken);
+      await persistAuthToken(nextAccessToken);
 
       await fetchProfile();
 
@@ -338,7 +340,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       onAccessTokenRefresh: async (nextAccessToken) => {
         updateAccessToken(nextAccessToken);
-        setLegacyAuthToken(nextAccessToken);
+        await persistAuthToken(nextAccessToken);
       },
 
       onLogout: async () => {
