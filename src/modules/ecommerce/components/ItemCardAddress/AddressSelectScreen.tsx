@@ -230,6 +230,9 @@ export default function AddressSelectScreen() {
     await queryClient.invalidateQueries({
       queryKey: ["ecommerce", "checkout-preview"],
     });
+    await queryClient.invalidateQueries({
+      queryKey: ["service-checkout"],
+    });
 
     // Go back to whichever screen pushed this one (cart, checkout, service
     // checkout, etc.) instead of hardcoding an ecommerce-only destination -

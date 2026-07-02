@@ -17,7 +17,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
 import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview } from '../../api/CartAPI';
 import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCard';
-import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import CheckoutSummary from '../../../ecommerce/components/ItemCardAddress/CheckoutSummary';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
 import { useAuth } from '../../../common/auth/context/AuthContext';
@@ -33,27 +32,6 @@ import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomC
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const serviceCartItemsQueryKey = SERVICE_CART_QUERY_KEY;
-
-const SERVICE_COUPONS = [
-  {
-    id: 1,
-    code: 'SERV20',
-    title: 'Save 20% on your service order',
-    subtitle: 'Valid on all government document services',
-  },
-  {
-    id: 2,
-    code: 'FIRSTSERV',
-    title: 'Extra ₹100 off on first service booking',
-    subtitle: 'New users only. Limited time offer.',
-  },
-  {
-    id: 3,
-    code: 'BUNDLE50',
-    title: 'Save ₹50 when bundling 2+ services',
-    subtitle: 'Add more services to unlock this discount',
-  },
-];
 
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -164,10 +142,10 @@ function CartScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | number | null>(null);
-  const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null); const [showAllCoupons, setShowAllCoupons] = useState(false);
+  const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null);
   const [error, setError] = useState('');
 
-  const { data: addressData, isFetching: isAddressFetching } = useQuery({
+  const { data: addressData } = useQuery({
     queryKey: addressesQueryKey,
     queryFn: fetchAllAddress,
     enabled: isAuthenticated,
@@ -288,8 +266,8 @@ function CartScreen() {
       previewData,
     });
 
-  } catch (error) {
-    console.error("❌ Buy Now Error:", error);
+  } catch (buyNowError) {
+    console.error("❌ Buy Now Error:", buyNowError);
 
     // fallback navigation
     navigation.navigate('ServiceCheckoutScreen', {
@@ -345,9 +323,9 @@ function CartScreen() {
     });
   }, [navigation]);
 
-  const showInitialSkeleton =
-    loading ||
-    (isAuthenticated && items.length === 0 && !error && isAddressFetching && !addressData);
+  // Address loading must not block the service cart. Users can proceed to
+  // checkout without one and select an address before placing the order.
+  const showInitialSkeleton = loading;
 
   const renderItem = useCallback(({ item }: { item: ServiceCartItem }) => (
     <CartCard
