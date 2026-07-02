@@ -343,6 +343,20 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       setHealthConnectStatus(String(sdkStatus));
 
       if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+        // Health Connect is completely uninstalled — if the user previously
+        // completed setup, reset that flag so they are routed back through
+        // onboarding (where they'll be prompted to reinstall HC) instead of
+        // landing on a broken Dashboard with 0 steps and no explanation.
+        // Only do this for SDK_UNAVAILABLE (gone entirely), not for
+        // SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED (installed but needs update —
+        // the user shouldn't lose their onboarding progress in that case).
+        if (sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE) {
+          const wasSetup = await AsyncStorage.getItem(STORAGE_SETUP).catch(() => null);
+          if (wasSetup === 'true') {
+            await AsyncStorage.removeItem(STORAGE_SETUP).catch(() => {});
+            setIsSetupComplete(false);
+          }
+        }
         const msg = sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE
           ? 'Health Connect not installed'
           : 'Health Connect needs setup';

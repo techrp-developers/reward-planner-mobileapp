@@ -199,7 +199,12 @@ export default function StepsTrackerScreen() {
   const canProceed    = isHCReady && totalSteps > 0;
 
   useEffect(() => { checkApps(); }, []);
-  useEffect(() => { if (isSetupComplete && isHCReady && totalSteps > 0) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, totalSteps, navigation]);
+  // Redirect to Dashboard as soon as HC is ready and setup is confirmed.
+  // No totalSteps > 0 guard here: a returning user (isSetupComplete already
+  // true from backend/storage) who hasn't walked yet today should still go
+  // to Dashboard. First-time users are safe because requestStepsPermission()
+  // only sets isSetupComplete after confirming a step source exists.
+  useEffect(() => { if (isSetupComplete && isHCReady) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, navigation]);
   useEffect(() => { setGuideOpen(showGuide); }, [showGuide]);
 
   const checkApps = async () => {
