@@ -23,6 +23,7 @@ import {
 import type { Permission } from 'react-native-health-connect';
 
 import { syncStepsToServer, type GoalSyncData } from '../api/Stepsapi';
+import { fetchProfileStepStatus } from '../api/ProfileAPI';
 import { fitnessQueryKeys } from '../api/fitnessQueryKeys';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,10 +70,15 @@ const HC_PACKAGE = 'com.google.android.healthconnect.controller';
 
 function hasStepsPerm(permissions: any[]): boolean {
   return permissions.some(p => {
-    // Handle both nested and flat permission shapes, and any casing of accessType
-    const rt = p.recordType ?? p.permission?.recordType;
+    // Some library versions return raw Android permission strings
+    if (typeof p === 'string') {
+      const s = p.toLowerCase();
+      return s.includes('read_steps') || (s.includes('steps') && s.includes('read'));
+    }
+    // Handle nested shape, and any casing of both fields
+    const rt = String(p.recordType ?? p.permission?.recordType ?? '').toLowerCase();
     const at = String(p.accessType ?? p.permission?.accessType ?? '').toLowerCase();
-    return rt === 'Steps' && at === 'read';
+    return rt === 'steps' && at === 'read';
   });
 }
 
@@ -143,7 +149,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   // ── Restore persisted state on mount ─────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(pairs => {
+    AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(async pairs => {
       const [lastSyncPair, setupPair] = pairs;
       const today = localDateString(new Date());
       const rawLastSync = lastSyncPair[1];
@@ -162,7 +168,23 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
           lastSyncedSteps.current = -1;
         }
       }
-      if (setupPair[1] === 'true') setIsSetupComplete(true);
+
+      if (setupPair[1] === 'true') {
+        setIsSetupComplete(true);
+      } else {
+        // AsyncStorage is wiped on reinstall — check the backend so users who
+        // already completed setup on a previous install skip onboarding entirely.
+        try {
+          const status = await fetchProfileStepStatus();
+          if (status.is_completed) {
+            await AsyncStorage.setItem(STORAGE_SETUP, 'true');
+            setIsSetupComplete(true);
+          }
+        } catch {
+          // Network unavailable or auth not ready — leave isSetupComplete false
+          // so the user goes through onboarding (will re-sync local flag then).
+        }
+      }
     }).catch(() => {});
   }, []);
 
@@ -321,6 +343,20 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       setHealthConnectStatus(String(sdkStatus));
 
       if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+        // Health Connect is completely uninstalled — if the user previously
+        // completed setup, reset that flag so they are routed back through
+        // onboarding (where they'll be prompted to reinstall HC) instead of
+        // landing on a broken Dashboard with 0 steps and no explanation.
+        // Only do this for SDK_UNAVAILABLE (gone entirely), not for
+        // SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED (installed but needs update —
+        // the user shouldn't lose their onboarding progress in that case).
+        if (sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE) {
+          const wasSetup = await AsyncStorage.getItem(STORAGE_SETUP).catch(() => null);
+          if (wasSetup === 'true') {
+            await AsyncStorage.removeItem(STORAGE_SETUP).catch(() => {});
+            setIsSetupComplete(false);
+          }
+        }
         const msg = sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE
           ? 'Health Connect not installed'
           : 'Health Connect needs setup';
@@ -330,7 +366,17 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         return [];
       }
 
-      const granted = await getGrantedPermissions();
+      let granted = await getGrantedPermissions();
+      console.log('[Steps] getGrantedPermissions raw:', JSON.stringify(granted));
+
+      // On some devices/versions the permission store needs a moment to settle
+      // after initialization — retry once with a short delay if we get nothing back.
+      if (granted.length === 0) {
+        await new Promise<void>(r => setTimeout(r, 1500));
+        granted = await getGrantedPermissions();
+        console.log('[Steps] getGrantedPermissions retry:', JSON.stringify(granted));
+      }
+
       setGrantedPermissions(granted);
 
       if (!hasStepsPerm(granted)) {

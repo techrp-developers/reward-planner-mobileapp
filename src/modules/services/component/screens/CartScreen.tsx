@@ -205,6 +205,10 @@ function CartScreen() {
 
       setItems(normalized);
       queryClient.setQueryData(serviceCartItemsQueryKey, response);
+      // Prefix-invalidate so the count subkey ([...key, 'count']) used by
+      // useServiceCartCount also refetches — setQueryData only updates the
+      // exact key and does not propagate to sub-keys on its own.
+      queryClient.invalidateQueries({ queryKey: serviceCartItemsQueryKey });
       setError('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to fetch cart items.';
