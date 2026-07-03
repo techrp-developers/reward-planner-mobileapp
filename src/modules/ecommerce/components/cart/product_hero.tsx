@@ -149,9 +149,9 @@ export default function ProductHero({ images, activeDot, onDotPress, loadImages 
           ))}
         </View>
 
-        <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85} onPress={handleShare}>
+        {/* <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85} onPress={handleShare}>
           <MaterialCommunityIcons name="share-variant" size={18} color="#222" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );
