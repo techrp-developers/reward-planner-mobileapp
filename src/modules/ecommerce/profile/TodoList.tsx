@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -43,6 +45,12 @@ type Todo = {
 
 type TimeTarget = "start" | "end";
 type FilterType = "ALL" | "TODAY" | "PENDING" | "COMPLETED";
+type DateItem = {
+  dateKey: string;
+  date: number;
+  day: string;
+  isToday?: boolean;
+};
 
 const PRIMARY = "#A654CD";
 const PRIMARY_DARK = "#7E2FA8";
@@ -54,6 +62,9 @@ const PAGE_BG = "#FFF7FB";
 const CARD_BG = "#FFFFFF";
 const TEXT_DARK = "#111111";
 const TEXT_MUTED = "#777777";
+const DATE_BOX_WIDTH = 58;
+const DATE_BOX_GAP = 8;
+const DATE_ITEM_SIZE = DATE_BOX_WIDTH + DATE_BOX_GAP;
 
 const formatDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -103,6 +114,8 @@ const buildTimeOptions = () => {
 
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
+  const { width: windowWidth } = useWindowDimensions();
+  const dateListRef = useRef<FlatList<DateItem>>(null);
   const today = new Date();
   const todayKey = formatDateKey(today);
 
@@ -226,6 +239,22 @@ const TodoListScreen = () => {
 
     return arr;
   }, [todayKey]);
+
+  const dateItems = useMemo<DateItem[]>(() => {
+    return [
+      ...pastDates,
+      {
+        dateKey: todayKey,
+        date: today.getDate(),
+        day: "Today",
+        isToday: true,
+      },
+      ...futureDates,
+    ];
+  }, [futureDates, pastDates, todayKey]);
+
+  const sidePadding = Math.max((windowWidth - DATE_BOX_WIDTH) / 2, 16);
+  const todayIndex = pastDates.length;
 
   const calendarDates = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -534,27 +563,54 @@ const TodoListScreen = () => {
     });
   };
 
-  const renderDateCard = (item: {
-    dateKey: string;
-    date: number;
-    day: string;
-  }) => {
+  const scrollToDateIndex = (index: number, animated: boolean) => {
+    dateListRef.current?.scrollToOffset({
+      offset: Math.max(index * DATE_ITEM_SIZE, 0),
+      animated,
+    });
+  };
+
+  useEffect(() => {
+    const selectedIndex = dateItems.findIndex(item => item.dateKey === selectedDate);
+
+    if (selectedIndex >= 0) {
+      requestAnimationFrame(() => scrollToDateIndex(selectedIndex, false));
+    }
+  }, [dateItems, selectedDate]);
+
+  const renderDateCard = ({ item, index }: { item: DateItem; index: number }) => {
     const active = selectedDate === item.dateKey;
 
     return (
       <TouchableOpacity
-        key={item.dateKey}
         onPress={() => {
           setSelectedDate(item.dateKey);
           setFilterType("ALL");
           resetSelection();
+          requestAnimationFrame(() => scrollToDateIndex(index, true));
         }}
-        style={[styles.dateBox, active && styles.activeDateBox]}
+        style={[
+          styles.dateBox,
+          item.isToday && styles.todayDateBox,
+          active && styles.activeDateBox,
+        ]}
       >
-        <Text style={[styles.dateNumber, active && styles.activeDateText]}>
+        <Text
+          style={[
+            styles.dateNumber,
+            item.isToday && !active && styles.todayDateText,
+            active && styles.activeDateText,
+          ]}
+        >
           {item.date}
         </Text>
-        <Text style={[styles.dateDay, active && styles.activeDateText]}>
+        <Text
+          style={[
+            styles.dateDay,
+            item.isToday && !active && styles.todayDateText,
+            active && styles.activeDateText,
+          ]}
+        >
           {item.day}
         </Text>
       </TouchableOpacity>
@@ -612,60 +668,28 @@ const TodoListScreen = () => {
         <View style={styles.pageGlossTwo} />
 
         <View style={styles.dateStripWrapper}>
-          <View style={styles.stickyDateRow}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.sideDateScroll}
-              contentContainerStyle={styles.sideDateContent}
-            >
-              {pastDates.map(renderDateCard)}
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedDate(todayKey);
-                setFilterType("ALL");
-                resetSelection();
-              }}
-              style={[
-                styles.todayStickyBox,
-                selectedDate === todayKey
-                  ? styles.activeDateBox
-                  : styles.todayNotSelectedBox,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.dateNumber,
-                  selectedDate === todayKey
-                    ? styles.activeDateText
-                    : styles.todayNotSelectedText,
-                ]}
-              >
-                {today.getDate()}
-              </Text>
-              <Text
-                style={[
-                  styles.dateDay,
-                  selectedDate === todayKey
-                    ? styles.activeDateText
-                    : styles.todayNotSelectedText,
-                ]}
-              >
-                Today
-              </Text>
-            </TouchableOpacity>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.sideDateScroll}
-              contentContainerStyle={styles.sideDateContent}
-            >
-              {futureDates.map(renderDateCard)}
-            </ScrollView>
-          </View>
+          <FlatList
+            ref={dateListRef}
+            data={dateItems}
+            extraData={selectedDate}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={item => item.dateKey}
+            renderItem={renderDateCard}
+            contentContainerStyle={[
+              styles.dateListContent,
+              { paddingHorizontal: sidePadding },
+            ]}
+            initialScrollIndex={todayIndex}
+            getItemLayout={(_, index) => ({
+              length: DATE_ITEM_SIZE,
+              offset: DATE_ITEM_SIZE * index,
+              index,
+            })}
+            onScrollToIndexFailed={({ index }) => {
+              scrollToDateIndex(index, false);
+            }}
+          />
         </View>
 
         {selectedTodo && !showCheckbox && !selectedTodo.completed && (
@@ -1239,30 +1263,19 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 
-  stickyDateRow: {
-    height: 72,
-    flexDirection: "row",
+  dateListContent: {
     alignItems: "center",
-    marginBottom: 0,
-  },
-
-  sideDateScroll: {
-    flex: 1,
-    height: 66,
-  },
-
-  sideDateContent: {
-    alignItems: "center",
+    paddingVertical: 4,
   },
 
   dateBox: {
-    width: 58,
+    width: DATE_BOX_WIDTH,
     height: 58,
     backgroundColor: CARD_BG,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 8,
+    marginRight: DATE_BOX_GAP,
     borderWidth: 1,
     borderColor: PINK_BORDER,
     shadowColor: "#000",
@@ -1272,30 +1285,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  todayStickyBox: {
-    width: 62,
-    height: 58,
-    backgroundColor: CARD_BG,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 8,
-    borderWidth: 1,
-    borderColor: PINK_BORDER,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-
-  todayNotSelectedBox: {
+  todayDateBox: {
     borderWidth: 1.5,
     borderColor: PRIMARY,
     backgroundColor: CARD_BG,
   },
 
-  todayNotSelectedText: {
+  todayDateText: {
     color: PRIMARY,
     fontWeight: "700",
   },
