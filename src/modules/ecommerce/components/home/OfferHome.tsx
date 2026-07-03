@@ -1,7 +1,6 @@
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   ScrollView,
   View,
   StyleSheet,
@@ -11,7 +10,6 @@ import {
   Image as RNImage,
   Alert,
   Linking,
-  ViewToken,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
@@ -40,6 +38,10 @@ const OFFER_HEIGHT = OFFER_WIDTH * 1.8;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
+// The campaign-home endpoint can omit flash_sales even while the dedicated
+// flash-sale campaign remains available. Keep the configured campaign visible
+// until the API starts returning an active flash sale again.
+const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -304,7 +306,6 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
-  const [visibleProductKeys, setVisibleProductKeys] = useState<Set<string>>(new Set());
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: ["ecommerce", "home", "campaign-home"],
@@ -312,7 +313,8 @@ export default function OfferHome() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
+  const flashCampaignId =
+    campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
 
   const { data: products = [], isLoading: isProductsLoading } = useQuery({
     queryKey: ["ecommerce", "home", "flash-products", flashCampaignId],
@@ -366,69 +368,6 @@ export default function OfferHome() {
     }
   };
 
-  const resolveProductKey = useCallback((item: any, index: number) => {
-    return String(item?.id ?? item?.product_id ?? index);
-  }, []);
-
-  useEffect(() => {
-    const nextKeys = new Set<string>();
-    products.slice(0, 2).forEach((item: any, index: number) => {
-      nextKeys.add(resolveProductKey(item, index));
-    });
-    setVisibleProductKeys((previous) => {
-      const merged = new Set(previous);
-      nextKeys.forEach((key) => merged.add(key));
-      return merged;
-    });
-  }, [products, resolveProductKey]);
-
-  const onViewableProductsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
-      const nextKeys = new Set<string>();
-
-      viewableItems.forEach((entry) => {
-        const item = entry.item as any;
-        if (!item) return;
-        nextKeys.add(resolveProductKey(item, entry.index ?? 0));
-      });
-
-      if (nextKeys.size > 0) {
-        setVisibleProductKeys((previous) => {
-          let didChange = false;
-          const merged = new Set(previous);
-          nextKeys.forEach((key) => {
-            if (!merged.has(key)) {
-              merged.add(key);
-              didChange = true;
-            }
-          });
-
-          return didChange ? merged : previous;
-        });
-      }
-    }
-  ).current;
-
-  const productViewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 35,
-    minimumViewTime: 60,
-  }).current;
-
-  const renderFlashProduct = useCallback(
-    ({ item, index }: { item: any; index: number }) => {
-      const itemKey = resolveProductKey(item, index);
-      return (
-        <FlashOfferProductCard
-          item={item}
-          shouldLoadImage={visibleProductKeys.has(itemKey)}
-        />
-      );
-    },
-    [resolveProductKey, visibleProductKeys],
-  );
-
-  const flashProductSeparator = useCallback(() => <View style={styles.flashProductGap} />, []);
-
   if (isProductsLoading || isCampaignLoading) {
     return <HomeSectionSkeleton height={390} />;
   }
@@ -464,29 +403,32 @@ export default function OfferHome() {
               <RNImage source={{ uri: flashSalesPoster }} style={styles.flashPosterImage} resizeMode="contain" />
             ) : (
               <View style={styles.placeholderFlash}>
-                <Text style={styles.placeholderText}>Flash Sales</Text>
+                <RNImage
+                  source={require('../../../../assets/homepage/flash_sale_title.png')}
+                  style={styles.flashSaleTitleImage}
+                  resizeMode="contain"
+                />
               </View>
             )}
           </View>
 
-          <FlatList
-            data={products}
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.innerProductsScroll}
-            keyExtractor={resolveProductKey}
-            renderItem={renderFlashProduct}
-            ItemSeparatorComponent={flashProductSeparator}
-            onViewableItemsChanged={onViewableProductsChanged}
-            viewabilityConfig={productViewabilityConfig}
-            initialNumToRender={2}
-            maxToRenderPerBatch={2}
-            updateCellsBatchingPeriod={80}
-            windowSize={3}
-            removeClippedSubviews={true}
             snapToInterval={CARD_WIDTH + CARD_MARGIN}
             decelerationRate="fast"
-          />
+            nestedScrollEnabled
+          >
+            {products.map((item: any, index: number) => (
+              <View
+                key={String(item?.id ?? item?.product_id ?? index)}
+                style={index < products.length - 1 ? styles.flashProductItem : undefined}
+              >
+                <FlashOfferProductCard item={item} shouldLoadImage />
+              </View>
+            ))}
+          </ScrollView>
         </View>
       </View>
     </View>
@@ -548,18 +490,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  placeholderText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#666",
+  flashSaleTitleImage: {
+    width: "92%",
+    height: "72%",
   },
   innerProductsScroll: {
     alignItems: "center",
     paddingLeft: CARD_MARGIN,
     paddingRight: CARD_MARGIN + 20,
   },
-  flashProductGap: {
-    width: CARD_MARGIN,
+  flashProductItem: {
+    marginRight: CARD_MARGIN,
   },
   cardContainer: {
     width: CARD_WIDTH,
