@@ -17,6 +17,7 @@ type Props = {
   onBackPress?: () => void;
   onHelpPress?: () => void;
   showHelp?: boolean;
+  isDark?: boolean;
 };
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
@@ -26,6 +27,7 @@ export default function OrderHeading({
   onBackPress,
   onHelpPress,
   showHelp = true,
+  isDark = false,
 }: Props) {
   const navigation = useNavigation<Nav>();
 
@@ -51,8 +53,8 @@ export default function OrderHeading({
   };
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safe}>
-      <View style={styles.header}>
+    <SafeAreaView edges={["top"]} style={[styles.safe, isDark && styles.safeDark]}>
+      <View style={[styles.header, isDark && styles.headerDark]}>
         {/* Back Button */}
         <TouchableOpacity
           onPress={handleBack}
@@ -62,12 +64,12 @@ export default function OrderHeading({
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
-            color="#374151"
+            color={isDark ? "#FFFFFF" : "#374151"}
           />
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, isDark && styles.titleDark]} numberOfLines={1}>
           {title}
         </Text>
 
@@ -94,6 +96,7 @@ const styles = StyleSheet.create({
   safe: {
     backgroundColor: "#FFFFFF",
   },
+  safeDark: { backgroundColor: "#111113" },
 
   header: {
     height: 56,
@@ -103,6 +106,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
     backgroundColor: "#FFFFFF",
+  },
+  headerDark: {
+    backgroundColor: "#111113",
+    borderBottomColor: "#27272A",
   },
 
   iconBtn: {
@@ -119,6 +126,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#374151",
   },
+  titleDark: { color: "#FFFFFF" },
 
   helpBtn: {
     flexDirection: "row",

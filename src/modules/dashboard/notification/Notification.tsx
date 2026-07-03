@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 import OrderHeading from "../../ecommerce/constants/heading/OrderHeading";
 import {
@@ -104,11 +105,34 @@ function isUnread(item: NotificationItem) {
 
 function Notification() {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [badgeCount, setBadgeCount] = useState(0);
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        screen: { backgroundColor: isDark ? "#09090B" : "#F5F3FA" },
+        card: {
+          backgroundColor: isDark ? "#18181B" : "#FFFFFF",
+          borderColor: isDark ? "rgba(255,255,255,0.24)" : "#ECE8F4",
+        },
+        unreadCard: {
+          backgroundColor: isDark ? "#1E1B2E" : "#FFFEFF",
+          borderColor: isDark ? "#FFFFFF" : "#CFC5FF",
+        },
+        text: { color: theme.text },
+        mutedText: { color: theme.secondaryText },
+        softButton: { backgroundColor: isDark ? "#27233A" : "#F2EDFF" },
+        disabledButton: { backgroundColor: isDark ? "#202024" : "#ECE8F4" },
+        emptyIcon: { backgroundColor: isDark ? "#27233A" : "#F1ECFF" },
+        actionText: { color: isDark ? "#FFFFFF" : "#6D5AE6" },
+        disabledText: { color: isDark ? "#71717A" : "#A19AAD" },
+      }),
+    [isDark, theme.secondaryText, theme.text],
+  );
 
   const loadNotifications = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -246,18 +270,25 @@ function Notification() {
     const unread = isUnread(item);
     const highPriority = item.priority === "high";
     const meta = getModuleMeta(item.module, highPriority);
+    const metaBackground = isDark ? `${meta.color}20` : meta.bg;
+    const metaBorder = isDark ? `${meta.color}55` : meta.border;
 
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        style={[styles.card, unread && styles.cardUnread]}
+        style={[
+          styles.card,
+          themed.card,
+          unread && styles.cardUnread,
+          unread && themed.unreadCard,
+        ]}
         onPress={() => handleNotificationPress(item)}
         onLongPress={() => handleDeleteNotification(item)}
       >
         <View
           style={[
             styles.iconWrap,
-            { backgroundColor: meta.bg, borderColor: meta.border },
+            { backgroundColor: metaBackground, borderColor: metaBorder },
           ]}
         >
           <MaterialCommunityIcons
@@ -269,19 +300,19 @@ function Notification() {
 
         <View style={styles.contentWrap}>
           <View style={styles.metaRow}>
-            <View style={[styles.modulePill, { backgroundColor: meta.bg }]}>
+            <View style={[styles.modulePill, { backgroundColor: metaBackground }]}>
               <Text style={[styles.moduleText, { color: meta.color }]}>
                 {meta.label}
               </Text>
             </View>
-            <Text style={styles.time}>{formatNotificationTime(item.created_at)}</Text>
+            <Text style={[styles.time, themed.mutedText]}>{formatNotificationTime(item.created_at)}</Text>
           </View>
           <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text style={[styles.title, themed.text]} numberOfLines={1}>
               {item.title}
             </Text>
           </View>
-          <Text style={styles.message} numberOfLines={2}>
+          <Text style={[styles.message, themed.mutedText]} numberOfLines={2}>
             {item.message}
           </Text>
         </View>
@@ -289,7 +320,11 @@ function Notification() {
         <View style={styles.cardAction}>
           {unread ? <View style={styles.unreadDot} /> : null}
           {item.action_url ? (
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#C4B5FD" />
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={20}
+              color={isDark ? "#818CF8" : "#C4B5FD"}
+            />
           ) : null}
         </View>
       </TouchableOpacity>
@@ -297,17 +332,18 @@ function Notification() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, themed.screen]}>
       <OrderHeading
         title="Notifications"
         onBackPress={() => navigation.goBack()}
         showHelp={false}
+        isDark={isDark}
       />
 
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#6D5AE6" />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <Text style={[styles.loadingText, themed.mutedText]}>Loading notifications...</Text>
         </View>
       ) : error ? (
         <View style={styles.centered}>
@@ -328,14 +364,16 @@ function Notification() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadNotifications(true)}
-              tintColor="#6D5AE6"
-              colors={["#6D5AE6"]}
+              tintColor={isDark ? "#A5B4FC" : "#6D5AE6"}
+              colors={[isDark ? "#A5B4FC" : "#6D5AE6"]}
             />
           }
           ListHeaderComponent={
             <View>
               <LinearGradient
-                colors={["#2F225F", "#6D5AE6", "#8B5CF6"]}
+                colors={isDark
+                  ? ["#18181B", "#27233A", "#4338CA"]
+                  : ["#2F225F", "#6D5AE6", "#8B5CF6"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.summaryCard}
@@ -358,20 +396,24 @@ function Notification() {
               </LinearGradient>
               {notifications.length > 0 ? (
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Recent updates</Text>
+                  <Text style={[styles.sectionTitle, themed.mutedText]}>Recent updates</Text>
                   <TouchableOpacity
                     activeOpacity={0.78}
                     disabled={badgeCount <= 0}
                     style={[
                       styles.markAllButton,
+                      themed.softButton,
                       badgeCount <= 0 && styles.markAllButtonDisabled,
+                      badgeCount <= 0 && themed.disabledButton,
                     ]}
                     onPress={handleMarkAllRead}
                   >
                     <Text
                       style={[
                         styles.markAllText,
+                        themed.actionText,
                         badgeCount <= 0 && styles.markAllTextDisabled,
+                        badgeCount <= 0 && themed.disabledText,
                       ]}
                     >
                       Mark all read
@@ -383,11 +425,11 @@ function Notification() {
           }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <View style={styles.emptyIconWrap}>
+              <View style={[styles.emptyIconWrap, themed.emptyIcon]}>
                 <MaterialCommunityIcons name="bell-sleep-outline" size={34} color="#7C3AED" />
               </View>
-              <Text style={styles.emptyTitle}>No notifications yet</Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, themed.text]}>No notifications yet</Text>
+              <Text style={[styles.emptyText, themed.mutedText]}>
                 Important order, wallet, and service updates will appear here.
               </Text>
             </View>
