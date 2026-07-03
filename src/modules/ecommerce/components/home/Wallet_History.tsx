@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   fetchWalletTransactions,
 } from "../../api/WalleteAPI";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Transaction = {
   id: string;
@@ -34,6 +35,7 @@ type Transaction = {
 const FILTERS = ["All Transactions", "Additions", "Deductions", "Expired"];
 
 export default function WalletHistoryScreen({ navigation }: any) {
+  const { isDark, theme } = useAppTheme();
   const [activeFilter, setActiveFilter] = useState("All Transactions");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
@@ -42,6 +44,27 @@ export default function WalletHistoryScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [txnLoading, setTxnLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        screen: { backgroundColor: isDark ? "#09090B" : "#F9FAFB" },
+        surface: {
+          backgroundColor: isDark ? "#18181B" : "#FFFFFF",
+          borderColor: isDark ? "#27272A" : "#E5E7EB",
+        },
+        text: { color: theme.text },
+        mutedText: { color: theme.secondaryText },
+        expiryStrip: {
+          backgroundColor: isDark ? "#211A14" : "#FFF8F0",
+          borderTopColor: isDark ? "#3F2D1D" : "#FDE9D0",
+        },
+        expiryText: { color: isDark ? "#FDBA74" : "#7C4A12" },
+        expiryDate: { color: isDark ? "#D6A66F" : "#9A6B33" },
+        creditIcon: { backgroundColor: isDark ? "rgba(16,185,129,0.14)" : "#ECFDF5" },
+        debitIcon: { backgroundColor: isDark ? "rgba(244,63,94,0.14)" : "#FEF2F2" },
+      }),
+    [isDark, theme.secondaryText, theme.text],
+  );
 
   const getType = (filter: string) => {
     if (filter === "Additions") return "credit";
@@ -50,7 +73,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
     return "all";
   };
 
-  const mapTransactions = (rows: any[]) =>
+  const mapTransactions = useCallback((rows: any[]) =>
     rows.map((txn: any) => ({
       id: String(txn.transaction_id),
       orderNo: txn.transaction_id,
@@ -68,19 +91,19 @@ export default function WalletHistoryScreen({ navigation }: any) {
           ? "file-document-outline"
           : "package-variant-closed",
       iconBg: txn.transaction_type === "credit" ? "#4F75FF" : "#A67B5B",
-    }));
+    })), []);
 
-  const loadBalance = async () => {
+  const loadBalance = useCallback(async () => {
     const balanceRes = await fetchWalletBalance();
     setBalance(balanceRes?.data?.balance || 0);
     setExpiringCoins(balanceRes?.data?.expiring_coins || 0);
     setExpiryDate(balanceRes?.data?.expiry_date || null);
-  };
+  }, []);
 
-  const loadTransactions = async (type: any = "all") => {
+  const loadTransactions = useCallback(async (type: any = "all") => {
     const txnRes = await fetchWalletTransactions(type);
     setTransactions(mapTransactions(txnRes.data));
-  };
+  }, [mapTransactions]);
 
   // Initial load: fetch balance + transactions together, full-screen loader.
   useEffect(() => {
@@ -94,7 +117,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [loadBalance, loadTransactions]);
 
   // Filter switch: only refetch transactions, keep card/list mounted (no flicker).
   const onFilterChange = async (filter: string) => {
@@ -164,7 +187,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
         </LinearGradient>
 
         {/* EXPIRY STRIP */}
-        <View style={styles.expiryStrip}>
+        <View style={[styles.expiryStrip, themed.expiryStrip]}>
           <View style={styles.expiryLeft}>
             <View style={styles.expiryIconWrap}>
               <MaterialCommunityIcons
@@ -173,12 +196,12 @@ export default function WalletHistoryScreen({ navigation }: any) {
                 color="#F97316"
               />
             </View>
-            <Text style={styles.expiryText}>
+            <Text style={[styles.expiryText, themed.expiryText]}>
               {expiringCoins} Coins Expiring
             </Text>
           </View>
 
-          <Text style={styles.expiryDate}>
+          <Text style={[styles.expiryDate, themed.expiryDate]}>
             {expiryDate
               ? new Date(expiryDate).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -191,7 +214,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
       </View>
 
       {/* TITLE */}
-      <Text style={styles.sectionHeading}>Transaction History</Text>
+      <Text style={[styles.sectionHeading, themed.text]}>Transaction History</Text>
 
       {/* FILTERS */}
       <FlatList
@@ -205,12 +228,14 @@ export default function WalletHistoryScreen({ navigation }: any) {
             onPress={() => onFilterChange(item)}
             style={[
               styles.filterChip,
+              themed.surface,
               activeFilter === item && styles.filterChipActive,
             ]}
           >
             <Text
               style={[
                 styles.filterText,
+                themed.mutedText,
                 activeFilter === item && styles.filterTextActive,
               ]}
             >
@@ -229,19 +254,23 @@ export default function WalletHistoryScreen({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safe, themed.screen]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#111113" : "#FFFFFF"}
+      />
 
       {/* ✅ HEADER */}
       <ProductHeadColor
         title="Wallet"
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, themed.screen]}>
         {loading ? (
-          <Text style={styles.loading}>Loading...</Text>
+          <Text style={[styles.loading, themed.mutedText]}>Loading...</Text>
         ) : (
           <FlatList
             data={transactions}
@@ -251,7 +280,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
             onRefresh={onRefresh}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <TransactionCard item={item} />
+              <TransactionCard item={item} themed={themed} />
             )}
           />
         )}
@@ -261,16 +290,22 @@ export default function WalletHistoryScreen({ navigation }: any) {
 }
 
 /* TRANSACTION CARD */
-function TransactionCard({ item }: { item: Transaction }) {
+function TransactionCard({
+  item,
+  themed,
+}: {
+  item: Transaction;
+  themed: any;
+}) {
   const isPositive = item.coins > 0;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, themed.surface]}>
       <View style={styles.cardLeft}>
         <View
           style={[
             styles.iconBox,
-            { backgroundColor: isPositive ? "#ECFDF5" : "#FEF2F2" },
+            isPositive ? themed.creditIcon : themed.debitIcon,
           ]}
         >
           <MaterialCommunityIcons
@@ -281,11 +316,11 @@ function TransactionCard({ item }: { item: Transaction }) {
         </View>
 
         <View style={styles.textBlock}>
-          <Text style={styles.orderText}>Order No. {item.orderNo}</Text>
+          <Text style={[styles.orderText, themed.text]}>Order No. {item.orderNo}</Text>
           {item.txnId && (
-            <Text style={styles.subText}>Txn Id: {item.txnId}</Text>
+            <Text style={[styles.subText, themed.mutedText]}>Txn Id: {item.txnId}</Text>
           )}
-          <Text style={styles.categoryText}>{item.title}</Text>
+          <Text style={[styles.categoryText, themed.mutedText]}>{item.title}</Text>
         </View>
       </View>
 
@@ -301,7 +336,7 @@ function TransactionCard({ item }: { item: Transaction }) {
             {isPositive ? `+${item.coins}` : item.coins}
           </Text>
         </View>
-        <Text style={styles.dateText}>{item.date}</Text>
+        <Text style={[styles.dateText, themed.mutedText]}>{item.date}</Text>
       </View>
     </View>
   );
@@ -491,6 +526,8 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
