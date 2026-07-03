@@ -418,11 +418,11 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   );
 
   const navigateToAddAddress = React.useCallback(() => {
-    navigateToScreen("AddAddressMap", { fromSource: "newAddress" });
+    navigateToScreen("AddressSelect", { manageOnly: true });
   }, [navigateToScreen]);
 
   const navigateToChangeAddress = React.useCallback(() => {
-    navigateToScreen("AddressSelect");
+    navigateToScreen("AddressSelect", { manageOnly: true });
   }, [navigateToScreen]);
 
   const loadNavbarUser = React.useCallback(async (forceRefresh = false) => {
