@@ -371,14 +371,21 @@ export default function OfferHome() {
   }, []);
 
   useEffect(() => {
+    if (products.length === 0) return;
     const nextKeys = new Set<string>();
     products.slice(0, 2).forEach((item: any, index: number) => {
       nextKeys.add(resolveProductKey(item, index));
     });
     setVisibleProductKeys((previous) => {
+      let didChange = false;
       const merged = new Set(previous);
-      nextKeys.forEach((key) => merged.add(key));
-      return merged;
+      nextKeys.forEach((key) => {
+        if (!merged.has(key)) {
+          merged.add(key);
+          didChange = true;
+        }
+      });
+      return didChange ? merged : previous;
     });
   }, [products, resolveProductKey]);
 

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LoginHead from "../constants/heading/LoginHead";
 import { fetchSearchSuggestions, getProductImageUrl, saveSearchHistory, getSearchHistory, clearSearchHistory } from "../api/ProductApi";
@@ -38,7 +38,6 @@ function SearchScreen() {
                 Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
             ])
         );
-
         animation.start();
         return () => animation.stop();
     }, [pulse]);
@@ -58,19 +57,18 @@ function SearchScreen() {
                     .filter(Boolean);
                 setHistory(Array.from(new Set(normalized)));
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
+            // swallow
         } finally {
             setLoadingHistory(false);
         }
     }, [normalizeHistoryItem]);
 
-    // Load History on Mount
     useEffect(() => {
         loadHistory();
     }, [loadHistory]);
 
-    const handleSelectSuggestion = async (item: SearchSuggestion) => {
+    const handleSelectSuggestion = useCallback(async (item: SearchSuggestion) => {
         setShowSuggest(false);
         setSearch(item.title);
         const normalizedType = String(item?.type || "product").trim().toLowerCase();
@@ -87,17 +85,17 @@ function SearchScreen() {
         try {
             await saveSearchHistory(item.title.trim());
             loadHistory();
-        } catch (error) {
-            console.error("Failed to save search history", error);
+        } catch {
+            // swallow — history save is best-effort
         }
-    };
+    }, [navigation, loadHistory]);
 
-    const handleHistoryPress = (value: string) => {
+    const handleHistoryPress = useCallback((value: string) => {
         setSearch(value);
         if (value.trim().length >= 2) {
             setShowSuggest(true);
         }
-    };
+    }, []);
 
     useEffect(() => {
         const delay = setTimeout(async () => {
@@ -116,8 +114,7 @@ function SearchScreen() {
                     setSuggestions([]);
                     setShowSuggest(true);
                 }
-            } catch (e) {
-                console.error(e);
+            } catch {
                 setSuggestions([]);
                 setShowSuggest(true);
             } finally {
@@ -126,6 +123,66 @@ function SearchScreen() {
         }, 300);
         return () => clearTimeout(delay);
     }, [search]);
+
+    const renderSuggestionItem = useCallback(
+        ({ item }: { item: SearchSuggestion }) => {
+            const isCategory = String(item?.type || "product").trim().toLowerCase() === "category";
+            return (
+                <TouchableOpacity
+                    activeOpacity={0.75}
+                    style={styles.item}
+                    onPress={() => handleSelectSuggestion(item)}
+                >
+                    <View style={styles.imageContainer}>
+                        <CachedImage
+                            uri={getProductImageUrl(item.image)}
+                            style={styles.img}
+                            resizeMode="contain"
+                            priority="normal"
+                        />
+                    </View>
+                    <View style={styles.textContainer}>
+                        <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
+                        <View style={[styles.tagPill, isCategory ? styles.tagPillCategory : styles.tagPillProduct]}>
+                            <Text style={[styles.categoryTag, isCategory && styles.categoryTagCategory]}>
+                                {isCategory ? "Category" : "Product"}
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={styles.arrowCircle}>
+                        <MaterialCommunityIcons name="arrow-top-left" size={16} color={BRAND_PURPLE_LIGHT} />
+                    </View>
+                </TouchableOpacity>
+            );
+        },
+        [handleSelectSuggestion]
+    );
+
+    const SuggestionSkeleton = useMemo(() => (
+        <View style={styles.loaderContainer}>
+            {Array.from({ length: 4 }).map((_, index) => (
+                <View key={`suggest-skeleton-${index}`} style={styles.searchSkeletonItem}>
+                    <SkeletonBox pulse={pulse} width={46} height={46} borderRadius={14} />
+                    <View style={styles.searchSkeletonTextWrap}>
+                        <SkeletonBox pulse={pulse} width="82%" height={12} borderRadius={999} />
+                        <SkeletonBox pulse={pulse} width="42%" height={10} borderRadius={999} style={styles.searchSkeletonTag} />
+                    </View>
+                </View>
+            ))}
+        </View>
+    // pulse is a stable Animated.Value ref — safe to omit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), []);
+
+    const SuggestionEmpty = useMemo(() => (
+        <View style={styles.emptyStateWrap}>
+            <View style={styles.emptyIconCircle}>
+                <MaterialCommunityIcons name="text-search" size={26} color={BRAND_PURPLE_LIGHT} />
+            </View>
+            <Text style={styles.noResultText}>No product found</Text>
+            <Text style={styles.emptySubText}>Try a different keyword</Text>
+        </View>
+    ), []);
 
     return (
         <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
@@ -138,63 +195,23 @@ function SearchScreen() {
 
             {showSuggest ? (
                 <View style={styles.suggestionWrapper}>
-                    <ScrollView
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.suggestionScrollContent}
-                    >
-                        {loadingSuggest ? (
-                            <View style={styles.loaderContainer}>
-                                {Array.from({ length: 4 }).map((_, index) => (
-                                    <View key={`suggest-skeleton-${index}`} style={styles.searchSkeletonItem}>
-                                        <SkeletonBox pulse={pulse} width={46} height={46} borderRadius={14} />
-                                        <View style={styles.searchSkeletonTextWrap}>
-                                            <SkeletonBox pulse={pulse} width="82%" height={12} borderRadius={999} />
-                                            <SkeletonBox pulse={pulse} width="42%" height={10} borderRadius={999} style={styles.searchSkeletonTag} />
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        ) : suggestions.length === 0 ? (
-                            <View style={styles.emptyStateWrap}>
-                                <View style={styles.emptyIconCircle}>
-                                    <MaterialCommunityIcons name="text-search" size={26} color={BRAND_PURPLE_LIGHT} />
-                                </View>
-                                <Text style={styles.noResultText}>No product found</Text>
-                                <Text style={styles.emptySubText}>Try a different keyword</Text>
-                            </View>
-                        ) : (
-                            suggestions.map((item) => {
-                                const isCategory = String(item?.type || "product").trim().toLowerCase() === "category";
-                                return (
-                                    <TouchableOpacity
-                                        key={item.id}
-                                        activeOpacity={0.75}
-                                        style={styles.item}
-                                        onPress={() => handleSelectSuggestion(item)}
-                                    >
-                                        <View style={styles.imageContainer}>
-                                            <Image
-                                                source={{ uri: getProductImageUrl(item.image) }}
-                                                style={styles.img}
-                                            />
-                                        </View>
-                                        <View style={styles.textContainer}>
-                                            <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
-                                            <View style={[styles.tagPill, isCategory ? styles.tagPillCategory : styles.tagPillProduct]}>
-                                                <Text style={[styles.categoryTag, isCategory && styles.categoryTagCategory]}>
-                                                    {isCategory ? "Category" : "Product"}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <View style={styles.arrowCircle}>
-                                            <MaterialCommunityIcons name="arrow-top-left" size={16} color={BRAND_PURPLE_LIGHT} />
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            })
-                        )}
-                    </ScrollView>
+                    {loadingSuggest ? (
+                        SuggestionSkeleton
+                    ) : (
+                        <FlatList
+                            data={suggestions}
+                            keyExtractor={(item) => String(item.id)}
+                            renderItem={renderSuggestionItem}
+                            ListEmptyComponent={SuggestionEmpty}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.suggestionScrollContent}
+                            initialNumToRender={4}
+                            maxToRenderPerBatch={4}
+                            windowSize={3}
+                            removeClippedSubviews
+                        />
+                    )}
                 </View>
             ) : (
                 <View style={styles.content}>
@@ -214,8 +231,7 @@ function SearchScreen() {
                                 } else {
                                   throw new Error("Failed to clear history");
                                 }
-                              } catch (error) {
-                                console.error("clearSearchHistory", error);
+                              } catch {
                                 Alert.alert("Error", "Unable to clear search history. Please try again.");
                               }
                             }}
@@ -308,11 +324,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
+        overflow: "hidden",
     },
     img: {
         width: 30,
         height: 30,
-        resizeMode: "contain",
     },
     textContainer: {
         flex: 1,
@@ -412,13 +428,6 @@ const styles = StyleSheet.create({
     loaderContainer: {
         padding: 24,
         alignItems: 'stretch',
-    },
-    msg: {
-        marginTop: 10,
-        color: "#888",
-    },
-    historyLoader: {
-        marginTop: 20,
     },
     searchSkeletonItem: {
         flexDirection: "row",

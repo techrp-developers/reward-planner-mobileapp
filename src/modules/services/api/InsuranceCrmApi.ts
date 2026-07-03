@@ -22,7 +22,6 @@ export const API = axios.create({
 
 API.interceptors.request.use(
   async (config) => {
-    console.log('🌐 API Request:', config.method?.toUpperCase(), (config.baseURL ?? '') + (config.url ?? ''));
     const authHeaders = await getAuthHeaders();
     Object.assign(config.headers, authHeaders || {});
     return config;

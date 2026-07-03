@@ -14,18 +14,8 @@ const api = axios.create({
 
 
 api.interceptors.response.use(
-  response => {
-    console.log('[MF-API] <-- RESPONSE:', response.status, response.config.url);
-    return response;
-  },
-  error => {
-    console.error('[MF-API] <-- ERROR STATUS:', error.response?.status);
-    console.error('[MF-API] <-- ERROR URL:', error.config?.url);
-    console.error('[MF-API] <-- ERROR BASE:', error.config?.baseURL);
-    console.error('[MF-API] <-- ERROR FULL URL:', (error.config?.baseURL ?? '') + (error.config?.url ?? ''));
-    console.error('[MF-API] <-- ERROR BODY:', JSON.stringify(error.response?.data));
-    return Promise.reject(error);
-  },
+  response => response,
+  error => Promise.reject(error),
 );
 
 // ─────────────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@ export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`);
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error("Fetch Categories Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Fetch Categories Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -42,10 +42,7 @@ export const fetchBillLocations = async (): Promise<BillLocation[]> => {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/locations`);
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error(
-      "Fetch Locations Error:",
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error("Fetch Locations Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -68,10 +65,7 @@ export const fetchOperators = async (
 
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error(
-      "Fetch Operators Error:",
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error("Fetch Operators Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -109,7 +103,7 @@ export const fetchOperatorDetails = async (
       data: Array.isArray(res.data?.data) ? res.data.data : [],
     };
   } catch (error: any) {
-    console.error("Operator Details Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Operator Details Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -140,10 +134,7 @@ export const fetchBill = async (
       await clearAuthToken();
     }
 
-    console.log(
-      "Fetch Bill Error:",
-      error?.response?.data || error?.message
-    );
+    if (__DEV__) { console.error("Fetch Bill Error:", error?.response?.data || error?.message); }
 
     if (error?.response?.data) {
       return error.response.data;
@@ -206,10 +197,7 @@ export const fetchRechargePlans = async (
       } as RechargePlansResponse,
     };
   } catch (error: any) {
-    console.error(
-      'Recharge Plans Error:',
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error('Recharge Plans Error:', error?.response?.data || error); }
 
     throw error?.response?.data || error;
   }
@@ -306,7 +294,7 @@ export const createBillPayOrder = async (
       return error as NormalizedApiError;
     }
 
-    console.error("Create Bill Pay Order Error:", error);
+    if (__DEV__) { console.error("Create Bill Pay Order Error:", error); }
     return {
       success: false,
       status: null,
@@ -343,7 +331,7 @@ export const verifyBillPayPayment = async (
       await clearAuthToken();
     }
 
-    console.error("Verify Bill Pay Payment Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Verify Bill Pay Payment Error:", error?.response?.data || error); }
     throw error?.response?.data || error;
   }
 };
@@ -368,7 +356,7 @@ export const checkBillTransactionStatus = async (
       await clearAuthToken();
     }
 
-    console.error("Check Bill Status Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Check Bill Status Error:", error?.response?.data || error); }
     throw error?.response?.data || error;
   }
 };

@@ -174,7 +174,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           return false;
         }
       } catch {
-        console.warn('Invalid operator field regex:', field.regex);
+        if (__DEV__) { console.warn('Invalid operator field regex:', field.regex); }
       }
     }
 
@@ -185,9 +185,6 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     if (!validateInputs()) {
       return;
     }
-
-    console.log('Operator Details:', operatorDetails);
-    console.log('Form Values:', formValues);
 
     setIsLoading(true);
     try {
@@ -210,9 +207,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
         return;
       }
 
-      console.log('Fetch Bill Payload:', payload);
       const response = await fetchBill(payload);
-      console.log('Fetch Bill Response:', response);
 
       if (!response?.success) {
         alert.warning(
@@ -235,7 +230,6 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     }
   }, [
     validateInputs,
-    operatorDetails,
     formValues,
     loggedInUserName,
     operatorId,
