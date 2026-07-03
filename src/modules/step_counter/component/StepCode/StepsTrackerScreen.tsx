@@ -246,6 +246,15 @@ export default function StepsTrackerScreen() {
   };
 
   const handleContinue = useCallback(async () => {
+    // Returning user: setup was already complete (from AsyncStorage or backend
+    // check) and HC is ready. The auto-redirect effect either already fired or
+    // is about to — navigating via Continue would race it and crash. Go to
+    // Dashboard directly so only one navigation is ever in flight.
+    if (isSetupComplete && isHCReady) {
+      navigation.replace('Dashboard');
+      return;
+    }
+
     if (!isHCReady) {
       alert.warning(
         !isHCInstalled ? 'Health Connect Required' : 'Permission Missing',
