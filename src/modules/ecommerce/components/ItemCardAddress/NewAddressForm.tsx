@@ -9,6 +9,7 @@ import type { HomeStackParamList } from '../../navigation/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { addressesQueryKey } from '../../navigation/navigationPerformance';
 import { useAlert } from '../alerts';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 export default function AddressDetailsSheetWrapper() {
   const [open, setOpen] = useState(true);
@@ -16,6 +17,7 @@ export default function AddressDetailsSheetWrapper() {
   const navigation = useNavigation<Nav>();
   const route = useRoute();
   const alert = useAlert();
+  const { isDark } = useAppTheme();
   const queryClient = useQueryClient();
 
   const params = (route.params || {}) as HomeStackParamList["AddressDetails"];
@@ -57,11 +59,12 @@ export default function AddressDetailsSheetWrapper() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       <ProductHeadColor
         title={mode === "edit" ? "Edit Address" : "Add Address"}
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
       <View style={styles.spacer} />
 
@@ -82,5 +85,6 @@ export default function AddressDetailsSheetWrapper() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  containerDark: { backgroundColor: "#09090B" },
   spacer: { flex: 1 },
 });

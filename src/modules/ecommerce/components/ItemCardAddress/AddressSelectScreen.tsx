@@ -28,6 +28,7 @@ import { addressesQueryKey } from "../../navigation/navigationPerformance";
 import { useAlert } from "../alerts";
 import StickyBottomCTA from "../../../../bottombar/StickyBottomCTA";
 import { useStickyBottomCTA } from "../../../../bottombar/hooks/useStickyBottomCTA";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'AddressSelect'>;
@@ -58,6 +59,7 @@ export default function AddressSelectScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const alert = useAlert();
+  const { isDark, theme } = useAppTheme();
   const queryClient = useQueryClient();
   const manageOnly = route.params?.manageOnly === true;
   // MainLayout already reserves space for the bottom navigation bar. Keep this
@@ -341,29 +343,31 @@ export default function AddressSelectScreen() {
     navigation.navigate("AddressDetails", { manageOnly });
   };
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, isDark && darkStyles.safe]}>
       <ProductHeadColor
         title="Select Address"
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
 
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, isDark && darkStyles.safe]}>
         {/* Search */}
-        <View style={styles.searchWrap}>
-          <MaterialCommunityIcons name="magnify" size={18} color="#777" />
+        <View style={[styles.searchWrap, isDark && darkStyles.surface]}>
+          <MaterialCommunityIcons name="magnify" size={18} color={isDark ? "#A1A1AA" : "#777"} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Search for area, street name..."
-            placeholderTextColor="#9A9AA5"
-            style={styles.searchInput}
+            placeholderTextColor={isDark ? "#71717A" : "#9A9AA5"}
+            selectionColor={theme.primary}
+            style={[styles.searchInput, isDark && darkStyles.primaryText]}
           />
         </View>
 
         {/* Top options card */}
-        <View style={styles.topCard}>
+        <View style={[styles.topCard, isDark && darkStyles.surface]}>
           {/* Add New Address */}
           <TouchableOpacity
             style={styles.topRow}
@@ -371,14 +375,14 @@ export default function AddressSelectScreen() {
             onPress={handleAddNewAddress}
           >
             <View style={styles.rowLeft}>
-              <View style={styles.iconCircleSoft}>
+              <View style={[styles.iconCircleSoft, isDark && darkStyles.iconCircle]}>
                 <MaterialCommunityIcons
                   name="plus"
                   size={18}
-                  color="#6D28D9"
+                  color={theme.primary}
                 />
               </View>
-              <Text style={styles.rowTitlePurple}>Add New Address</Text>
+              <Text style={[styles.rowTitlePurple, isDark && darkStyles.accentText]}>Add New Address</Text>
             </View>
 
             <MaterialCommunityIcons
@@ -389,9 +393,9 @@ export default function AddressSelectScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Saved Addresses</Text>
+        <Text style={[styles.sectionTitle, isDark && darkStyles.secondaryText]}>Saved Addresses</Text>
         {isInitialLoad && loading && (
-          <Text style={styles.loadingText}>
+          <Text style={[styles.loadingText, isDark && darkStyles.secondaryText]}>
             Loading addresses...
           </Text>
         )}
@@ -413,48 +417,48 @@ export default function AddressSelectScreen() {
                 key={item.id}
                 activeOpacity={0.9}
                 onPress={() => setSelectedId(item.id)}
-                style={styles.addrCard}
+                style={[styles.addrCard, isDark && darkStyles.surface]}
               >
                 <View style={styles.addrTop}>
                   <View style={styles.addrLeft}>
-                    <View style={styles.pinCircle}>
+                    <View style={[styles.pinCircle, isDark && darkStyles.iconCircle]}>
                       <MaterialCommunityIcons
                         name="map-marker-outline"
                         size={18}
-                        color="#7B7B86"
+                        color={isDark ? "#D4D4D8" : "#7B7B86"}
                       />
                     </View>
 
                     <View style={styles.flexOne}>
                       <View style={styles.titleRow}>
-                        <Text style={styles.addrTitle}>{item.title}</Text>
+                        <Text style={[styles.addrTitle, isDark && darkStyles.primaryText]}>{item.title}</Text>
                         {item.isDefault ? (
-                          <View style={styles.defaultPill}>
-                            <Text style={styles.defaultPillText}>Default</Text>
+                          <View style={[styles.defaultPill, isDark && darkStyles.defaultPill]}>
+                            <Text style={[styles.defaultPillText, isDark && darkStyles.secondaryText]}>Default</Text>
                           </View>
                         ) : null}
                       </View>
 
-                      <Text style={styles.addrText}>{item.address}</Text>
+                      <Text style={[styles.addrText, isDark && darkStyles.secondaryText]}>{item.address}</Text>
 
                       {/* ✅ only 3 dots like screenshot */}
                       <TouchableOpacity
-                        style={styles.moreBtn}
+                        style={[styles.moreBtn, isDark && darkStyles.iconButton]}
                         onPress={() => openSheet(item.id)}
                         activeOpacity={0.9}
                       >
                         <MaterialCommunityIcons
                           name="dots-horizontal"
                           size={18}
-                          color="#6B6B76"
+                          color={isDark ? "#D4D4D8" : "#6B6B76"}
                         />
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {/* Radio */}
-                  <View style={styles.radioOuter}>
-                    {selected ? <View style={styles.radioInner} /> : null}
+                  <View style={[styles.radioOuter, isDark && darkStyles.radioOuter]}>
+                    {selected ? <View style={[styles.radioInner, isDark && darkStyles.radioInner]} /> : null}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -467,7 +471,7 @@ export default function AddressSelectScreen() {
       {/* Bottom CTA - hidden when managing addresses (no checkout context) or when there's no address yet */}
       {!manageOnly && canSubmit && (
         <StickyBottomCTA bottomOffset={stickyCTA.bottomOffset} onLayout={stickyCTA.onCtaLayout}>
-          <View style={styles.bottomBar}>
+          <View style={[styles.bottomBar, isDark && darkStyles.bottomBar]}>
             <TouchableOpacity
               onPress={handleSubmit}
               activeOpacity={0.9}
@@ -498,27 +502,28 @@ export default function AddressSelectScreen() {
         <Animated.View
           style={[
             styles.sheet,
+            isDark && darkStyles.sheet,
             {
               transform: [{ translateY }],
             },
           ]}
         >
-          <View style={styles.sheetHandle} />
+          <View style={[styles.sheetHandle, isDark && darkStyles.sheetHandle]} />
 
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Option</Text>
+            <Text style={[styles.sheetTitle, isDark && darkStyles.primaryText]}>Select Option</Text>
             <TouchableOpacity onPress={closeSheet} style={styles.sheetCloseBtn}>
-              <MaterialCommunityIcons name="close" size={20} color="#1C1C22" />
+              <MaterialCommunityIcons name="close" size={20} color={isDark ? "#FFFFFF" : "#1C1C22"} />
             </TouchableOpacity>
           </View>
 
           {!sheetItem?.isDefault && (
             <TouchableOpacity
-              style={styles.sheetRow}
+              style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
               activeOpacity={0.9}
               onPress={onSetDefaultAddress}
             >
-              <Text style={styles.sheetRowText}>Set as Default</Text>
+              <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Set as Default</Text>
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={22}
@@ -528,11 +533,11 @@ export default function AddressSelectScreen() {
           )}
 
           <TouchableOpacity
-            style={styles.sheetRow}
+            style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
             activeOpacity={0.9}
             onPress={onEditAddress}
           >
-            <Text style={styles.sheetRowText}>Edit Address</Text>
+            <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Edit Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -541,11 +546,11 @@ export default function AddressSelectScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sheetRow}
+            style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
             activeOpacity={0.9}
             onPress={onDeleteAddress}
           >
-            <Text style={styles.sheetRowText}>Delete Address</Text>
+            <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Delete Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -827,5 +832,34 @@ const styles = StyleSheet.create({
   },
   sheetBottomSpacer: {
     height: Platform.OS === "ios" ? 18 : 10,
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  safe: { backgroundColor: "#09090B" },
+  surface: {
+    backgroundColor: "#18181B",
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  primaryText: { color: "#F4F4F5" },
+  secondaryText: { color: "#A1A1AA" },
+  accentText: { color: "#C4B5FD" },
+  iconCircle: {
+    backgroundColor: "#27233A",
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  defaultPill: { backgroundColor: "#27272A" },
+  iconButton: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  radioOuter: { borderColor: "#C4B5FD" },
+  radioInner: { backgroundColor: "#A78BFA" },
+  bottomBar: { backgroundColor: "#09090B" },
+  sheet: { backgroundColor: "#18181B" },
+  sheetHandle: { backgroundColor: "#52525B" },
+  sheetRow: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.16)",
   },
 });

@@ -15,6 +15,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchAllStates } from "../../api/AddressApi";
 import { useAlert } from "../alerts";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type AddressTag = "Home" | "Work" | "Other";
 
@@ -133,6 +134,7 @@ function AddressDetailsSheet({
 }: Props) {
   const insets = useSafeAreaInsets();
   const alert = useAlert();
+  const { isDark, theme } = useAppTheme();
   const { states, loading: statesLoading, error: statesError, retry: retryStates } = useStates();
 
   const [fields, setFields] = useState<FormFields>(() =>
@@ -271,17 +273,22 @@ function AddressDetailsSheet({
     ? "Couldn't load states - tap to retry"
     : "Select State";
 
+  const themedInputProps = {
+    placeholderTextColor: isDark ? "#71717A" : "#9A9AA5",
+    selectionColor: theme.primary,
+  };
+
   return (
-    <View style={styles.overlay}>
+    <View style={[styles.overlay, isDark && darkStyles.overlay]}>
       <KeyboardAvoidingView
-        style={styles.sheet}
+        style={[styles.sheet, isDark && darkStyles.sheet]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.headerTitle}>Enter Complete Address</Text>
+        <View style={[styles.header, isDark && darkStyles.header]}>
+          <View style={[styles.sheetHandle, isDark && darkStyles.sheetHandle]} />
+          <Text style={[styles.headerTitle, isDark && darkStyles.primaryText]}>Enter Complete Address</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-            <Text style={styles.closeText}>✕</Text>
+            <Text style={[styles.closeText, isDark && darkStyles.primaryText]}>✕</Text>
           </TouchableOpacity>
         </View>
 
@@ -290,7 +297,7 @@ function AddressDetailsSheet({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.label}>Save Address as</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Save Address as</Text>
           <View style={styles.chipRow}>
             {ADDRESS_TAGS.map(tag => {
               const active = fields.saveAs === tag;
@@ -298,25 +305,32 @@ function AddressDetailsSheet({
                 <TouchableOpacity
                   key={tag}
                   onPress={() => setField("saveAs", tag)}
-                  style={[styles.chip, active && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    isDark && darkStyles.chip,
+                    active && styles.chipActive,
+                    active && isDark && darkStyles.chipActive,
+                  ]}
                 >
-                  <Text style={[styles.chipIcon, active && styles.chipTextActive]}>
+                  <Text style={[styles.chipIcon, isDark && darkStyles.primaryText, active && styles.chipTextActive]}>
                     {tagIcon(tag)}
                   </Text>
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{tag}</Text>
+                  <Text style={[styles.chipText, isDark && darkStyles.primaryText, active && styles.chipTextActive]}>{tag}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          <Text style={styles.label}>Flat / House no / Building Name*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Flat / House no / Building Name*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.flatHouseBuilding}
             onChangeText={t => setField("flatHouseBuilding", t)}
             placeholder="Enter here"
             maxLength={120}
             style={[
               styles.input,
+              isDark && darkStyles.input,
               touched.flatHouseBuilding && errors.flatHouseBuilding ? styles.inputError : null,
             ]}
             onBlur={() => markTouched("flatHouseBuilding")}
@@ -325,14 +339,16 @@ function AddressDetailsSheet({
             <Text style={styles.errorText}>{errors.flatHouseBuilding}</Text>
           ) : null}
 
-          <Text style={styles.label}>Area / Sector / Locality*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Area / Sector / Locality*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.areaLocality}
             onChangeText={t => setField("areaLocality", t)}
             placeholder="Enter here"
             maxLength={120}
             style={[
               styles.input,
+              isDark && darkStyles.input,
               touched.areaLocality && errors.areaLocality ? styles.inputError : null,
             ]}
             onBlur={() => markTouched("areaLocality")}
@@ -341,42 +357,46 @@ function AddressDetailsSheet({
             <Text style={styles.errorText}>{errors.areaLocality}</Text>
           ) : null}
 
-          <Text style={styles.label}>Nearby Landmark (Optional)</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Nearby Landmark (Optional)</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.landmark}
             onChangeText={t => setField("landmark", t)}
             placeholder="Enter here"
             maxLength={100}
-            style={styles.input}
+            style={[styles.input, isDark && darkStyles.input]}
           />
 
-          <Text style={styles.label}>Pincode*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Pincode*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.pincode}
             onChangeText={t => setField("pincode", t.replace(/\D/g, ""))}
             keyboardType="number-pad"
             maxLength={6}
             placeholder="Enter pincode"
-            style={[styles.input, touched.pincode && errors.pincode && styles.inputError]}
+            style={[styles.input, isDark && darkStyles.input, touched.pincode && errors.pincode && styles.inputError]}
             onBlur={() => markTouched("pincode")}
           />
           {touched.pincode && errors.pincode ? <Text style={styles.errorText}>{errors.pincode}</Text> : null}
 
-          <Text style={styles.label}>City*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>City*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.city}
             onChangeText={t => setField("city", t)}
             placeholder="Enter city"
             maxLength={60}
-            style={[styles.input, touched.city && errors.city && styles.inputError]}
+            style={[styles.input, isDark && darkStyles.input, touched.city && errors.city && styles.inputError]}
             onBlur={() => markTouched("city")}
           />
           {touched.city && errors.city ? <Text style={styles.errorText}>{errors.city}</Text> : null}
 
-          <Text style={styles.label}>State*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>State*</Text>
           <Dropdown
             style={[
               styles.input,
+              isDark && darkStyles.input,
               statesLoading && styles.inputDisabled,
               touched.stateId && errors.stateId && styles.inputError,
             ]}
@@ -386,13 +406,18 @@ function AddressDetailsSheet({
             placeholder={statePlaceholder}
             value={fields.stateId}
             disable={statesLoading}
+            placeholderStyle={isDark ? darkStyles.dropdownPlaceholder : undefined}
+            selectedTextStyle={isDark ? darkStyles.dropdownText : undefined}
+            itemTextStyle={isDark ? darkStyles.dropdownText : undefined}
+            containerStyle={isDark ? darkStyles.dropdownContainer : undefined}
+            activeColor={isDark ? "#27233A" : undefined}
             onChange={item => {
               setField("stateId", item.state_id);
               setField("stateName", item.state_name);
               markTouched("stateId");
             }}
             renderRightIcon={() =>
-              statesLoading ? <ActivityIndicator size="small" color="#7c3aed" /> : null
+              statesLoading ? <ActivityIndicator size="small" color={theme.primary} /> : null
             }
           />
           {statesError ? (
@@ -404,27 +429,29 @@ function AddressDetailsSheet({
             <Text style={styles.errorText}>{errors.stateId}</Text>
           ) : null}
 
-          <Text style={styles.label}>Contact Name*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Contact Name*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.name}
             onChangeText={t => setField("name", t)}
             placeholder="Enter name"
             maxLength={80}
-            style={[styles.input, touched.name && errors.name && styles.inputError]}
+            style={[styles.input, isDark && darkStyles.input, touched.name && errors.name && styles.inputError]}
             onBlur={() => markTouched("name")}
           />
           {touched.name && errors.name ? (
             <Text style={styles.errorText}>{errors.name}</Text>
           ) : null}
 
-          <Text style={styles.label}>Phone Number*</Text>
+          <Text style={[styles.label, isDark && darkStyles.label]}>Phone Number*</Text>
           <TextInput
+            {...themedInputProps}
             value={fields.phone}
             onChangeText={t => setField("phone", t.replace(/[^\d]/g, ""))}
             placeholder="Enter phone"
             keyboardType="number-pad"
             maxLength={10}
-            style={[styles.input, touched.phone && errors.phone && styles.inputError]}
+            style={[styles.input, isDark && darkStyles.input, touched.phone && errors.phone && styles.inputError]}
             onBlur={() => markTouched("phone")}
           />
           {touched.phone && errors.phone ? (
@@ -504,5 +531,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     textAlign: "center",
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  overlay: { backgroundColor: "rgba(0,0,0,0.36)" },
+  sheet: { backgroundColor: "#18181B" },
+  header: { borderBottomColor: "rgba(255,255,255,0.14)" },
+  sheetHandle: { backgroundColor: "#52525B" },
+  primaryText: { color: "#F4F4F5" },
+  label: { color: "#D4D4D8" },
+  chip: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.18)",
+  },
+  chipActive: {
+    backgroundColor: "#27233A",
+    borderColor: "#A78BFA",
+  },
+  input: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.18)",
+    color: "#F4F4F5",
+  },
+  dropdownPlaceholder: { color: "#71717A", fontSize: 13 },
+  dropdownText: { color: "#F4F4F5", fontSize: 13 },
+  dropdownContainer: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.18)",
   },
 });
