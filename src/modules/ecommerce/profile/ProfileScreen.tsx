@@ -467,6 +467,20 @@ const ProfileScreen: React.FC = () => {
             <AccountRow icon="map-marker-outline" label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect', { manageOnly: true } as any)} />
           </View>
 
+          <SectionHead title="Track Orders" isDark={isDark} />
+          <View style={[styles.card, cardColor(isDark, theme)]}>
+            <AccountRow
+              icon="truck-delivery-outline"
+              label="Track Orders"
+              isDark={isDark}
+              theme={theme}
+              last
+              onPress={() => rootNavigation.navigate('App', {
+                screen: 'TrackOrders',
+              } as any)}
+            />
+          </View>
+
           {/* ════════════════════════════════════
               OTHERS / ACCOUNT
           ════════════════════════════════════ */}
