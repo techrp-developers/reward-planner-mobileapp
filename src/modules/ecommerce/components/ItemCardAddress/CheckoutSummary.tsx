@@ -42,7 +42,9 @@ export default function CheckoutSummary({
           <MaterialCommunityIcons name="home-outline" size={22} color="#7C3AED" />
           <View style={styles.addressTextWrap}>
             <Text style={styles.addressTitle}>
-              Delivering to {address?.contact_name || 'User'}
+              {address
+                ? `Delivering to ${address.contact_name || 'User'}`
+                : 'Delivery address'}
             </Text>
             <Text style={styles.addressSub}>
               {address ? `${address.address1}, ${address.city}` : 'No address selected'}
@@ -51,7 +53,7 @@ export default function CheckoutSummary({
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('AddressSelect')}>
-          <Text style={styles.changeText}>Change</Text>
+          <Text style={styles.changeText}>{address ? 'Change' : 'Add'}</Text>
         </TouchableOpacity>
       </View>
 

@@ -287,7 +287,6 @@ export default function ServiceCheckoutScreen() {
   // ── address query ──────────────────────────────────────────────────────────
   const {
     data: address,
-    isFetching: isAddressFetching,
   } = useQuery({
     queryKey: addressesQueryKey,
     queryFn: fetchAllAddress,
@@ -296,7 +295,7 @@ export default function ServiceCheckoutScreen() {
     gcTime: THIRTY_MINUTES,
     select: (res: any) => {
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-      return list.find((a: any) => a?.is_default) ?? list[0] ?? null;
+      return list.find((a: any) => Number(a?.is_default) === 1) ?? list[0] ?? null;
     },
   });
 
@@ -328,6 +327,9 @@ export default function ServiceCheckoutScreen() {
     gcTime: THIRTY_MINUTES,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    // Keep the current service summary mounted during background refreshes
+    // (including the refresh triggered after selecting an address).
+    placeholderData: previousData => previousData,
     select: (res: any) => normalizePreview(res, mode, service_id, variant_id),
     retry: 1,
     throwOnError: false,
@@ -413,8 +415,8 @@ export default function ServiceCheckoutScreen() {
       if (!address_id) {
         setPlacing(false);
         Alert.alert(
-          "No Address",
-          "Please add a delivery address to continue.",
+          "Select Address",
+          "Please select an address.",
           [
             { text: "Cancel", style: "cancel" },
             { text: "Add Address", onPress: () => navigation.navigate('AddressSelect') },
@@ -676,7 +678,7 @@ export default function ServiceCheckoutScreen() {
   // ── loading skeleton ───────────────────────────────────────────────────────
   const isLoading =
     isAuthenticated &&
-    (!hasStarted || (!checkoutData && (isCheckoutFetching || isAddressFetching)));
+    (!hasStarted || (!checkoutData && isCheckoutFetching));
 
   if (isLoading) {
     return (
@@ -827,7 +829,6 @@ export default function ServiceCheckoutScreen() {
         total={summary.grandTotal}
         count={items.length}
         loading={placing}
-        disabled={isAddressFetching}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
         // Rest flush against the bottom bar; still rise above the keyboard when it's open.

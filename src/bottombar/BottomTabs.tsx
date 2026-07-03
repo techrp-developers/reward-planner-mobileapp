@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useIsFocused } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import ProfileIcon from "../assets/menu/profile.svg";
@@ -143,6 +144,7 @@ function BottomTabs({
   layoutMode = "overlay",
 }: Props) {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const bottomInset = Math.max(insets.bottom, 8);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
@@ -203,11 +205,18 @@ function BottomTabs({
 
   // Keep local active tab state in sync with navigation-driven activeTabKey from parent.
   React.useEffect(() => {
-    if (activeTabKey && activeTabKey !== activeTabRef.current) {
+    if (!isFocused || !activeTabKey) return;
+
+    if (activeTabKey !== activeTabRef.current) {
       activeTabRef.current = activeTabKey;
       setActiveTab(activeTabKey);
     }
-  }, [activeTabKey]);
+
+    if (isDashboard) {
+      const index = activeTabKey === "Notes" ? 0 : activeTabKey === "Home" ? 1 : 2;
+      animateDashboardIndicator(index);
+    }
+  }, [activeTabKey, animateDashboardIndicator, isDashboard, isFocused]);
 
   if (isDashboard) {
     return (

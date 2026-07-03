@@ -249,7 +249,18 @@ function Dashbord() {
                 end={{ x: 1, y: 0.5 }}
                 style={[styles.card, t.card]}
               >
-                <View style={styles.quoteHighlight} />
+                <LinearGradient
+                  colors={[
+                    'rgba(255,255,255,0)',
+                    'rgba(255,255,255,0.035)',
+                    'rgba(255,255,255,0.10)',
+                  ]}
+                  locations={[0, 0.58, 1]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.quoteHighlight}
+                  pointerEvents="none"
+                />
 
                 <View style={[styles.iconContainer, t.iconContainer]}>
                   <MaterialCommunityIcons
@@ -397,8 +408,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    width: rs(92),
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: '62%',
   },
 
   iconContainer: {

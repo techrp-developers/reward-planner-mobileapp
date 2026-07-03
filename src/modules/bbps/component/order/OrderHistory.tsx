@@ -1,13 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import EmptyOrders from '../../../../assets/product/EmptyCart.svg';
 import OrderHeading from '../../../ecommerce/constants/heading/OrderHeading';
-import jio from '../../assets/Sample/jio.png';
-import vi from '../../assets/Sample/VI_Card.png';
-import bill1 from '../../assets/Sample/HDFC.png';
-import bill2 from '../../assets/Sample/SBI_card.png';
 import BBPSOrderFilterSheet, {
   BBPSOrderStatus,
   BBPSOrderTime,
@@ -17,7 +12,6 @@ import BBPSOrderFilterSheet, {
 
 type TemporaryOrder = {
   id: string;
-  icon: any;
   title: string;
   amount: number;
   status: BBPSOrderStatus;
@@ -28,14 +22,7 @@ type TemporaryOrder = {
   repeatable?: boolean;
 };
 
-const TEMPORARY_ORDERS: TemporaryOrder[] = [
-  { id: '9175334410', icon: vi, title: 'Recharge of VI Mobile', amount: 249, status: 'successful', statusText: 'Your order is successful', dateLabel: '23 Jan 2026, 7:34 PM', dateValue: '2026-01-23T19:34:00', month: 'January 2026', repeatable: true },
-  { id: 'Payment', icon: bill1, title: 'Groww', amount: 5490, status: 'failed', statusText: 'Failed', dateLabel: '22 Jan 2026, 5:34 PM', dateValue: '2026-01-22T17:34:00', month: 'January 2026' },
-  { id: '736263728', icon: bill2, title: 'DTH Recharge', amount: 446, status: 'failed', statusText: 'Your order failed', dateLabel: '16 Jan 2026, 9:23 PM', dateValue: '2026-01-16T21:23:00', month: 'January 2026' },
-  { id: '7293334410', icon: jio, title: 'Recharge of Jio Mobile', amount: 549, status: 'successful', statusText: 'Your order is successful', dateLabel: '22 Jan 2026, 5:34 PM', dateValue: '2026-01-22T17:34:00', month: 'January 2026', repeatable: true },
-  { id: '9175334410-dec', icon: vi, title: 'Recharge of VI Mobile', amount: 249, status: 'successful', statusText: 'Your order is successful', dateLabel: '23 Dec 2025, 7:34 PM', dateValue: '2025-12-23T19:34:00', month: 'December 2025', repeatable: true },
-  { id: '7293334410-dec', icon: jio, title: 'Recharge of Jio Mobile', amount: 549, status: 'successful', statusText: 'Your order is successful', dateLabel: '22 Dec 2025, 5:34 PM', dateValue: '2025-12-22T17:34:00', month: 'December 2025', repeatable: true },
-];
+const ORDERS: TemporaryOrder[] = [];
 
 const matchesTimeFilter = (dateValue: string, filter: BBPSOrderTime) => {
   if (!filter) return true;
@@ -59,7 +46,7 @@ const OrderCard = ({
 }) => (
   <View style={styles.orderCard}>
     <View style={styles.logoWrap}>
-      <Image source={order.icon} style={styles.operatorLogo} resizeMode="contain" />
+      <MaterialCommunityIcons name="receipt-text-outline" size={26} color="#8665FF" />
     </View>
     <View style={styles.orderDetails}>
       <Text style={styles.orderTitle} numberOfLines={1}>{order.title}</Text>
@@ -86,6 +73,7 @@ function OrderHistory({ navigation }: any) {
   const [statusFilter, setStatusFilter] = useState<BBPSOrderStatus>('');
   const [timeFilter, setTimeFilter] = useState<BBPSOrderTime>('');
   const [filterVisible, setFilterVisible] = useState(false);
+
   const handleRepeat = (order: TemporaryOrder) => {
     navigation.navigate('ReachargeHomeScreen', {
       mobileNumber: order.id.replace('-dec', ''),
@@ -94,7 +82,7 @@ function OrderHistory({ navigation }: any) {
 
   const groupedOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = TEMPORARY_ORDERS.filter((order) => {
+    const filtered = ORDERS.filter((order) => {
       const matchesSearch = !query || [order.title, order.id, order.statusText]
         .some((value) => value.toLowerCase().includes(query));
       return matchesSearch
@@ -109,12 +97,6 @@ function OrderHistory({ navigation }: any) {
       return groups;
     }, []);
   }, [search, statusFilter, timeFilter]);
-
-  const clearFilters = () => {
-    setStatusFilter('');
-    setTimeFilter('');
-    setSearch('');
-  };
 
   return (
     <View style={styles.container}>
@@ -149,11 +131,7 @@ function OrderHistory({ navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {groupedOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <View style={styles.emptyArt}><EmptyOrders width={210} height={210} /></View>
-            <Text style={styles.emptyTitle}>No transactions found!</Text>
-            <TouchableOpacity onPress={clearFilters}>
-              <Text style={styles.olderOrders}>View Older Orders</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyTitle}>No transaction found</Text>
           </View>
         ) : groupedOrders.map((group) => {
           const total = group.orders.reduce((sum, order) => sum + order.amount, 0);
@@ -208,7 +186,6 @@ const styles = StyleSheet.create({
   monthTotal: { color: '#3F3F46', fontSize: 14, fontWeight: '800' },
   orderCard: { flexDirection: 'row', alignItems: 'center', minHeight: 114, marginHorizontal: 14, marginTop: 10, padding: 12, borderWidth: 1, borderColor: '#ECECEF', borderRadius: 13, backgroundColor: '#FFFFFF', shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 5, elevation: 1 },
   logoWrap: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D4D4D8', borderRadius: 25, backgroundColor: '#FFFFFF' },
-  operatorLogo: { width: 36, height: 36, borderRadius: 18 },
   orderDetails: { flex: 1, minWidth: 0, marginLeft: 12 },
   orderTitle: { color: '#4B4B52', fontSize: 14, fontWeight: '800' },
   orderId: { marginTop: 1, color: '#52525B', fontSize: 12, fontWeight: '700' },
@@ -219,9 +196,7 @@ const styles = StyleSheet.create({
   repeatButton: { minWidth: 72, marginLeft: 6, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1.25, borderColor: '#8665FF', borderRadius: 9 },
   repeatText: { color: '#6D4ACB', fontSize: 12, fontWeight: '800' },
   emptyState: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 48 },
-  emptyArt: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center', borderRadius: 110, backgroundColor: '#F3F1FF' },
-  emptyTitle: { marginTop: 26, color: '#3F3F46', fontSize: 16, fontWeight: '800' },
-  olderOrders: { marginTop: 10, color: '#6D4ACB', fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' },
+  emptyTitle: { marginTop: 18, color: '#3F3F46', fontSize: 16, fontWeight: '800' },
   bottomSpace: { height: 24 },
 });
 

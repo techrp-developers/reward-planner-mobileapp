@@ -178,12 +178,24 @@ export default function WithAddress() {
     refetchOnMount: 'always',
   })
 
-  const cartSummaryData = useRewards
-    ? rewardSummaryQuery.data
-    : noRewardSummaryQuery.data
-  const isSummaryFetchedAfterMount = useRewards
-    ? rewardSummaryQuery.isFetchedAfterMount
-    : noRewardSummaryQuery.isFetchedAfterMount
+  const cartSummaryData = useMemo(() => {
+    if (useRewards) return rewardSummaryQuery.data
+    if (noRewardSummaryQuery.data) return noRewardSummaryQuery.data
+
+    // Keep the cart stable while the first no-reward summary loads. The
+    // product total is already known; only reward-derived fields need refresh.
+    const current = rewardSummaryQuery.data
+    if (!current) return undefined
+    return {
+      ...current,
+      finalPayable: Number(current.cartTotal || 0),
+      totalRedeemed: 0,
+    }
+  }, [noRewardSummaryQuery.data, rewardSummaryQuery.data, useRewards])
+
+  const hasSummaryData = Boolean(
+    rewardSummaryQuery.data || noRewardSummaryQuery.data
+  )
 
   const address = useMemo(() => {
     const list = Array.isArray(addressData?.data) ? addressData.data : []
@@ -216,7 +228,7 @@ export default function WithAddress() {
     isAuthenticated &&
     (!isCartFetchedAfterMount ||
       (!addressData && isAddressFetching) ||
-      (items.length > 0 && !isSummaryFetchedAfterMount))
+      (items.length > 0 && !hasSummaryData))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {

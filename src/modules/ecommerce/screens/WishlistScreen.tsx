@@ -8,9 +8,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { getWishlist, removeWishlist } from "../api/WishlistApi";
-import { getProductImageUrl } from "../api/ProductApi";
+import { fetchProductDetailsByID, getProductImageUrl } from "../api/ProductApi";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -45,12 +46,24 @@ const resolveVariantId = (item: WishlistItem, productId?: number) =>
       item?.product?.variant_id ??
       item?.product?.default_variant_id ??
       item?.product?.variants?.[0]?.variant_id ??
-      item?.product?.variants?.[0]?.id ??
-      productId
+      item?.product?.variants?.[0]?.id
   );
 
 const getProductField = (item: WishlistItem, key: string) =>
   item?.[key] ?? item?.product?.[key] ?? item?.variant?.[key];
+
+const uniqueIds = (values: unknown[]) => {
+  const seen = new Set<number>();
+
+  return values.reduce<number[]>((ids, value) => {
+    const id = toNumberOrUndefined(value);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+    return ids;
+  }, []);
+};
 
 const WishlistScreen = () => {
   const navigation = useNavigation<Nav>();
@@ -121,23 +134,63 @@ const WishlistScreen = () => {
   };
 
   const handleRemoveWishlist = async (item: WishlistItem) => {
-    const wishlistId =
-      item?.wishlist_id != null
-        ? toNumberOrUndefined(item.wishlist_id)
-        : item?.wishlistId != null
-        ? toNumberOrUndefined(item.wishlistId)
-        : item?.id != null
-        ? toNumberOrUndefined(item.id)
-        : undefined;
     const productId = resolveProductId(item);
     const variantId = resolveVariantId(item, productId);
 
     try {
-      await removeWishlist({
-        wishlistId,
-        productId,
+      if (!productId) {
+        throw new Error("Product id is required");
+      }
+
+      const candidateVariantIds = uniqueIds([
         variantId,
-      });
+        item?.default_variant_id,
+        item?.product?.default_variant_id,
+        item?.variant?.variant_id,
+        item?.variant?.id,
+        ...(Array.isArray(item?.variants)
+          ? item.variants.map((variant: any) => variant?.variant_id ?? variant?.id)
+          : []),
+        ...(Array.isArray(item?.product?.variants)
+          ? item.product.variants.map((variant: any) => variant?.variant_id ?? variant?.id)
+          : []),
+      ]);
+
+      if (candidateVariantIds.length === 0) {
+        const productDetails = await fetchProductDetailsByID(productId);
+        const variants = Array.isArray(productDetails?.variants) ? productDetails.variants : [];
+        candidateVariantIds.push(
+          ...uniqueIds([
+            productDetails?.default_variant_id,
+            productDetails?.variant_id,
+            ...variants.map((variant: any) => variant?.variant_id ?? variant?.id),
+          ])
+        );
+      }
+
+      if (candidateVariantIds.length === 0) {
+        throw new Error("Variant id is required");
+      }
+
+      let lastError: any = null;
+
+      for (const candidateVariantId of candidateVariantIds) {
+        try {
+          await removeWishlist({
+            productId,
+            variantId: candidateVariantId,
+            strict: true,
+          });
+          lastError = null;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
 
       setItems((prev) =>
         prev.filter((x) => Number(x?.wishlist_id ?? x?.id) !== Number(item?.wishlist_id ?? item?.id))
@@ -146,8 +199,10 @@ const WishlistScreen = () => {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
+        error?.message ||
         "Failed to remove from wishlist";
       console.log("Wishlist remove failed", message);
+      Alert.alert("Wishlist", String(message));
     }
   };
 

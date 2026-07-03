@@ -61,7 +61,7 @@ export default function AddressDetailsSheetWrapper() {
       <ProductHeadColor
         title={mode === "edit" ? "Edit Address" : "Add Address"}
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => alert.info("Search", "Search functionality coming soon")}
+        showSearch={false}
       />
       <View style={styles.spacer} />
 
@@ -70,7 +70,10 @@ export default function AddressDetailsSheetWrapper() {
         fullAddress=""
         initialValues={initialData}
         submitLabel={submitLabel}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          navigation.goBack();
+        }}
         onSubmit={handleSubmit}
       />
     </View>

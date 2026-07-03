@@ -46,8 +46,8 @@ export function useServiceCartCount(enabled = true): number {
     queryKey: [...SERVICE_CART_QUERY_KEY, 'count'],
     queryFn: fetchServiceCartCounts,
     enabled: isAuthenticated && enabled,
-    staleTime: 2 * 60 * 1000,
-    refetchOnMount: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   return (data?.bundles ?? 0) + (data?.individual_items ?? 0);

@@ -267,7 +267,7 @@ export default function OrderStepUI() {
 
   const selectAddress = useCallback((res: any) => {
     const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-    return list.find((a: any) => a?.is_default) || list[0] || null;
+    return list.find((a: any) => Number(a?.is_default) === 1) || list[0] || null;
   }, []);
 
   const checkoutQueryKey = useMemo(
@@ -310,10 +310,36 @@ export default function OrderStepUI() {
     enabled: isAuthenticated && isBuyNowValid,
     staleTime: TEN_MINUTES,
     gcTime: THIRTY_MINUTES,
+    // Reward toggles change the query key. Retain the current checkout preview
+    // while the reward totals refresh so shipping and delivery details do not
+    // disappear or jump back to the full-screen skeleton.
+    placeholderData: previousData => previousData,
     select: parseCheckoutResponse,
     retry: 1,
     throwOnError: false,
   });
+
+  // An addressless preview has no shipping charge. When an address is added,
+  // removed, or changed, force a fresh preview so shipping and EDD are not
+  // reused from the previous cached response.
+  const previousAddressIdRef = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (isAddressFetching) return;
+
+    const currentAddressId = address
+      ? Number(address?.address_id ?? address?.id) || null
+      : null;
+
+    if (previousAddressIdRef.current === undefined) {
+      previousAddressIdRef.current = currentAddressId;
+      return;
+    }
+
+    if (previousAddressIdRef.current !== currentAddressId) {
+      previousAddressIdRef.current = currentAddressId;
+      queryClient.invalidateQueries({ queryKey: checkoutQueryKey }).catch(() => {});
+    }
+  }, [address, checkoutQueryKey, isAddressFetching, queryClient]);
 
   const addressLine = [
     address?.address1,
@@ -535,7 +561,7 @@ export default function OrderStepUI() {
       if (!selectedAddressId) {
         isCreatingOrder.current = false;
         setPlacing(false);
-        Alert.alert("Select Address", "Please select a delivery address to continue.");
+        Alert.alert("Select Address", "Please select an address.");
         return;
       }
 
@@ -867,9 +893,8 @@ export default function OrderStepUI() {
     (
       !isBuyNowValid ||
       !hasCheckoutStarted ||
-      isCheckoutFetching ||
-      isAddressFetching ||
-      (hasCheckoutStarted && checkoutData === undefined) ||
+      (isCheckoutFetching && checkoutData === undefined) ||
+      (hasCheckoutStarted && checkoutData === undefined && !checkoutError) ||
       checkoutHasItemsPendingSync ||
       (mode === "buy_now" && isBuyNowValid && items.length === 0 && !checkoutError)
     );
@@ -893,7 +918,6 @@ if (
   checkoutDataItems.length === 0 &&
   hasCheckoutStarted &&
   !isCheckoutFetching &&
-  !isAddressFetching &&
   checkoutData !== undefined &&
   mode !== "buy_now"
 ) {    return (
@@ -945,10 +969,12 @@ if (
               <View style={styles.cardContent}>
                 <View style={styles.cardTopRow}>
                   <Text style={styles.title}>
-                    Delivering to {address?.contact_name || "User"}
+                    {address
+                      ? `Delivering to ${address.contact_name || "User"}`
+                      : "Delivery address"}
                   </Text>
                   <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate("AddressSelect")}>
-                    <Text style={styles.change}>Change</Text>
+                    <Text style={styles.change}>{address ? "Change" : "Add"}</Text>
                   </TouchableOpacity>
                 </View>
 
