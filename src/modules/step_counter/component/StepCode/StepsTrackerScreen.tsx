@@ -246,6 +246,20 @@ export default function StepsTrackerScreen() {
   };
 
   const handleContinue = useCallback(async () => {
+    // Ignore rapid double taps while the native permission/read flow or a
+    // navigation transition is already running.
+    if (continueInProgressRef.current) return;
+
+    // Returning user: setup was already complete (from AsyncStorage or backend
+    // check) and HC is ready. The auto-redirect effect either already fired or
+    // is about to — navigating via Continue would race it and crash. Go to
+    // Dashboard directly so only one navigation is ever in flight.
+    if (isSetupComplete && isHCReady) {
+      continueInProgressRef.current = true;
+      navigation.replace('Dashboard');
+      return;
+    }
+
     if (!isHCReady) {
       alert.warning(
         !isHCInstalled ? 'Health Connect Required' : 'Permission Missing',
@@ -268,14 +282,17 @@ export default function StepsTrackerScreen() {
     // requestStepsPermission() sets isSetupComplete = true internally, which
     // would otherwise fire the redirect at the same time as navigate('StepForm').
     continueInProgressRef.current = true;
-    try {
-      const setupReady = await requestStepsPermission();
-      if (!setupReady) return;
-      navigation.navigate('StepForm');
-    } finally {
+    const setupReady = await requestStepsPermission();
+    if (!setupReady) {
       continueInProgressRef.current = false;
+      return;
     }
-  }, [isHCReady, isHCInstalled, totalSteps, requestStepsPermission, navigation, alert, refreshStatus]);
+
+    // Keep the ref set after a successful setup. setIsSetupComplete(true) and
+    // this navigation are scheduled very close together; clearing it here lets
+    // the redirect effect replace StepForm with Dashboard during the transition.
+    navigation.navigate('StepForm');
+  }, [isSetupComplete, isHCReady, isHCInstalled, totalSteps, requestStepsPermission, navigation, alert, refreshStatus]);
 
   return (
     <SafeAreaView style={ss.safe} edges={['top', 'bottom']}>
