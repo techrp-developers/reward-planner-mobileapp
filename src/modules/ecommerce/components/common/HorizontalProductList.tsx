@@ -70,9 +70,15 @@ function HorizontalProductList<T extends ListItemBase>({
       nextKeys.add(resolveKey(item, index));
     });
     setLoadedImageKeys((previous) => {
+      let didChange = false;
       const merged = new Set(previous);
-      nextKeys.forEach((key) => merged.add(key));
-      return merged;
+      nextKeys.forEach((key) => {
+        if (!merged.has(key)) {
+          merged.add(key);
+          didChange = true;
+        }
+      });
+      return didChange ? merged : previous;
     });
   }, [data, initialVisibleCount, resolveKey]);
 
