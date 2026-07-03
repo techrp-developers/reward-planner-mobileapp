@@ -194,17 +194,27 @@ export default function StepsTrackerScreen() {
   const hasStepsPerm  = hasStepsPermission(grantedPermissions);
   const isHCReady     = healthConnectStatus === String(SdkAvailabilityStatus.SDK_AVAILABLE) && hasStepsPerm;
   const showGuide     = isHCInstalled && !hasStepsPerm;
-
-  // Only two real gates: Health Connect permission granted and step data available.
   const canProceed    = isHCReady && totalSteps > 0;
 
+  // Prevent a double-navigation crash: when handleContinue calls
+  // requestStepsPermission(), that sets isSetupComplete = true which would
+  // fire the auto-redirect below at the same time as navigation.navigate('StepForm').
+  // Holding this ref true during the Continue flow suppresses the redirect;
+  // the user lands on StepForm instead and the redirect fires on Dashboard
+  // via isSetupComplete being true on re-entry to StepsTrackerScreen never happens.
+  const continueInProgressRef = useRef(false);
+
   useEffect(() => { checkApps(); }, []);
-  // Redirect to Dashboard as soon as HC is ready and setup is confirmed.
-  // No totalSteps > 0 guard here: a returning user (isSetupComplete already
-  // true from backend/storage) who hasn't walked yet today should still go
-  // to Dashboard. First-time users are safe because requestStepsPermission()
-  // only sets isSetupComplete after confirming a step source exists.
-  useEffect(() => { if (isSetupComplete && isHCReady) navigation.replace('Dashboard'); }, [isSetupComplete, isHCReady, navigation]);
+
+  // Auto-redirect for returning users: if setup was already complete (from
+  // AsyncStorage or backend check) and HC is ready, skip the screen entirely.
+  // Suppressed while handleContinue is running to avoid the double-navigation crash.
+  useEffect(() => {
+    if (isSetupComplete && isHCReady && !continueInProgressRef.current) {
+      navigation.replace('Dashboard');
+    }
+  }, [isSetupComplete, isHCReady, navigation]);
+
   useEffect(() => { setGuideOpen(showGuide); }, [showGuide]);
 
   const checkApps = async () => {
@@ -254,9 +264,17 @@ export default function StepsTrackerScreen() {
       refreshStatus();
       return;
     }
-    const setupReady = await requestStepsPermission();
-    if (!setupReady) return;
-    navigation.navigate('StepForm');
+    // Block the auto-redirect effect while this async flow is in progress.
+    // requestStepsPermission() sets isSetupComplete = true internally, which
+    // would otherwise fire the redirect at the same time as navigate('StepForm').
+    continueInProgressRef.current = true;
+    try {
+      const setupReady = await requestStepsPermission();
+      if (!setupReady) return;
+      navigation.navigate('StepForm');
+    } finally {
+      continueInProgressRef.current = false;
+    }
   }, [isHCReady, isHCInstalled, totalSteps, requestStepsPermission, navigation, alert, refreshStatus]);
 
   return (
