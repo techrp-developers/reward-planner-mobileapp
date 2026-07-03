@@ -51,6 +51,12 @@ type Props = {
 
 const ADDRESS_TAGS: AddressTag[] = ["Home", "Work", "Other"];
 
+const normalizePhone = (value: string | undefined) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  return digits.slice(0, 10);
+};
+
 const tagIcon = (tag: AddressTag) => {
   if (tag === "Home") return "⌂";
   if (tag === "Work") return "⌁";
@@ -107,7 +113,7 @@ function buildInitialFields(
     areaLocality: initialValues?.areaLocality ?? "",
     landmark: initialValues?.landmark ?? "",
     name: initialValues?.name ?? defaultName ?? "",
-    phone: initialValues?.phone ?? defaultPhone ?? "",
+    phone: normalizePhone(initialValues?.phone ?? defaultPhone),
     pincode: initialValues?.pincode ?? "",
     city: initialValues?.city ?? "",
     stateId: initialValues?.state_id ?? null,
@@ -139,6 +145,7 @@ function AddressDetailsSheet({
   // Re-sync fields if the record being edited changes while the sheet stays mounted.
   useEffect(() => {
     setFields(buildInitialFields(initialValues, defaultName, defaultPhone));
+    setTouched({});
   }, [initialValues, defaultName, defaultPhone]);
 
   // Backfill pincode from a freeform address string (e.g. picked from the map) if not already set.
@@ -169,12 +176,53 @@ function AddressDetailsSheet({
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (!fields.flatHouseBuilding.trim()) e.flatHouseBuilding = "Required";
-    if (!fields.areaLocality.trim()) e.areaLocality = "Required";
-    if (!fields.pincode.trim()) e.pincode = "Required";
-    if (!fields.city.trim()) e.city = "Required";
+    const flatHouseBuilding = fields.flatHouseBuilding.trim();
+    const areaLocality = fields.areaLocality.trim();
+    const pincode = fields.pincode.trim();
+    const city = fields.city.trim();
+    const name = fields.name.trim();
+    const phone = fields.phone.trim();
+
+    if (!flatHouseBuilding) {
+      e.flatHouseBuilding = "Flat, house number or building name is required";
+    } else if (flatHouseBuilding.length < 2) {
+      e.flatHouseBuilding = "Enter at least 2 characters";
+    }
+
+    if (!areaLocality) {
+      e.areaLocality = "Area or locality is required";
+    } else if (areaLocality.length < 2) {
+      e.areaLocality = "Enter at least 2 characters";
+    }
+
+    if (!pincode) {
+      e.pincode = "Pincode is required";
+    } else if (!/^[1-9]\d{5}$/.test(pincode)) {
+      e.pincode = "Enter a valid 6-digit pincode";
+    }
+
+    if (!city) {
+      e.city = "City is required";
+    } else if (city.length < 2) {
+      e.city = "Enter a valid city name";
+    }
+
+    if (fields.stateId === null) e.stateId = "Please select a state";
+
+    if (!name) {
+      e.name = "Contact name is required";
+    } else if (name.length < 2) {
+      e.name = "Enter a valid contact name";
+    }
+
+    if (!phone) {
+      e.phone = "Phone number is required";
+    } else if (!/^[6-9]\d{9}$/.test(phone)) {
+      e.phone = "Enter a valid 10-digit mobile number";
+    }
+
     return e;
-  }, [fields.flatHouseBuilding, fields.areaLocality, fields.pincode, fields.city]);
+  }, [fields]);
 
   const canSubmit = Object.keys(errors).length === 0 && !submitting;
 
@@ -186,6 +234,9 @@ function AddressDetailsSheet({
       areaLocality: true,
       pincode: true,
       city: true,
+      stateId: true,
+      name: true,
+      phone: true,
     });
 
     if (!canSubmit) return;
@@ -198,8 +249,8 @@ function AddressDetailsSheet({
         areaLocality: fields.areaLocality.trim(),
         fullAddress,
         landmark: fields.landmark.trim() || undefined,
-        name: fields.name.trim() || undefined,
-        phone: fields.phone.trim() || undefined,
+        name: fields.name.trim(),
+        phone: fields.phone.trim(),
         pincode: fields.pincode.trim(),
         city: fields.city.trim(),
         state_id: fields.stateId ?? undefined,
@@ -263,6 +314,7 @@ function AddressDetailsSheet({
             value={fields.flatHouseBuilding}
             onChangeText={t => setField("flatHouseBuilding", t)}
             placeholder="Enter here"
+            maxLength={120}
             style={[
               styles.input,
               touched.flatHouseBuilding && errors.flatHouseBuilding ? styles.inputError : null,
@@ -278,6 +330,7 @@ function AddressDetailsSheet({
             value={fields.areaLocality}
             onChangeText={t => setField("areaLocality", t)}
             placeholder="Enter here"
+            maxLength={120}
             style={[
               styles.input,
               touched.areaLocality && errors.areaLocality ? styles.inputError : null,
@@ -293,13 +346,14 @@ function AddressDetailsSheet({
             value={fields.landmark}
             onChangeText={t => setField("landmark", t)}
             placeholder="Enter here"
+            maxLength={100}
             style={styles.input}
           />
 
           <Text style={styles.label}>Pincode*</Text>
           <TextInput
             value={fields.pincode}
-            onChangeText={t => setField("pincode", t)}
+            onChangeText={t => setField("pincode", t.replace(/\D/g, ""))}
             keyboardType="number-pad"
             maxLength={6}
             placeholder="Enter pincode"
@@ -313,14 +367,19 @@ function AddressDetailsSheet({
             value={fields.city}
             onChangeText={t => setField("city", t)}
             placeholder="Enter city"
+            maxLength={60}
             style={[styles.input, touched.city && errors.city && styles.inputError]}
             onBlur={() => markTouched("city")}
           />
           {touched.city && errors.city ? <Text style={styles.errorText}>{errors.city}</Text> : null}
 
-          <Text style={styles.label}>State</Text>
+          <Text style={styles.label}>State*</Text>
           <Dropdown
-            style={[styles.input, statesLoading && styles.inputDisabled]}
+            style={[
+              styles.input,
+              statesLoading && styles.inputDisabled,
+              touched.stateId && errors.stateId && styles.inputError,
+            ]}
             data={states}
             labelField="state_name"
             valueField="state_id"
@@ -330,6 +389,7 @@ function AddressDetailsSheet({
             onChange={item => {
               setField("stateId", item.state_id);
               setField("stateName", item.state_name);
+              markTouched("stateId");
             }}
             renderRightIcon={() =>
               statesLoading ? <ActivityIndicator size="small" color="#7c3aed" /> : null
@@ -340,28 +400,40 @@ function AddressDetailsSheet({
               <Text style={styles.retryText}>Couldn't load states. Tap to retry.</Text>
             </TouchableOpacity>
           ) : null}
+          {touched.stateId && errors.stateId ? (
+            <Text style={styles.errorText}>{errors.stateId}</Text>
+          ) : null}
 
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Contact Name*</Text>
           <TextInput
             value={fields.name}
             onChangeText={t => setField("name", t)}
             placeholder="Enter name"
-            style={styles.input}
+            maxLength={80}
+            style={[styles.input, touched.name && errors.name && styles.inputError]}
+            onBlur={() => markTouched("name")}
           />
+          {touched.name && errors.name ? (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          ) : null}
 
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>Phone Number*</Text>
           <TextInput
             value={fields.phone}
             onChangeText={t => setField("phone", t.replace(/[^\d]/g, ""))}
             placeholder="Enter phone"
             keyboardType="number-pad"
             maxLength={10}
-            style={styles.input}
+            style={[styles.input, touched.phone && errors.phone && styles.inputError]}
+            onBlur={() => markTouched("phone")}
           />
+          {touched.phone && errors.phone ? (
+            <Text style={styles.errorText}>{errors.phone}</Text>
+          ) : null}
 
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={!canSubmit}
+            disabled={submitting}
             activeOpacity={0.9}
             style={[styles.ctaWrapper, { marginBottom: insets.bottom + 78 }]}
           >
@@ -369,7 +441,7 @@ function AddressDetailsSheet({
               colors={["#8665FF", "#5B47A3"]}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
-              style={[styles.cta, (!canSubmit || submitting) && styles.ctaDisabled]}
+              style={[styles.cta, submitting && styles.ctaDisabled]}
             >
               <Text style={styles.ctaText}>{submitting ? "Saving..." : submitLabel}</Text>
             </LinearGradient>

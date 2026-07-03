@@ -59,9 +59,15 @@ export default function AddressSelectScreen() {
   const insets = useSafeAreaInsets();
   const alert = useAlert();
   const queryClient = useQueryClient();
-  const fromCart = route.params?.fromCart === true;
   const manageOnly = route.params?.manageOnly === true;
-  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 });
+  // MainLayout already reserves space for the bottom navigation bar. Keep this
+  // CTA anchored to that boundary instead of letting the search keyboard lift
+  // it into the middle of the address list.
+  const stickyCTA = useStickyBottomCTA({
+    tabBarAware: false,
+    keyboardAware: false,
+    extraSpacing: 0,
+  });
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
@@ -201,13 +207,7 @@ export default function AddressSelectScreen() {
 
   const canSubmit = !!selectedId;
 
-  const handleUseCurrentLocation = () => {
-    navigation.navigate("AddAddressMap", { fromCart, manageOnly });
-  };
-
-
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedId) return;
 
     const selected = addresses.find(a => a.id === selectedId);
@@ -215,16 +215,24 @@ export default function AddressSelectScreen() {
     // Make the chosen address the default so the cart/checkout actually uses
     // it for the order, instead of always falling back to whichever address
     // was previously default. Apply locally + to the shared cache right away
-    // and navigate back immediately - the network call finishes in the
-    // background instead of making the user wait on the round-trip before
-    // the cart even reflects the change.
+    // only after the server has accepted the new default. Otherwise checkout
+    // can refetch too early and cache an addressless preview with zero shipping.
     if (selected && !selected.isDefault) {
-      setAddressAsDefault(selectedId).then(success => {
-        if (!success) {
-          alert.error("Error", "Could not save your selected address. Please try again.");
-        }
-      });
+      const success = await setAddressAsDefault(selectedId);
+      if (!success) {
+        alert.error("Error", "Could not save your selected address. Please try again.");
+        return;
+      }
     }
+
+    // Refresh both reward modes and cart/buy-now previews after the address is
+    // committed so shipping charges and EDD use the newly selected pincode.
+    await queryClient.invalidateQueries({
+      queryKey: ["ecommerce", "checkout-preview"],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["service-checkout"],
+    });
 
     // Go back to whichever screen pushed this one (cart, checkout, service
     // checkout, etc.) instead of hardcoding an ecommerce-only destination -
@@ -337,7 +345,7 @@ export default function AddressSelectScreen() {
       <ProductHeadColor
         title="Select Address"
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => alert.info("Search", "Search functionality coming soon")}
+        showSearch={false}
       />
 
 
@@ -356,38 +364,6 @@ export default function AddressSelectScreen() {
 
         {/* Top options card */}
         <View style={styles.topCard}>
-          {/* Use Current Location */}
-          <TouchableOpacity
-            style={styles.topRow}
-            activeOpacity={0.85}
-            onPress={handleUseCurrentLocation}
-          >
-            <View style={styles.rowLeft}>
-              <View style={styles.iconCircleSoft}>
-                <MaterialCommunityIcons
-                  name="target"
-                  size={18}
-                  color="#6D28D9"
-                />
-              </View>
-              <View style={styles.rowTextWrap}>
-                <Text style={styles.rowTitlePurple}>Use Current Location</Text>
-                <Text style={styles.rowSubText} numberOfLines={2}>
-                  B-25, KPCT Mall, 16/1/1 Wanworie Road, Fatima Nagar, Wanwadi,
-                  Pune, 411040
-                </Text>
-              </View>
-            </View>
-
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color="#B2B2BD"
-            />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
           {/* Add New Address */}
           <TouchableOpacity
             style={styles.topRow}
@@ -661,7 +637,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   rowLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  rowTextWrap: { flex: 1, marginLeft: 10 },
   iconCircleSoft: {
     width: 28,
     height: 28,
@@ -675,14 +650,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  rowSubText: {
-    marginTop: 3,
-    color: "#8A8A95",
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  divider: { height: 1, backgroundColor: "#EFEFF6" },
-
   sectionTitle: {
     marginTop: 14,
     marginBottom: 8,

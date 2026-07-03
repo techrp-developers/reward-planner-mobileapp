@@ -170,12 +170,23 @@ export default function WithoutAddress() {
     refetchOnMount: 'always',
   })
 
-  const cartSummaryData = useRewards
-    ? rewardSummaryQuery.data
-    : noRewardSummaryQuery.data
-  const isSummaryFetchedAfterMount = useRewards
-    ? rewardSummaryQuery.isFetchedAfterMount
-    : noRewardSummaryQuery.isFetchedAfterMount
+  const cartSummaryData = useMemo(() => {
+    if (useRewards) return rewardSummaryQuery.data
+    if (noRewardSummaryQuery.data) return noRewardSummaryQuery.data
+
+    // Keep the cart visible while the first no-reward summary refreshes.
+    const current = rewardSummaryQuery.data
+    if (!current) return undefined
+    return {
+      ...current,
+      finalPayable: Number(current.cartTotal || 0),
+      totalRedeemed: 0,
+    }
+  }, [noRewardSummaryQuery.data, rewardSummaryQuery.data, useRewards])
+
+  const hasSummaryData = Boolean(
+    rewardSummaryQuery.data || noRewardSummaryQuery.data
+  )
 
   const cartSummary = useMemo(() => {
     return {
@@ -201,7 +212,7 @@ export default function WithoutAddress() {
   const loading =
     isAuthenticated &&
     (!isCartFetchedAfterMount ||
-      (items.length > 0 && !isSummaryFetchedAfterMount))
+      (items.length > 0 && !hasSummaryData))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {
