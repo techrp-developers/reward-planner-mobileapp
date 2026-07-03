@@ -113,17 +113,17 @@ export default function ServiceCart({
                     resizeMode="cover"
                 />
 
-                <LinearGradient
+                {/* <LinearGradient
                     colors={['#FDF4A3', '#FEDB7C']}
                     start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
                     style={styles.discountBadge}
                 >
                     <Text style={styles.discountText}>Upto 48% Off</Text>
-                </LinearGradient>
+                </LinearGradient> */}
 
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                {/* <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
                     <MaterialCommunityIcons name="share-variant-outline" size={24} color="#374151" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
             <View style={styles.contentPadding}>
@@ -177,7 +177,7 @@ export default function ServiceCart({
                 </Text>
 
                 {/* 4. Renewal Offer Banner */}
-                <LinearGradient
+                {/* <LinearGradient
                     colors={['#FEEEAC', '#FDD174']}
                     style={styles.offerBanner}
                     start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
@@ -190,7 +190,7 @@ export default function ServiceCart({
                     <View style={styles.offerBadge}>
                         <Text style={styles.offerBadgeText}>Today Only</Text>
                     </View>
-                </LinearGradient>
+                </LinearGradient> */}
 
                 {/* 5. Action Buttons */}
                 <TouchableOpacity activeOpacity={0.9} onPress={onPrimaryPress} style={styles.primaryButtonShadow}>
