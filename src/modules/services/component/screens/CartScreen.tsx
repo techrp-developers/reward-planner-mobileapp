@@ -250,7 +250,9 @@ function CartScreen() {
         return;
       }
 
-      const selected_items = item.bundle_items.map((i: any) => Number(i.bundle_item_id));
+      const selected_items = item.bundle_items
+        .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
 
       console.log("📦 Bundle Buy Now:", {
         bundle_id: item.bundle_id,
@@ -266,6 +268,7 @@ function CartScreen() {
         mode: 'buy_now', // ✅ SAME MODE
         previewData,     // ✅ IMPORTANT
         bundle_id: item.bundle_id,
+        selected_items,
       });
 
       return;

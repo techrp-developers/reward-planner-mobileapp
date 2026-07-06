@@ -288,7 +288,14 @@ export default function ServiceCheckoutScreen() {
   const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
-  const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};
+  const {
+    mode: routeMode,
+    service_id,
+    variant_id,
+    bundle_id,
+    selected_items: routeSelectedItems,
+    previewData: passedPreview,
+  } = route.params ?? {};
   const mode = routeMode === 'buy_now' ? 'buy_now' : 'cart';
 
   const { isAuthenticated } = useAuth();
@@ -464,9 +471,9 @@ export default function ServiceCheckoutScreen() {
       // ✅ Step 1: Create Order via API
       let orderRes;
       if (mode === "buy_now" && bundle_id) {
-        const selected_items = items
+        const selected_items = (routeSelectedItems?.length ? routeSelectedItems : items
           .flatMap((item) => item.bundle_items ?? [])
-          .map((i: any) => Number(i.bundle_item_id))
+          .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id)))
           .filter((id) => Number.isFinite(id) && id > 0);
 
         orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
@@ -670,7 +677,7 @@ export default function ServiceCheckoutScreen() {
         "Failed to place order";
       alert.error?.("Error", serverMessage);
     }
-  }, [mode, service_id, variant_id, bundle_id, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
+  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
   const handleRemoveFromCheckout = useCallback(async (item: ServicePreviewItem) => {
     if (mode !== 'cart' || !item.id) return;
     if (removingId === item.id) return;

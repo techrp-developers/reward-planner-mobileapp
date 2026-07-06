@@ -382,6 +382,7 @@ function PackScreen() {
         mode: "buy_now", // ✅ IMPORTANT
         previewData: preview,
         bundle_id: finalBundleId,
+        selected_items,
       });
 
     } catch (error: any) {

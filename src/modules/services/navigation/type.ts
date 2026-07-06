@@ -121,6 +121,7 @@ export type HomeStackParamList = {
     service_id?: number;
     variant_id?: number;
     bundle_id?: number; 
+    selected_items?: number[];
     previewData?: any; 
   };
 };
