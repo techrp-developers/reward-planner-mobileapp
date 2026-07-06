@@ -59,7 +59,9 @@ type NormalizedSelectionItem = {
 };
 
 const parsePrice = (value: string | number | null | undefined) => {
-  const parsed = Number(value ?? 0);
+  const parsed = typeof value === 'number'
+    ? value
+    : Number(String(value ?? '').replace(/[^0-9.]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
@@ -311,11 +313,10 @@ function PackScreen() {
     // ✅ Individual mode
     const selectedItems = items.filter(item => selectedSet.has(item.id));
 
-    const original = selectedItems.reduce((s, i) => s + i.individualPrice, 0);
-    const discounted = selectedItems.reduce((s, i) => s + i.price, 0);
+    const discounted = selectedItems.reduce((s, i) => s + i.individualPrice, 0);
 
     return {
-      original,
+      original: 0,
       discounted,
       savings: 0,
     };
