@@ -51,6 +51,22 @@ type ServiceCartItem = {
 
 };
 
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sumBundleItemPrices = (items: any[], fields: string[]): number => {
+  return items.reduce((total, item) => {
+    const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
+    return total + parseMoney(field ? item?.[field] : 0);
+  }, 0);
+};
+
 // const parsePositiveId = (value: unknown): number | null => {
 //   const parsed = Number(value);
 //   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -68,6 +84,15 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
   // ✅ Handle Bundles as SINGLE ITEM
   bundles.forEach((bundle: any) => {
     const bundleItems = bundle.items || [];
+    const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+    const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+      'individual_price',
+      'mrp',
+      'original_price',
+      'price',
+    ]);
+    const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+    const displayMrp = selectedItemsMrp || displayPrice;
 
     // ✅ Collect all documents
 
@@ -96,8 +121,8 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       // ✅ Real bundle description, falling back to item count
       description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-      price: Number(bundle.bundle_total || 0),
-      mrp: Number(bundle.bundle_total || 0),
+      price: displayPrice,
+      mrp: Math.max(displayMrp, displayPrice),
 
       // 🔥 FIXED (no duplicate docs)
       documents: uniqueDocs,

@@ -78,6 +78,22 @@ type PreviewSummary = {
   grandTotal: number;
 };
 
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sumBundleItemPrices = (items: any[], fields: string[]): number => {
+  return items.reduce((total, item) => {
+    const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
+    return total + parseMoney(field ? item?.[field] : 0);
+  }, 0);
+};
+
 function normalizePreview(
   data: any,
   mode: 'buy_now' | 'cart',
@@ -94,6 +110,15 @@ function normalizePreview(
     // ✅ Convert bundle → SINGLE ITEM
     const bundleCards = bundles.map((bundle: any) => {
       const bundleItems = bundle.items || [];
+      const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+      const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+        'individual_price',
+        'mrp',
+        'original_price',
+        'price',
+      ]);
+      const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+      const displayMrp = selectedItemsMrp || displayPrice;
 
       // ✅ Merge documents (no duplicate)
       const allDocs = bundleItems.flatMap((i: any) =>
@@ -111,8 +136,8 @@ function normalizePreview(
         variant_name: 'Bundle Pack',
         description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-        price: Number(bundle.bundle_total || 0),
-        mrp: Number(bundle.bundle_total || 0),
+        price: displayPrice,
+        mrp: Math.max(displayMrp, displayPrice),
 
         documents: uniqueDocs,
 
@@ -132,6 +157,15 @@ function normalizePreview(
     if (raw?.bundle) {
       const bundle = raw.bundle;
       const bundleItems = bundle.items || [];
+      const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+      const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+        'individual_price',
+        'mrp',
+        'original_price',
+        'price',
+      ]);
+      const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+      const displayMrp = selectedItemsMrp || displayPrice;
 
       const bundleCard = {
         id: `bundle-${bundle.bundle_id}`,
@@ -142,8 +176,8 @@ function normalizePreview(
         variant_name: 'Bundle Pack',
         description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-        price: Number(bundle.bundle_total || 0),
-        mrp: Number(bundle.bundle_total || 0),
+        price: displayPrice,
+        mrp: Math.max(displayMrp, displayPrice),
 
         documents: [],
 
@@ -179,8 +213,8 @@ function normalizePreview(
         variant_name: String(entry?.variant_name ?? 'Plan').trim(),
         description: String(entry?.description ?? entry?.short_description ?? '').trim(),
 
-        price: Number(entry?.price ?? 0),
-        mrp: Number(entry?.mrp ?? entry?.price ?? 0),
+        price: parseMoney(entry?.price),
+        mrp: parseMoney(entry?.mrp ?? entry?.price),
 
         image_url: entry?.image_url ? String(entry.image_url) : undefined,
 
@@ -204,21 +238,23 @@ function normalizePreview(
 let subtotal = 0;
 
 if (raw?.bundle?.bundle_total) {
-  subtotal = Number(raw.bundle.bundle_total); // ✅ MOST RELIABLE
+  subtotal = parseMoney(raw.bundle.bundle_total); // ✅ MOST RELIABLE
 } else if (items.length === 1 && items[0].isBundle) {
-  subtotal = Number(items[0].price || 0);
+  subtotal = parseMoney(items[0].price);
 } else {
-  subtotal = items.reduce((s, it) => s + Number(it.price || 0), 0);
+  subtotal = items.reduce((s, it) => s + parseMoney(it.price), 0);
 }
 
 // ✅ discount
 const discount =
-  Number(summaryRaw.discount ?? 0) +
-  Number(summaryRaw.reward_discount ?? 0);
+  parseMoney(summaryRaw.discount) +
+  parseMoney(summaryRaw.reward_discount);
 
 // ✅ total
 const grandTotal =
-  Number(summaryRaw.total ?? subtotal);
+  mode === 'cart'
+    ? Math.max(subtotal - discount, 0)
+    : parseMoney(summaryRaw.total ?? subtotal);
 
 return {
   items,
