@@ -236,7 +236,7 @@ function RechargeSection({ navigation, route }: any) {
         user={{
           name: user?.name || 'User',
           number: String(primaryValue),
-          operatorLogo: require('../../assets/Sample/VI_Card.png'),
+          operatorInitial: operatorName,
           type: operatorName,
         }}
         onBackPress={() => navigation.goBack()}
