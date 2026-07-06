@@ -72,7 +72,7 @@ export const addToCart = async (payload: AddToCartPayload) => {
 
 export const deleteAllCartItems = async () => {
   try {
-    const res = await api.put("/v1/cart/cart-items");
+    const res = await api.delete("/v1/cart/cart-items");
     return res.data;
   } catch (error: any) {
     const status = Number(error?.response?.status || 0);
