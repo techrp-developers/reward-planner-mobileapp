@@ -25,6 +25,7 @@ type Props = {
   loadingMore?: boolean;
   hasNextPage?: boolean;
   ListFooterComponent?: React.ReactElement | null;
+  onProductPress?: (productId: string | number, item: any) => void;
 };
 
 const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
@@ -50,6 +51,7 @@ export default function ProductGrid({
   loadingMore = false,
   hasNextPage = false,
   ListFooterComponent = null,
+  onProductPress,
 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const loadedProductIdsRef = useRef<Set<string>>(new Set());
@@ -215,11 +217,16 @@ export default function ProductGrid({
       const shouldLoadImage = loadedProductIdsRef.current.has(itemKey);
       return (
         <View style={[styles.itemWrap, { width: cardWidth }]}>
-          <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage={shouldLoadImage} />
+          <ProductCard
+            item={item}
+            cardWidth={cardWidth}
+            shouldLoadImage={shouldLoadImage}
+            onProductPress={onProductPress}
+          />
         </View>
       );
     },
-    [cardWidth]
+    [cardWidth, onProductPress]
   );
 
   const handleEndReached = useCallback(() => {

@@ -32,6 +32,7 @@ type Props = {
   item: any;
   cardWidth?: number;
   shouldLoadImage?: boolean;
+  onProductPress?: (productId: string | number, item: any) => void;
 };
 
 const getProductId = (item: any) => item?.id ?? item?.product_id ?? item?.productId;
@@ -63,7 +64,7 @@ const StarRating = React.memo(function StarRating({
   );
 });
 
-const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props) => {
+const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProductPress }: Props) => {
   const navigation = useNavigation<Nav>();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
@@ -90,8 +91,12 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true }: Props
 
   const goToDetails = useCallback(() => {
     if (!productId) return;
+    if (onProductPress) {
+      onProductPress(productId, item);
+      return;
+    }
     navigation.navigate("ProductDescription", { productId });
-  }, [productId, navigation]);
+  }, [item, navigation, onProductPress, productId]);
 
   const firstImage = useMemo(() => {
     const candidates = [
@@ -385,7 +390,8 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevItem?.title === nextItem?.title &&
     prevItem?.brand === nextItem?.brand &&
     prevItem?.brand_name === nextItem?.brand_name &&
-    prevProps.shouldLoadImage === nextProps.shouldLoadImage
+    prevProps.shouldLoadImage === nextProps.shouldLoadImage &&
+    prevProps.onProductPress === nextProps.onProductPress
   );
 });
 
