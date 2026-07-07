@@ -219,10 +219,17 @@ export default function HelpForm({ navigation }: HelpFormProps) {
 
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={styles.historyBtn}
+                style={[styles.historyBtn, isDark && darkStyles.historyBtn]}
                 onPress={handleHistoryPress}
               >
-                <Text style={styles.historyBtnText}>History</Text>
+                <Text
+                  style={[
+                    styles.historyBtnText,
+                    isDark && darkStyles.historyBtnText,
+                  ]}
+                >
+                  History
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -644,6 +651,11 @@ const darkStyles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.20)',
   },
   dropdownItem: { borderBottomColor: 'rgba(255,255,255,0.12)' },
+  historyBtn: {
+    backgroundColor: '#27272A',
+    borderColor: 'rgba(255,255,255,0.20)',
+  },
+  historyBtnText: { color: '#C4B5FD' },
   successCard: {
     backgroundColor: '#18181B',
     borderWidth: 1,

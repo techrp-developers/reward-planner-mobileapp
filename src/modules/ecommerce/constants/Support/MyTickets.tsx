@@ -5,6 +5,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  StatusBar,
   Text,
   TouchableOpacity,
   View,
@@ -17,6 +18,7 @@ import {
   fetchSupportTickets,
   type SupportTicket,
 } from "../../api/SupportApi";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type TicketFilter = "all" | "open" | "in_progress" | "closed";
 
@@ -86,17 +88,23 @@ const getStatusStyle = (status: string) => {
   }
 };
 
-const TicketCard = ({ item }: { item: SupportTicket }) => {
+const TicketCard = ({ item, isDark }: { item: SupportTicket; isDark: boolean }) => {
   const statusStyle = getStatusStyle(item.status);
 
   return (
-    <View style={styles.ticketCard}>
+    <View style={[styles.ticketCard, isDark && darkStyles.ticketCard]}>
       <View style={styles.ticketTopRow}>
         <View style={styles.ticketTitleWrap}>
-          <Text style={styles.ticketSubject} numberOfLines={1}>
+          <Text
+            style={[styles.ticketSubject, isDark && darkStyles.primaryText]}
+            numberOfLines={1}
+          >
             {item.subject}
           </Text>
-          <Text style={styles.ticketCategory} numberOfLines={1}>
+          <Text
+            style={[styles.ticketCategory, isDark && darkStyles.accentText]}
+            numberOfLines={1}
+          >
             {item.category_name || "General"}
           </Text>
         </View>
@@ -113,7 +121,10 @@ const TicketCard = ({ item }: { item: SupportTicket }) => {
         </View>
       </View>
 
-      <Text style={styles.ticketDescription} numberOfLines={2}>
+      <Text
+        style={[styles.ticketDescription, isDark && darkStyles.secondaryText]}
+        numberOfLines={2}
+      >
         {item.description || "No description added for this ticket."}
       </Text>
 
@@ -124,7 +135,9 @@ const TicketCard = ({ item }: { item: SupportTicket }) => {
             size={15}
             color="#8B5CF6"
           />
-          <Text style={styles.metaText}>#{item.ticket_id}</Text>
+          <Text style={[styles.metaText, isDark && darkStyles.mutedText]}>
+            #{item.ticket_id}
+          </Text>
         </View>
 
         <View style={styles.metaGroup}>
@@ -133,7 +146,7 @@ const TicketCard = ({ item }: { item: SupportTicket }) => {
             size={15}
             color="#8B5CF6"
           />
-          <Text style={styles.metaText}>
+          <Text style={[styles.metaText, isDark && darkStyles.mutedText]}>
             {formatTicketDate(item.created_at || item.updated_at)}
           </Text>
         </View>
@@ -146,28 +159,47 @@ const FilterCard = ({
   label,
   count,
   active,
+  isDark,
   onPress,
 }: {
   label: string;
   count: number;
   active: boolean;
+  isDark: boolean;
   onPress: () => void;
 }) => (
   <TouchableOpacity
     activeOpacity={0.85}
-    style={[styles.filterCard, active && styles.filterCardActive]}
+    style={[
+      styles.filterCard,
+      isDark && darkStyles.filterCard,
+      active && styles.filterCardActive,
+    ]}
     onPress={onPress}
   >
-    <Text style={[styles.filterCardCount, active && styles.filterCardCountActive]}>
+    <Text
+      style={[
+        styles.filterCardCount,
+        isDark && darkStyles.filterCardCount,
+        active && styles.filterCardCountActive,
+      ]}
+    >
       {count}
     </Text>
-    <Text style={[styles.filterCardLabel, active && styles.filterCardLabelActive]}>
+    <Text
+      style={[
+        styles.filterCardLabel,
+        isDark && darkStyles.filterCardLabel,
+        active && styles.filterCardLabelActive,
+      ]}
+    >
       {label}
     </Text>
   </TouchableOpacity>
 );
 
 export default function MyTickets({ navigation }: any) {
+  const { isDark } = useAppTheme();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,31 +261,43 @@ export default function MyTickets({ navigation }: any) {
   });
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
-      <View style={styles.headerWrap}>
+    <SafeAreaView style={[styles.screen, isDark && darkStyles.screen]} edges={["top"]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#09090B" : "#F7F3FF"}
+      />
+      <View style={[styles.headerWrap, isDark && darkStyles.headerWrap]}>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.backButton}
+          style={[styles.backButton, isDark && darkStyles.backButton]}
           onPress={() => navigation.goBack()}
         >
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
-            color="#852BAF"
+            color={isDark ? "#F4F4F5" : "#852BAF"}
           />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>My Tickets</Text>
+        <Text style={[styles.headerTitle, isDark && darkStyles.primaryText]}>
+          My Tickets
+        </Text>
       </View>
 
       <FlatList
         data={filteredTickets}
         keyExtractor={(item) => String(item.ticket_id)}
-        renderItem={({ item }) => <TicketCard item={item} />}
+        renderItem={({ item }) => <TicketCard item={item} isDark={isDark} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={isDark ? "#C4B5FD" : "#A654CD"}
+            colors={["#A654CD"]}
+            progressBackgroundColor={isDark ? "#27272A" : "#FFFFFF"}
+          />
         }
         ListHeaderComponent={
           <View>
@@ -266,36 +310,44 @@ export default function MyTickets({ navigation }: any) {
                 label="All Tickets"
                 count={ticketCounts.all}
                 active={activeFilter === "all"}
+                isDark={isDark}
                 onPress={() => setActiveFilter("all")}
               />
               <FilterCard
                 label="Open"
                 count={ticketCounts.open}
                 active={activeFilter === "open"}
+                isDark={isDark}
                 onPress={() => setActiveFilter("open")}
               />
               <FilterCard
                 label="In Progress"
                 count={ticketCounts.in_progress}
                 active={activeFilter === "in_progress"}
+                isDark={isDark}
                 onPress={() => setActiveFilter("in_progress")}
               />
               <FilterCard
                 label="Closed"
                 count={ticketCounts.closed}
                 active={activeFilter === "closed"}
+                isDark={isDark}
                 onPress={() => setActiveFilter("closed")}
               />
             </ScrollView>
 
-            <Text style={styles.sectionTitle}>Available Tickets</Text>
+            <Text style={[styles.sectionTitle, isDark && darkStyles.primaryText]}>
+              Available Tickets
+            </Text>
           </View>
         }
         ListEmptyComponent={
           loading ? (
             <View style={styles.loaderWrap}>
               <ActivityIndicator size="large" color="#A654CD" />
-              <Text style={styles.loaderText}>Loading your tickets...</Text>
+              <Text style={[styles.loaderText, isDark && darkStyles.mutedText]}>
+                Loading your tickets...
+              </Text>
             </View>
           ) : (
             <View style={styles.emptyState}>
@@ -304,8 +356,15 @@ export default function MyTickets({ navigation }: any) {
                 size={54}
                 color="#C4B5FD"
               />
-              <Text style={styles.emptyTitle}>No tickets found</Text>
-              <Text style={styles.emptyDescription}>
+              <Text style={[styles.emptyTitle, isDark && darkStyles.primaryText]}>
+                No tickets found
+              </Text>
+              <Text
+                style={[
+                  styles.emptyDescription,
+                  isDark && darkStyles.secondaryText,
+                ]}
+              >
                 Once a user raises a support request, it will appear here.
               </Text>
             </View>
@@ -512,5 +571,58 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: "center",
     color: "#7B728B",
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  screen: {
+    backgroundColor: "#09090B",
+  },
+
+  headerWrap: {
+    backgroundColor: "#09090B",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+
+  backButton: {
+    backgroundColor: "#18181B",
+    borderRadius: 18,
+  },
+
+  primaryText: {
+    color: "#F4F4F5",
+  },
+
+  secondaryText: {
+    color: "#D4D4D8",
+  },
+
+  mutedText: {
+    color: "#A1A1AA",
+  },
+
+  accentText: {
+    color: "#C4B5FD",
+  },
+
+  filterCard: {
+    backgroundColor: "#18181B",
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+
+  filterCardCount: {
+    color: "#C4B5FD",
+  },
+
+  filterCardLabel: {
+    color: "#A1A1AA",
+  },
+
+  ticketCard: {
+    backgroundColor: "#18181B",
+    borderColor: "rgba(255,255,255,0.12)",
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
