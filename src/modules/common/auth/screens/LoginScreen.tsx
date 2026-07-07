@@ -18,6 +18,10 @@ import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../../../ecommerce/components/alerts";
 import Logo from "../../../../assets/homepage/login_logo.svg";
 import type { AuthStackParamList } from "../navigation/types";
+import {
+  getLoginIdentifierKeyboardType,
+  parseLoginIdentifier,
+} from "../utils/loginIdentifier";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -26,16 +30,21 @@ export default function LoginScreen({ navigation }: Props) {
   const alert = useAlert();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const onLogin = useCallback(async () => {
     try {
-      const cleanEmail = email.trim().toLowerCase();
+      const parsedIdentifier = parseLoginIdentifier(identifier);
 
-      if (!cleanEmail) {
-        alert.error("Login Error", "Please enter your email address");
+      if (parsedIdentifier.kind === "empty") {
+        alert.error("Login Error", "Please enter your email address or phone number");
+        return;
+      }
+
+      if (parsedIdentifier.kind === "invalid") {
+        alert.error("Login Error", "Enter a valid email address or 10-digit phone number");
         return;
       }
 
@@ -45,7 +54,9 @@ export default function LoginScreen({ navigation }: Props) {
       }
 
       await login({
-        email: cleanEmail,
+        identifier: parsedIdentifier.normalized,
+        email: parsedIdentifier.kind === "email" ? parsedIdentifier.normalized : undefined,
+        phone: parsedIdentifier.kind === "phone" ? parsedIdentifier.normalized : undefined,
         password,
       });
     } catch (error: any) {
@@ -69,7 +80,7 @@ export default function LoginScreen({ navigation }: Props) {
 
       alert.error("Login Error", String(message));
     }
-  }, [email, password, login, alert]);
+  }, [identifier, password, login, alert]);
 
   return (
       <SafeAreaView style={styles.screen} edges={["left", "right", "top"]}>
@@ -91,22 +102,26 @@ export default function LoginScreen({ navigation }: Props) {
 
               <View style={styles.inputWrap}>
                 <MaterialCommunityIcons
-                  name="email-outline"
+                  name="account-outline"
                   size={18}
                   color="#999"
                   style={styles.inputIcon}
                 />
 
                 <TextInput
-                  placeholder="Email Address"
+                  placeholder="Email Address or Phone Number"
                   placeholderTextColor="#999"
                   autoCapitalize="none"
-                  keyboardType="email-address"
+                  keyboardType={getLoginIdentifierKeyboardType(identifier)}
                   style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
+                  value={identifier}
+                  onChangeText={setIdentifier}
                 />
               </View>
+
+              <Text style={styles.helperText}>
+                Use your registered email or 10-digit mobile number.
+              </Text>
 
               <View style={styles.inputWrap}>
                 <MaterialCommunityIcons
@@ -228,6 +243,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#333",
+  },
+  helperText: {
+    marginTop: -6,
+    marginBottom: 14,
+    fontSize: 12,
+    color: "#777",
   },
   loginBtn: {
     paddingVertical: 14,

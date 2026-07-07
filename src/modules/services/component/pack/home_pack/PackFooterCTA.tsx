@@ -32,6 +32,8 @@ const PackFooterCTA: React.FC<Props> = ({
   onAddToCart,
   isAddingToCart = false,
 }) => {
+  const showOriginalPrice = originalPrice > totalPrice;
+
   return (
     <>
       {/* MAIN CTA SECTION */}
@@ -43,7 +45,9 @@ const PackFooterCTA: React.FC<Props> = ({
           >
             <Text style={styles.primaryText}>
               Get the Full Package at ₹{totalPrice}{' '}
-              <Text style={styles.strike}>₹{originalPrice}</Text>
+              {showOriginalPrice && (
+                <Text style={styles.strike}>₹{originalPrice}</Text>
+              )}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

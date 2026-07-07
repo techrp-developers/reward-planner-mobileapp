@@ -152,7 +152,13 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
       console.log('Verify Recharge Payment Response:', verifyResponse);
 
-      if (!verifyResponse?.success) {
+      // The backend can legitimately return success:false with a transaction_id
+      // when the payment was captured but bill processing is queued/retrying
+      // (HTTP 202) or already resolved by a webhook — the status screen still
+      // needs to open so the user can track that in-progress/refund state.
+      const transactionId = verifyResponse?.transaction_id ?? order.transaction_id;
+
+      if (verifyResponse?.success === false && !transactionId) {
         alert.warning(
           'Payment Verification Failed',
           verifyResponse?.message || 'Unable to verify payment.',
@@ -161,10 +167,17 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', {
-        transactionId: order.transaction_id,
-      });
+      navigation.navigate('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
+      // A rejected verify-payment call (e.g. HTTP 422 when the provider
+      // permanently rejected the transaction) still carries a transaction_id —
+      // route to the status screen instead of stranding the user on an alert.
+      const transactionId = error?.transaction_id;
+      if (transactionId) {
+        navigation.navigate('TransactionStatusScreen', { transactionId });
+        return;
+      }
+
       // Razorpay checkout cancellation/failure or verify-payment network error.
       alert.error('Error', error?.message || 'Could not create recharge order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {

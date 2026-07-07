@@ -29,7 +29,6 @@ import {
   type CreateServiceEnquiryPayload,
 } from '../../api/ServiceAPI';
 
-const PackBanner = require('../../assete/service/PackBanner.png');
 const FolderService = require('../../assete/service/FolderService.png');
 
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -411,12 +410,6 @@ function BundleEnquiryForm() {
       >
         <Banner />
 
-        <Image
-          source={PackBanner}
-          style={styles.packBannerContainer}
-          resizeMode="contain"
-        />
-
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <View style={styles.headerIcon}>
@@ -496,12 +489,6 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingBottom: 28,
-  },
-
-  packBannerContainer: {
-    height: 120,
-    marginVertical: 10,
-    marginHorizontal: 16,
   },
 
   card: {

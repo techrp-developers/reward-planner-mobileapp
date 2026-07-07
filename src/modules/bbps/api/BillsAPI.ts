@@ -161,6 +161,11 @@ export interface RechargePlan {
   [key: string]: any;
 }
 
+export interface RechargePlanGroup {
+  label: string;
+  plans: RechargePlan[];
+}
+
 export interface RechargePlansResponse {
   status: number;
   responseTypeId: number;
@@ -169,6 +174,7 @@ export interface RechargePlansResponse {
   circleId: string;
   mobile: string;
   count: number;
+  groups: RechargePlanGroup[];
   plans: RechargePlan[];
 }
 
@@ -200,6 +206,9 @@ export const fetchRechargePlans = async (
         circleId: res.data?.data?.circleId ?? '',
         mobile: res.data?.data?.mobile ?? '',
         count: res.data?.data?.count ?? 0,
+        groups: Array.isArray(res.data?.data?.groups)
+          ? res.data.data.groups
+          : [],
         plans: Array.isArray(res.data?.data?.plans)
           ? res.data.data.plans
           : [],
@@ -373,6 +382,83 @@ export const checkBillTransactionStatus = async (
   }
 };
 
+export interface OrderHistoryItem {
+  id: number;
+  operator_id: number;
+  operator_name: string | null;
+  utility_acc_no: string | null;
+  confirmation_mobile_no: string | null;
+  sender_name: string | null;
+  amount: string;
+  bbps_status: string;
+  payment_status: string | null;
+  provider_client_ref_id: string;
+  recharge_circle_id: string | null;
+  razorpay_order_id: string | null;
+  created_at: string;
+  final_status: TransactionStatus;
+}
+
+export interface OrderHistoryResponse {
+  success: boolean;
+  orders: OrderHistoryItem[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export interface OrderHistoryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  fromDate?: string;
+  toDate?: string;
+  timeFilter?: string;
+}
+
+export const bbpsOrderHistoryQueryKey = (params: OrderHistoryParams) =>
+  ['bbps-order-history', params] as const;
+
+export const fetchOrderHistory = async (
+  params: OrderHistoryParams = {},
+  token?: string,
+): Promise<OrderHistoryResponse> => {
+  try {
+    const authHeaders = token
+      ? { Authorization: `Bearer ${token}` }
+      : await getAuthHeaders();
+
+    const res = await axios.get(`${API_BASE_URL}/v1/bills/order-history`, {
+      headers: authHeaders,
+      params: {
+        page: params.page,
+        limit: params.limit,
+        status: params.status || undefined,
+        search: params.search || undefined,
+        from_date: params.fromDate || undefined,
+        to_date: params.toDate || undefined,
+        time_filter: params.timeFilter || undefined,
+      },
+    });
+
+    return {
+      success: res.data?.success ?? false,
+      orders: Array.isArray(res.data?.orders) ? res.data.orders : [],
+      total: res.data?.total ?? 0,
+      totalPages: res.data?.totalPages ?? 1,
+      currentPage: res.data?.currentPage ?? 1,
+    };
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Fetch Order History Error:", error?.response?.data || error);
+    throw error?.response?.data || error;
+  }
+};
+
 export const TERMINAL_TRANSACTION_STATUSES = [
   "SUCCESS",
   "FAILED",
@@ -382,7 +468,9 @@ export const TERMINAL_TRANSACTION_STATUSES = [
 
 export type TransactionStatus =
   | typeof TERMINAL_TRANSACTION_STATUSES[number]
-  | "PENDING";
+  | "PENDING"
+  | "RETRYING"
+  | "REFUND_PENDING";
 
 const extractTransactionStatus = (response: any): { status: TransactionStatus; message: string } => {
   // check-status responds with { success, data: { final_status, bbps_status,
@@ -413,6 +501,8 @@ const extractTransactionStatus = (response: any): { status: TransactionStatus; m
  * terminal status is reached. Returns a cancel function to stop polling
  * (e.g. on screen unmount).
  */
+const MAX_CONSECUTIVE_POLL_ERRORS = 5;
+
 export const pollTransactionStatus = (
   transactionId: string | number,
   onUpdate: (result: { status: TransactionStatus; message: string }) => void,
@@ -420,11 +510,13 @@ export const pollTransactionStatus = (
 ): (() => void) => {
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let consecutiveErrors = 0;
 
   const tick = async () => {
     try {
       const response = await checkBillTransactionStatus(transactionId);
       if (cancelled) return;
+      consecutiveErrors = 0;
 
       const result = extractTransactionStatus(response);
       onUpdate(result);
@@ -433,12 +525,26 @@ export const pollTransactionStatus = (
         timer = setTimeout(tick, intervalMs);
       }
     } catch (error: any) {
-      if (!cancelled) {
+      if (cancelled) return;
+
+      // A single dropped request (e.g. a brief network blip) shouldn't strand
+      // the user on a permanent "Payment Failed" screen while the backend is
+      // still processing — keep polling until errors persist.
+      consecutiveErrors += 1;
+
+      if (consecutiveErrors < MAX_CONSECUTIVE_POLL_ERRORS) {
         onUpdate({
-          status: "FAILED",
-          message: error?.message || "Could not check transaction status.",
+          status: "PENDING",
+          message: "Having trouble reaching the server, retrying...",
         });
+        timer = setTimeout(tick, intervalMs);
+        return;
       }
+
+      onUpdate({
+        status: "FAILED",
+        message: error?.message || "Could not check transaction status.",
+      });
     }
   };
 

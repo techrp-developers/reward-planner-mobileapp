@@ -22,6 +22,7 @@ import {
   fetchBillLocations,
   fetchRechargePlans,
   RechargePlan,
+  RechargePlanGroup,
 } from '../../api/BillsAPI';
 import { useAlert } from '../../../ecommerce/components/alerts';
 
@@ -68,6 +69,8 @@ function RechargeSection({ navigation, route }: any) {
     () => params.selectedLocation ?? null
   );
   const [plans, setPlans] = useState<RechargePlan[]>([]);
+  const [planGroups, setPlanGroups] = useState<RechargePlanGroup[]>([]);
+  const [activeGroupLabel, setActiveGroupLabel] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [plansLoading, setPlansLoading] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
@@ -88,14 +91,26 @@ function RechargeSection({ navigation, route }: any) {
     );
   }, [locations, locationSearch]);
 
+  const activeGroupPlans = useMemo(() => {
+    if (planGroups.length === 0) {
+      return plans;
+    }
+
+    return (
+      planGroups.find((group) => group.label === activeGroupLabel)?.plans ||
+      planGroups[0]?.plans ||
+      []
+    );
+  }, [activeGroupLabel, planGroups, plans]);
+
   const filteredPlans = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     if (!query) {
-      return plans;
+      return activeGroupPlans;
     }
 
-    return plans.filter((plan) => {
+    return activeGroupPlans.filter((plan) => {
       const searchable = [
         getPlanAmount(plan),
         getPlanValidity(plan),
@@ -107,7 +122,7 @@ function RechargeSection({ navigation, route }: any) {
 
       return searchable.includes(query);
     });
-  }, [plans, searchQuery]);
+  }, [activeGroupPlans, searchQuery]);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -180,6 +195,8 @@ function RechargeSection({ navigation, route }: any) {
     const loadPlans = async () => {
       if (!selectedLocation || !primaryValue || !operatorId) {
         setPlans([]);
+        setPlanGroups([]);
+        setActiveGroupLabel('');
         return;
       }
 
@@ -195,9 +212,26 @@ function RechargeSection({ navigation, route }: any) {
           return;
         }
 
-        setPlans(response?.data?.plans || []);
+        const responsePlans = response?.data?.plans || [];
+        const responseGroups = Array.isArray(response?.data?.groups)
+          ? response.data.groups.filter(
+              (group) => group?.label && Array.isArray(group.plans) && group.plans.length > 0
+            )
+          : [];
+        const groups =
+          responseGroups.length > 0
+            ? responseGroups
+            : responsePlans.length > 0
+            ? [{ label: 'Recommended Packs', plans: responsePlans }]
+            : [];
+
+        setPlans(responsePlans);
+        setPlanGroups(groups);
+        setActiveGroupLabel(groups[0]?.label || '');
       } catch (error: any) {
         setPlans([]);
+        setPlanGroups([]);
+        setActiveGroupLabel('');
         alertRef.current.error('Error', error?.message || 'Could not load recharge plans.');
       } finally {
         if (mounted) {
@@ -236,7 +270,7 @@ function RechargeSection({ navigation, route }: any) {
         user={{
           name: user?.name || 'User',
           number: String(primaryValue),
-          operatorLogo: require('../../assets/Sample/VI_Card.png'),
+          operatorInitial: operatorName,
           type: operatorName,
         }}
         onBackPress={() => navigation.goBack()}
@@ -348,10 +382,33 @@ function RechargeSection({ navigation, route }: any) {
               </View>
 
               <View style={styles.tabContainer}>
-                <View style={styles.activeTab}>
-                  <Text style={styles.activeTabText}>Recommended Packs</Text>
-                  <View style={styles.activeTabUnderline} />
-                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.groupTabsContent}
+                >
+                  {(planGroups.length > 0
+                    ? planGroups
+                    : [{ label: 'Recommended Packs', plans }]
+                  ).map((group) => {
+                    const selectedLabel = activeGroupLabel || planGroups[0]?.label || group.label;
+                    const active = group.label === selectedLabel;
+
+                    return (
+                      <TouchableOpacity
+                        key={group.label}
+                        style={[styles.groupTab, active && styles.activeGroupTab]}
+                        activeOpacity={0.8}
+                        onPress={() => setActiveGroupLabel(group.label)}
+                      >
+                        <Text style={[styles.groupTabText, active && styles.activeGroupTabText]}>
+                          {group.label}
+                        </Text>
+                        {active && <View style={styles.activeTabUnderline} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
 
               {!selectedLocation ? (
@@ -633,7 +690,12 @@ const styles = StyleSheet.create({
     shadowColor: '#5B47A3', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#111827' },
-  tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginTop: 25, paddingHorizontal: 16, backgroundColor: '#FFFFFF' },
+  tabContainer: { borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginTop: 25, backgroundColor: '#FFFFFF' },
+  groupTabsContent: { paddingHorizontal: 16 },
+  groupTab: { marginRight: 20, paddingBottom: 10, minHeight: 32, justifyContent: 'center' },
+  activeGroupTab: {},
+  groupTabText: { fontSize: 15, fontWeight: '700', color: '#9CA3AF' },
+  activeGroupTabText: { color: '#374151' },
   activeTab: { marginRight: 20, paddingBottom: 10 },
   activeTabText: { fontSize: 15, fontWeight: '700', color: '#374151' },
   activeTabUnderline: { height: 3, borderRadius: 2, backgroundColor: '#8665FF', position: 'absolute', bottom: 0, left: 0, right: 0 },

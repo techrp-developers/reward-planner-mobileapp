@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -26,11 +27,13 @@ import {
 
 import { useAlert } from "../../components/alerts";
 import type { AppStackParamList } from "../../../../navigation/RootNavigator";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type HelpFormProps = NativeStackScreenProps<AppStackParamList, "HelpForm">;
 
 export default function HelpForm({ navigation }: HelpFormProps) {
   const alert = useAlert();
+  const { isDark, theme } = useAppTheme();
 
   const [categories, setCategories] = useState<SupportCategory[]>([]);
   const [selectedCategory, setSelectedCategory] =
@@ -175,7 +178,7 @@ export default function HelpForm({ navigation }: HelpFormProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, subject, description, alert, navigation, showSuccessCard]);
+  }, [selectedCategory, subject, description, alert, showSuccessCard]);
 
   useEffect(() => {
     return () => {
@@ -186,7 +189,11 @@ export default function HelpForm({ navigation }: HelpFormProps) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={[styles.screen, isDark && darkStyles.screen]} edges={["top"]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#09090B" : "#F5F0FF"}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardWrap}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -199,36 +206,40 @@ export default function HelpForm({ navigation }: HelpFormProps) {
           {/* HEADER */}
 
           <View style={styles.headerWrap}>
-            <Text style={styles.headerTitle}>Support Ticket</Text>
+            <Text style={[styles.headerTitle, isDark && darkStyles.primaryText]}>
+              Support Ticket
+            </Text>
 
-            <Text style={styles.headerSub}>
+            <Text style={[styles.headerSub, isDark && darkStyles.mutedText]}>
               Raise your issue and our team will help you.
             </Text>
           </View>
 
           {/* CARD */}
 
-          <View style={styles.card}>
+          <View style={[styles.card, isDark && darkStyles.card]}>
             {/* CATEGORY */}
 
-            <Text style={styles.label}>Category</Text>
+            <Text style={[styles.label, isDark && darkStyles.primaryText]}>Category</Text>
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={styles.inputWrap}
+              style={[styles.inputWrap, isDark && darkStyles.inputWrap]}
               onPress={() => setShowDropdown((prev) => !prev)}
             >
               <MaterialCommunityIcons
                 name="shape-outline"
                 size={18}
-                color="#999"
+                color={isDark ? "#A1A1AA" : "#999"}
                 style={styles.inputIcon}
               />
 
               <Text
                 style={[
                   styles.dropdownText,
+                  isDark && darkStyles.inputText,
                   !selectedCategory && styles.placeholderText,
+                  !selectedCategory && isDark && darkStyles.placeholderText,
                 ]}
               >
                 {selectedCategory?.name || "Select Category"}
@@ -237,26 +248,26 @@ export default function HelpForm({ navigation }: HelpFormProps) {
               <MaterialCommunityIcons
                 name={showDropdown ? "chevron-up" : "chevron-down"}
                 size={20}
-                color="#A654CD"
+                color={theme.primary}
               />
             </TouchableOpacity>
 
             {showDropdown && (
-              <View style={styles.dropdown}>
+              <View style={[styles.dropdown, isDark && darkStyles.dropdown]}>
                 {categoryLoading ? (
-                  <ActivityIndicator color="#852BAF" />
+                  <ActivityIndicator color={theme.primary} />
                 ) : (
                   categories.map((item) => (
                     <TouchableOpacity
                       key={item.category_id}
-                      style={styles.dropdownItem}
+                      style={[styles.dropdownItem, isDark && darkStyles.dropdownItem]}
                       activeOpacity={0.8}
                       onPress={() => {
                         setSelectedCategory(item);
                         setShowDropdown(false);
                       }}
                     >
-                      <Text style={styles.dropdownItemText}>
+                      <Text style={[styles.dropdownItemText, isDark && darkStyles.inputText]}>
                         {item.name}
                       </Text>
                     </TouchableOpacity>
@@ -267,20 +278,21 @@ export default function HelpForm({ navigation }: HelpFormProps) {
 
             {/* SUBJECT */}
 
-            <Text style={styles.label}>Subject</Text>
+            <Text style={[styles.label, isDark && darkStyles.primaryText]}>Subject</Text>
 
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, isDark && darkStyles.inputWrap]}>
               <MaterialCommunityIcons
                 name="text-box-outline"
                 size={18}
-                color="#999"
+                color={isDark ? "#A1A1AA" : "#999"}
                 style={styles.inputIcon}
               />
 
               <TextInput
                 placeholder="Enter Subject"
-                placeholderTextColor="#999"
-                style={styles.input}
+                placeholderTextColor={isDark ? "#71717A" : "#999"}
+                selectionColor={theme.primary}
+                style={[styles.input, isDark && darkStyles.inputText]}
                 value={subject}
                 onChangeText={setSubject}
               />
@@ -288,15 +300,16 @@ export default function HelpForm({ navigation }: HelpFormProps) {
 
             {/* DESCRIPTION */}
 
-            <Text style={styles.label}>Description</Text>
+            <Text style={[styles.label, isDark && darkStyles.primaryText]}>Description</Text>
 
-            <View style={styles.textAreaWrap}>
+            <View style={[styles.textAreaWrap, isDark && darkStyles.inputWrap]}>
               <TextInput
                 placeholder="Describe your issue..."
-                placeholderTextColor="#999"
+                placeholderTextColor={isDark ? "#71717A" : "#999"}
+                selectionColor={theme.primary}
                 multiline
                 textAlignVertical="top"
-                style={styles.textArea}
+                style={[styles.textArea, isDark && darkStyles.inputText]}
                 value={description}
                 onChangeText={setDescription}
               />
@@ -330,6 +343,7 @@ export default function HelpForm({ navigation }: HelpFormProps) {
             <Animated.View
               style={[
                 styles.successCard,
+                isDark && darkStyles.successCard,
                 {
                   opacity: successOpacity,
                   transform: [{ translateY: successTranslateY }],
@@ -350,8 +364,8 @@ export default function HelpForm({ navigation }: HelpFormProps) {
                   />
                 </LinearGradient>
               </View>
-              <Text style={styles.successTitle}>Thank You ✨</Text>
-              <Text style={styles.successDescription}>
+              <Text style={[styles.successTitle, isDark && darkStyles.successTitle]}>Thank You </Text>
+              <Text style={[styles.successDescription, isDark && darkStyles.mutedText]}>
                 Our support team received your request and will get back to you shortly.
               </Text>
             </Animated.View>
@@ -547,4 +561,28 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
+});
+
+const darkStyles = StyleSheet.create({
+  screen: { backgroundColor: "#09090B" },
+  card: { backgroundColor: "#18181B" },
+  primaryText: { color: "#C4B5FD" },
+  mutedText: { color: "#A1A1AA" },
+  inputWrap: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  inputText: { color: "#F4F4F5" },
+  placeholderText: { color: "#71717A" },
+  dropdown: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  dropdownItem: { borderBottomColor: "rgba(255,255,255,0.12)" },
+  successCard: {
+    backgroundColor: "#18181B",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  successTitle: { color: "#FFFFFF" },
 });

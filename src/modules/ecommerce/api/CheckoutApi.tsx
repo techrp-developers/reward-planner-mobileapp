@@ -35,10 +35,29 @@ export const addCartOrder = async (payload?: CartOrderPayload) => {
  * Fetch cart checkout preview
  */
 export const fetchCheckoutCart = async (useRewards = true) => {
-  const res = await api.get("/v1/checkout/get-cart", {
-    params: { use_rewards: useRewards },
-  });
-  return res.data;
+  try {
+    const res = await api.get("/v1/checkout/get-cart", {
+      params: { use_rewards: useRewards },
+    });
+    return res.data;
+  } catch (error: any) {
+    const status = Number(error?.response?.status || 0);
+    const message = String(
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      ""
+    ).toUpperCase();
+
+    if (
+      status === 400 &&
+      (message.includes("CART_EMPTY") || message.includes("CART IS EMPTY"))
+    ) {
+      return { items: [], data: { items: [] } };
+    }
+
+    throw error;
+  }
 };
 
 /* ================= BUY NOW ================= */

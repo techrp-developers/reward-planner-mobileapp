@@ -8,7 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 interface UserInfo {
   name: string;
   number: string;
-  operatorLogo: any; // Asset for the VI/Jio logo
+  operatorLogo?: any; // Optional asset for provider logo
+  operatorInitial?: string;
   type: string; // e.g., "Prepaid"
 }
 
@@ -22,6 +23,7 @@ interface Props {
 
 const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onChangePress }) => {
   const navigation = useNavigation<any>();
+  const operatorInitial = user?.operatorInitial?.trim()?.charAt(0)?.toUpperCase() || 'O';
 
   const handleHelpPress = useCallback(() => {
     onHelpPress?.();
@@ -40,7 +42,18 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
           {user ? (
             <View style={styles.profileSection}>
               <View style={styles.logoContainer}>
-                <Image source={user.operatorLogo} style={styles.operatorLogo} resizeMode="contain" />
+                {user.operatorLogo ? (
+                  <Image source={user.operatorLogo} style={styles.operatorLogo} resizeMode="contain" />
+                ) : (
+                  <LinearGradient
+                    colors={['#8665FF', '#5B47A3']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.operatorInitialCircle}
+                  >
+                    <Text style={styles.operatorInitialText}>{operatorInitial}</Text>
+                  </LinearGradient>
+                )}
               </View>
               <View style={styles.userInfo}>
                 <Text style={styles.userNameText} numberOfLines={1}>
@@ -94,6 +107,18 @@ const styles = StyleSheet.create({
   profileSection: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
   logoContainer: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
   operatorLogo: { width: 28, height: 28 },
+  operatorInitialCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  operatorInitialText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
   userInfo: { marginLeft: 12, flex: 1, minWidth: 0 },
   userNameText: { fontSize: 16, fontWeight: '700', color: '#374151', flexShrink: 1 },
   typeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },

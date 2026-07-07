@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   InteractionManager,
+  BackHandler,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
@@ -25,7 +26,7 @@ import { addToCart, deleteAllCartItems, fetchCartItems, updateCartQty } from "..
 import { fetchCheckoutCart, fetchBuyNowCheckout, addBuyNowOrder, addCartOrder } from "../../api/CheckoutApi";
 import { fetchAllAddress } from "../../api/AddressApi";
 import { createPaymentOrder, verifyPayment, checkPaymentStatus } from "../../api/Payment";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StackActions, CommonActions } from "@react-navigation/native";
 import type { HomeStackParamList } from "../../navigation/types";
@@ -39,6 +40,8 @@ import { useAlert } from "../alerts/useAlert";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import {
   addressesQueryKey,
+  cartItemsQueryKey,
+  cartSummaryQueryKey,
   checkoutPreviewQueryKey,
 } from "../../navigation/navigationPerformance";
 import RecommendedProducts from "../Promotion/RecommendedProducts";
@@ -140,6 +143,7 @@ export default function OrderStepUI() {
   const queryClient = useQueryClient();
   const skipItemsRefresh = useRef(false);
   const lastRedeemableCoins = useRef(0);
+  const isSkippingEmptyCheckoutBack = useRef(false);
 
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const handleUnauthorized = useCallback(async () => {
@@ -315,7 +319,10 @@ export default function OrderStepUI() {
     // disappear or jump back to the full-screen skeleton.
     placeholderData: previousData => previousData,
     select: parseCheckoutResponse,
-    retry: 1,
+    retry: (failureCount, error: any) => {
+      const status = Number(error?.response?.status || 0);
+      return status >= 500 && failureCount < 1;
+    },
     throwOnError: false,
   });
 
@@ -440,7 +447,12 @@ export default function OrderStepUI() {
     : lastRedeemableCoins.current;
 
   useEffect(() => {
-    if (checkoutData && useRewards && checkoutData.summary.reward.redeemCoins <= 0) {
+    if (
+      checkoutData &&
+      checkoutData.items.length > 0 &&
+      useRewards &&
+      checkoutData.summary.reward.redeemCoins <= 0
+    ) {
       setUseRewards(false);
     }
   }, [checkoutData, useRewards]);
@@ -450,6 +462,28 @@ export default function OrderStepUI() {
   const checkoutItemCount = useMemo(() => {
     return items.reduce((sum, item) => sum + Math.max(1, Number(item?.quantity || 1)), 0);
   }, [items]);
+
+  const markCartAsCleared = useCallback(() => {
+    const emptySummary = emptyCheckoutSummary();
+    const emptyCartSummary = {
+      cartTotal: 0,
+      finalPayable: 0,
+      totalRewardEarn: 0,
+      totalRedeemed: 0,
+    };
+
+    setItems([]);
+    setCartSummary(emptySummary);
+    queryClient.setQueryData(cartItemsQueryKey, { items: [] });
+    queryClient.setQueryData(cartSummaryQueryKey(true), emptyCartSummary);
+    queryClient.setQueryData(cartSummaryQueryKey(false), emptyCartSummary);
+    const emptyCheckoutData = {
+      items: [],
+      summary: emptySummary,
+    };
+    queryClient.setQueryData(checkoutPreviewQueryKey({ mode: "cart", use_rewards: true }), emptyCheckoutData);
+    queryClient.setQueryData(checkoutPreviewQueryKey({ mode: "cart", use_rewards: false }), emptyCheckoutData);
+  }, [queryClient]);
 
   const navigateToOrderConfirm = useCallback(
     (orderId: number) => {
@@ -496,6 +530,23 @@ export default function OrderStepUI() {
     },
     [navigation]
   );
+
+  const handleEmptyCheckoutBack = useCallback(() => {
+    isSkippingEmptyCheckoutBack.current = true;
+    const state = navigation.getState();
+
+    if (state.index >= 2) {
+      navigation.dispatch(StackActions.pop(2));
+      return;
+    }
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      })
+    );
+  }, [navigation]);
 
   const handlePlaceOrder = async () => {
     if (isCreatingOrder.current) {
@@ -688,6 +739,7 @@ export default function OrderStepUI() {
               if (mode !== "buy_now") {
                 try {
                   await deleteAllCartItems();
+                  markCartAsCleared();
                   console.log("🧹 Cart cleared");
                 } catch (clearErr) {
                   console.error("❌ Cart clear failed:", clearErr);
@@ -710,6 +762,7 @@ export default function OrderStepUI() {
               if (mode !== "buy_now") {
                 try {
                   await deleteAllCartItems();
+                  markCartAsCleared();
                   console.log("🧹 Cart cleared after status check");
                 } catch (clearErr) {
                   console.error("❌ Cart clear failed:", clearErr);
@@ -880,13 +933,52 @@ export default function OrderStepUI() {
   };
 
   const removeAll = async () => {
-    setItems([]);
     await deleteAllCartItems();
-    await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
+    markCartAsCleared();
   };
 
   const checkoutDataItems = Array.isArray(checkoutData?.items) ? checkoutData.items : [];
   const checkoutHasItemsPendingSync = checkoutDataItems.length > 0 && items.length === 0;
+  const isEmptyCheckoutState =
+    items.length === 0 &&
+    checkoutDataItems.length === 0 &&
+    hasCheckoutStarted &&
+    !isCheckoutFetching &&
+    checkoutData !== undefined &&
+    mode !== "buy_now";
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isEmptyCheckoutState) {
+        return undefined;
+      }
+
+      const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+        handleEmptyCheckoutBack();
+        return true;
+      });
+
+      return () => subscription.remove();
+    }, [handleEmptyCheckoutBack, isEmptyCheckoutState])
+  );
+
+  useEffect(() => {
+    if (!isEmptyCheckoutState) {
+      isSkippingEmptyCheckoutBack.current = false;
+      return undefined;
+    }
+
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      if (isSkippingEmptyCheckoutBack.current) {
+        return;
+      }
+
+      event.preventDefault();
+      handleEmptyCheckoutBack();
+    });
+
+    return unsubscribe;
+  }, [handleEmptyCheckoutBack, isEmptyCheckoutState, navigation]);
 
   const loading =
     isAuthenticated &&
@@ -913,18 +1005,12 @@ export default function OrderStepUI() {
     );
   }
 
-if (
-  items.length === 0 &&
-  checkoutDataItems.length === 0 &&
-  hasCheckoutStarted &&
-  !isCheckoutFetching &&
-  checkoutData !== undefined &&
-  mode !== "buy_now"
-) {    return (
+  if (isEmptyCheckoutState) {
+    return (
       <View style={styles.container}>
         <ProductHeadColor
           title="Cart"
-          onBackPress={() => navigation.goBack()}
+          onBackPress={handleEmptyCheckoutBack}
           onSearchPress={() => Alert.alert("Search", "Open search")}
         />
         <EmptyCart
