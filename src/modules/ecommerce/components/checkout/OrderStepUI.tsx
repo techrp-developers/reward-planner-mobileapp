@@ -548,6 +548,15 @@ export default function OrderStepUI() {
     );
   }, [navigation]);
 
+  const exitBuyNowCheckout = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate("Home");
+  }, [navigation]);
+
   const handlePlaceOrder = async () => {
     if (isCreatingOrder.current) {
       console.log("⏸️ Order creation already in progress (ref guard)");
@@ -922,6 +931,11 @@ export default function OrderStepUI() {
   };
 
   const removeItem = async (item: any) => {
+    if (mode === "buy_now") {
+      exitBuyNowCheckout();
+      return;
+    }
+
     setItems(p => p.filter(i => i.cart_item_id !== item.cart_item_id));
     try {
       await removeFromCart(item.cart_item_id);
@@ -933,6 +947,11 @@ export default function OrderStepUI() {
   };
 
   const removeAll = async () => {
+    if (mode === "buy_now") {
+      exitBuyNowCheckout();
+      return;
+    }
+
     await deleteAllCartItems();
     markCartAsCleared();
   };
@@ -1074,7 +1093,7 @@ export default function OrderStepUI() {
           </View>
 
           {/* Select/Remove Row */}
-          {items.length > 0 && (
+          {mode !== "buy_now" && items.length > 0 && (
             <View style={styles.actionsRow}>
               <TouchableOpacity onPress={removeAll}>
                 <Text style={styles.actionDanger}>Remove all</Text>
