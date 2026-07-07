@@ -161,6 +161,11 @@ export interface RechargePlan {
   [key: string]: any;
 }
 
+export interface RechargePlanGroup {
+  label: string;
+  plans: RechargePlan[];
+}
+
 export interface RechargePlansResponse {
   status: number;
   responseTypeId: number;
@@ -169,6 +174,7 @@ export interface RechargePlansResponse {
   circleId: string;
   mobile: string;
   count: number;
+  groups: RechargePlanGroup[];
   plans: RechargePlan[];
 }
 
@@ -200,6 +206,9 @@ export const fetchRechargePlans = async (
         circleId: res.data?.data?.circleId ?? '',
         mobile: res.data?.data?.mobile ?? '',
         count: res.data?.data?.count ?? 0,
+        groups: Array.isArray(res.data?.data?.groups)
+          ? res.data.data.groups
+          : [],
         plans: Array.isArray(res.data?.data?.plans)
           ? res.data.data.plans
           : [],
