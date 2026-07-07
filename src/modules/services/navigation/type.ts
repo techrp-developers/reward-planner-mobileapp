@@ -88,6 +88,7 @@ export type HomeStackParamList = {
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
   HelpForm: undefined;
+  MyTickets: undefined;
   ChangePassword: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
   CommonQuestionsScreen: undefined;
