@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import Reward from "../../../../assets/product/rewards.svg";
 import {
   fetchWalletBalance,
   fetchWalletTransactions,
+  type WalletBalanceResponse,
 } from "../../api/WalleteAPI";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
 import { useAppTheme } from "../../../../theme/ThemeContext";
@@ -39,11 +40,13 @@ export default function WalletHistoryScreen({ navigation }: any) {
   const [activeFilter, setActiveFilter] = useState("All Transactions");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
+  const [totalEarnedPoints, setTotalEarnedPoints] = useState(0);
   const [expiringCoins, setExpiringCoins] = useState(0);
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [txnLoading, setTxnLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const hasEarnedTotalFromBalance = useRef(false);
   const themed = useMemo(
     () =>
       StyleSheet.create({
@@ -93,15 +96,46 @@ export default function WalletHistoryScreen({ navigation }: any) {
       iconBg: txn.transaction_type === "credit" ? "#4F75FF" : "#A67B5B",
     })), []);
 
+  const getTotalEarnedFromBalance = (data: any) => {
+    const value =
+      data?.total_earned_points ??
+      data?.total_earned ??
+      data?.total_earned_coins ??
+      data?.earned_points ??
+      data?.earned_coins;
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+
   const loadBalance = useCallback(async () => {
     const balanceRes = await fetchWalletBalance();
-    setBalance(balanceRes?.data?.balance || 0);
-    setExpiringCoins(balanceRes?.data?.expiring_coins || 0);
-    setExpiryDate(balanceRes?.data?.expiry_date || null);
+    const balanceData: WalletBalanceResponse["data"] =
+      balanceRes?.data || {
+        balance: 0,
+        expiring_coins: 0,
+        expiry_date: null,
+      };
+    setBalance(balanceData.balance || 0);
+    setExpiringCoins(balanceData.expiring_coins || 0);
+    setExpiryDate(balanceData.expiry_date || null);
+
+    const earnedFromBalance = getTotalEarnedFromBalance(balanceData);
+    if (earnedFromBalance !== null) {
+      hasEarnedTotalFromBalance.current = true;
+      setTotalEarnedPoints(earnedFromBalance);
+    }
   }, []);
 
   const loadTransactions = useCallback(async (type: any = "all") => {
     const txnRes = await fetchWalletTransactions(type);
+    if (type === "all" && !hasEarnedTotalFromBalance.current) {
+      const totalCredits = (txnRes.data || []).reduce((sum: number, txn: any) => {
+        if (txn?.transaction_type !== "credit") return sum;
+        return sum + (Number(txn?.coins) || 0);
+      }, 0);
+      setTotalEarnedPoints(totalCredits);
+    }
     setTransactions(mapTransactions(txnRes.data));
   }, [mapTransactions]);
 
@@ -158,30 +192,45 @@ export default function WalletHistoryScreen({ navigation }: any) {
 
           <View style={styles.walletTopRow}>
             <Text style={styles.cardKicker}>REWARD WALLET</Text>
-            <View style={styles.chipBadge}>
-              <MaterialCommunityIcons
-                name="shield-check"
-                size={12}
-                color="#FFE9A8"
-              />
-              <Text style={styles.chipBadgeText}>Premium</Text>
+            <View style={styles.topRightMeta}>
+              {/* <View style={styles.chipBadge}>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={12}
+                  color="#FFE9A8"
+                />
+                <Text style={styles.chipBadgeText}>Premium</Text>
+              </View> */}
+
+              <View style={styles.rateBox}>
+                <Reward width={13} height={13} />
+                <Text style={styles.rateText}> 1 Coin = ₹1</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.leftSection}>
-            <View style={styles.coinIconWrap}>
-              <Reward width={30} height={30} />
+          <View style={styles.walletStatsRow}>
+            <View style={styles.leftSection}>
+              <View style={styles.coinIconWrap}>
+                <Reward width={30} height={30} />
+              </View>
+              <View style={styles.balanceBlock}>
+                <Text style={styles.label}>My Balance</Text>
+                <Text style={styles.balance}>{balance.toLocaleString("en-IN")}</Text>
+              </View>
             </View>
-            <View style={styles.balanceBlock}>
-              <Text style={styles.label}>My Balance</Text>
-              <Text style={styles.balance}>{balance.toLocaleString("en-IN")}</Text>
-            </View>
+
           </View>
 
           <View style={styles.cardBottomRow}>
-            <View style={styles.rateBox}>
-              <Reward width={13} height={13} />
-              <Text style={styles.rateText}> 1 Coin = ₹1</Text>
+            <View style={styles.earnedSummary}>
+              <View style={styles.earnedLine}>
+                <Text style={styles.earnedLineText}>Total earned -</Text>
+                <Reward width={13} height={13} />
+                <Text style={styles.earnedLineText}>
+                  {totalEarnedPoints.toLocaleString("en-IN")} coins
+                </Text>
+              </View>
             </View>
           </View>
         </LinearGradient>
@@ -419,7 +468,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  leftSection: { flexDirection: "row", alignItems: "center" },
+  topRightMeta: {
+    alignItems: "flex-end",
+    gap: 7,
+  },
+
+  walletStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  leftSection: { flexDirection: "row", alignItems: "center", flex: 1 },
 
   coinIconWrap: {
     width: 48,
@@ -434,6 +495,21 @@ const styles = StyleSheet.create({
 
   label: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "500" },
   balance: { color: "#fff", fontSize: 28, fontWeight: "800", letterSpacing: 0.3 },
+
+  earnedSummary: { alignItems: "flex-start" },
+
+  earnedLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
+  earnedLineText: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
 
   cardBottomRow: {
     flexDirection: "row",

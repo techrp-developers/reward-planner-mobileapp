@@ -7,6 +7,11 @@ export type WalletBalanceResponse = {
   success: boolean;
   data: {
     balance: number;
+    total_earned_points?: number;
+    total_earned?: number;
+    total_earned_coins?: number;
+    earned_points?: number;
+    earned_coins?: number;
     expiring_coins: number;
     expiry_date: string | null;
   };
@@ -45,8 +50,9 @@ export const fetchWalletBalance = async (): Promise<WalletBalanceResponse> => {
       return {
         success: false,
         data: {
-          coins: 0,
           balance: 0,
+          expiring_coins: 0,
+          expiry_date: null,
         },
       };
     }
