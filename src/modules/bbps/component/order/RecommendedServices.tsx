@@ -2,13 +2,13 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import FASTagRecharge from '../../assets/BBPS_Service/FASTag Recharge.png';
-import Electricity from '../../assets/BBPS_Service/Electricity.png';
-import Water from '../../assets/BBPS_Service/Water.png';
-import Landline from '../../assets/BBPS_Service/LandLine.png';
-import Broadband from '../../assets/BBPS_Service/Broadband.png';
-import DTH from '../../assets/BBPS_Service/DTH.png';
-import Credit from '../../assets/BBPS_Service/Creadit.png';
+import FASTagRecharge from '../../assets/BBPS_Service/FASTagRecharge.svg';
+import Electricity from '../../assets/BBPS_Service/Electricity.svg';
+import Water from '../../assets/BBPS_Service/Water.svg';
+import Landline from '../../assets/BBPS_Service/LandLine.svg';
+import Broadband from '../../assets/BBPS_Service/Broadband.svg';
+import DTH from '../../assets/BBPS_Service/DTH.svg';
+import Credit from '../../assets/BBPS_Service/Creadit.svg';
 
 type Service = {
   id: string;
