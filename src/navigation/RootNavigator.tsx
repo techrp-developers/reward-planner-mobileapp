@@ -45,6 +45,7 @@ export type AppStackParamList = {
   BBPSHomeStack: undefined;
   Search: undefined;
   GlobalSearchScreen: undefined;
+  TrackOrders: undefined;
   Notification: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
@@ -260,6 +261,12 @@ function AppNavigator() {
         name="GlobalSearchScreen"
         getComponent={() =>
           require("../modules/dashboard/dashboard/GlobalSearchScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="TrackOrders"
+        getComponent={() =>
+          require("../modules/dashboard/globalorder/TrackOrderScreen").default
         }
       />
       <AppStack.Screen
