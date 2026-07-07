@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
 
 import OrderHeading from '../../../ecommerce/constants/heading/OrderHeading';
 import BBPSOrderFilterSheet, {
@@ -9,6 +10,7 @@ import BBPSOrderFilterSheet, {
   STATUS_LABELS,
   TIME_LABELS,
 } from './BBPSOrderFilterSheet';
+import { bbpsOrderHistoryQueryKey, fetchOrderHistory, OrderHistoryItem } from '../../api/BillsAPI';
 
 type TemporaryOrder = {
   id: string;
@@ -20,9 +22,57 @@ type TemporaryOrder = {
   dateValue: string;
   month: string;
   repeatable?: boolean;
+  mobileNumber?: string;
 };
 
-const ORDERS: TemporaryOrder[] = [];
+const ORDER_HISTORY_PAGE_LIMIT = 50;
+
+const STATUS_TEXT: Record<string, string> = {
+  SUCCESS: 'Successful',
+  FAILED: 'Failed',
+  RECONCILIATION_REQUIRED: 'Reconciliation Required',
+  REFUNDED: 'Refunded',
+  REFUND_PENDING: 'Refund In Progress',
+  RETRYING: 'Retrying',
+  PENDING: 'Processing',
+};
+
+const mapOrderStatus = (finalStatus: string): BBPSOrderStatus => {
+  switch (finalStatus) {
+    case 'SUCCESS':
+      return 'successful';
+    case 'FAILED':
+    case 'RECONCILIATION_REQUIRED':
+      return 'failed';
+    case 'REFUNDED':
+    case 'REFUND_PENDING':
+      return 'refunded';
+    default:
+      return 'pending';
+  }
+};
+
+const toTemporaryOrder = (item: OrderHistoryItem): TemporaryOrder => {
+  const created = new Date(item.created_at);
+  const validDate = !Number.isNaN(created.getTime());
+
+  return {
+    id: String(item.provider_client_ref_id || item.id),
+    title: item.operator_name || `Operator #${item.operator_id}`,
+    amount: Number(item.amount) || 0,
+    status: mapOrderStatus(item.final_status),
+    statusText: STATUS_TEXT[item.final_status] || 'Processing',
+    dateLabel: validDate
+      ? created.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })
+      : '-',
+    dateValue: item.created_at,
+    month: validDate
+      ? created.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      : 'Unknown',
+    repeatable: Boolean(item.utility_acc_no),
+    mobileNumber: item.utility_acc_no || item.confirmation_mobile_no || undefined,
+  };
+};
 
 const matchesTimeFilter = (dateValue: string, filter: BBPSOrderTime) => {
   if (!filter) return true;
@@ -37,6 +87,19 @@ const matchesTimeFilter = (dateValue: string, filter: BBPSOrderTime) => {
   return date >= cutoff && date <= now;
 };
 
+function statusTextStyle(status: BBPSOrderStatus) {
+  switch (status) {
+    case 'successful':
+      return styles.success;
+    case 'refunded':
+      return styles.refunded;
+    case 'failed':
+      return styles.failed;
+    default:
+      return styles.pending;
+  }
+}
+
 const OrderCard = ({
   order,
   onRepeat,
@@ -50,8 +113,8 @@ const OrderCard = ({
     </View>
     <View style={styles.orderDetails}>
       <Text style={styles.orderTitle} numberOfLines={1}>{order.title}</Text>
-      <Text style={styles.orderId}>{order.id.replace('-dec', '')}</Text>
-      <Text style={[styles.orderStatus, order.status === 'successful' ? styles.success : styles.failed]}>
+      <Text style={styles.orderId}>{order.id}</Text>
+      <Text style={[styles.orderStatus, statusTextStyle(order.status)]}>
         {`\u20B9${order.amount.toLocaleString('en-IN')}, ${order.statusText}`}
       </Text>
       <Text style={styles.orderDate}>{order.dateLabel}</Text>
@@ -74,15 +137,32 @@ function OrderHistory({ navigation }: any) {
   const [timeFilter, setTimeFilter] = useState<BBPSOrderTime>('');
   const [filterVisible, setFilterVisible] = useState(false);
 
+  const {
+    data,
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+  } = useQuery({
+    queryKey: bbpsOrderHistoryQueryKey({ limit: ORDER_HISTORY_PAGE_LIMIT }),
+    queryFn: () => fetchOrderHistory({ limit: ORDER_HISTORY_PAGE_LIMIT }),
+  });
+
+  const orders = useMemo(
+    () => (data?.orders || []).map(toTemporaryOrder),
+    [data?.orders]
+  );
+
   const handleRepeat = (order: TemporaryOrder) => {
+    if (!order.mobileNumber) return;
     navigation.navigate('ReachargeHomeScreen', {
-      mobileNumber: order.id.replace('-dec', ''),
+      mobileNumber: order.mobileNumber,
     });
   };
 
   const groupedOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = ORDERS.filter((order) => {
+    const filtered = orders.filter((order) => {
       const matchesSearch = !query || [order.title, order.id, order.statusText]
         .some((value) => value.toLowerCase().includes(query));
       return matchesSearch
@@ -96,7 +176,7 @@ function OrderHistory({ navigation }: any) {
       else groups.push({ month: order.month, orders: [order] });
       return groups;
     }, []);
-  }, [search, statusFilter, timeFilter]);
+  }, [orders, search, statusFilter, timeFilter]);
 
   return (
     <View style={styles.container}>
@@ -128,8 +208,23 @@ function OrderHistory({ navigation }: any) {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {groupedOrders.length === 0 ? (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      >
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color="#8665FF" size="large" />
+          </View>
+        ) : isError ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Could not load transactions</Text>
+            <TouchableOpacity style={styles.repeatButton} onPress={() => refetch()}>
+              <Text style={styles.repeatText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : groupedOrders.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No transaction found</Text>
           </View>
@@ -192,6 +287,8 @@ const styles = StyleSheet.create({
   orderStatus: { marginTop: 5, fontSize: 12, fontWeight: '800' },
   success: { color: '#08A85A' },
   failed: { color: '#F04A24' },
+  pending: { color: '#8665FF' },
+  refunded: { color: '#D97706' },
   orderDate: { marginTop: 4, color: '#71717A', fontSize: 11 },
   repeatButton: { minWidth: 72, marginLeft: 6, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1.25, borderColor: '#8665FF', borderRadius: 9 },
   repeatText: { color: '#6D4ACB', fontSize: 12, fontWeight: '800' },

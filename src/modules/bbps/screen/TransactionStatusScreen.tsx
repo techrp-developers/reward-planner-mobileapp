@@ -3,7 +3,7 @@ import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vi
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../constatnt/BBPSHead';
-import { pollTransactionStatus, TransactionStatus } from '../api/BillsAPI';
+import { pollTransactionStatus, TERMINAL_TRANSACTION_STATUSES, TransactionStatus } from '../api/BillsAPI';
 
 const BRAND_PRIMARY = '#8665FF';
 const BRAND_SECONDARY = '#5B47A3';
@@ -21,6 +21,18 @@ const STATUS_PRESENTATION: Record<
     color: '#F59E0B',
     bg: '#FFFBEB',
     title: 'Reconciliation Required',
+  },
+  RETRYING: {
+    icon: 'hourglass-empty',
+    color: '#8665FF',
+    bg: '#F3EFFF',
+    title: 'Payment Captured, Retrying',
+  },
+  REFUND_PENDING: {
+    icon: 'hourglass-empty',
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    title: 'Refund In Progress',
   },
 };
 
@@ -45,7 +57,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   }, [transactionId]);
 
   const isTerminal = useMemo(
-    () => status !== 'PENDING',
+    () => TERMINAL_TRANSACTION_STATUSES.includes(status as any),
     [status]
   );
 
