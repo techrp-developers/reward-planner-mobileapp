@@ -55,7 +55,8 @@ type ConfirmationRouteParams = {
 
 const hasDisplayValue = (value?: string | number | null) => {
   if (value === null || value === undefined) return false;
-  return String(value).trim().length > 0;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized.length > 0 && normalized !== 'null' && normalized !== 'undefined' && normalized !== '-';
 };
 
 const formatAmount = (value?: string | number) => {
@@ -63,6 +64,40 @@ const formatAmount = (value?: string | number) => {
   if (!normalized) return '';
   const amount = Number(normalized);
   return Number.isNaN(amount) ? normalized : amount.toString();
+};
+
+const formatBillDate = (value?: string | number | null) => {
+  if (!hasDisplayValue(value)) {
+    return '-';
+  }
+
+  const rawValue = String(value).trim();
+  const compactDate = rawValue.match(/^(\d{4})(\d{2})(\d{2})$/);
+  const dashedDate = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const parts = compactDate || dashedDate;
+
+  if (!parts) {
+    return rawValue;
+  }
+
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return rawValue;
+  }
+
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 };
 
 // Reusable Info Row — icon + label + value, used across the Bill Summary card
@@ -112,6 +147,8 @@ const PaymentConfirmationScreenComponent = () => {
   }, [params.nickname, customerName]);
 
   const billAmount = useMemo(() => formatAmount(bill.amount), [bill.amount]);
+  const billDate = useMemo(() => formatBillDate(bill.billDate), [bill.billDate]);
+  const dueDate = useMemo(() => formatBillDate(bill.dueDate), [bill.dueDate]);
   const billFetchId = useMemo(() => params.fetchBillData?.data?.billFetchId, [params.fetchBillData]);
   const rawMessage = useMemo(() => params.fetchBillData?.data?.raw?.message || '', [params.fetchBillData]);
 
@@ -256,9 +293,9 @@ const PaymentConfirmationScreenComponent = () => {
             <Text style={styles.cardSectionTitle}>Bill Summary</Text>
             <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} />
             <View style={styles.infoRowDivider} />
-            <InfoRow icon="event" label="Bill Date" value={bill.billDate || '-'} />
+            <InfoRow icon="event" label="Bill Date" value={billDate} />
             <View style={styles.infoRowDivider} />
-            <InfoRow icon="event-busy" label="Due Date" value={bill.dueDate || '-'} />
+            <InfoRow icon="event-busy" label="Due Date" value={dueDate} />
             <View style={styles.infoRowDivider} />
             <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} />
           </View>
