@@ -75,6 +75,10 @@ export default function ServiceHomeStack() {
                 getComponent={() => require("../../ecommerce/constants/Support/HelpForm").default}
             />
             <Stack.Screen
+                name="MyTickets"
+                getComponent={() => require("../../ecommerce/constants/Support/MyTickets").default}
+            />
+            <Stack.Screen
                 name="ChangePassword"
                 getComponent={() => require("../../common/auth/screens/ChangePasswordScreen").default}
             />

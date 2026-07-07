@@ -49,6 +49,10 @@ export default function HelpForm({ navigation }: HelpFormProps) {
   const [loading, setLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
 
+  const handleHistoryPress = useCallback(() => {
+    navigation.navigate("MyTickets");
+  }, [navigation]);
+
   // ============================ LOAD CATEGORIES ============================
 
   const loadCategories = useCallback(async () => {
@@ -199,7 +203,17 @@ export default function HelpForm({ navigation }: HelpFormProps) {
           {/* HEADER */}
 
           <View style={styles.headerWrap}>
-            <Text style={styles.headerTitle}>Support Ticket</Text>
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>Support Ticket</Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.historyBtn}
+                onPress={handleHistoryPress}
+              >
+                <Text style={styles.historyBtnText}>History</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.headerSub}>
               Raise your issue and our team will help you.
@@ -383,8 +397,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: 12,
+  },
+
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#852BAF",
+    flex: 1,
+  },
+
+  historyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D9B7EA",
+    backgroundColor: "#FFFFFF",
+  },
+
+  historyBtnText: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#852BAF",
   },
