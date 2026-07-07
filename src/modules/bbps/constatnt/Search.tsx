@@ -12,12 +12,91 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { SvgProps } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 
 import PaymentTop from '../../../navbar/assete/Payment_BG.png';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { BillCategory, fetchBillsCategories } from '../api/BillsAPI';
+import Recharge from '../assets/BBPS_Service/Recharge.svg';
+import DTH from '../assets/BBPS_Service/DTH.svg';
+import Subscriptions from '../assets/BBPS_Service/Subscriptions.svg';
+import FASTagRecharge from '../assets/BBPS_Service/FASTagRecharge.svg';
+import Electricity from '../assets/BBPS_Service/Electricity.svg';
+import Water from '../assets/BBPS_Service/Water.svg';
+import PipedGas from '../assets/BBPS_Service/solid.svg';
+import LPGCylender from '../assets/BBPS_Service/LPG.svg';
+import Landline from '../assets/BBPS_Service/LandLine.svg';
+import Broadband from '../assets/BBPS_Service/Broadband.svg';
+import Credit from '../assets/BBPS_Service/Creadit.svg';
+import Loan from '../assets/BBPS_Service/Loan_Emi.svg';
+import Insurance from '../assets/BBPS_Service/Insurance.svg';
+import Tax from '../assets/BBPS_Service/Tax.svg';
+import Housing from '../assets/BBPS_Service/Housing_Socity.svg';
+import Municipal from '../assets/BBPS_Service/Munsiple_taxes.svg';
+import Education from '../assets/BBPS_Service/Education.svg';
+import Hospital from '../assets/BBPS_Service/Hospital_bill.svg';
 
 const MIN_SEARCH_LENGTH = 2;
+
+type SvgIconComponent = React.FC<SvgProps>;
+type VectorIconAsset = {
+  type: 'vector';
+  name: string;
+};
+type IconAsset = SvgIconComponent | VectorIconAsset;
+
+const isVectorIcon = (icon: IconAsset): icon is VectorIconAsset =>
+  typeof icon === 'object' && icon !== null && 'type' in icon && icon.type === 'vector';
+
+const ICON_MAP: Record<string, IconAsset> = {
+  'Mobile Prepaid': Recharge,
+  DTH,
+  Subscription: Subscriptions,
+  Subscriptions,
+  FASTag: FASTagRecharge,
+  'Cable TV': Subscriptions,
+  Electricity,
+  Water,
+  Gas: PipedGas,
+  'LPG Cylinder': LPGCylender,
+  'Broadband Postpaid': Broadband,
+  'Landline Postpaid': Landline,
+  'Mobile Postpaid': Recharge,
+  'Credit Card': Credit,
+  Loan,
+  Insurance,
+  Tax,
+  'Housing Society': Housing,
+  Education,
+  Hospital,
+  'Municipal Taxes': Municipal,
+  'Municipal Services': Municipal,
+  'Rental Payment': Housing,
+  eChallan: { type: 'vector', name: 'file-document-outline' },
+  'Agent Collection': { type: 'vector', name: 'account-cash-outline' },
+  'Fleet Card Recharge': { type: 'vector', name: 'card-account-details-outline' },
+  'EV Recharge': { type: 'vector', name: 'ev-station' },
+  'Clubs and Associations': Subscriptions,
+};
+
+const getCategoryInitial = (name?: string) =>
+  String(name || 'B').trim().charAt(0).toUpperCase();
+
+const SearchResultIcon = ({ categoryName }: { categoryName: string }) => {
+  const icon = ICON_MAP[categoryName];
+
+  if (!icon) {
+    return <Text style={styles.resultIconInitial}>{getCategoryInitial(categoryName)}</Text>;
+  }
+
+  if (isVectorIcon(icon)) {
+    return <MaterialCommunityIcons name={icon.name} size={25} color="#FFFFFF" />;
+  }
+
+  const SvgIcon = icon;
+  return <SvgIcon width={26} height={26} />;
+};
 
 function Search({ navigation }: any) {
   const { width } = useWindowDimensions();
@@ -154,9 +233,14 @@ function Search({ navigation }: any) {
               })
             }
           >
-            <View style={styles.resultIcon}>
-              <MaterialCommunityIcons name="receipt-text-outline" size={26} color="#7C3AED" />
-            </View>
+            <LinearGradient
+              colors={['#8665FF', '#5B47A3']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.resultIcon}
+            >
+              <SearchResultIcon categoryName={item.operator_category_name} />
+            </LinearGradient>
             <View style={styles.resultText}>
               <Text style={styles.resultTitle} numberOfLines={1}>
                 {item.operator_category_name}
@@ -254,12 +338,14 @@ const styles = StyleSheet.create({
   resultIcon: {
     width: 50,
     height: 50,
-    borderWidth: 1,
-    borderColor: '#EEEAF8',
-    borderRadius: 10,
-    backgroundColor: '#F7F4FF',
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  resultIconInitial: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
   },
   resultText: {
     flex: 1,

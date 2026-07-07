@@ -99,7 +99,9 @@ function statusTextStyle(status: BBPSOrderStatus) {
 const OrderCard = ({ order }: { order: TemporaryOrder }) => (
   <View style={styles.orderCard}>
     <View style={styles.logoWrap}>
-      <MaterialCommunityIcons name="receipt-text-outline" size={26} color="#8665FF" />
+      <Text style={styles.logoInitial}>
+        {(order.title || 'B').trim().charAt(0).toUpperCase()}
+      </Text>
     </View>
     <View style={styles.orderDetails}>
       <Text style={styles.orderTitle} numberOfLines={1}>{order.title}</Text>
@@ -254,7 +256,8 @@ const styles = StyleSheet.create({
   monthText: { color: '#4B4B52', fontSize: 14, fontWeight: '800' },
   monthTotal: { color: '#3F3F46', fontSize: 14, fontWeight: '800' },
   orderCard: { flexDirection: 'row', alignItems: 'center', minHeight: 114, marginHorizontal: 14, marginTop: 10, padding: 12, borderWidth: 1, borderColor: '#ECECEF', borderRadius: 13, backgroundColor: '#FFFFFF', shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 5, elevation: 1 },
-  logoWrap: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D4D4D8', borderRadius: 25, backgroundColor: '#FFFFFF' },
+  logoWrap: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#ECE7FF', borderRadius: 25, backgroundColor: '#F7F4FF' },
+  logoInitial: { color: '#8665FF', fontSize: 18, fontWeight: '800' },
   orderDetails: { flex: 1, minWidth: 0, marginLeft: 12 },
   orderTitle: { color: '#4B4B52', fontSize: 14, fontWeight: '800' },
   orderId: { marginTop: 1, color: '#52525B', fontSize: 12, fontWeight: '700' },
