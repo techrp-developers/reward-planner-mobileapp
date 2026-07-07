@@ -1011,7 +1011,7 @@ export default function OrderStepUI() {
         <ProductHeadColor
           title="Cart"
           onBackPress={handleEmptyCheckoutBack}
-          onSearchPress={() => Alert.alert("Search", "Open search")}
+          showSearch={false}
         />
         <EmptyCart
           message="Your cart is empty. Add products to continue."
@@ -1026,7 +1026,7 @@ export default function OrderStepUI() {
       <ProductHeadColor
         title="Checkout"
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => Alert.alert("Search", "Open search")}
+        showSearch={false}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
