@@ -21,8 +21,6 @@ type TemporaryOrder = {
   dateLabel: string;
   dateValue: string;
   month: string;
-  repeatable?: boolean;
-  mobileNumber?: string;
 };
 
 const ORDER_HISTORY_PAGE_LIMIT = 50;
@@ -69,8 +67,6 @@ const toTemporaryOrder = (item: OrderHistoryItem): TemporaryOrder => {
     month: validDate
       ? created.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
       : 'Unknown',
-    repeatable: Boolean(item.utility_acc_no),
-    mobileNumber: item.utility_acc_no || item.confirmation_mobile_no || undefined,
   };
 };
 
@@ -100,13 +96,7 @@ function statusTextStyle(status: BBPSOrderStatus) {
   }
 }
 
-const OrderCard = ({
-  order,
-  onRepeat,
-}: {
-  order: TemporaryOrder;
-  onRepeat: (order: TemporaryOrder) => void;
-}) => (
+const OrderCard = ({ order }: { order: TemporaryOrder }) => (
   <View style={styles.orderCard}>
     <View style={styles.logoWrap}>
       <MaterialCommunityIcons name="receipt-text-outline" size={26} color="#8665FF" />
@@ -119,15 +109,6 @@ const OrderCard = ({
       </Text>
       <Text style={styles.orderDate}>{order.dateLabel}</Text>
     </View>
-    {order.repeatable && (
-      <TouchableOpacity
-        style={styles.repeatButton}
-        activeOpacity={0.8}
-        onPress={() => onRepeat(order)}
-      >
-        <Text style={styles.repeatText}>Repeat</Text>
-      </TouchableOpacity>
-    )}
   </View>
 );
 
@@ -152,13 +133,6 @@ function OrderHistory({ navigation }: any) {
     () => (data?.orders || []).map(toTemporaryOrder),
     [data?.orders]
   );
-
-  const handleRepeat = (order: TemporaryOrder) => {
-    if (!order.mobileNumber) return;
-    navigation.navigate('ReachargeHomeScreen', {
-      mobileNumber: order.mobileNumber,
-    });
-  };
 
   const groupedOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -220,8 +194,8 @@ function OrderHistory({ navigation }: any) {
         ) : isError ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>Could not load transactions</Text>
-            <TouchableOpacity style={styles.repeatButton} onPress={() => refetch()}>
-              <Text style={styles.repeatText}>Retry</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+              <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : groupedOrders.length === 0 ? (
@@ -237,7 +211,7 @@ function OrderHistory({ navigation }: any) {
                 <Text style={styles.monthTotal}>{`\u20B9${total.toLocaleString('en-IN')}`}</Text>
               </View>
               {group.orders.map((order) => (
-                <OrderCard key={order.id} order={order} onRepeat={handleRepeat} />
+                <OrderCard key={order.id} order={order} />
               ))}
             </View>
           );
@@ -290,8 +264,8 @@ const styles = StyleSheet.create({
   pending: { color: '#8665FF' },
   refunded: { color: '#D97706' },
   orderDate: { marginTop: 4, color: '#71717A', fontSize: 11 },
-  repeatButton: { minWidth: 72, marginLeft: 6, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1.25, borderColor: '#8665FF', borderRadius: 9 },
-  repeatText: { color: '#6D4ACB', fontSize: 12, fontWeight: '800' },
+  retryButton: { minWidth: 72, marginTop: 14, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1.25, borderColor: '#8665FF', borderRadius: 9 },
+  retryText: { color: '#6D4ACB', fontSize: 12, fontWeight: '800' },
   emptyState: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 48 },
   emptyTitle: { marginTop: 18, color: '#3F3F46', fontSize: 16, fontWeight: '800' },
   bottomSpace: { height: 24 },

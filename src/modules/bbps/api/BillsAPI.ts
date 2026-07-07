@@ -393,6 +393,7 @@ export interface OrderHistoryItem {
   bbps_status: string;
   payment_status: string | null;
   provider_client_ref_id: string;
+  recharge_circle_id: string | null;
   razorpay_order_id: string | null;
   created_at: string;
   final_status: TransactionStatus;
