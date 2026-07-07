@@ -69,7 +69,7 @@ export default function TrackOrderScreen() {
             >
               <MaterialCommunityIcons name="arrow-left" size={20} color="#0F172A" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Track Orders</Text>
+            <Text style={styles.headerTitle}>All Orders</Text>
             <View style={styles.headerSpacer} />
           </View>
 
@@ -80,11 +80,11 @@ export default function TrackOrderScreen() {
             style={styles.heroCard}
           >
             <View style={styles.heroIcon}>
-              <MaterialCommunityIcons name="truck-fast-outline" size={28} color="#FFFFFF" />
+              <MaterialCommunityIcons name="clipboard-list-outline" size={28} color="#FFFFFF" />
             </View>
-            <Text style={styles.heroTitle}>One place to follow every order</Text>
+            <Text style={styles.heroTitle}>One place for every order</Text>
             <Text style={styles.heroSubtitle}>
-              Open your shopping, service, or BBPS orders and check their latest status.
+              View product purchases, service bookings, bill payments, and future order types from one place.
             </Text>
           </LinearGradient>
 
@@ -105,7 +105,7 @@ export default function TrackOrderScreen() {
             icon="briefcase-check-outline"
             iconBg="#ECFDF5"
             iconColor="#059669"
-            onPress={() => navigation.navigate("ServiceStack")}
+            onPress={() => navigation.navigate("ServiceStack", { screen: "MyOrder" } as any)}
           />
 
           <OrderSectionCard
@@ -114,22 +114,22 @@ export default function TrackOrderScreen() {
             icon="receipt-text-check-outline"
             iconBg="#FFF7ED"
             iconColor="#EA580C"
-            onPress={() => navigation.navigate("BBPSHomeStack")}
+            onPress={() => navigation.navigate("BBPSHomeStack", { screen: "OrderHistory" } as any)}
           />
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>What you can check here</Text>
+            <Text style={styles.infoTitle}>What you can manage here</Text>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>Order status and recent updates</Text>
+              <Text style={styles.infoText}>Product orders, service bookings, and BBPS transactions</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>Placed orders from different modules</Text>
+              <Text style={styles.infoText}>Status, payment details, invoices, and recent updates</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>A quick route to the right order list</Text>
+              <Text style={styles.infoText}>A quick route to each module's dedicated order list</Text>
             </View>
           </View>
         </ScrollView>
