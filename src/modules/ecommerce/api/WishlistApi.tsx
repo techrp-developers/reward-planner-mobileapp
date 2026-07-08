@@ -49,11 +49,13 @@ export const isWishlistPresent = (response: any) => {
     response?.exists ??
     response?.inWishlist ??
     response?.in_wishlist ??
+    response?.is_wishlist ??
     response?.is_wishlisted ??
     response?.data?.isPresent ??
     response?.data?.exists ??
     response?.data?.inWishlist ??
     response?.data?.in_wishlist ??
+    response?.data?.is_wishlist ??
     response?.data?.is_wishlisted ??
     false;
 

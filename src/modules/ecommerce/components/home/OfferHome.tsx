@@ -45,6 +45,18 @@ const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
+const hasWishlistFlag = (item: any) =>
+  item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
+
+const getWishlistFlag = (item: any) => {
+  const value = item?.is_wishlisted ?? item?.is_wishlist;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y"].includes(normalized);
+};
+
 // ---------------------------------------------------------------------
 // Product Card Component
 // ---------------------------------------------------------------------
@@ -57,7 +69,7 @@ const FlashOfferProductCard = React.memo(({
 }) => {
   const navigation = useNavigation<Nav>();
   const [wishLoading, setWishLoading] = useState(false);
-  const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
+  const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
 
   const productId = item.product_id ?? item.id;
   const variantId =
@@ -69,15 +81,20 @@ const FlashOfferProductCard = React.memo(({
   const [resolvedVariantId, setResolvedVariantId] = useState<any>(variantId);
 
   useEffect(() => {
-    setWishlisted(Boolean(item?.is_wishlisted));
+    setWishlisted(getWishlistFlag(item));
     setResolvedVariantId(variantId);
-  }, [item?.is_wishlisted, variantId]);
+  }, [item, variantId]);
 
   useEffect(() => {
     const parsedProductId = Number(productId);
     const initialVariantId = Number(variantId);
 
-    if (!shouldLoadImage || !parsedProductId || Number.isNaN(parsedProductId)) {
+    if (
+      hasWishlistFlag(item) ||
+      !shouldLoadImage ||
+      !parsedProductId ||
+      Number.isNaN(parsedProductId)
+    ) {
       return;
     }
 
@@ -123,7 +140,7 @@ const FlashOfferProductCard = React.memo(({
         }
       }
 
-      if (!cancelled && item?.is_wishlisted === undefined) {
+      if (!cancelled) {
         setWishlisted(false);
       }
 
@@ -137,7 +154,7 @@ const FlashOfferProductCard = React.memo(({
     return () => {
       cancelled = true;
     };
-  }, [item?.is_wishlisted, productId, shouldLoadImage, variantId]);
+  }, [item, productId, shouldLoadImage, variantId]);
 
   const displayData = useMemo(() => {
     // Parse price values from API response (format: "₹1349" or 1349)

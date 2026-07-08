@@ -34,6 +34,18 @@ const MemoProductHero = React.memo(ProductHero);
 const MemoProductVariants = React.memo(ProductVariants);
 const MemoBuySection = React.memo(BuySection);
 
+const hasWishlistFlag = (item: any) =>
+  item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
+
+const getWishlistFlag = (item: any) => {
+  const value = item?.is_wishlisted ?? item?.is_wishlist;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y"].includes(normalized);
+};
+
 export default function
   ProductDescriptionScreen() {
   const route = useRoute<RouteT>();
@@ -137,7 +149,7 @@ export default function
         setProduct({ ...p, variants });
         setSelectedVariant(defaultVariant);
         setSelectedAttrs(defaultVariant?.variant_attributes ?? {});
-        setWishlisted(Boolean(defaultVariant?.is_wishlisted ?? p?.is_wishlisted));
+        setWishlisted(getWishlistFlag(defaultVariant) || getWishlistFlag(p));
       });
     };
 
@@ -236,14 +248,24 @@ export default function
   }, [selectedVariant]);
 
   useEffect(() => {
-    setWishlisted(Boolean(selectedVariant?.is_wishlisted ?? product?.is_wishlisted));
-  }, [product?.is_wishlisted, productId, selectedVariant?.is_wishlisted]);
+    setWishlisted(getWishlistFlag(selectedVariant) || getWishlistFlag(product));
+  }, [
+    product,
+    productId,
+    selectedVariant,
+  ]);
 
   useEffect(() => {
     const parsedProductId = Number(product?.product_id ?? productId);
     const parsedVariantId = Number(selectedVariant?.variant_id ?? product?.default_variant_id);
 
-    if (!isAuthenticated || !parsedProductId || !parsedVariantId) {
+    if (
+      hasWishlistFlag(selectedVariant) ||
+      hasWishlistFlag(product) ||
+      !isAuthenticated ||
+      !parsedProductId ||
+      !parsedVariantId
+    ) {
       return;
     }
 
@@ -262,7 +284,7 @@ export default function
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, product?.default_variant_id, product?.product_id, productId, selectedVariant?.variant_id]);
+  }, [isAuthenticated, product, productId, selectedVariant]);
 
   useEffect(() => {
     if (!selectedVariant?.variant_id) return;

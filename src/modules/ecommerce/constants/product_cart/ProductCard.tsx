@@ -48,6 +48,18 @@ const getProductImage = (item: any) =>
   item?.thumbnail ??
   (Array.isArray(item?.images) ? item.images[0] : undefined);
 
+const hasWishlistFlag = (item: any) =>
+  item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
+
+const getWishlistFlag = (item: any) => {
+  const value = item?.is_wishlisted ?? item?.is_wishlist;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y"].includes(normalized);
+};
+
 const StarRating = React.memo(function StarRating({
   starCount,
 }: {
@@ -67,7 +79,7 @@ const StarRating = React.memo(function StarRating({
 const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProductPress }: Props) => {
   const navigation = useNavigation<Nav>();
   const [wishLoading, setWishLoading] = useState(false);
-  const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
+  const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
   const [resolvedVariantId, setResolvedVariantId] = useState<any>(() => getVariantId(item));
 
   const usedCardWidth = cardWidth ?? CARD_WIDTH;
@@ -109,15 +121,20 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
   }, [item?.image, item?.image_url, item?.images, item?.thumbnail]);
 
   useEffect(() => {
-    setWishlisted(Boolean(item?.is_wishlisted));
+    setWishlisted(getWishlistFlag(item));
     setResolvedVariantId(variantId);
-  }, [item?.is_wishlisted, productId, variantId]);
+  }, [item, productId, variantId]);
 
   useEffect(() => {
     const parsedProductId = Number(productId);
     const initialVariantId = Number(variantId);
 
-    if (!shouldLoadImage || !parsedProductId || Number.isNaN(parsedProductId)) {
+    if (
+      hasWishlistFlag(item) ||
+      !shouldLoadImage ||
+      !parsedProductId ||
+      Number.isNaN(parsedProductId)
+    ) {
       return;
     }
 
@@ -163,7 +180,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
         }
       }
 
-      if (!cancelled && item?.is_wishlisted === undefined) {
+      if (!cancelled) {
         setWishlisted(false);
       }
 
@@ -177,7 +194,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
     return () => {
       cancelled = true;
     };
-  }, [item?.is_wishlisted, productId, shouldLoadImage, variantId]);
+  }, [item, productId, shouldLoadImage, variantId]);
 
   const handleWishlist = useCallback(async () => {
     if (wishLoading) return;
@@ -369,6 +386,7 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
 
   return (
     getProductId(prevItem) === getProductId(nextItem) &&
+    prevItem?.is_wishlist === nextItem?.is_wishlist &&
     prevItem?.is_wishlisted === nextItem?.is_wishlisted &&
     prevProps.cardWidth === nextProps.cardWidth &&
     prevItem?.discount === nextItem?.discount &&
