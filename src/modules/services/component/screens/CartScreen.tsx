@@ -44,6 +44,7 @@ type ServiceCartItem = {
   description: string;
   price: number;
   mrp: number;
+  imageUrl?: string;
   documents: string[];
   isBundle?: boolean;
   bundle_id?: number;
@@ -123,6 +124,7 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
       price: displayPrice,
       mrp: Math.max(displayMrp, displayPrice),
+      imageUrl: bundle.bundle_image ? String(bundle.bundle_image) : undefined,
 
       // 🔥 FIXED (no duplicate docs)
       documents: uniqueDocs,
@@ -144,6 +146,9 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       description: item.title,
       price: Number(item.price),
       mrp: Number(item.price),
+      imageUrl: item.image_url || item.variant_image
+        ? String(item.image_url || item.variant_image)
+        : undefined,
       documents: (item.documents || []).map((d: any) => d.document_name),
 
       isBundle: false,
@@ -363,6 +368,7 @@ function CartScreen() {
       description={item.description}
       price={item.price}
       mrp={item.mrp}
+      imageUrl={item.imageUrl}
       documents={item.documents}
       isBundle={item.isBundle} // ✅ ADD THIS
 

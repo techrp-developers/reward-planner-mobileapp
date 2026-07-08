@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,6 +32,7 @@ import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentSta
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import RazorpayCheckout from "react-native-razorpay";
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
+import { getServiceImageUrl } from '../../utils/serviceImage';
 
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCheckoutScreen'>;
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
@@ -64,6 +66,7 @@ type ServicePreviewItem = {
 
   price: number;
   mrp: number;
+  imageUrl?: string;
 
   documents: string[];
 
@@ -92,6 +95,15 @@ const sumBundleItemPrices = (items: any[], fields: string[]): number => {
     const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
     return total + parseMoney(field ? item?.[field] : 0);
   }, 0);
+};
+
+const getFirstImage = (source: any, fields: string[]): string | undefined => {
+  const field = fields.find((key) => {
+    const value = source?.[key];
+    return typeof value === 'string' && value.trim();
+  });
+
+  return field ? String(source[field]).trim() : undefined;
 };
 
 function normalizePreview(
@@ -138,6 +150,7 @@ function normalizePreview(
 
         price: displayPrice,
         mrp: Math.max(displayMrp, displayPrice),
+        imageUrl: getFirstImage(bundle, ['bundle_image']),
 
         documents: uniqueDocs,
 
@@ -178,6 +191,7 @@ function normalizePreview(
 
         price: displayPrice,
         mrp: Math.max(displayMrp, displayPrice),
+        imageUrl: getFirstImage(bundle, ['bundle_image']),
 
         documents: [],
 
@@ -188,7 +202,15 @@ function normalizePreview(
 
       sourceItems = [bundleCard]; // ✅ IMPORTANT
     } else {
-      sourceItems = Array.isArray(raw?.items) ? raw.items : [];
+      sourceItems = Array.isArray(raw?.items)
+        ? raw.items
+        : raw?.item
+          ? [raw.item]
+          : raw?.service
+            ? [raw.service]
+            : raw?.service_id || raw?.variant_id || raw?.image_url
+              ? [raw]
+              : [];
     }
   }
   const items: ServicePreviewItem[] = sourceItems
@@ -216,7 +238,7 @@ function normalizePreview(
         price: parseMoney(entry?.price),
         mrp: parseMoney(entry?.mrp ?? entry?.price),
 
-        image_url: entry?.image_url ? String(entry.image_url) : undefined,
+        imageUrl: getFirstImage(entry, ['image_url', 'variant_image']),
 
         documents: (() => {
           const docs = entry?.documents ?? entry?.required_documents ?? [];
@@ -795,7 +817,15 @@ export default function ServiceCheckoutScreen() {
           <View key={`${item.id}-${item.service_id}-${item.variant_id}-${idx}`} style={styles.card}>
             <View style={styles.itemRow}>
               <View style={styles.iconBg}>
-                <MaterialIcons name="description" size={28} color="#8665FF" />
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: getServiceImageUrl(item.imageUrl) }}
+                    style={styles.itemImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <MaterialIcons name="description" size={28} color="#8665FF" />
+                )}
               </View>
               <View style={styles.itemInfo}>
                 {mode === 'cart' && !item.isBundle && (<View style={styles.itemTopActions}>
@@ -927,6 +957,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+  },
+  itemImage: {
+    width: 58,
+    height: 62,
+    borderRadius: 8,
   },
   itemInfo: { flex: 1 },
   itemTopActions: { alignItems: 'flex-end' },
