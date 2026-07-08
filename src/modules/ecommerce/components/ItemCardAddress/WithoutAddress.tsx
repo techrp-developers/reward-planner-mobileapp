@@ -69,7 +69,6 @@ const CartRow = React.memo(function CartRow({
 
   return (
     <CartItemCard
-      checked
       title={item.product_name}
       image={getProductImageUrl(item.image)}
       deliveryText="Delivery in 3–5 days"
