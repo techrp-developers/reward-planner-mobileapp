@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
-import { BASE_API_URL, BASE_IMAGE_URL } from "./api";
+import { BASE_API_URL } from "./api";
 
 /* =========================================================
    TYPES
@@ -100,16 +100,45 @@ export interface ServiceCancellationReason {
   reason_text: string;
 }
 
-export interface ServiceInvoiceDetails {
-  id: number;
-  parent_order_id: string;
-  invoice_number: string;
-  invoice_url: string;
-  total_amount: string;
-  created_at: string;
-  url: string;
-  download_url: string;
-}
+type ServiceInvoicePdfResult =
+  | { success: true; base64: string; fileName: string }
+  | { success: false; message?: string; status?: number };
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192;
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...Array.from(chunk));
+  }
+
+  const encoder = (globalThis as { btoa?: (value: string) => string }).btoa;
+  if (typeof encoder !== "function") {
+    throw new Error("Base64 encoder is not available");
+  }
+
+  return encoder(binary);
+};
+
+const extractFileName = (contentDisposition?: string, fallback?: string): string => {
+  if (!contentDisposition) {
+    return fallback || "service_invoice.pdf";
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const normalMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (normalMatch?.[1]) {
+    return normalMatch[1];
+  }
+
+  return fallback || "service_invoice.pdf";
+};
 
 export interface SubmitServiceFeedbackPayload {
   service_order_id: number;
@@ -423,10 +452,7 @@ export const requestServiceOrderCancellation = async (payload: {
 // ==============================
 export const getServiceInvoiceDetails = async (
   parent_order_id: string
-): Promise<{
-  success: boolean;
-  data: ServiceInvoiceDetails;
-}> => {
+): Promise<ServiceInvoicePdfResult> => {
   try {
     const headers = await getAuthHeaders();
 
@@ -436,23 +462,30 @@ export const getServiceInvoiceDetails = async (
 
     const res = await axios.get(
       `${BASE_API_URL}/service-orders/invoice-details/${parent_order_id}`,
-      { headers }
+      {
+        headers,
+        responseType: "arraybuffer",
+      }
     );
 
-    const invoice = res.data?.data;
-    const relativeUrl = String(invoice?.url || "").trim();
-    const downloadUrl = relativeUrl
-      ? relativeUrl.startsWith("http")
-        ? relativeUrl
-        : `${BASE_IMAGE_URL}/api/crm${relativeUrl.startsWith("/") ? relativeUrl : `/${relativeUrl}`}`
-      : "";
+    const base64 =
+      typeof res.data === "string"
+        ? res.data.replace(/^data:application\/pdf;base64,/, "")
+        : arrayBufferToBase64(res.data as ArrayBuffer);
+
+    const contentDisposition = res?.headers?.["content-disposition"] as
+      | string
+      | undefined;
+    const fileName = extractFileName(contentDisposition, `service_invoice_${parent_order_id}.pdf`);
+
+    if (!base64) {
+      return { success: false, message: "Invoice PDF is empty" };
+    }
 
     return {
-      success: Boolean(res.data?.success),
-      data: {
-        ...invoice,
-        download_url: downloadUrl,
-      },
+      success: true,
+      base64,
+      fileName,
     };
   } catch (error: any) {
     if (Number(error?.response?.status) === 401) {
@@ -460,7 +493,15 @@ export const getServiceInvoiceDetails = async (
     }
 
     console.error("Get Service Invoice Details Error:", error?.response || error);
-    throw error?.response?.data || error;
+    const status = Number(error?.response?.status || 0);
+    const message =
+      status === 400
+        ? "Invoice is available after payment."
+        : status === 404
+          ? "Invoice is not available for this order yet."
+          : error?.message || "Could not fetch invoice PDF";
+
+    return { success: false, status, message };
   }
 };
 

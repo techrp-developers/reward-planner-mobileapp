@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import Share from 'react-native-share';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
@@ -136,14 +137,21 @@ export default function ServiceOrderDetail() {
     try {
       setInvoiceDownloading(true);
       const res = await getServiceInvoiceDetails(parent_order_id);
-      const invoiceUrl = res?.data?.download_url;
 
-      if (!res?.success || !invoiceUrl) {
-        Alert.alert('Invoice unavailable', 'Unable to find invoice for this order.');
+      if (res.success === false) {
+        Alert.alert('Invoice unavailable', res.message || 'Unable to find invoice for this order.');
         return;
       }
 
-      await Linking.openURL(invoiceUrl);
+      await Share.open({
+        title: 'Download Invoice',
+        url: `data:application/pdf;base64,${res.base64}`,
+        type: 'application/pdf',
+        filename: res.fileName.replace(/\.pdf$/i, ''),
+        failOnCancel: false,
+        saveToFiles: Platform.OS === 'ios',
+        ...(Platform.OS === 'android' ? ({ useInternalStorage: true } as Record<string, unknown>) : {}),
+      });
     } catch (err: any) {
       Alert.alert(
         'Download failed',
