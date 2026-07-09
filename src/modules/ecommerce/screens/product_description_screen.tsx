@@ -433,39 +433,6 @@ export default function
     }
   }, [wishLoading, product?.product_id, productId, selectedVariant?.variant_id, product?.default_variant_id, wishlisted]);
 
-  const handleWriteReview = useCallback((orderId: number) => {
-    const resolvedProductId = Number(product?.product_id ?? productId ?? 0);
-    const resolvedVariantId = Number(
-      selectedVariant?.variant_id ?? product?.default_variant_id ?? 0
-    );
-
-    if (!resolvedProductId || !resolvedVariantId) {
-      Alert.alert("Write Review", "Product details are not ready yet.");
-      return;
-    }
-
-    const rawVariantImage = selectedVariant?.images?.[0];
-    const imagePath =
-      (typeof rawVariantImage === "string" && rawVariantImage) ||
-      rawVariantImage?.image_url ||
-      rawVariantImage?.url ||
-      product?.images?.[0] ||
-      "";
-
-    const reviewImage = /^(https?:)?\/\//i.test(String(imagePath))
-      ? String(imagePath)
-      : getProductImageUrl(String(imagePath));
-
-    navigation.navigate("ReviewScreen", {
-      product_id: resolvedProductId,
-      variant_id: resolvedVariantId,
-      order_id: orderId,
-      product_name: product?.product_name,
-      image: reviewImage,
-      delivered_on: product?.delivered_on,
-    });
-  }, [navigation, product?.default_variant_id, product?.delivered_on, product?.images, product?.product_id, product?.product_name, productId, selectedVariant?.images, selectedVariant?.variant_id]);
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -601,8 +568,6 @@ export default function
         <View style={styles.descriptionWrap}>
           <CustomerReviewsView
             productId={product?.product_id ?? productId}
-            variantId={selectedVariant?.variant_id}
-            onWriteReview={handleWriteReview}
           />
         </View>
 
