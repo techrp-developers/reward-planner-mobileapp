@@ -52,7 +52,7 @@ export default function
   const { productId } = route.params;
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
-  const { addItem, totalQuantity } = useCart();
+  const { addItem, updateQuantity, totalQuantity, items: cartItems } = useCart();
   const queryClient = useQueryClient();
 
   const [product, setProduct] = useState<any>(null);
@@ -309,6 +309,34 @@ export default function
     })();
   }, [selectedVariant]);
 
+  const selectedCartItem = useMemo(() => {
+    const productCartId = Number(product?.product_id ?? productId);
+    const variantCartId = Number(selectedVariant?.variant_id);
+
+    if (!productCartId || !variantCartId) {
+      return undefined;
+    }
+
+    return cartItems.find(
+      (cartItem) =>
+        Number(cartItem.product_id) === productCartId &&
+        Number(cartItem.variant_id) === variantCartId
+    );
+  }, [cartItems, product?.product_id, productId, selectedVariant?.variant_id]);
+
+  useEffect(() => {
+    const cartQuantity = Number(selectedCartItem?.quantity);
+    if (Number.isFinite(cartQuantity) && cartQuantity > 0) {
+      setQty(cartQuantity);
+    }
+  }, [selectedCartItem?.id, selectedCartItem?.quantity]);
+
+  const selectedVariantInCart = useMemo(() => {
+    if (!selectedCartItem) return false;
+
+    return Number(selectedCartItem.quantity) === Number(qty);
+  }, [qty, selectedCartItem]);
+
   const handleAddToCart = useCallback(async () => {
     if (adding) return;
 
@@ -319,8 +347,19 @@ export default function
 
     if (!product?.product_id || !selectedVariant?.variant_id) return;
 
+    if (selectedVariantInCart) {
+      navigation.navigate("Cart");
+      return;
+    }
+
     try {
       setAdding(true);
+
+      if (selectedCartItem?.id && Number(selectedCartItem.quantity) !== Number(qty)) {
+        await updateQuantity(selectedCartItem.id, qty);
+        alert.success("Cart Updated", "Cart quantity updated successfully.", 2500);
+        return;
+      }
 
       await addItem(product.product_id, selectedVariant.variant_id, qty);
 
@@ -345,7 +384,20 @@ export default function
     } finally {
       setAdding(false);
     }
-  }, [adding, isAuthenticated, product?.product_id, selectedVariant?.variant_id, qty, addItem, alert, product?.product_name]);
+  }, [
+    adding,
+    isAuthenticated,
+    product?.product_id,
+    selectedVariant?.variant_id,
+    selectedVariantInCart,
+    selectedCartItem,
+    navigation,
+    qty,
+    updateQuantity,
+    addItem,
+    alert,
+    product?.product_name,
+  ]);
 
   const handleWishlist = useCallback(async () => {
     if (wishLoading) return;
@@ -525,6 +577,7 @@ export default function
           onAddToCart={handleAddToCart}
           onBuyNow={handleBuyNow}
           isAdding={adding}
+          isInCart={selectedVariantInCart}
         />
 
         {/* <OffersSection /> */}
