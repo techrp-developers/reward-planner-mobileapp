@@ -47,8 +47,18 @@ const CartContext = createContext<CartContextType>({
 const toCartItems = (rawItems: any[]): CartItem[] => {
   return rawItems.map((item: any) => ({
     id: String(item.id || item.cart_item_id || ""),
-    product_id: item.product_id,
-    variant_id: item.variant_id,
+    product_id:
+      item.product_id ??
+      item.productId ??
+      item.product?.product_id ??
+      item.product?.id,
+    variant_id:
+      item.variant_id ??
+      item.variantId ??
+      item.product_variant_id ??
+      item.productVariantId ??
+      item.variant?.variant_id ??
+      item.variant?.id,
     name: item.product_name || item.name,
     price: Number(item.sale_price || item.price || 0),
     quantity: Number(item.quantity || 1),
@@ -70,9 +80,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
 
   const items = useMemo(() => {
-    const rawItems = Array.isArray(cartData?.items) ? cartData.items : [];
+    const rawItems =
+      (Array.isArray(cartData?.items) && cartData.items) ||
+      (Array.isArray(cartData?.data?.items) && cartData.data.items) ||
+      (Array.isArray(cartData?.cart_items) && cartData.cart_items) ||
+      (Array.isArray(cartData?.data?.cart_items) && cartData.data.cart_items) ||
+      [];
     return toCartItems(rawItems);
-  }, [cartData?.items]);
+  }, [cartData]);
 
   const count = items.length;
 
