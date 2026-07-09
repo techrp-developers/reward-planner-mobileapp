@@ -74,6 +74,7 @@ const HOME_SECTIONS: HomeSection[] = [
 ];
 
 const INITIAL_VISIBLE_SECTIONS = new Set<SectionKey>(['banner', 'categories']);
+const READY_HOME_SECTIONS = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
 
 const MemoHomeBanner = React.memo(HomeBanner);
 const MemoCategoriesSection = React.memo(CategoriesSection);
@@ -131,9 +132,9 @@ ListFooterSpacer.displayName = 'HomeListFooterSpacer';
 
 function HomeScreen() {
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
-    () => new Set(INITIAL_VISIBLE_SECTIONS),
+    () => new Set(READY_HOME_SECTIONS),
   );
-  const pendingReadySections = useRef<Set<SectionKey>>(new Set(INITIAL_VISIBLE_SECTIONS));
+  const pendingReadySections = useRef<Set<SectionKey>>(new Set(READY_HOME_SECTIONS));
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
@@ -144,7 +145,10 @@ function HomeScreen() {
       const keysToAdd = nextKeys.filter((key) => !pendingReadySections.current.has(key));
       if (keysToAdd.length === 0) return;
 
-      keysToAdd.forEach((key) => pendingReadySections.current.add(key));
+      keysToAdd.forEach((key) => {
+        pendingReadySections.current.add(key);
+        READY_HOME_SECTIONS.add(key);
+      });
 
       InteractionManager.runAfterInteractions(() => {
         setReadySections((previous) => {
