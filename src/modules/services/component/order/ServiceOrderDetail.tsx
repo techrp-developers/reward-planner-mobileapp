@@ -126,6 +126,14 @@ export default function ServiceOrderDetail() {
     });
   };
 
+  const handleCancellationDetailsItem = (item: ServiceItem) => {
+    navigation.navigate('ServiceCancellationDetails', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      service_id: item.service_id,
+    });
+  };
+
   const handleFeedbackItem = (item: ServiceItem) => {
     navigation.navigate('ServiceFeedback', {
       service_order_id: item.id,
@@ -328,6 +336,7 @@ export default function ServiceOrderDetail() {
                 <ServiceOrderItemCard
                   item={item}
                   onCancelPress={handleCancelItem}
+                  onCancellationDetailsPress={handleCancellationDetailsItem}
                   onFeedbackPress={handleFeedbackItem}
                 />
               </View>
@@ -344,6 +353,7 @@ export default function ServiceOrderDetail() {
                 bundle={bundle}
                 bundleIndex={i + 1}
                 onCancelItem={handleCancelItem}
+                onCancellationDetailsItem={handleCancellationDetailsItem}
                 onFeedbackItem={handleFeedbackItem}
               />
             ))}

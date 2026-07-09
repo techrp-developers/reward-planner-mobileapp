@@ -74,6 +74,11 @@ export type HomeStackParamList = {
     variant_name?: string;
     image_url?: string | null;
   };
+  ServiceCancellationDetails: {
+    service_order_id: number;
+    parent_order_id: string;
+    service_id?: number | null;
+  };
   ServiceFeedback: {
     service_order_id: number;
     parent_order_id: string;

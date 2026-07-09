@@ -93,11 +93,64 @@ export interface ServiceFeedback {
 
 export interface ServiceCancellation {
   can_cancel: boolean;
+  status?: string;
+  reason?: string | null;
+  refund_status?: string | null;
 }
 
 export interface ServiceCancellationReason {
   reason_id: number;
   reason_text: string;
+}
+
+export interface ServiceCancellationDetails {
+  service_order_id: number;
+  order_ref: string;
+  status: string;
+  service: {
+    service_id?: number | null;
+    service_name: string;
+    variant_name?: string | null;
+    title?: string | null;
+    image_url?: string | null;
+  };
+  address: null | {
+    address_type?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    zipcode?: string | null;
+    landmark?: string | null;
+    contact_name?: string | null;
+    contact_phone?: string | null;
+  };
+  cancellation: null | {
+    status: string;
+    refund_status?: string | null;
+    refund_method?: string | null;
+    refund_amount: number;
+    created_at?: string | null;
+  };
+  timeline: Array<{
+    label: string;
+    event: string;
+    date?: string | null;
+  }>;
+  refund: {
+    total: number;
+    money_refund: number;
+    coin_refund: number;
+  };
+  rewards: {
+    used: number;
+    reversed: number;
+  };
+  summary: {
+    service_total: number;
+    order_total: number;
+  };
 }
 
 type ServiceInvoicePdfResult =
@@ -153,6 +206,7 @@ export interface SubmitServiceFeedbackPayload {
 
 export interface ServiceItem {
   id: number;
+  service_id?: number | null;
   order_ref: string;
   service_name: string;
   variant_name: string;
@@ -448,7 +502,36 @@ export const requestServiceOrderCancellation = async (payload: {
 };
 
 // ==============================
-// 8. Get Service Invoice Details
+// 8. Get Service Cancellation Details
+// ==============================
+export const getServiceCancellationDetails = async (
+  service_order_id: number
+): Promise<{ success: boolean; data?: ServiceCancellationDetails; message?: string }> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/cancellation-details/${service_order_id}`,
+      { headers }
+    );
+
+    return {
+      success: Boolean(res.data?.success),
+      data: res.data?.data,
+      message: res.data?.message,
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Cancellation Details Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 9. Get Service Invoice Details
 // ==============================
 export const getServiceInvoiceDetails = async (
   parent_order_id: string
