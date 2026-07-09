@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { SvgProps } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
 
 // Asset Imports
 import Recharge from '../../assets/BBPS_Service/Recharge.svg';
@@ -152,6 +153,8 @@ const ICON_MAP: Record<string, IconAsset> = {
 };
 
 const FALLBACK_ICON: IconAsset = Recharge;
+const BILL_CATEGORIES_QUERY_KEY = ['bbps', 'bill-categories'] as const;
+const BILL_CATEGORIES_STALE_TIME = 10 * 60 * 1000;
 
 const normalizeCategoryName = (name?: string) => String(name || '').trim();
 
@@ -263,23 +266,14 @@ const RechargeBillSkeleton = () => {
 
 function RechargeBill() {
   const navigation = useNavigation<any>();
-  const [categories, setCategories] = useState<BillCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchBillsCategories();
-        setCategories(data);
-      } catch (e) {
-        console.log(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  const { data: categories = [], isLoading: loading } = useQuery({
+    queryKey: BILL_CATEGORIES_QUERY_KEY,
+    queryFn: fetchBillsCategories,
+    staleTime: BILL_CATEGORIES_STALE_TIME,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
   const groupedData = useMemo(() => {
     const baseGroups: Record<SectionName, BillCategory[]> = {

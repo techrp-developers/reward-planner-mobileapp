@@ -43,6 +43,18 @@ const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
   DineOut: '#DC2626',
 };
 
+type DashboardHeaderCache = {
+  userName: string;
+  userImage: string | null;
+  companyLogo: string | null;
+  thought: string;
+  stepGoal: number;
+  birthdays: BirthdayEmployee[];
+  fetchedAt: number;
+};
+
+const DASHBOARD_HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
+let dashboardHeaderCache: DashboardHeaderCache | null = null;
 
 function Dashbord() {
   const { isDark } = useAppTheme();
@@ -68,6 +80,20 @@ function Dashbord() {
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
+
+    if (
+      dashboardHeaderCache &&
+      Date.now() - dashboardHeaderCache.fetchedAt < DASHBOARD_HEADER_CACHE_TTL_MS
+    ) {
+      setHeaderUserName(dashboardHeaderCache.userName);
+      setHeaderUserImage(dashboardHeaderCache.userImage);
+      setHeaderCompanyLogo(dashboardHeaderCache.companyLogo);
+      setThought(dashboardHeaderCache.thought);
+      setStepGoal(dashboardHeaderCache.stepGoal);
+      setBirthdays(dashboardHeaderCache.birthdays);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) return;
@@ -90,16 +116,30 @@ function Dashbord() {
         }
 
         const raw: any[] = Array.isArray(d.birthday_employees) ? d.birthday_employees : [];
-        setBirthdays(raw.map((b) => ({
+        const mappedBirthdays = raw.map((b) => ({
           id:          b.employeeId,
           name:        b.name,
           designation: b.role,
           department:  b.department,
           photo:       b.image ?? null,
-        })));
+        }));
+        setBirthdays(mappedBirthdays);
+
+        dashboardHeaderCache = {
+          userName: d.name || headerUserName,
+          userImage: d.userImage ?? headerUserImage,
+          companyLogo: d.company?.logo ?? headerCompanyLogo,
+          thought: d.thought ?? thought,
+          stepGoal:
+            Number.isFinite(Number(d.steps?.goal_steps)) && Number(d.steps?.goal_steps) > 0
+              ? Number(d.steps.goal_steps)
+              : stepGoal,
+          birthdays: mappedBirthdays,
+          fetchedAt: Date.now(),
+        };
       }
     } catch { }
-  }, [isAuthenticated]);
+  }, [headerCompanyLogo, headerUserImage, headerUserName, isAuthenticated, stepGoal, thought]);
 
   // Warm the ecommerce route shortly after the first dashboard paint. A timer
   // is intentional here: InteractionManager may never become idle while the
