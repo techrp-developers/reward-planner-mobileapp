@@ -9,7 +9,15 @@ import { useServiceHome } from '../../hooks/useServiceHome';
 
 const fallbackImg = require('../../assete/gov_documet/aadhar card.png');
 
-const RecommendedServicesCarousel = () => {
+type RecommendedServicesCarouselProps = {
+  title?: string;
+  subtitle?: string;
+};
+
+const RecommendedServicesCarousel = ({
+  title = 'Recommended for you',
+  subtitle = "Picked based on what's popular",
+}: RecommendedServicesCarouselProps) => {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
   const { data, isLoading, error } = useServiceHome();
 
@@ -23,8 +31,8 @@ const RecommendedServicesCarousel = () => {
     return (
       <View style={styles.wrapper}>
         <View style={styles.headerRow}>
-          <Text style={styles.heading}>Recommended for you</Text>
-          <Text style={styles.subheading}>Picked based on what's popular</Text>
+          <Text style={styles.heading}>{title}</Text>
+          <Text style={styles.subheading}>{subtitle}</Text>
         </View>
         <ActivityIndicator size="small" color="#8665FF" style={styles.loader} />
       </View>
@@ -36,8 +44,8 @@ const RecommendedServicesCarousel = () => {
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Recommended for you</Text>
-        <Text style={styles.subheading}>Picked based on what's popular</Text>
+        <Text style={styles.heading}>{title}</Text>
+        <Text style={styles.subheading}>{subtitle}</Text>
       </View>
 
       <ScrollView

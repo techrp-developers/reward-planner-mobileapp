@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Image,
   TouchableOpacity,
   Alert,
   RefreshControl,
@@ -20,10 +21,13 @@ import Share from 'react-native-share';
 // ── Reused ecommerce common components ──────────────────────────────────────
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
 import PriceDetailsCard from '../../../../modules/common/order/PriceDetailsCard';
+import OrderItemCard from '../../../../modules/common/order/OrderItemCard';
 
 // ── Service-specific components ──────────────────────────────────────────────
 import ServiceOrderItemCard from './ServiceOrderItemCard';
 import ServiceBundleCard from './ServiceBundleCard';
+import YouMayNeedServicesCarousel from '../constant/YouMayNeedServicesCarousel';
+import RecommendedServicesCarousel from '../constant/RecommendedServicesCarousel';
 
 // ── API & types ──────────────────────────────────────────────────────────────
 import {
@@ -166,7 +170,10 @@ export default function ServiceOrderDetail() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header onBack={() => navigation.goBack()} />
+        <Header
+          onBack={() => navigation.goBack()}
+          onHelp={() => navigation.navigate('HelpForm')}
+        />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#7C3AED" />
           <Text style={styles.loadingText}>Loading order details…</Text>
@@ -178,7 +185,10 @@ export default function ServiceOrderDetail() {
   if (error || !order) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header onBack={() => navigation.goBack()} />
+        <Header
+          onBack={() => navigation.goBack()}
+          onHelp={() => navigation.navigate('HelpForm')}
+        />
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle-outline" size={52} color="#DC2626" />
           <Text style={styles.errorText}>{error || 'Order not found.'}</Text>
@@ -207,10 +217,19 @@ export default function ServiceOrderDetail() {
     allServiceItems.find(item => item.documents.some(document => !document.uploaded))?.id ||
     allServiceItems[0]?.id ||
     0;
+  const primaryService = allServiceItems[0];
+  const primaryTitle = primaryService?.service_name || 'Service Order';
+  const primarySubtitle =
+    primaryService?.variant_name ||
+    `${allServiceItems.length} service${allServiceItems.length === 1 ? '' : 's'}`;
+  const primaryImage = primaryService?.image_url;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Header onBack={() => navigation.goBack()} />
+      <Header
+        onBack={() => navigation.goBack()}
+        onHelp={() => navigation.navigate('HelpForm')}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -224,7 +243,32 @@ export default function ServiceOrderDetail() {
           />
         }
       >
+        <OrderItemCard
+          image={
+            primaryImage ? (
+              <Image source={{ uri: primaryImage }} style={styles.productImage} />
+            ) : (
+              <MaterialCommunityIcons name="file-document-outline" size={34} color="#8665FF" />
+            )
+          }
+          title={primaryTitle}
+          weight={primarySubtitle}
+          orderId={parent_order_id.slice(0, 8).toUpperCase()}
+        />
+
+        <View style={styles.statusSummaryCard}>
+          <View style={styles.statusSummaryHeader}>
+            <Text style={[styles.statusSummaryTitle, { color: statusColor }]}>
+              {statusLabel}
+            </Text>
+            <Text style={styles.statusSummaryDate}>{formatDate(order.created_at)}</Text>
+          </View>
+          <Text style={styles.statusSummaryText}>
+            Track each service below for its individual document and completion timeline.
+          </Text>
+        </View>
         {/* ── Order summary card ─────────────────────────────────────── */}
+        {false && (
         <LinearGradient
           colors={['#30205F', '#6344BD', '#7C3AED']}
           start={{ x: 0, y: 0 }}
@@ -271,6 +315,7 @@ export default function ServiceOrderDetail() {
             </View>
           </View>
         </LinearGradient>
+        )}
 
         {/* ── Standalone service items ───────────────────────────────── */}
         {hasStandaloneItems && (
@@ -351,7 +396,11 @@ export default function ServiceOrderDetail() {
           />
         </SectionCard>
 
-       
+        <YouMayNeedServicesCarousel />
+        <RecommendedServicesCarousel
+          title="Top Picks for You"
+          subtitle="Popular services customers choose next"
+        />
 
         <View style={styles.bottomPad} />
       </ScrollView>
@@ -360,26 +409,27 @@ export default function ServiceOrderDetail() {
 }
 
 // ── Local layout helpers (not exported — presentational only) ─────────────────
-function Header({ onBack }: { onBack: () => void }) {
+function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
   return (
-    <LinearGradient
-      colors={['#30205F', '#5B3CB4', '#7C3AED']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.header}
-    >
+    <View style={styles.header}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="arrow-left" size={21} color="#FFF" />
+        <MaterialCommunityIcons name="chevron-left" size={28} color="#374151" />
       </TouchableOpacity>
-      <View style={styles.headerCopy}>
-        <Text style={styles.headerEyebrow}>SERVICE HUB</Text>
-        <Text style={styles.headerTitle}>Order details</Text>
-      </View>
-    </LinearGradient>
+      <Text style={styles.headerTitle}>Order Details</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={styles.helpBtn}>
+        <MaterialCommunityIcons
+          name="chat-outline"
+          size={16}
+          color="#EC4899"
+          style={styles.helpIcon}
+        />
+        <Text style={styles.helpText}>Help</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -474,23 +524,68 @@ function InvoiceDownloadRow({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F6F5FB' },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
 
   header: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 18,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
-  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
+  backButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, marginLeft: 12 },
   headerEyebrow: { color: 'rgba(255,255,255,0.64)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFF', marginTop: 1, letterSpacing: -0.3 },
+  headerTitle: { flex: 1, marginLeft: 8, fontSize: 16, fontWeight: '600', color: '#374151' },
+  helpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  helpIcon: { marginRight: 4 },
+  helpText: { fontSize: 14, fontWeight: '600', color: '#EC4899' },
 
-  scroll: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 8, gap: 14 },
+  scroll: { padding: 16, paddingBottom: 8 },
+  productImage: {
+    width: 48,
+    height: 48,
+    resizeMode: 'contain',
+  },
+  statusSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    marginBottom: 12,
+  },
+  statusSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statusSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  statusSummaryDate: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  statusSummaryText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+  },
 
   summaryCard: {
     borderRadius: 22,
@@ -539,20 +634,16 @@ const styles = StyleSheet.create({
 
   section: {
     backgroundColor: '#FFF',
-    borderRadius: 18,
+    borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#ECE8F3',
-    elevation: 2,
-    shadowColor: '#35245F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#251B40',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
     marginBottom: 10,
   },
   documentsCard: {
@@ -560,19 +651,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E9E3F8',
-    borderRadius: 18,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
     padding: 14,
-    shadowColor: '#35245F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 12,
   },
-  documentsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0ECFF', alignItems: 'center', justifyContent: 'center' },
+  documentsIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#F0ECFF', alignItems: 'center', justifyContent: 'center' },
   documentsCopy: { flex: 1, marginLeft: 12, marginRight: 8 },
-  documentsTitle: { fontSize: 14, fontWeight: '800', color: '#251B40' },
-  documentsText: { fontSize: 12, color: '#817A91', fontWeight: '600', marginTop: 3 },
+  documentsTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  documentsText: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 3 },
   documentsDone: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF3', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 9 },
   documentsDoneText: { fontSize: 10, color: '#16A34A', fontWeight: '800' },
   uploadDocumentsButton: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PURPLE, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
@@ -581,10 +668,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 14,
-    borderRadius: 12,
+    marginTop: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E7E0F2',
+    borderColor: '#E5E7EB',
     backgroundColor: '#FFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -592,8 +679,8 @@ const styles = StyleSheet.create({
   invoiceText: {
     flex: 1,
     fontSize: 12,
-    color: '#2F293D',
-    fontWeight: '600',
+    color: '#374151',
+    fontWeight: '500',
   },
   invoiceButton: {
     paddingLeft: 12,
@@ -605,10 +692,9 @@ const styles = StyleSheet.create({
   },
   invoiceButtonText: {
     fontSize: 12,
-    color: PURPLE,
-    fontWeight: '900',
+    color: '#6366F1',
+    fontWeight: '700',
   },
-
   centered: {
     flex: 1,
     justifyContent: 'center',
