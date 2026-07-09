@@ -73,7 +73,7 @@ export const createServicePaymentOrder = async (
 ): Promise<CreateServicePaymentOrderResponse> => {
   const headers = await getAuthHeaders();
   const url = `${SERVICE_API_BASE}/service-orders/create-order`;
-  console.log("💳 createServicePaymentOrder →", url, { parent_order_id });
+  __DEV__ && console.log("💳 createServicePaymentOrder →", url, { parent_order_id });
 
   const res = await axios.post(url, { parent_order_id }, { headers });
   return res.data;
@@ -90,7 +90,7 @@ export const verifyServicePayment = async (
 ): Promise<VerifyServicePaymentResponse> => {
   const headers = await getAuthHeaders();
   const url = `${SERVICE_API_BASE}/service-orders/verify-payment`;
-  console.log("🔐 verifyServicePayment →", url, {
+  __DEV__ && console.log("🔐 verifyServicePayment →", url, {
     razorpay_order_id: payload.razorpay_order_id,
   });
 
@@ -116,7 +116,7 @@ export const checkServicePaymentStatus = async (
 ): Promise<CheckServicePaymentStatusResponse> => {
   const headers = await getAuthHeaders();
   const url = `${SERVICE_API_BASE}/service-orders/payment-status/${parent_order_id}`;
-  console.log("📊 checkServicePaymentStatus →", url);
+  __DEV__ && console.log("📊 checkServicePaymentStatus →", url);
 
   const res = await axios.get(url, { headers });
   return res.data;

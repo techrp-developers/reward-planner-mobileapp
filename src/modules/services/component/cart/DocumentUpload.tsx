@@ -339,7 +339,7 @@ const DocumentUpload = () => {
     const result = await launchImageLibrary({
       mediaType: 'mixed',
       selectionLimit: 1,
-      quality: 0.85,
+      quality: 0.8,
     });
 
     if (result.didCancel || !result.assets?.[0]) {

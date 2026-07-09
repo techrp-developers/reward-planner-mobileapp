@@ -341,8 +341,8 @@ export default function ServiceCheckoutScreen() {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -388,10 +388,10 @@ export default function ServiceCheckoutScreen() {
       return getCheckoutPreview();
     },
     enabled: isAuthenticated,
-    staleTime: 0,
+    staleTime: 30 * 1000,
     gcTime: THIRTY_MINUTES,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     // Keep the current service summary mounted during background refreshes
     // (including the refresh triggered after selecting an address).
     placeholderData: previousData => previousData,
@@ -460,7 +460,7 @@ export default function ServiceCheckoutScreen() {
           });
         }
 
-        console.log("↩️ Cart restored after payment failure/cancel");
+        __DEV__ && console.log("↩️ Cart restored after payment failure/cancel");
       } catch (restoreErr) {
         console.error("❌ Failed to restore cart after payment failure:", restoreErr);
       }
@@ -468,14 +468,14 @@ export default function ServiceCheckoutScreen() {
 
     try {
       if (placing) {
-        console.log("⏸️ Order placement already in progress");
+        __DEV__ && console.log("⏸️ Order placement already in progress");
         return;
       }
       setPlacing(true);
 
-      console.log("📦 Creating order...");
+      __DEV__ && console.log("📦 Creating order...");
 
-      console.log("🏠 Address debug:", JSON.stringify(address, null, 2));
+      __DEV__ && console.log("🏠 Address debug:", JSON.stringify(address, null, 2));
       const address_id = Number(address?.id ?? (address as any)?.address_id ?? 0);
       if (!address_id) {
         setPlacing(false);
@@ -547,7 +547,7 @@ export default function ServiceCheckoutScreen() {
         ? String(raw_uuid).trim()
         : String(numeric_order_id);
 
-      console.log("🔍 Order Extraction Debug:", {
+      __DEV__ && console.log("🔍 Order Extraction Debug:", {
         mode,
         numeric_order_id,
         parent_order_id,
@@ -562,14 +562,14 @@ export default function ServiceCheckoutScreen() {
         return;
       }
 
-      console.log("✅ Order created successfully:", { numeric_order_id, parent_order_id, mode });
+      __DEV__ && console.log("✅ Order created successfully:", { numeric_order_id, parent_order_id, mode });
 
       // ✅ Step 2: Create Payment Order
-      console.log("💳 Creating payment order with parent_order_id:", parent_order_id);
+      __DEV__ && console.log("💳 Creating payment order with parent_order_id:", parent_order_id);
       const paymentRes = await createServicePaymentOrder(parent_order_id);
       const paymentData = paymentRes.data;
 
-      console.log("💳 Payment Order Response:", paymentData);
+      __DEV__ && console.log("💳 Payment Order Response:", paymentData);
 
       const options = {
         key: paymentData.key || "rzp_test_xxx",
@@ -581,14 +581,14 @@ export default function ServiceCheckoutScreen() {
         theme: { color: "#8665FF" },
       };
 
-      console.log("🔑 Razorpay options:", { order_id: options.order_id, amount: options.amount, key: options.key });
+      __DEV__ && console.log("🔑 Razorpay options:", { order_id: options.order_id, amount: options.amount, key: options.key });
 
       setPlacing(false);
 
       // ✅ Step 3: Open Razorpay Checkout
       RazorpayCheckout.open(options)
         .then(async (response) => {
-          console.log("💰 Payment successful:", response);
+          __DEV__ && console.log("💰 Payment successful:", response);
           try {
             setPlacing(true);
 
@@ -596,7 +596,7 @@ export default function ServiceCheckoutScreen() {
             if (mode !== "buy_now") {
               try {
                 await clearServiceCart();
-                console.log("🧹 Cart cleared successfully");
+                __DEV__ && console.log("🧹 Cart cleared successfully");
                 await queryClient.invalidateQueries({ queryKey: SERVICE_CART_QUERY_KEY });
                 await queryClient.invalidateQueries({ queryKey: SERVICE_CHECKOUT_QUERY_KEY });
               } catch (clearErr) {
@@ -612,13 +612,13 @@ export default function ServiceCheckoutScreen() {
                 razorpay_signature: response.razorpay_signature,
               });
 
-              console.log("🔐 Payment verified:", verifyRes);
+              __DEV__ && console.log("🔐 Payment verified:", verifyRes);
 
               if (!verifyRes?.success) {
                 // Poll as fallback if verify response doesn't confirm success
                 await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
                 const statusRes = await checkServicePaymentStatus(parent_order_id);
-                console.log("📊 Payment status poll:", statusRes);
+                __DEV__ && console.log("📊 Payment status poll:", statusRes);
               }
             } catch (verifyError) {
               console.error("⚠️ Verification failed, proceeding to upload:", verifyError);

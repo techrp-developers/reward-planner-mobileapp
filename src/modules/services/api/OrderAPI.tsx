@@ -348,7 +348,7 @@ export const createServiceOrderPayment = async (parent_order_id: string) => {
       throw new Error("Invalid parent_order_id (must be UUID)");
     }
 
-    console.log("📤 Creating payment order:", parent_order_id);
+    __DEV__ && console.log("📤 Creating payment order:", parent_order_id);
 
     const res = await axios.post(
       `${BASE_API_URL}/service-orders/create-order`,
@@ -381,7 +381,7 @@ export const verifyServicePayment = async (payload: {
   try {
     const headers = await getAuthHeaders();
 
-    console.log("🔐 Verifying service payment:", {
+    __DEV__ && console.log("🔐 Verifying service payment:", {
       parent_order_id: payload.parent_order_id,
       razorpay_order_id: payload.razorpay_order_id,
     });
@@ -392,7 +392,7 @@ export const verifyServicePayment = async (payload: {
       { headers }
     );
 
-    console.log("✅ Payment verified:", res.data);
+    __DEV__ && console.log("✅ Payment verified:", res.data);
     return res.data;
 
   } catch (error: any) {
@@ -417,14 +417,14 @@ export const checkServicePaymentStatus = async (parent_order_id: string) => {
   try {
     const headers = await getAuthHeaders();
 
-    console.log("📊 Checking service payment status for:", parent_order_id);
+    __DEV__ && console.log("📊 Checking service payment status for:", parent_order_id);
 
     const res = await axios.get(
       `${BASE_API_URL}/service-orders/payment-status/${parent_order_id}`,
       { headers }
     );
 
-    console.log("📊 Payment status:", res.data);
+    __DEV__ && console.log("📊 Payment status:", res.data);
     return res.data;
 
   } catch (error: any) {
