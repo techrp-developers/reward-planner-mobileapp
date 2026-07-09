@@ -112,8 +112,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();
@@ -186,9 +186,6 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       return;
     }
 
-    console.log('Operator Details:', operatorDetails);
-    console.log('Form Values:', formValues);
-
     setIsLoading(true);
     try {
       const payload = {
@@ -210,9 +207,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
         return;
       }
 
-      console.log('Fetch Bill Payload:', payload);
       const response = await fetchBill(payload);
-      console.log('Fetch Bill Response:', response);
 
       if (!response?.success) {
         alert.warning(
@@ -235,7 +230,6 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     }
   }, [
     validateInputs,
-    operatorDetails,
     formValues,
     loggedInUserName,
     operatorId,

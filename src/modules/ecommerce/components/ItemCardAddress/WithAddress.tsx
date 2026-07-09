@@ -44,7 +44,18 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>
 // ]
 
 const TEN_MINUTES = 10 * 60 * 1000
+const THIRTY_SECONDS = 30 * 1000
 const THIRTY_MINUTES = 30 * 60 * 1000
+
+const getCartItems = (cartData: any) => {
+  return (
+    (Array.isArray(cartData?.items) && cartData.items) ||
+    (Array.isArray(cartData?.data?.items) && cartData.data.items) ||
+    (Array.isArray(cartData?.cart_items) && cartData.cart_items) ||
+    (Array.isArray(cartData?.data?.cart_items) && cartData.data.cart_items) ||
+    []
+  )
+}
 
 type CartRowProps = {
   item: any
@@ -137,14 +148,15 @@ export default function WithAddress() {
 
   const {
     data: cartData,
-    isFetchedAfterMount: isCartFetchedAfterMount,
+    isLoading: isCartLoading,
   } = useQuery({
     queryKey: cartItemsQueryKey,
     queryFn: fetchCartItems,
     enabled: isAuthenticated,
-    staleTime: 0,
+    staleTime: THIRTY_SECONDS,
     gcTime: THIRTY_MINUTES,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
   const { data: addressData, isFetching: isAddressFetching } = useQuery({
@@ -156,25 +168,27 @@ export default function WithAddress() {
   })
 
   const items = useMemo(() => {
-    return Array.isArray(cartData?.items) ? cartData.items : []
-  }, [cartData?.items])
+    return getCartItems(cartData)
+  }, [cartData])
 
   const rewardSummaryQuery = useQuery({
     queryKey: cartSummaryQueryKey(true),
     queryFn: () => fetchCartSummary(true),
     enabled: isAuthenticated && items.length > 0,
-    staleTime: 0,
+    staleTime: THIRTY_SECONDS,
     gcTime: THIRTY_MINUTES,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
   const noRewardSummaryQuery = useQuery({
     queryKey: cartSummaryQueryKey(false),
     queryFn: () => fetchCartSummary(false),
     enabled: isAuthenticated && items.length > 0 && !useRewards,
-    staleTime: 0,
+    staleTime: THIRTY_SECONDS,
     gcTime: THIRTY_MINUTES,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
   const cartSummaryData = useMemo(() => {
@@ -191,10 +205,6 @@ export default function WithAddress() {
       totalRedeemed: 0,
     }
   }, [noRewardSummaryQuery.data, rewardSummaryQuery.data, useRewards])
-
-  const hasSummaryData = Boolean(
-    rewardSummaryQuery.data || noRewardSummaryQuery.data
-  )
 
   const address = useMemo(() => {
     const list = Array.isArray(addressData?.data) ? addressData.data : []
@@ -225,9 +235,8 @@ export default function WithAddress() {
 
   const loading =
     isAuthenticated &&
-    (!isCartFetchedAfterMount ||
-      (!addressData && isAddressFetching) ||
-      (items.length > 0 && !hasSummaryData))
+    ((isCartLoading && !cartData) ||
+      (!addressData && isAddressFetching))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {

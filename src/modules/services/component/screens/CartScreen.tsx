@@ -168,8 +168,12 @@ function CartScreen() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
-  const [items, setItems] = useState<ServiceCartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedCartItems = useMemo(() => {
+    const cached = queryClient.getQueryData(serviceCartItemsQueryKey);
+    return cached ? normalizeCartItems(cached) : [];
+  }, [queryClient]);
+  const [items, setItems] = useState<ServiceCartItem[]>(cachedCartItems);
+  const [loading, setLoading] = useState(cachedCartItems.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | number | null>(null);
   const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null);
@@ -205,7 +209,7 @@ function CartScreen() {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(true);
+        setLoading(items.length === 0);
       }
 
       const response = await getServiceCartItems();
@@ -225,7 +229,7 @@ function CartScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [queryClient]);
+  }, [items.length, queryClient]);
 
   useEffect(() => {
     loadCart();
@@ -234,8 +238,8 @@ function CartScreen() {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
     animation.start();
@@ -258,11 +262,6 @@ function CartScreen() {
       const selected_items = item.bundle_items
         .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id))
         .filter((id: number) => Number.isFinite(id) && id > 0);
-
-      console.log("📦 Bundle Buy Now:", {
-        bundle_id: item.bundle_id,
-        selected_items,
-      });
 
       const previewData = await getBuyNowBundlePreview({
         bundle_id: item.bundle_id,

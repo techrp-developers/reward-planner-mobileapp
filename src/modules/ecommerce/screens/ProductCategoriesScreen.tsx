@@ -154,6 +154,8 @@ const ProductCategory = () => {
     queryFn: fetchProductCategories,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -180,6 +182,8 @@ const ProductCategory = () => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const products = useMemo(
@@ -267,7 +271,7 @@ const ProductCategory = () => {
         <ProductGrid
           products={products}
           columns={GRID_COLUMNS}
-          useFlatList={true}
+          useFlatList={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.4}
           loadingMore={isFetchingNextPage}
