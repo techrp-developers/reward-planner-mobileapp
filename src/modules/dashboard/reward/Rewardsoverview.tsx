@@ -35,6 +35,17 @@ const PURPLE_DARK = "#5B47A3";
 const formatPts = (pts: number): string =>
   `${pts.toLocaleString("en-IN")} pts`;
 
+const getTotalEarnedFromBalance = (data: any): number | null => {
+  const value =
+    data?.total_earned_points ??
+    data?.total_earned ??
+    data?.total_earned_coins ??
+    data?.earned_points ??
+    data?.earned_coins;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+};
+
 const StatColumn: React.FC<{ label: string; value: string }> = ({ label, value }) => {
   const { theme } = useAppTheme();
   const t = useMemo(() => ({
@@ -77,7 +88,9 @@ const RewardsOverview: React.FC = () => {
 
         const credits = creditRes.success ? creditRes.data : [];
         const debits = debitRes.success ? debitRes.data : [];
-        const totalSpent = credits.reduce((sum, tx) => sum + tx.coins, 0);
+        const earnedFromBalance = getTotalEarnedFromBalance(balanceRes.data);
+        const totalSpent =
+          earnedFromBalance ?? credits.reduce((sum, tx) => sum + tx.coins, 0);
         const totalRedeemed = debits.reduce((sum, tx) => sum + tx.coins, 0);
         const allTx = [...credits, ...debits].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

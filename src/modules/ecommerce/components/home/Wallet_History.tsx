@@ -28,6 +28,7 @@ type Transaction = {
   title: string;
   subtitle?: string;
   date: string;
+  expiryLabel?: string;
   coins: number;
   icon: string;
   iconBg: string;
@@ -76,6 +77,20 @@ export default function WalletHistoryScreen({ navigation }: any) {
     return "all";
   };
 
+  const formatExpiryLabel = useCallback((txn: any) => {
+    if (!txn?.expiry_date) return undefined;
+
+    const formattedDate = new Date(txn.expiry_date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    return Number(txn.is_expired) === 1
+      ? `Expired on ${formattedDate}`
+      : `Expires on ${formattedDate}`;
+  }, []);
+
   const mapTransactions = useCallback((rows: any[]) =>
     rows.map((txn: any) => ({
       id: String(txn.transaction_id),
@@ -88,13 +103,14 @@ export default function WalletHistoryScreen({ navigation }: any) {
         month: "short",
         year: "numeric",
       }),
+      expiryLabel: formatExpiryLabel(txn),
       coins: txn.transaction_type === "credit" ? txn.coins : -txn.coins,
       icon:
         txn.transaction_type === "credit"
           ? "file-document-outline"
           : "package-variant-closed",
       iconBg: txn.transaction_type === "credit" ? "#4F75FF" : "#A67B5B",
-    })), []);
+    })), [formatExpiryLabel]);
 
   const getTotalEarnedFromBalance = (data: any) => {
     const value =
@@ -370,6 +386,11 @@ function TransactionCard({
             <Text style={[styles.subText, themed.mutedText]}>Txn Id: {item.txnId}</Text>
           )}
           <Text style={[styles.categoryText, themed.mutedText]}>{item.title}</Text>
+          {item.expiryLabel && (
+            <Text style={[styles.transactionExpiryText, themed.expiryDate]}>
+              {item.expiryLabel}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -633,6 +654,13 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
 
   categoryText: { fontSize: 12, color: "#6B7280", marginTop: 4 },
+
+  transactionExpiryText: {
+    fontSize: 11,
+    color: "#9A6B33",
+    marginTop: 4,
+    fontWeight: "600",
+  },
 
   cardRight: { alignItems: "flex-end" },
 
