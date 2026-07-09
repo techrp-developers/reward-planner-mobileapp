@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +20,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
-import OrderBanner from "../../../../assets/order/order_banner.svg";
 import Coin from "../../../../assets/product/rewards.svg";
 import { useAuth } from "../../../common/auth/context/AuthContext";
 import type { HomeStackParamList } from "../../navigation/type";
@@ -31,6 +32,12 @@ import {
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 const PLACEHOLDER_IMAGE = require("../../assete/gov_documet/rent_agrement.png");
+const DASHBOARD_BANNERS = [
+  require("../../assete/home/banner1.png"),
+  require("../../assete/home/banner2.png"),
+];
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const DASHBOARD_BANNER_WIDTH = SCREEN_WIDTH - 32;
 
 const TIME_FILTERS = [
   { key: "", label: "All time" },
@@ -134,6 +141,59 @@ function getSummaryValue(summary: OrdersResponse["summary"] | null, keys: string
   }
 
   return 0;
+}
+
+function ServiceDashboardBanner() {
+  const scrollRef = useRef<ScrollView>(null);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const nextIndex = (index + 1) % DASHBOARD_BANNERS.length;
+      scrollRef.current?.scrollTo({
+        x: nextIndex * DASHBOARD_BANNER_WIDTH,
+        animated: true,
+      });
+      setIndex(nextIndex);
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [index]);
+
+  return (
+    <View style={styles.dashboardBannerWrap}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(event) => {
+          const nextIndex = Math.round(
+            event.nativeEvent.contentOffset.x / DASHBOARD_BANNER_WIDTH,
+          );
+          setIndex(nextIndex);
+        }}
+      >
+        {DASHBOARD_BANNERS.map((source, bannerIndex) => (
+          <View key={bannerIndex} style={styles.dashboardBannerSlide}>
+            <Image source={source} style={styles.dashboardBannerImage} resizeMode="cover" />
+          </View>
+        ))}
+      </ScrollView>
+
+      <View style={styles.dashboardBannerDots}>
+        {DASHBOARD_BANNERS.map((_, dotIndex) => (
+          <View
+            key={dotIndex}
+            style={[
+              styles.dashboardBannerDot,
+              index === dotIndex && styles.dashboardBannerActiveDot,
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
 }
 
 function ServiceOrderRow({
@@ -423,9 +483,7 @@ export default function MyOrder() {
 
   const renderHeader = () => (
     <View style={styles.headerContent}>
-      <View style={styles.bannerWrap}>
-        <OrderBanner width="100%" height={140} />
-      </View>
+      <ServiceDashboardBanner />
 
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -507,7 +565,11 @@ export default function MyOrder() {
           <MaterialCommunityIcons name="chevron-left" size={28} color="#374151" />
         </TouchableOpacity>
         <Text style={styles.headingTitle}>My Orders</Text>
-        <TouchableOpacity activeOpacity={0.85} style={styles.helpBtn}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.helpBtn}
+          onPress={() => navigation.navigate("HelpForm")}
+        >
           <MaterialCommunityIcons
             name="chat-outline"
             size={16}
@@ -615,10 +677,33 @@ const styles = StyleSheet.create({
   headerContent: {
     backgroundColor: "#FFFFFF",
   },
-  bannerWrap: {
+  dashboardBannerWrap: {
+    marginBottom: 14,
+  },
+  dashboardBannerSlide: {
+    width: DASHBOARD_BANNER_WIDTH,
+    alignItems: "center",
+  },
+  dashboardBannerImage: {
     width: "100%",
+    height: 100,
     borderRadius: 12,
-    overflow: "hidden",
+  },
+  dashboardBannerDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  dashboardBannerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D1D5DB",
+    marginHorizontal: 4,
+  },
+  dashboardBannerActiveDot: {
+    width: 16,
+    backgroundColor: "#111827",
   },
   searchRow: {
     flexDirection: "row",
