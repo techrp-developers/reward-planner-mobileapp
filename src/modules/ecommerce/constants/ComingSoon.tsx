@@ -28,8 +28,8 @@ const ComingSoonScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient
-        // Soft Blue -> Pale Purple -> Soft Pink transition
-        colors={['#BCC5FF', '#F9E1FF', '#FFB6D9']} 
+        // Light red transition to match the Bus Booking navbar theme
+        colors={['#FFE1E1', '#FFB3B3', '#FF8A8A']}
         start={{ x: 0, y: 0 }} 
         end={{ x: 1, y: 1 }}  
         style={styles.gradientSection}
