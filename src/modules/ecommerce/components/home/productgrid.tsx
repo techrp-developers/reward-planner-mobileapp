@@ -275,10 +275,10 @@ export default function ProductGrid({
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={viewabilityConfig}
       removeClippedSubviews={true}
-      windowSize={5}
-      initialNumToRender={Math.max(DEFAULT_INITIAL_RENDER, columns * 3)}
-      maxToRenderPerBatch={columns * 2}
-      updateCellsBatchingPeriod={80}
+      windowSize={7}
+      initialNumToRender={Math.max(DEFAULT_INITIAL_RENDER, columns * 4)}
+      maxToRenderPerBatch={columns * 3}
+      updateCellsBatchingPeriod={48}
       scrollEnabled={useFlatList}
       nestedScrollEnabled={useFlatList}
       onEndReached={handleEndReached}

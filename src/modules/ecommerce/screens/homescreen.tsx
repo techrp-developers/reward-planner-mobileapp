@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   InteractionManager,
@@ -11,6 +11,7 @@ import CategoriesSection from '../components/home/categories_section';
 import HomeBanner from '../components/home/HomeBanner';
 import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
+import { useAuth } from '../../common/auth/context/AuthContext';
 
 // Keep only the immediately visible banner and categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -75,6 +76,8 @@ const HOME_SECTIONS: HomeSection[] = [
 
 const INITIAL_VISIBLE_SECTIONS = new Set<SectionKey>(['banner', 'categories']);
 const READY_HOME_SECTIONS = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
+const HOME_SECTION_KEYS = HOME_SECTIONS.map((section) => section.key);
+const SECTION_PREFETCH_AHEAD = 3;
 
 const MemoHomeBanner = React.memo(HomeBanner);
 const MemoCategoriesSection = React.memo(CategoriesSection);
@@ -131,34 +134,111 @@ const ListFooterSpacer = React.memo(() => <View style={styles.footerSpacer} />);
 ListFooterSpacer.displayName = 'HomeListFooterSpacer';
 
 function HomeScreen() {
+  const { isAuthenticated, user } = useAuth();
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(READY_HOME_SECTIONS),
   );
   const pendingReadySections = useRef<Set<SectionKey>>(new Set(READY_HOME_SECTIONS));
 
+  const markSectionsReady = useCallback((keys: SectionKey[]) => {
+    const keysToAdd = keys.filter((key) => !pendingReadySections.current.has(key));
+    if (keysToAdd.length === 0) return;
+
+    keysToAdd.forEach((key) => {
+      pendingReadySections.current.add(key);
+      READY_HOME_SECTIONS.add(key);
+    });
+
+    InteractionManager.runAfterInteractions(() => {
+      setReadySections((previous) => {
+        const next = new Set(previous);
+        keysToAdd.forEach((key) => next.add(key));
+        return next;
+      });
+    });
+  }, []);
+
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
-      const nextKeys = viewableItems
-        .map((entry) => (entry.item as HomeSection | undefined)?.key)
-        .filter((key): key is SectionKey => Boolean(key));
+      const keysToWarm = new Set<SectionKey>();
 
-      const keysToAdd = nextKeys.filter((key) => !pendingReadySections.current.has(key));
-      if (keysToAdd.length === 0) return;
+      viewableItems.forEach((entry) => {
+        const key = (entry.item as HomeSection | undefined)?.key;
+        if (!key) return;
 
-      keysToAdd.forEach((key) => {
-        pendingReadySections.current.add(key);
-        READY_HOME_SECTIONS.add(key);
+        const index = HOME_SECTION_KEYS.indexOf(key);
+        for (
+          let offset = 0;
+          offset <= SECTION_PREFETCH_AHEAD && index + offset < HOME_SECTION_KEYS.length;
+          offset += 1
+        ) {
+          keysToWarm.add(HOME_SECTION_KEYS[index + offset]);
+        }
       });
 
-      InteractionManager.runAfterInteractions(() => {
-        setReadySections((previous) => {
-          const next = new Set(previous);
-          keysToAdd.forEach((key) => next.add(key));
-          return next;
-        });
-      });
+      markSectionsReady(Array.from(keysToWarm));
     }
   ).current;
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const runWarmup = (delay: number, task: () => void) => {
+      timers.push(setTimeout(() => {
+        InteractionManager.runAfterInteractions(task);
+      }, delay));
+    };
+
+    runWarmup(120, () => {
+      const { prefetchCategoriesSection } = require('../components/home/categories_section');
+      const { prefetchBestSellerSection } = require('../components/Promotion/BestSeller');
+      const { prefetchTopRatedSection } = require('../components/Promotion/TopRated');
+
+      markSectionsReady(['bestSeller', 'topRated']);
+      Promise.allSettled([
+        prefetchCategoriesSection(),
+        prefetchBestSellerSection(),
+        prefetchTopRatedSection(),
+      ]).catch(() => {});
+    });
+
+    runWarmup(420, () => {
+      const { prefetchOfferHomeSection } = require('../components/home/OfferHome');
+      const { prefetchNewArrivalsSection } = require('../components/Promotion/NewArrivals');
+      const { prefetchMostViewSection } = require('../components/Promotion/MostView');
+
+      markSectionsReady(['offerHome', 'newArrivals', 'mostView']);
+      Promise.allSettled([
+        prefetchOfferHomeSection(),
+        prefetchNewArrivalsSection(),
+        prefetchMostViewSection(),
+      ]).catch(() => {});
+    });
+
+    runWarmup(820, () => {
+      const { prefetchRecommendedSection } = require('../components/Promotion/RecommendedProducts');
+      const { prefetchFeaturesProductSection } = require('../components/home/featuresProduct');
+      const { prefetchRecentProductSection } = require('../components/Promotion/RecentProduct');
+      const { prefetchProductCategoriesSection } = require('./ProductCategoriesScreen');
+
+      markSectionsReady(['recommended', 'features', 'recent', 'productCategory']);
+
+      const tasks = [
+        prefetchFeaturesProductSection(),
+        prefetchProductCategoriesSection(),
+      ];
+
+      if (isAuthenticated && user?.user_id) {
+        tasks.push(prefetchRecommendedSection(user.user_id));
+        tasks.push(prefetchRecentProductSection(user.user_id));
+      }
+
+      Promise.allSettled(tasks).catch(() => {});
+    });
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [isAuthenticated, markSectionsReady, user?.user_id]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 8,
@@ -184,10 +264,10 @@ function HomeScreen() {
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        initialNumToRender={2}
-        maxToRenderPerBatch={2}
-        updateCellsBatchingPeriod={32}
-        windowSize={5}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        updateCellsBatchingPeriod={24}
+        windowSize={9}
         removeClippedSubviews={Platform.OS === 'android'}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}

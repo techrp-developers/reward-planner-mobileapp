@@ -15,6 +15,7 @@ import { fetchAllCategories, fetchCategoriesByID, getProductImageUrl } from "../
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
 import ProductGrid from "../components/home/productgrid";
 import { normalizeProduct } from "../utils/normalizeProduct";
+import { queryClient } from "../../../query/queryClient";
 
 type Category = {
   id: number;
@@ -34,6 +35,52 @@ type CategoryProductsPage = {
 
 const PAGE_LIMIT = 10;
 const GRID_COLUMNS = 2;
+const PRODUCT_CATEGORIES_QUERY_KEY = ["ecommerce", "home", "categories"] as const;
+const productCategoryProductsQueryKey = (categoryId: number | null) =>
+  ["ecommerce", "home", "category-products", categoryId] as const;
+
+const fetchProductCategories = async (): Promise<Category[]> => {
+  const res = await fetchAllCategories();
+  const fetchedCategories = Array.isArray(res?.data)
+    ? res.data
+        .map((category: any) => ({
+          id: Number(category?.id ?? category?.category_id),
+          name: String(category?.name ?? category?.category_name ?? "").trim(),
+          image: category?.image ?? category?.icon,
+        }))
+        .filter((category: Category) => category.id && category.name)
+    : [];
+
+  return fetchedCategories;
+};
+
+const fetchCategoryProductsPage = async (
+  categoryId: number,
+  page: number,
+): Promise<CategoryProductsPage> => {
+  const res = await fetchCategoriesByID(categoryId, {
+    page,
+    limit: PAGE_LIMIT,
+  });
+
+  const rawProducts = Array.isArray(res?.products)
+    ? res.products
+    : Array.isArray(res?.data?.products)
+      ? res.data.products
+      : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+  const products = rawProducts.map(normalizeProduct);
+
+  const hasMore = Boolean(res?.hasMore ?? res?.data?.hasMore);
+  const currentPage = Number(res?.currentPage ?? res?.data?.currentPage ?? page);
+
+  return {
+    products,
+    nextPage: hasMore ? currentPage + 1 : undefined,
+  };
+};
 
 // Memoized category item component
 type CategoryItemProps = {
@@ -103,21 +150,8 @@ const ProductCategory = () => {
     isLoading: isCategoriesLoading,
     error: categoriesError,
   } = useQuery({
-    queryKey: ["ecommerce", "home", "categories"],
-    queryFn: async () => {
-      const res = await fetchAllCategories();
-      const fetchedCategories = Array.isArray(res?.data)
-        ? res.data
-            .map((category: any) => ({
-              id: Number(category?.id ?? category?.category_id),
-              name: String(category?.name ?? category?.category_name ?? "").trim(),
-              image: category?.image ?? category?.icon,
-            }))
-            .filter((category: Category) => category.id && category.name)
-        : [];
-
-      return fetchedCategories;
-    },
+    queryKey: PRODUCT_CATEGORIES_QUERY_KEY,
+    queryFn: fetchProductCategories,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
@@ -136,33 +170,12 @@ const ProductCategory = () => {
     hasNextPage,
     error: productsError,
   } = useInfiniteQuery<CategoryProductsPage>({
-    queryKey: ["ecommerce", "home", "category-products", activeCategoryId],
+    queryKey: productCategoryProductsQueryKey(activeCategoryId),
     enabled: Boolean(activeCategoryId),
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const page = Number(pageParam) || 1;
-      const res = await fetchCategoriesByID(activeCategoryId as number, {
-        page,
-        limit: PAGE_LIMIT,
-      });
-
-      const rawProducts = Array.isArray(res?.products)
-        ? res.products
-        : Array.isArray(res?.data?.products)
-          ? res.data.products
-          : Array.isArray(res?.data)
-            ? res.data
-            : [];
-
-      const products = rawProducts.map(normalizeProduct);
-
-      const hasMore = Boolean(res?.hasMore ?? res?.data?.hasMore);
-      const currentPage = Number(res?.currentPage ?? res?.data?.currentPage ?? page);
-
-      return {
-        products,
-        nextPage: hasMore ? currentPage + 1 : undefined,
-      };
+      return fetchCategoryProductsPage(activeCategoryId as number, page);
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     staleTime: 5 * 60 * 1000,
@@ -273,6 +286,26 @@ const ProductCategory = () => {
 };
 
 export default ProductCategory;
+
+export const prefetchProductCategoriesSection = () =>
+  queryClient
+    .fetchQuery({
+      queryKey: PRODUCT_CATEGORIES_QUERY_KEY,
+      queryFn: fetchProductCategories,
+      staleTime: 10 * 60 * 1000,
+    })
+    .then((categories) => {
+      const firstCategoryId = categories[0]?.id;
+      if (!firstCategoryId) return;
+
+      return queryClient.prefetchInfiniteQuery({
+        queryKey: productCategoryProductsQueryKey(firstCategoryId),
+        queryFn: ({ pageParam }) => fetchCategoryProductsPage(firstCategoryId, Number(pageParam) || 1),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => lastPage.nextPage,
+        staleTime: 5 * 60 * 1000,
+      });
+    });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF" },

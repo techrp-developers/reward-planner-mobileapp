@@ -23,6 +23,7 @@ import {
   fetchProductDetailsByID,
 } from "../../api/ProductApi";
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
+import { queryClient } from "../../../../query/queryClient";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
 import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
@@ -38,6 +39,9 @@ const OFFER_HEIGHT = OFFER_WIDTH * 1.8;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
+const CAMPAIGN_HOME_QUERY_KEY = ["ecommerce", "home", "campaign-home"] as const;
+const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
+  ["ecommerce", "home", "flash-products", campaignId] as const;
 // The campaign-home endpoint can omit flash_sales even while the dedicated
 // flash-sale campaign remains available. Keep the configured campaign visible
 // until the API starts returning an active flash sale again.
@@ -325,7 +329,7 @@ export default function OfferHome() {
   const navigation = useNavigation<Nav>();
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "campaign-home"],
+    queryKey: CAMPAIGN_HOME_QUERY_KEY,
     queryFn: getCampaignHome,
     staleTime: 10 * 60 * 1000,
   });
@@ -334,7 +338,7 @@ export default function OfferHome() {
     campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
 
   const { data: products = [], isLoading: isProductsLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "flash-products", flashCampaignId],
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId!),
     queryFn: () => getCampaignProducts(flashCampaignId!),
     enabled: flashCampaignId != null,
     staleTime: 5 * 60 * 1000,
@@ -451,6 +455,23 @@ export default function OfferHome() {
     </View>
   );
 }
+
+export const prefetchOfferHomeSection = async () => {
+  const campaignHome = await queryClient.fetchQuery({
+    queryKey: CAMPAIGN_HOME_QUERY_KEY,
+    queryFn: getCampaignHome,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
+  if (flashCampaignId == null) return;
+
+  await queryClient.prefetchQuery({
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId),
+    queryFn: () => getCampaignProducts(flashCampaignId),
+    staleTime: 5 * 60 * 1000,
+  });
+};
 
 const styles = StyleSheet.create({
   container: {
