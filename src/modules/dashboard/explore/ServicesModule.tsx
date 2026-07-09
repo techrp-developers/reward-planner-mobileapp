@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -52,7 +52,7 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
   DineOut: { screen: 'DineOutModule', moduleName: 'DineOut' },
 };
 
-export default function ServicesModule({ onModulePress }: ServicesModuleProps) {
+function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -164,6 +164,8 @@ export default function ServicesModule({ onModulePress }: ServicesModuleProps) {
     </View>
   );
 }
+
+export default React.memo(ServicesModule);
 
 const styles = StyleSheet.create({
   wrapper: {

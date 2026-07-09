@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -56,6 +56,12 @@ type DashboardHeaderCache = {
 const DASHBOARD_HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
 let dashboardHeaderCache: DashboardHeaderCache | null = null;
 
+const MemoHomeChart = memo(Home_Chart);
+const MemoServicesModule = memo(ServicesModule);
+const MemoModuleBanner = memo(ModuleBanner);
+const MemoRewardsOverview = memo(RewardsOverview);
+const MemoBirthdayCarousel = memo(BirthdayCarousel);
+
 function Dashbord() {
   const { isDark } = useAppTheme();
   const iconSize = rs(26);
@@ -63,18 +69,27 @@ function Dashbord() {
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
 
-  const [headerUserName, setHeaderUserName] = useState<string>(user?.name ?? 'User');
-  const [headerUserImage, setHeaderUserImage] = useState<string | null>(null);
-  const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(null);
-  const [thought, setThought] = useState<string>('');
+  const [headerUserName, setHeaderUserName] = useState<string>(
+    () => dashboardHeaderCache?.userName ?? user?.name ?? 'User',
+  );
+  const [headerUserImage, setHeaderUserImage] = useState<string | null>(
+    () => dashboardHeaderCache?.userImage ?? null,
+  );
+  const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(
+    () => dashboardHeaderCache?.companyLogo ?? null,
+  );
+  const [thought, setThought] = useState<string>(() => dashboardHeaderCache?.thought ?? '');
   const [stepGoal, setStepGoal] = useState<number>(() => {
+    if (dashboardHeaderCache?.stepGoal) return dashboardHeaderCache.stepGoal;
     const initialGoal = Number((user as any)?.steps?.goal_steps);
     return Number.isFinite(initialGoal) && initialGoal > 0 ? initialGoal : 5000;
   });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
-  const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>([]);
+  const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>(
+    () => dashboardHeaderCache?.birthdays ?? [],
+  );
   const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
 
@@ -105,14 +120,14 @@ function Dashbord() {
 
       if (userRes.data?.success) {
         const d = userRes.data.data;
-        if (d.name)          setHeaderUserName(d.name);
-        if (d.userImage)     setHeaderUserImage(d.userImage);
-        if (d.company?.logo) setHeaderCompanyLogo(d.company.logo);
-        if (d.thought)       setThought(d.thought);
+        if (d.name)          setHeaderUserName((prev) => (prev === d.name ? prev : d.name));
+        if (d.userImage)     setHeaderUserImage((prev) => (prev === d.userImage ? prev : d.userImage));
+        if (d.company?.logo) setHeaderCompanyLogo((prev) => (prev === d.company.logo ? prev : d.company.logo));
+        if (d.thought)       setThought((prev) => (prev === d.thought ? prev : d.thought));
 
         const apiStepGoal = Number(d.steps?.goal_steps);
         if (Number.isFinite(apiStepGoal) && apiStepGoal > 0) {
-          setStepGoal(apiStepGoal);
+          setStepGoal((prev) => (prev === apiStepGoal ? prev : apiStepGoal));
         }
 
         const raw: any[] = Array.isArray(d.birthday_employees) ? d.birthday_employees : [];
@@ -123,7 +138,9 @@ function Dashbord() {
           department:  b.department,
           photo:       b.image ?? null,
         }));
-        setBirthdays(mappedBirthdays);
+        setBirthdays((prev) => (
+          JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays
+        ));
 
         dashboardHeaderCache = {
           userName: d.name || headerUserName,
@@ -321,14 +338,14 @@ function Dashbord() {
         </LinearGradient>
         {hasBirthdays && (
           <Pressable onPress={dismissSearch}>
-            <BirthdayCarousel birthdays={birthdays} />
+          <MemoBirthdayCarousel birthdays={birthdays} />
           </Pressable>
         )}
         <Pressable onPress={dismissSearch}>
-          <Home_Chart goalSteps={stepGoal} />
-          <ServicesModule onModulePress={handleExploreModulePress} />
-          <ModuleBanner />
-          <RewardsOverview />
+          <MemoHomeChart goalSteps={stepGoal} />
+          <MemoServicesModule onModulePress={handleExploreModulePress} />
+          <MemoModuleBanner />
+          <MemoRewardsOverview />
         </Pressable>
       </ScrollView>
 

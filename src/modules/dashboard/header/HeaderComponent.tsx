@@ -115,7 +115,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Layout measurement — drives dropdown top position ─────────────────────
 
   const handleHeaderLayout = useCallback((e: LayoutChangeEvent) => {
-    setHeaderHeight(e.nativeEvent.layout.height);
+    const nextHeight = e.nativeEvent.layout.height;
+    setHeaderHeight((prev) => (Math.abs(prev - nextHeight) < 1 ? prev : nextHeight));
   }, []);
 
   // ── Search animation ──────────────────────────────────────────────────────
