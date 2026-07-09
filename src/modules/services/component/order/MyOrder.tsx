@@ -250,7 +250,7 @@ function ServiceOrderRow({
             </Text>
           </View>
           <Text style={styles.actionText}>
-            {order.status === "completed" ? "Share your feedback" : "View Order"}
+            View Order
           </Text>
         </View>
 
