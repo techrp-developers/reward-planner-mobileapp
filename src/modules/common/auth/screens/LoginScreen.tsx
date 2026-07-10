@@ -100,28 +100,30 @@ export default function LoginScreen({ navigation }: Props) {
             <View style={styles.card}>
               <Text style={styles.title}>Login to Your Account</Text>
 
-              <View style={styles.inputWrap}>
-                <MaterialCommunityIcons
-                  name="account-outline"
-                  size={18}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+              <View style={styles.identifierGroup}>
+                <View style={styles.inputWrap}>
+                  <MaterialCommunityIcons
+                    name="account-outline"
+                    size={18}
+                    color="#999"
+                    style={styles.inputIcon}
+                  />
 
-                <TextInput
-                  placeholder="Email Address or Phone Number"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  keyboardType={getLoginIdentifierKeyboardType(identifier)}
-                  style={styles.input}
-                  value={identifier}
-                  onChangeText={setIdentifier}
-                />
+                  <TextInput
+                    placeholder="Email Address or Phone Number"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    keyboardType={getLoginIdentifierKeyboardType(identifier)}
+                    style={styles.input}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                  />
+                </View>
+
+                <Text style={styles.helperText}>
+                  Registered email or mobile number
+                </Text>
               </View>
-
-              <Text style={styles.helperText}>
-                Use your registered email or 10-digit mobile number.
-              </Text>
 
               <View style={styles.inputWrap}>
                 <MaterialCommunityIcons
@@ -236,6 +238,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     height: 48,
   },
+  identifierGroup: {
+    marginBottom: 8,
+  },
   inputIcon: {
     marginRight: 10,
   },
@@ -245,8 +250,8 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   helperText: {
-    marginTop: -6,
-    marginBottom: 14,
+    marginTop: -8,
+    marginBottom: 0,
     fontSize: 12,
     color: "#777",
   },

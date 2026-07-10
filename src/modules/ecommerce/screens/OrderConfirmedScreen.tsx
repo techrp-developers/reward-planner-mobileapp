@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,6 +17,7 @@ import ProductCarousel from "../components/order/ProductCarousel";
 import OrderCancelModal from "../../common/order/OrderCancelModal";
 import { fetchOrderDetails } from "../api/OrderApi";
 import { fetchAllProducts, getProductImageUrl } from "../api/ProductApi";
+import { fetchReviewableOrder } from "../api/ReviewApi";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type OrderConfirmedRoute = RouteProp<HomeStackParamList, "OrderConfirmedScreen">;
@@ -134,6 +135,7 @@ export default function OrderConfirmedScreen() {
     const [error, setError] = useState<string | null>(null);
     const [orderData, setOrderData] = useState<OrderDetailsResponse | null>(null);
     const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+    const [reviewableVariants, setReviewableVariants] = useState<Record<number, boolean>>({});
 
     const orderId = route.params?.order_id;
 
@@ -180,6 +182,37 @@ export default function OrderConfirmedScreen() {
 
         loadProducts();
     }, []);
+
+    useEffect(() => {
+        const loadReviewableItems = async () => {
+            const isDelivered = orderData?.order?.status?.toLowerCase() === "delivered";
+            const items = orderData?.items || [];
+
+            if (!isDelivered || !items.length) {
+                setReviewableVariants({});
+                return;
+            }
+
+            const entries = await Promise.all(
+                items.map(async (item) => {
+                    try {
+                        const response = await fetchReviewableOrder(item.variant_id);
+                        const payload = response?.data ?? response;
+                        return [
+                            item.order_item_id,
+                            Boolean(payload?.can_review),
+                        ] as const;
+                    } catch {
+                        return [item.order_item_id, false] as const;
+                    }
+                })
+            );
+
+            setReviewableVariants(Object.fromEntries(entries));
+        };
+
+        loadReviewableItems();
+    }, [orderData?.items, orderData?.order?.status]);
 
     const firstItem = orderData?.items?.[0];
     const primaryShipment = orderData?.shipments?.[0];
@@ -312,6 +345,7 @@ export default function OrderConfirmedScreen() {
     }, [orderData?.order?.status, primaryShipment]);
 
     const canCancelOrder = !isTerminalStatus(orderData?.order?.status);
+    const isDeliveredOrder = orderData?.order?.status?.toLowerCase() === "delivered";
 
     const itemTotal = Number(orderData?.summary?.item_total ?? 0);
     const shippingTotal = Number(orderData?.summary?.shipping_total ?? 0);
@@ -320,6 +354,17 @@ export default function OrderConfirmedScreen() {
     const rewardCoinsEarned = Number(orderData?.summary?.reward_coins_earned ?? 0);
     const bagDiscount = Number(orderData?.summary?.bag_discount ?? 0);
     const orderTotal = Number(orderData?.summary?.order_total ?? orderData?.order?.total_amount ?? 0);
+
+    const openReviewScreen = (item: NonNullable<OrderDetailsResponse["items"]>[number]) => {
+        navigation.navigate("ReviewScreen", {
+            product_id: Number(item.product_id),
+            variant_id: Number(item.variant_id),
+            order_id: Number(orderData?.order?.order_id),
+            product_name: item.product_name,
+            image: item.image ? getProductImageUrl(item.image) : undefined,
+            delivered_on: orderData?.order?.created_at,
+        });
+    };
 
     if (loading) {
         return (
@@ -387,6 +432,41 @@ export default function OrderConfirmedScreen() {
                     tone={isCancelledOrder ? "danger" : "success"}
                     onCancelPress={canCancelOrder ? () => setModalVisible(true) : undefined}
                 />
+
+                {isDeliveredOrder && orderData.items?.length ? (
+                    <View style={styles.reviewSection}>
+                        <Text style={styles.reviewSectionTitle}>Review your products</Text>
+                        {orderData.items.map((item) => {
+                            const canReview = Boolean(reviewableVariants[item.order_item_id]);
+                            const title = [item.brand_name, item.product_name].filter(Boolean).join(" ");
+
+                            return (
+                                <View key={item.order_item_id} style={styles.reviewItemRow}>
+                                    <View style={styles.reviewItemCopy}>
+                                        <Text style={styles.reviewItemTitle} numberOfLines={2}>
+                                            {title || "Product"}
+                                        </Text>
+                                        <Text style={styles.reviewItemMeta} numberOfLines={1}>
+                                            {item.attributes?.weight || item.attributes?.size || `Qty: ${item.quantity}`}
+                                        </Text>
+                                    </View>
+                                    {canReview ? (
+                                        <TouchableOpacity
+                                            style={styles.reviewButton}
+                                            activeOpacity={0.82}
+                                            onPress={() => openReviewScreen(item)}
+                                        >
+                                            <Text style={styles.reviewButtonText}>Write Review</Text>
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <Text style={styles.reviewDoneText}>Reviewed</Text>
+                                    )}
+                                </View>
+                            );
+                        })}
+                    </View>
+                ) : null}
+
                 <DeliveryDetailsCard
                     addressType={orderData.address?.type?.toUpperCase() || "HOME"}
                     address={fullAddress || "Address unavailable"}
@@ -443,6 +523,62 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         resizeMode: "contain",
+    },
+    reviewSection: {
+        marginBottom: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        backgroundColor: "#FFFFFF",
+        padding: 14,
+    },
+    reviewSectionTitle: {
+        fontSize: 14,
+        fontWeight: "800",
+        color: "#111827",
+        marginBottom: 10,
+    },
+    reviewItemRow: {
+        minHeight: 52,
+        flexDirection: "row",
+        alignItems: "center",
+        borderTopWidth: 1,
+        borderTopColor: "#F3F4F6",
+        paddingVertical: 10,
+        gap: 10,
+    },
+    reviewItemCopy: {
+        flex: 1,
+    },
+    reviewItemTitle: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#374151",
+        lineHeight: 18,
+    },
+    reviewItemMeta: {
+        marginTop: 2,
+        fontSize: 12,
+        color: "#6B7280",
+        fontWeight: "500",
+    },
+    reviewButton: {
+        borderRadius: 9,
+        backgroundColor: "#F5F3FF",
+        borderWidth: 1,
+        borderColor: "#DDD6FE",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    reviewButtonText: {
+        fontSize: 12,
+        color: "#7C3AED",
+        fontWeight: "800",
+    },
+    reviewDoneText: {
+        fontSize: 12,
+        color: "#16A34A",
+        fontWeight: "700",
     },
 
     centeredState: {

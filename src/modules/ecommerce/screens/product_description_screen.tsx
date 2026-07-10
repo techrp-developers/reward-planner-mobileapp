@@ -34,13 +34,25 @@ const MemoProductHero = React.memo(ProductHero);
 const MemoProductVariants = React.memo(ProductVariants);
 const MemoBuySection = React.memo(BuySection);
 
+const hasWishlistFlag = (item: any) =>
+  item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
+
+const getWishlistFlag = (item: any) => {
+  const value = item?.is_wishlisted ?? item?.is_wishlist;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y"].includes(normalized);
+};
+
 export default function
   ProductDescriptionScreen() {
   const route = useRoute<RouteT>();
   const { productId } = route.params;
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
-  const { addItem, totalQuantity } = useCart();
+  const { addItem, updateQuantity, totalQuantity, items: cartItems } = useCart();
   const queryClient = useQueryClient();
 
   const [product, setProduct] = useState<any>(null);
@@ -137,7 +149,7 @@ export default function
         setProduct({ ...p, variants });
         setSelectedVariant(defaultVariant);
         setSelectedAttrs(defaultVariant?.variant_attributes ?? {});
-        setWishlisted(Boolean(defaultVariant?.is_wishlisted ?? p?.is_wishlisted));
+        setWishlisted(getWishlistFlag(defaultVariant) || getWishlistFlag(p));
       });
     };
 
@@ -236,14 +248,24 @@ export default function
   }, [selectedVariant]);
 
   useEffect(() => {
-    setWishlisted(Boolean(selectedVariant?.is_wishlisted ?? product?.is_wishlisted));
-  }, [product?.is_wishlisted, productId, selectedVariant?.is_wishlisted]);
+    setWishlisted(getWishlistFlag(selectedVariant) || getWishlistFlag(product));
+  }, [
+    product,
+    productId,
+    selectedVariant,
+  ]);
 
   useEffect(() => {
     const parsedProductId = Number(product?.product_id ?? productId);
     const parsedVariantId = Number(selectedVariant?.variant_id ?? product?.default_variant_id);
 
-    if (!isAuthenticated || !parsedProductId || !parsedVariantId) {
+    if (
+      hasWishlistFlag(selectedVariant) ||
+      hasWishlistFlag(product) ||
+      !isAuthenticated ||
+      !parsedProductId ||
+      !parsedVariantId
+    ) {
       return;
     }
 
@@ -262,7 +284,7 @@ export default function
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, product?.default_variant_id, product?.product_id, productId, selectedVariant?.variant_id]);
+  }, [isAuthenticated, product, productId, selectedVariant]);
 
   useEffect(() => {
     if (!selectedVariant?.variant_id) return;
@@ -287,6 +309,34 @@ export default function
     })();
   }, [selectedVariant]);
 
+  const selectedCartItem = useMemo(() => {
+    const productCartId = Number(product?.product_id ?? productId);
+    const variantCartId = Number(selectedVariant?.variant_id);
+
+    if (!productCartId || !variantCartId) {
+      return undefined;
+    }
+
+    return cartItems.find(
+      (cartItem) =>
+        Number(cartItem.product_id) === productCartId &&
+        Number(cartItem.variant_id) === variantCartId
+    );
+  }, [cartItems, product?.product_id, productId, selectedVariant?.variant_id]);
+
+  useEffect(() => {
+    const cartQuantity = Number(selectedCartItem?.quantity);
+    if (Number.isFinite(cartQuantity) && cartQuantity > 0) {
+      setQty(cartQuantity);
+    }
+  }, [selectedCartItem?.id, selectedCartItem?.quantity]);
+
+  const selectedVariantInCart = useMemo(() => {
+    if (!selectedCartItem) return false;
+
+    return Number(selectedCartItem.quantity) === Number(qty);
+  }, [qty, selectedCartItem]);
+
   const handleAddToCart = useCallback(async () => {
     if (adding) return;
 
@@ -297,8 +347,19 @@ export default function
 
     if (!product?.product_id || !selectedVariant?.variant_id) return;
 
+    if (selectedVariantInCart) {
+      navigation.navigate("Cart");
+      return;
+    }
+
     try {
       setAdding(true);
+
+      if (selectedCartItem?.id && Number(selectedCartItem.quantity) !== Number(qty)) {
+        await updateQuantity(selectedCartItem.id, qty);
+        alert.success("Cart Updated", "Cart quantity updated successfully.", 2500);
+        return;
+      }
 
       await addItem(product.product_id, selectedVariant.variant_id, qty);
 
@@ -323,7 +384,20 @@ export default function
     } finally {
       setAdding(false);
     }
-  }, [adding, isAuthenticated, product?.product_id, selectedVariant?.variant_id, qty, addItem, alert, product?.product_name]);
+  }, [
+    adding,
+    isAuthenticated,
+    product?.product_id,
+    selectedVariant?.variant_id,
+    selectedVariantInCart,
+    selectedCartItem,
+    navigation,
+    qty,
+    updateQuantity,
+    addItem,
+    alert,
+    product?.product_name,
+  ]);
 
   const handleWishlist = useCallback(async () => {
     if (wishLoading) return;
@@ -358,39 +432,6 @@ export default function
       setWishLoading(false);
     }
   }, [wishLoading, product?.product_id, productId, selectedVariant?.variant_id, product?.default_variant_id, wishlisted]);
-
-  const handleWriteReview = useCallback((orderId: number) => {
-    const resolvedProductId = Number(product?.product_id ?? productId ?? 0);
-    const resolvedVariantId = Number(
-      selectedVariant?.variant_id ?? product?.default_variant_id ?? 0
-    );
-
-    if (!resolvedProductId || !resolvedVariantId) {
-      Alert.alert("Write Review", "Product details are not ready yet.");
-      return;
-    }
-
-    const rawVariantImage = selectedVariant?.images?.[0];
-    const imagePath =
-      (typeof rawVariantImage === "string" && rawVariantImage) ||
-      rawVariantImage?.image_url ||
-      rawVariantImage?.url ||
-      product?.images?.[0] ||
-      "";
-
-    const reviewImage = /^(https?:)?\/\//i.test(String(imagePath))
-      ? String(imagePath)
-      : getProductImageUrl(String(imagePath));
-
-    navigation.navigate("ReviewScreen", {
-      product_id: resolvedProductId,
-      variant_id: resolvedVariantId,
-      order_id: orderId,
-      product_name: product?.product_name,
-      image: reviewImage,
-      delivered_on: product?.delivered_on,
-    });
-  }, [navigation, product?.default_variant_id, product?.delivered_on, product?.images, product?.product_id, product?.product_name, productId, selectedVariant?.images, selectedVariant?.variant_id]);
 
   if (loading) {
     return (
@@ -503,6 +544,7 @@ export default function
           onAddToCart={handleAddToCart}
           onBuyNow={handleBuyNow}
           isAdding={adding}
+          isInCart={selectedVariantInCart}
         />
 
         {/* <OffersSection /> */}
@@ -526,8 +568,6 @@ export default function
         <View style={styles.descriptionWrap}>
           <CustomerReviewsView
             productId={product?.product_id ?? productId}
-            variantId={selectedVariant?.variant_id}
-            onWriteReview={handleWriteReview}
           />
         </View>
 

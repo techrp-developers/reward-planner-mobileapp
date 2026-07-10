@@ -108,6 +108,7 @@ export default function HomeStack() {
       <Stack.Screen name="OrderConfirmedScreen" getComponent={() => require("../screens/OrderConfirmedScreen").default} />
       <Stack.Screen name="ChangePassword" getComponent={() => require("../../common/auth/screens/ChangePasswordScreen").default} />
       <Stack.Screen name="HelpForm" getComponent={() => require("../constants/Support/HelpForm").default} />
+      <Stack.Screen name="MyTickets" getComponent={() => require("../constants/Support/MyTickets").default} />
     </Stack.Navigator>
   );
 }

@@ -23,10 +23,13 @@ import {
     PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
 import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
+import { queryClient } from "../../../../query/queryClient";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const recentQueryKey = (userId?: string | number) =>
+    ["ecommerce", "promotion", "recent", userId ?? "guest"] as const;
 
 const fetchRecentProductsData = async () => {
     const res = await getRecentProducts();
@@ -47,7 +50,7 @@ const fetchRecentProductsData = async () => {
 const RecentProduct = () => {
     const navigation = useNavigation<Nav>();
     const { user, isAuthenticated } = useAuth();
-    const RECENT_QUERY_KEY = ["ecommerce", "promotion", "recent", user?.user_id ?? "guest"] as const;
+    const RECENT_QUERY_KEY = recentQueryKey(user?.user_id);
 
     const { data: products = [], isLoading } = useQuery({
         queryKey: RECENT_QUERY_KEY,
@@ -106,6 +109,13 @@ const RecentProduct = () => {
         </View>
     );
 };
+
+export const prefetchRecentProductSection = (userId?: string | number) =>
+    queryClient.prefetchQuery({
+        queryKey: recentQueryKey(userId),
+        queryFn: fetchRecentProductsData,
+        staleTime: CACHE_TTL_MS,
+    });
 
 const styles = StyleSheet.create({
     sectionWrapper: {

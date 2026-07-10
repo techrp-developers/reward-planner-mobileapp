@@ -27,12 +27,14 @@ import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecomme
 import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
 import PaymentTop from "./assete/Payment_BG.png";
+import BusBookingTop from "./assete/Bus_BG.png";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
 import Services from "../assets/menu/Services.svg";
 import Payments from "../assets/menu/Payments.svg";
-import Dine_Out from "../assets/menu/Dine_Out.svg";
+// import Dine_Out from "../assets/menu/Dine_Out.svg";
+import Bus_Booking from "../assets/menu/Bus_Booking.svg";
 import Reward from "../assets/product/rewards.svg";
 
 import type { RootStackParamList } from "@/navigation/types";
@@ -110,7 +112,7 @@ const BG_MAP: Record<TopTab, any> = {
   Product: ProductTop,
   Services: ServiceTop,
   Payments: PaymentTop,
-  DineOut: ProductTop,
+  DineOut: BusBookingTop,
 };
 
 const TAB_THEME: Record<TopTab, { bgColor: string }> = {
@@ -557,8 +559,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         <TopIconWithLabel
           active={activeTab === "DineOut"}
           onPress={() => handleTab("DineOut")}
-          Icon={Dine_Out as unknown as SvgIcon}
-          label="Dine Out"
+          Icon={Bus_Booking as unknown as SvgIcon}
+          label="Bus Booking"
           activeColor={TAB_THEME.DineOut.bgColor}
         />
       </View>

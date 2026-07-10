@@ -13,15 +13,12 @@ import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   fetchProductReviews,
-  fetchReviewableOrder,
   markReviewHelpful,
   removeHelpfulReview,
 } from "../../../api/ReviewApi";
 
 type CustomerReviewsViewProps = {
   productId: number | string;
-  variantId?: number | string;
-  onWriteReview?: (orderId: number) => void;
 };
 
 type ReviewItem = {
@@ -134,14 +131,9 @@ const extractReviews = (response: any): ReviewItem[] => {
 
 export default function CustomerReviewsView({
   productId,
-  variantId,
-  onWriteReview,
 }: CustomerReviewsViewProps) {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [checkingReviewable, setCheckingReviewable] = useState(false);
-  const [canReview, setCanReview] = useState(false);
-  const [reviewOrderId, setReviewOrderId] = useState<number | null>(null);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -164,46 +156,6 @@ export default function CustomerReviewsView({
   useEffect(() => {
     loadReviews();
   }, [loadReviews]);
-
-  useEffect(() => {
-    let mounted = true;
-    const reviewTargetId = variantId ?? productId;
-
-    const loadReviewableOrder = async () => {
-      if (!reviewTargetId) {
-        if (!mounted) return;
-        setCanReview(false);
-        setReviewOrderId(null);
-        return;
-      }
-
-      try {
-        setCheckingReviewable(true);
-        const response = await fetchReviewableOrder(reviewTargetId);
-        const payload = response?.data ?? response;
-        const nextCanReview = Boolean(payload?.can_review);
-        const nextOrderId = toNumber(payload?.order_id, 0);
-
-        if (!mounted) return;
-        setCanReview(nextCanReview && nextOrderId > 0);
-        setReviewOrderId(nextOrderId > 0 ? nextOrderId : null);
-      } catch {
-        if (!mounted) return;
-        setCanReview(false);
-        setReviewOrderId(null);
-      } finally {
-        if (mounted) {
-          setCheckingReviewable(false);
-        }
-      }
-    };
-
-    loadReviewableOrder();
-
-    return () => {
-      mounted = false;
-    };
-  }, [productId, variantId]);
 
   const summary = useMemo(() => {
     const total = reviews.length;
@@ -260,23 +212,6 @@ export default function CustomerReviewsView({
     }
   };
 
-  const handleWriteReviewPress = () => {
-    if (checkingReviewable) {
-      return;
-    }
-
-    if (!canReview || !reviewOrderId) {
-      Alert.alert("Write Review", "You can review this product only after a delivered order.");
-      return;
-    }
-
-    if (onWriteReview) {
-      onWriteReview(reviewOrderId);
-      return;
-    }
-    Alert.alert("Write Review", "Review form is not available right now.");
-  };
-
   return (
     <View style={styles.container}>
       <Text style={styles.mainTitle}>Customer Reviews</Text>
@@ -308,28 +243,6 @@ export default function CustomerReviewsView({
               </View>
             ))}
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.writeReviewBtn,
-              (!canReview || checkingReviewable) && styles.writeReviewBtnDisabled,
-            ]}
-            onPress={handleWriteReviewPress}
-            activeOpacity={0.85}
-            disabled={checkingReviewable || !canReview}
-          >
-            {checkingReviewable ? (
-              <ActivityIndicator size="small" color="#64748B" />
-            ) : (
-              <Text style={styles.writeReviewText}>Write a Review</Text>
-            )}
-          </TouchableOpacity>
-
-          {!checkingReviewable && !canReview && (
-            <Text style={styles.reviewHintText}>
-              Review is available only for delivered orders of this product.
-            </Text>
-          )}
 
           {reviews.slice(0, MAX_VISIBLE).map((review) => (
             <View style={styles.reviewCardContainer} key={String(review.id)}>
@@ -415,24 +328,6 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: "100%" },
   rowPercentage: { width: 40, fontSize: 12, color: "#1E293B", textAlign: "right", fontWeight: "600" },
-  writeReviewBtn: {
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D1D5DB",
-    borderWidth: 1,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  writeReviewBtnDisabled: { opacity: 0.7 },
-  writeReviewText: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  reviewHintText: {
-    marginTop: -6,
-    marginBottom: 12,
-    fontSize: 12,
-    color: "#64748B",
-  },
   reviewCardContainer: { paddingTop: 12 },
   userHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   avatar: {

@@ -114,18 +114,18 @@ const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
     pulse.setValue(0);
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ]),
     ).start();
   }, [pulse]);
 
   const fetchArticles = useCallback(async () => {
     try {
-      console.log('[FAQListingScreen] fetching sectionId:', sectionId, '| categoryId param:', categoryId);
+      __DEV__ && console.log('[FAQListingScreen] fetching sectionId:', sectionId, '| categoryId param:', categoryId);
       const content = await getSectionContent(sectionId);
-      console.log('[FAQListingScreen] section title:', content.section.title);
-      console.log('[FAQListingScreen] articles count:', content.articles.length);
+      __DEV__ && console.log('[FAQListingScreen] section title:', content.section.title);
+      __DEV__ && console.log('[FAQListingScreen] articles count:', content.articles.length);
       setSectionTitle(content.section.title ?? categoryTitle);
       setArticles(content.articles);
     } catch (err) {

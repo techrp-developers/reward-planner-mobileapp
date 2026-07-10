@@ -10,6 +10,7 @@ type Props = {
   bundle: ServiceDetailBundle;
   bundleIndex: number;
   onCancelItem: (item: ServiceItem) => void;
+  onCancellationDetailsItem: (item: ServiceItem) => void;
   onFeedbackItem: (item: ServiceItem) => void;
 };
 
@@ -17,6 +18,7 @@ export default function ServiceBundleCard({
   bundle,
   bundleIndex,
   onCancelItem,
+  onCancellationDetailsItem,
   onFeedbackItem,
 }: Props) {
   const [expanded, setExpanded] = useState(true);
@@ -63,6 +65,7 @@ export default function ServiceBundleCard({
               key={item.id}
               item={item}
               onCancelPress={onCancelItem}
+              onCancellationDetailsPress={onCancellationDetailsItem}
               onFeedbackPress={onFeedbackItem}
             />
           ))}

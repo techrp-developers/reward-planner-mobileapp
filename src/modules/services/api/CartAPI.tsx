@@ -57,7 +57,7 @@ export const addServiceToCart = async ({
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-cart/add`;
 
-    console.log('📦 Adding service to cart...', {
+    __DEV__ && console.log('📦 Adding service to cart...', {
       url,
       service_id,
       variant_id,
@@ -100,9 +100,9 @@ export const getServiceCartItems = async () => {
     `${SERVICE_API_BASE}/service-cart/items`,
   ];
 
-  console.log('📦 Fetching service cart...');
-  console.log('📡 API URL candidates:', primaryUrls);
-  console.log('🔑 Headers:', { hasAuthorization: !!headers?.Authorization });
+  __DEV__ && console.log('📦 Fetching service cart...');
+  __DEV__ && console.log('📡 API URL candidates:', primaryUrls);
+  __DEV__ && console.log('🔑 Headers:', { hasAuthorization: !!headers?.Authorization });
 
   if (!headers.Authorization) {
     console.warn('⚠️ No auth token found, skipping request');
@@ -112,7 +112,7 @@ export const getServiceCartItems = async () => {
   for (const url of primaryUrls) {
     try {
       const res = await getWithRetry(url, { headers }, 2);
-      console.log('✅ Service cart fetched from:', url);
+      __DEV__ && console.log('✅ Service cart fetched from:', url);
       const data = res.data?.data || res.data || EMPTY_SERVICE_CART;
 
       return {
@@ -177,7 +177,7 @@ export const removeServiceCartItem = async (cartItemId: number) => {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-cart/item/${cartItemId}`;
 
-    console.log('🗑️ Removing cart item...', {
+    __DEV__ && console.log('🗑️ Removing cart item...', {
       url,
       cartItemId,
       hasAuthToken: !!headers?.Authorization,
@@ -210,7 +210,7 @@ export const clearServiceCart = async () => {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-cart/clear`;
 
-    console.log('🧹 Clearing service cart...', {
+    __DEV__ && console.log('🧹 Clearing service cart...', {
       url,
       hasAuthToken: !!headers?.Authorization,
     });
@@ -243,7 +243,7 @@ export const getBuyNowPreview = async ({ service_id, variant_id }) => {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/buy-now-preview`;
 
-    console.log('🧾 Fetching buy-now preview...', {
+    __DEV__ && console.log('🧾 Fetching buy-now preview...', {
       url,
       service_id,
       variant_id,
@@ -272,7 +272,7 @@ export const getCheckoutPreview = async () => {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/checkout-preview`;
 
-    console.log('🧾 Fetching service checkout preview...', {
+    __DEV__ && console.log('🧾 Fetching service checkout preview...', {
       url,
       hasAuthToken: !!headers?.Authorization,
     });
@@ -321,7 +321,7 @@ export const placeCartOrder = async ({ address_id }: { address_id: number }) => 
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/cart`;
 
-    console.log('📦 Placing cart service order...', {
+    __DEV__ && console.log('📦 Placing cart service order...', {
       url,
       address_id,
       hasAuthToken: !!headers?.Authorization,
@@ -358,7 +358,7 @@ export const placeBuyNowOrder = async ({
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/buy-now`;
 
-    console.log('⚡ Placing buy-now service order...', {
+    __DEV__ && console.log('⚡ Placing buy-now service order...', {
       url,
       service_id,
       variant_id,

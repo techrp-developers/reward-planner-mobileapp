@@ -9,7 +9,7 @@ type Props = {
 };
 
 export default function ServiceFeedbackCard({ feedback, onSubmitFeedback }: Props) {
-  if (!feedback.can_submit && !feedback.submitted) return null;
+  if (!feedback.can_submit || feedback.submitted) return null;
 
   return (
     <View style={styles.container}>
@@ -18,30 +18,10 @@ export default function ServiceFeedbackCard({ feedback, onSubmitFeedback }: Prop
         <Text style={styles.title}>Feedback</Text>
       </View>
 
-      {feedback.submitted && feedback.data ? (
-        <View style={styles.submitted}>
-          {typeof feedback.data?.rating === 'number' && (
-            <View style={styles.ratingRow}>
-              {[1, 2, 3, 4, 5].map(star => (
-                <MaterialCommunityIcons
-                  key={star}
-                  name={star <= feedback.data.rating ? 'star' : 'star-outline'}
-                  size={18}
-                  color="#F59E0B"
-                />
-              ))}
-            </View>
-          )}
-          {feedback.data?.comment ? (
-            <Text style={styles.comment}>{feedback.data.comment}</Text>
-          ) : null}
-        </View>
-      ) : feedback.can_submit ? (
-        <TouchableOpacity style={styles.ctaBtn} onPress={onSubmitFeedback} activeOpacity={0.8}>
-          <MaterialCommunityIcons name="star-plus-outline" size={16} color="#7C3AED" />
-          <Text style={styles.ctaText}>Rate this service</Text>
-        </TouchableOpacity>
-      ) : null}
+      <TouchableOpacity style={styles.ctaBtn} onPress={onSubmitFeedback} activeOpacity={0.8}>
+        <MaterialCommunityIcons name="star-plus-outline" size={16} color="#7C3AED" />
+        <Text style={styles.ctaText}>Rate this service</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -61,10 +41,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: { fontSize: 13, fontWeight: '700', color: '#374151' },
-
-  submitted: { gap: 6 },
-  ratingRow: { flexDirection: 'row', gap: 2 },
-  comment: { fontSize: 13, color: '#6B7280', fontStyle: 'italic', lineHeight: 18 },
 
   ctaBtn: {
     flexDirection: 'row',

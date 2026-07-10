@@ -47,6 +47,10 @@ export default function ServiceHomeStack() {
                 getComponent={() => require("../component/order/ServiceCancellationRequest").default}
             />
             <Stack.Screen
+                name="ServiceCancellationDetails"
+                getComponent={() => require("../component/order/ServiceCancellationDetails").default}
+            />
+            <Stack.Screen
                 name="ServiceFeedback"
                 getComponent={() => require("../component/order/ServiceFeedback").default}
             />
@@ -73,6 +77,10 @@ export default function ServiceHomeStack() {
             <Stack.Screen
                 name="HelpForm"
                 getComponent={() => require("../../ecommerce/constants/Support/HelpForm").default}
+            />
+            <Stack.Screen
+                name="MyTickets"
+                getComponent={() => require("../../ecommerce/constants/Support/MyTickets").default}
             />
             <Stack.Screen
                 name="ChangePassword"

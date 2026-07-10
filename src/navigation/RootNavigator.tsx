@@ -50,6 +50,7 @@ export type AppStackParamList = {
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: undefined;
+  MyTickets: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
@@ -180,6 +181,12 @@ function AppNavigator() {
         name="HelpForm"
         getComponent={() =>
           require("../modules/ecommerce/constants/Support/HelpForm").default
+        }
+      />
+      <AppStack.Screen
+        name="MyTickets"
+        getComponent={() =>
+          require("../modules/ecommerce/constants/Support/MyTickets").default
         }
       />
       <AppStack.Screen

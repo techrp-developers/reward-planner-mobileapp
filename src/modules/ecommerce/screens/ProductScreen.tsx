@@ -142,6 +142,8 @@ function ProductScreen() {
       lastPage.hasMore && lastPage.nextOffset > 0 ? lastPage.nextOffset : undefined,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const products = useMemo(() => {

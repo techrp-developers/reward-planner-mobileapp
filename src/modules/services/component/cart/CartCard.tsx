@@ -72,9 +72,6 @@ const CartCard = ({
         <View style={styles.row}>
           {/* Thumbnail */}
           <View style={styles.imageWrapper}>
-            <View style={styles.checkboxOverlay}>
-              <MaterialIcons name="check" size={12} color="white" />
-            </View>
             {imageUrl ? (
               <Image source={{ uri: getServiceImageUrl(imageUrl) }} style={styles.thumbnail} resizeMode="contain" />
             ) : (
@@ -215,15 +212,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     flexShrink: 0,
-  },
-  checkboxOverlay: {
-    position: 'absolute',
-    top: -5,
-    left: -5,
-    backgroundColor: '#7C3AED',
-    borderRadius: 5,
-    padding: 3,
-    zIndex: 1,
   },
   thumbnail: {
     width: 62,

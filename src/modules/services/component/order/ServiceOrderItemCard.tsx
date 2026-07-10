@@ -36,12 +36,14 @@ const CANCELLABLE_STATUSES = new Set([
 type Props = {
   item: ServiceItem;
   onCancelPress: (item: ServiceItem) => void;
+  onCancellationDetailsPress: (item: ServiceItem) => void;
   onFeedbackPress: (item: ServiceItem) => void;
 };
 
 export default function ServiceOrderItemCard({
   item,
   onCancelPress,
+  onCancellationDetailsPress,
   onFeedbackPress,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
@@ -111,6 +113,7 @@ export default function ServiceOrderItemCard({
             serviceName={item.service_name}
             canCancelByStatus={CANCELLABLE_STATUSES.has(item.status)}
             onCancelPress={() => onCancelPress(item)}
+            onViewDetailsPress={() => onCancellationDetailsPress(item)}
           />
         </View>
       )}

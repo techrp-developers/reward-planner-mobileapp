@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIsFocused } from "@react-navigation/native";
@@ -82,8 +82,21 @@ const DASHBOARD_TABS: TabConfig[] = [
 const ACTIVE_COLOR = "#8B5CF6";
 const INACTIVE_COLOR = "#9CA3AF";
 
+// Icon "pop" when a tab becomes active — spring overshoots past ACTIVE_ICON_SCALE
+// then settles, giving a bouncy feel without a background pill.
+const ACTIVE_ICON_SCALE = 1.22;
+const ICON_SPRING_CONFIG = { useNativeDriver: true, tension: 220, friction: 5 };
+
 const TabItem = React.memo(({ label, active, onPress, Icon, badgeCount }: TabItemProps) => {
   const iconColor = active ? ACTIVE_COLOR : INACTIVE_COLOR;
+  const iconScale = useRef(new Animated.Value(active ? ACTIVE_ICON_SCALE : 1)).current;
+
+  useEffect(() => {
+    Animated.spring(iconScale, {
+      toValue: active ? ACTIVE_ICON_SCALE : 1,
+      ...ICON_SPRING_CONFIG,
+    }).start();
+  }, [active, iconScale]);
 
   return (
     <TouchableOpacity
@@ -93,7 +106,9 @@ const TabItem = React.memo(({ label, active, onPress, Icon, badgeCount }: TabIte
       hitSlop={HIT_SLOP}
     >
       <View>
-        <Icon width={24} height={24} color={iconColor} />
+        <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+          <Icon width={24} height={24} color={iconColor} />
+        </Animated.View>
         {(badgeCount ?? 0) > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badgeCount}</Text>

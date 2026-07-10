@@ -41,6 +41,16 @@ const getPlanData = (plan: RechargePlan) =>
 const getPlanDescription = (plan: RechargePlan) =>
   String(plan.description || plan.desc || plan.planDescription || plan.short_desc || '');
 
+const TEN_MINUTES = 10 * 60 * 1000;
+
+let cachedBillLocations: { data: BillLocation[]; timestamp: number } | null = null;
+const rechargePlansCache = new Map<
+  string,
+  { data: { plans: RechargePlan[]; groups: RechargePlanGroup[] }; timestamp: number }
+>();
+
+const isFresh = (timestamp: number) => Date.now() - timestamp < TEN_MINUTES;
+
 function RechargeSection({ navigation, route }: any) {
   const { user } = useAuth();
   const alert = useAlert();
@@ -127,8 +137,8 @@ function RechargeSection({ navigation, route }: any) {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();
@@ -147,8 +157,18 @@ function RechargeSection({ navigation, route }: any) {
 
     const loadLocations = async () => {
       try {
-        setLoading(true);
-        const list = await fetchBillLocations();
+        const cachedList = cachedBillLocations && isFresh(cachedBillLocations.timestamp)
+          ? cachedBillLocations.data
+          : null;
+
+        if (!cachedList) {
+          setLoading(true);
+        }
+
+        const list = cachedList || (await fetchBillLocations());
+        if (!cachedList) {
+          cachedBillLocations = { data: list, timestamp: Date.now() };
+        }
 
         if (!mounted) {
           return;
@@ -201,6 +221,21 @@ function RechargeSection({ navigation, route }: any) {
       }
 
       try {
+        const cacheKey = [
+          String(primaryValue),
+          String(operatorId),
+          String(selectedLocation.operator_location_id),
+        ].join(':');
+        const cached = rechargePlansCache.get(cacheKey);
+
+        if (cached && isFresh(cached.timestamp)) {
+          setPlans(cached.data.plans);
+          setPlanGroups(cached.data.groups);
+          setActiveGroupLabel(cached.data.groups[0]?.label || '');
+          setPlansLoading(false);
+          return;
+        }
+
         setPlansLoading(true);
         const response = await fetchRechargePlans(
           String(primaryValue),
@@ -228,6 +263,10 @@ function RechargeSection({ navigation, route }: any) {
         setPlans(responsePlans);
         setPlanGroups(groups);
         setActiveGroupLabel(groups[0]?.label || '');
+        rechargePlansCache.set(cacheKey, {
+          data: { plans: responsePlans, groups },
+          timestamp: Date.now(),
+        });
       } catch (error: any) {
         setPlans([]);
         setPlanGroups([]);

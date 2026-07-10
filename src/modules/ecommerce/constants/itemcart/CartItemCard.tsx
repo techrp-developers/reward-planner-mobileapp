@@ -9,7 +9,6 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 
 type Props = {
-  checked?: boolean
   title: string
   image: string
   deliveryText: string
@@ -26,7 +25,6 @@ type Props = {
 }
 
 export default function CartItemCard({
-  checked = true,
   title,
   image,
   deliveryText,
@@ -44,10 +42,6 @@ export default function CartItemCard({
   return (
     <View style={styles.card}>
       <View style={styles.row}>
-        <View style={styles.checkbox}>
-          {checked && <MaterialIcons name="check" size={16} color="#fff" />}
-        </View>
-
         <TouchableOpacity style={styles.mainContent} activeOpacity={0.85} onPress={onPress}>
           {/* ✅ FIXED IMAGE */}
           {image ? (
@@ -122,17 +116,6 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         padding: 12,
-    },
-
-    checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        backgroundColor: '#2F80ED',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 8,
-        marginTop: 4,
     },
 
     image: {

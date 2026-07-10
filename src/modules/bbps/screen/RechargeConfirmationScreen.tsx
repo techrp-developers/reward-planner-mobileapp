@@ -86,9 +86,9 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
     };
 
     try {
-      console.log('Create Recharge Order Payload:', payload);
+      __DEV__ && console.log('Create Recharge Order Payload:', payload);
       const response = await createBillPayOrder(payload);
-      console.log('Create Recharge Order Response:', response);
+      __DEV__ && console.log('Create Recharge Order Response:', response);
 
       if (response.success === false) {
         if (__DEV__ && lastSuccessfulOrderPayload) {
@@ -148,9 +148,9 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_signature: paymentResult.razorpay_signature,
       };
-      console.log('Verify Recharge Payment Payload:', verifyPayload);
+      __DEV__ && console.log('Verify Recharge Payment Payload:', verifyPayload);
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
-      console.log('Verify Recharge Payment Response:', verifyResponse);
+      __DEV__ && console.log('Verify Recharge Payment Response:', verifyResponse);
 
       // The backend can legitimately return success:false with a transaction_id
       // when the payment was captured but bill processing is queued/retrying
