@@ -35,26 +35,26 @@ const PaginationDot = memo(({
   active: boolean;
   isDark: boolean;
 }) => {
-  const width = useRef(new Animated.Value(active ? rs(18) : rs(6))).current;
+  const scaleX = useRef(new Animated.Value(active ? 1 : 0.34)).current;
   const activeColor = '#818CF8';
   const inactiveColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(49,46,129,0.18)';
   const dotColor = active ? activeColor : inactiveColor;
 
   useEffect(() => {
-    Animated.spring(width, {
-      toValue: active ? rs(18) : rs(6),
+    Animated.spring(scaleX, {
+      toValue: active ? 1 : 0.34,
       tension: 120,
       friction: 10,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
-  }, [active, width]);
+  }, [active, scaleX]);
 
   return (
     <Animated.View
       style={[
         styles.dot,
         {
-          width,
+          transform: [{ scaleX }],
           backgroundColor: dotColor,
         },
       ]}
@@ -231,8 +231,9 @@ const styles = StyleSheet.create({
     gap: rs(5),
   },
 
-  // Base dot style — width is animated per-dot
+  // Base dot style — scaleX is animated with the native driver.
   dot: {
+    width: rs(18),
     height: rs(6),
     borderRadius: rs(3),
   },

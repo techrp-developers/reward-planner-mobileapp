@@ -25,6 +25,7 @@ type Props = {
   loadingMore?: boolean;
   hasNextPage?: boolean;
   ListFooterComponent?: React.ReactElement | null;
+  onProductPress?: (productId: string | number, item: any) => void;
 };
 
 const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
@@ -50,6 +51,7 @@ export default function ProductGrid({
   loadingMore = false,
   hasNextPage = false,
   ListFooterComponent = null,
+  onProductPress,
 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const loadedProductIdsRef = useRef<Set<string>>(new Set());
@@ -212,14 +214,19 @@ export default function ProductGrid({
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
       const itemKey = String(item?.id ?? item?.product_id ?? item?._id ?? "");
-      const shouldLoadImage = loadedProductIdsRef.current.has(itemKey);
+      const shouldLoadImage = !useFlatList || loadedProductIdsRef.current.has(itemKey);
       return (
         <View style={[styles.itemWrap, { width: cardWidth }]}>
-          <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage={shouldLoadImage} />
+          <ProductCard
+            item={item}
+            cardWidth={cardWidth}
+            shouldLoadImage={shouldLoadImage}
+            onProductPress={onProductPress}
+          />
         </View>
       );
     },
-    [cardWidth]
+    [cardWidth, onProductPress, useFlatList]
   );
 
   const handleEndReached = useCallback(() => {
@@ -255,6 +262,21 @@ export default function ProductGrid({
 
   if (!dataToShow.length) return null;
 
+  if (!useFlatList) {
+    return (
+      <View style={styles.listContent}>
+        <View style={styles.staticGrid}>
+          {dataToShow.map((item, index) => (
+            <React.Fragment key={String(item?.id ?? item?.product_id ?? item?._id ?? index)}>
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        </View>
+        {ListFooterComponent}
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={dataToShow}
@@ -268,10 +290,10 @@ export default function ProductGrid({
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={viewabilityConfig}
       removeClippedSubviews={true}
-      windowSize={5}
-      initialNumToRender={Math.max(DEFAULT_INITIAL_RENDER, columns * 3)}
-      maxToRenderPerBatch={columns * 2}
-      updateCellsBatchingPeriod={80}
+      windowSize={7}
+      initialNumToRender={Math.max(DEFAULT_INITIAL_RENDER, columns * 4)}
+      maxToRenderPerBatch={columns * 3}
+      updateCellsBatchingPeriod={48}
       scrollEnabled={useFlatList}
       nestedScrollEnabled={useFlatList}
       onEndReached={handleEndReached}
@@ -301,6 +323,11 @@ columnRow: {
     flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "flex-start",
+  },
+  staticGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: COLUMN_GAP,
   },
   center: {
     padding: 16,

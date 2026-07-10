@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../navigation/types";
 import ProductHeadColor from "../constants/heading/Poduct_Head_Color";
+import { useCart } from "../context/CartContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type WishlistItem = any;
@@ -36,7 +37,7 @@ const resolveProductId = (item: WishlistItem) =>
       item?.product?.productId
   );
 
-const resolveVariantId = (item: WishlistItem, productId?: number) =>
+const resolveVariantId = (item: WishlistItem) =>
   toNumberOrUndefined(
     item?.variant_id ??
       item?.variantId ??
@@ -67,9 +68,11 @@ const uniqueIds = (values: unknown[]) => {
 
 const WishlistScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { addItem, items: cartItems } = useCart();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cartLoadingKey, setCartLoadingKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadWishlist();
@@ -135,7 +138,7 @@ const WishlistScreen = () => {
 
   const handleRemoveWishlist = async (item: WishlistItem) => {
     const productId = resolveProductId(item);
-    const variantId = resolveVariantId(item, productId);
+    const variantId = resolveVariantId(item);
 
     try {
       if (!productId) {
@@ -206,8 +209,74 @@ const WishlistScreen = () => {
     }
   };
 
+  const isItemInCart = (productId?: number, variantId?: number) => {
+    if (!productId) return false;
+
+    return cartItems.some(
+      (cartItem) =>
+        Number(cartItem.product_id) === Number(productId) &&
+        (!variantId || Number(cartItem.variant_id) === Number(variantId))
+    );
+  };
+
+  const resolveCartVariantId = async (item: WishlistItem, productId: number) => {
+    const directVariantId = resolveVariantId(item);
+    if (directVariantId) return directVariantId;
+
+    const productDetails = await fetchProductDetailsByID(productId);
+    const variants = Array.isArray(productDetails?.variants) ? productDetails.variants : [];
+
+    return toNumberOrUndefined(
+      productDetails?.default_variant_id ??
+        productDetails?.variant_id ??
+        variants[0]?.variant_id ??
+        variants[0]?.id
+    );
+  };
+
+  const handleCartAction = async (item: WishlistItem) => {
+    const productId = resolveProductId(item);
+    const itemKey = String(item?.wishlist_id ?? item?.id ?? productId ?? "");
+
+    if (!productId) {
+      Alert.alert("Cart", "Product information is incomplete.");
+      return;
+    }
+
+    try {
+      setCartLoadingKey(itemKey);
+      const variantId = await resolveCartVariantId(item, productId);
+
+      if (!variantId) {
+        Alert.alert("Cart", "Product variant is missing.");
+        return;
+      }
+
+      if (isItemInCart(productId, variantId)) {
+        navigation.navigate("Cart");
+        return;
+      }
+
+      await addItem(productId, variantId, 1);
+      Alert.alert("Cart", "Item added to cart.");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Unable to add item to cart.";
+      Alert.alert("Cart", String(message));
+    } finally {
+      setCartLoadingKey(null);
+    }
+  };
+
   const renderProduct = ({ item }: { item: WishlistItem }) => {
     const productId = resolveProductId(item);
+    const variantId = resolveVariantId(item);
+    const itemKey = String(item?.wishlist_id ?? item?.id ?? productId ?? "");
+    const inCart = isItemInCart(productId, variantId);
+    const cartBusy = cartLoadingKey === itemKey;
     const salePrice = Number(
       getProductField(item, "sale_price") ??
         getProductField(item, "price") ??
@@ -286,15 +355,18 @@ const WishlistScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={styles.productNavBtn}
+            style={[styles.productNavBtn, inCart && styles.goToCartBtn]}
             activeOpacity={0.85}
-            onPress={() => {
-              if (productId) {
-                navigation.navigate("ProductDescription", { productId });
-              }
-            }}
+            onPress={() => handleCartAction(item)}
+            disabled={cartBusy}
           >
-            <Text style={styles.btnText}>VIEW PRODUCT</Text>
+            {cartBusy ? (
+              <ActivityIndicator size="small" color={inCart ? "#FFFFFF" : "#8B5CF6"} />
+            ) : (
+              <Text style={[styles.btnText, inCart && styles.goToCartText]}>
+                {inCart ? "GO TO CART" : "ADD TO CART"}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -314,6 +386,7 @@ const WishlistScreen = () => {
       <ProductHeadColor
         title="My Wishlist"
         onBackPress={() => navigation.goBack()}
+        showSearch={false}
       />
 
       <View style={styles.countRow}>
@@ -466,10 +539,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  goToCartBtn: {
+    backgroundColor: "#8B5CF6",
+  },
+
   btnText: {
     color: "#8B5CF6",
     fontWeight: "700",
     fontSize: 12,
+  },
+  goToCartText: {
+    color: "#FFFFFF",
   },
   centered: {
     flex: 1,

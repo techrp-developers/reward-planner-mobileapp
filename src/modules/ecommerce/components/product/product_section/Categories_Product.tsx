@@ -58,8 +58,37 @@ type CategoryProductsPage = {
 const SIDEBAR_WIDTH = 104;
 const CONTENT_PADDING = 10;
 const PAGE_LIMIT = 10;
+const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+let cachedCategoryTree: CategoryWithSubcategories[] = [];
 
 type CategoryRouteProp = RouteProp<HomeStackParamList, "Category">;
+
+const resolveInitialSelection = (
+  allCategories: CategoryWithSubcategories[],
+  categoryId?: string | number,
+  subcategoryId?: string | number,
+) => {
+  if (allCategories.length === 0) {
+    return { category: null, subcategory: null };
+  }
+
+  const matchedCategory = allCategories.find(
+    (cat) => String(cat.id) === String(categoryId)
+  );
+  const category = matchedCategory || allCategories[0];
+  const matchedSubcategory =
+    subcategoryId !== undefined && subcategoryId !== null
+      ? (category.subcategories || []).find(
+          (sub) => String(sub.id) === String(subcategoryId)
+        )
+      : undefined;
+
+  return {
+    category: category.id,
+    subcategory: matchedSubcategory ? matchedSubcategory.id : null,
+  };
+};
 
 export default function Categories_Product() {
   const route = useRoute<CategoryRouteProp>();
@@ -69,11 +98,19 @@ export default function Categories_Product() {
   const topSpacing = Math.max(insets.top, 8);
   const HEADER_HEIGHT = Math.round(width * 0.25) + topSpacing;
 
-  const [categories, setCategories] = useState<CategoryWithSubcategories[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | number | null>(null);
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | number | null>(null);
+  const [categories, setCategories] = useState<CategoryWithSubcategories[]>(() => cachedCategoryTree);
+  const initialSelection = useMemo(
+    () => resolveInitialSelection(cachedCategoryTree, categoryId, subcategoryId),
+    [categoryId, subcategoryId],
+  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | number | null>(
+    () => initialSelection.category,
+  );
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | number | null>(
+    () => initialSelection.subcategory,
+  );
   const [filterQuery, setFilterQuery] = useState<string>("");
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(() => cachedCategoryTree.length === 0);
 
   const numColumns = 2;
   const cardWidth = useMemo(() => {
@@ -106,30 +143,12 @@ export default function Categories_Product() {
       res?.result,
     ];
 
-    for (const candidate of candidates) {
-      if (Array.isArray(candidate) && candidate.length > 0) {
-        if (__DEV__) {
-          const sample = candidate[0];
-          console.log("[Categories] extractProducts found items:", {
-            count: candidate.length,
-            sampleKeys: Object.keys(sample ?? {}),
-            rewardCoins: sample?.rewardCoins,
-            reward_coins: sample?.reward_coins,
-            redeem_coins: sample?.redeem_coins,
-            reward: sample?.reward,
-            points: sample?.points,
-          });
-        }
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
         return candidate;
       }
     }
 
-    if (__DEV__) {
-      console.warn(
-        "[Categories] extractProducts: no valid array found in response",
-        Object.keys(res ?? {})
-      );
-    }
     return [];
   }, []);
 
@@ -156,9 +175,6 @@ export default function Categories_Product() {
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const page = Number(pageParam) || 1;
-      console.log(
-        `[Pagination] Requesting page: ${page} | categoryId: ${selectedCategoryId} | subcategoryId: ${selectedSubcategoryId}`
-      );
 
       const queryOptions = {
         page,
@@ -170,39 +186,9 @@ export default function Categories_Product() {
         ? await fetchProductsBySubcategoryId(selectedSubcategoryId, queryOptions)
         : await fetchCategoriesByID(selectedCategoryId as string | number, queryOptions);
 
-      if (__DEV__) {
-        console.log("[Categories] raw API response shape:", {
-          keys: Object.keys(res ?? {}),
-          hasProducts: Array.isArray(res?.products),
-          hasDataProducts: Array.isArray(res?.data?.products),
-          hasItems: Array.isArray(res?.items),
-          hasDataItems: Array.isArray(res?.data?.items),
-          hasData: Array.isArray(res?.data),
-          productsLength: res?.products?.length,
-        });
-      }
-
-      console.log("[Pagination] API Response:", {
-        currentPage: res?.currentPage,
-        totalPages: res?.totalPages,
-        hasMore: res?.hasMore,
-        productsCount: res?.products?.length,
-      });
-
       const rawProducts = extractProducts(res);
       const normalized = rawProducts.map((raw: any) => {
         const n = normalizeProduct(raw);
-
-        if (__DEV__ && n.rewardCoins === 0 && n.redeem_coins === 0) {
-          console.warn("[Categories] Product has 0 coins after normalize:", {
-            id: raw?.id ?? raw?.product_id,
-            rewardCoins: raw?.rewardCoins,
-            reward_coins: raw?.reward_coins,
-            reward: raw?.reward,
-            points: raw?.points,
-            redeem_coins: raw?.redeem_coins,
-          });
-        }
 
         return {
           ...n,
@@ -217,8 +203,6 @@ export default function Categories_Product() {
       const nextPage =
         hasMore && currentPage < totalPages ? currentPage + 1 : undefined;
 
-      console.log(`[Pagination] Next page value: ${nextPage ?? "none (last page)"}`);
-
       return { products: normalized, nextPage, currentPage, totalPages, hasMore };
     },
     // Uses currentPage, totalPages, and hasMore — all three fields as required
@@ -228,8 +212,10 @@ export default function Categories_Product() {
       }
       return lastPage.nextPage;
     },
-    staleTime: 30 * 1000,
+    staleTime: CATEGORY_CACHE_TTL_MS,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
@@ -242,7 +228,6 @@ export default function Categories_Product() {
 
   const handleLoadMore = useCallback(() => {
     if (!hasNextPage || isFetchingNextPage) return;
-    console.log("[Pagination] fetchNextPage() triggered");
     fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
@@ -252,12 +237,15 @@ export default function Categories_Product() {
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<any> }) => {
-      const next = new Set<string>();
+      let didChange = false;
       viewableItems.forEach((entry) => {
         const key = String(entry.item?.id ?? entry.item?.product_id ?? "");
-        if (key) next.add(key);
+        if (key && !visibleIdsRef.current.has(key)) {
+          visibleIdsRef.current.add(key);
+          didChange = true;
+        }
       });
-      visibleIdsRef.current = next;
+      if (!didChange) return;
       forceVisibleTick((p) => p + 1);
     }
   ).current;
@@ -270,9 +258,19 @@ export default function Categories_Product() {
   // ── Category Loading ────────────────────────────────────────────────────────
   const loadCategories = useCallback(async () => {
     try {
-      setLoadingCategories(true);
+      if (cachedCategoryTree.length > 0) {
+        setCategories(cachedCategoryTree);
+        const cachedSelection = resolveInitialSelection(cachedCategoryTree, categoryId, subcategoryId);
+        setSelectedCategoryId(cachedSelection.category);
+        setSelectedSubcategoryId(cachedSelection.subcategory);
+        setLoadingCategories(false);
+      } else {
+        setLoadingCategories(true);
+      }
+
       const res = await fetchCategoriesScreenAll();
       const allCategories = Array.isArray(res?.data) ? res.data : [];
+      cachedCategoryTree = allCategories;
       setCategories(allCategories);
 
       if (allCategories.length === 0) {
@@ -281,20 +279,9 @@ export default function Categories_Product() {
         return;
       }
 
-      const matchedCategory = allCategories.find(
-        (cat: CategoryWithSubcategories) => String(cat.id) === String(categoryId)
-      );
-
-      const initialCategory = matchedCategory || allCategories[0];
-      const initialSubcategory =
-        subcategoryId !== undefined && subcategoryId !== null
-          ? (initialCategory.subcategories || []).find(
-              (sub) => String(sub.id) === String(subcategoryId)
-            )
-          : undefined;
-
-      setSelectedCategoryId(initialCategory.id);
-      setSelectedSubcategoryId(initialSubcategory ? initialSubcategory.id : null);
+      const selection = resolveInitialSelection(allCategories, categoryId, subcategoryId);
+      setSelectedCategoryId(selection.category);
+      setSelectedSubcategoryId(selection.subcategory);
       // useInfiniteQuery auto-fetches once selectedCategoryId is non-null
     } catch (e) {
       console.error("Category load error", e);

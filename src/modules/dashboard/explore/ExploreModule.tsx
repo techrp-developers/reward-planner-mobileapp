@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -214,7 +214,7 @@ function ExploreModule() {
   );
 }
 
-export default ExploreModule;
+export default React.memo(ExploreModule);
 
 const styles = StyleSheet.create({
   safeArea: {

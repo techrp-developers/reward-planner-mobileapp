@@ -112,8 +112,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();

@@ -28,13 +28,13 @@ export default function NeedHelpBanner() {
       {/* SPLIT ACTION BUTTON */}
       <View style={styles.actionButton}>
         <View style={styles.numberSection}>
-          <Text style={styles.phoneNumber}>+91 7798 612243</Text>
+          <Text style={styles.phoneNumber}>+91 8660 583751</Text>
         </View>
 
         <TouchableOpacity
           style={styles.talkSection}
           activeOpacity={0.8}
-          onPress={() => Linking.openURL('tel:+917798612243')}
+          onPress={() => Linking.openURL('tel:+918660583751')}
         >
           <Text style={styles.talkText}>Talk To Us</Text>
         </TouchableOpacity>

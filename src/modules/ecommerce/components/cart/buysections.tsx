@@ -24,6 +24,7 @@ type Props = {
   onAddToCart: () => void;
   onBuyNow?: () => void;
   isAdding?: boolean;
+  isInCart?: boolean;
 };
 
 export default function BuySection({
@@ -38,6 +39,7 @@ export default function BuySection({
     onAddToCart,
     onBuyNow,
     isAdding = false,
+    isInCart = false,
 }: Props) {
   const navigation = useNavigation<Nav>();
   const [open, setOpen] = React.useState(false);
@@ -133,7 +135,7 @@ export default function BuySection({
 
         {!inStock && <Text style={styles.outStockText}>Out of stock</Text>}
 
-        {/* Add to Cart */}
+        {/* Add to Cart / Go to Cart */}
         <TouchableOpacity 
           activeOpacity={0.9} 
           disabled={!inStock || isAdding} 
@@ -152,7 +154,7 @@ export default function BuySection({
                   <Text style={styles.addToCartText}>Adding...</Text>
                 </View>
               ) : (
-                <Text style={styles.addToCartText}>Add to Cart</Text>
+                <Text style={styles.addToCartText}>{isInCart ? "Go to Cart" : "Add to Cart"}</Text>
               )}
             </View>
           </LinearGradient>

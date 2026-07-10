@@ -55,7 +55,8 @@ type ConfirmationRouteParams = {
 
 const hasDisplayValue = (value?: string | number | null) => {
   if (value === null || value === undefined) return false;
-  return String(value).trim().length > 0;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized.length > 0 && normalized !== 'null' && normalized !== 'undefined' && normalized !== '-';
 };
 
 const formatAmount = (value?: string | number) => {
@@ -63,6 +64,40 @@ const formatAmount = (value?: string | number) => {
   if (!normalized) return '';
   const amount = Number(normalized);
   return Number.isNaN(amount) ? normalized : amount.toString();
+};
+
+const formatBillDate = (value?: string | number | null) => {
+  if (!hasDisplayValue(value)) {
+    return '-';
+  }
+
+  const rawValue = String(value).trim();
+  const compactDate = rawValue.match(/^(\d{4})(\d{2})(\d{2})$/);
+  const dashedDate = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const parts = compactDate || dashedDate;
+
+  if (!parts) {
+    return rawValue;
+  }
+
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return rawValue;
+  }
+
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 };
 
 // Reusable Info Row — icon + label + value, used across the Bill Summary card
@@ -112,6 +147,8 @@ const PaymentConfirmationScreenComponent = () => {
   }, [params.nickname, customerName]);
 
   const billAmount = useMemo(() => formatAmount(bill.amount), [bill.amount]);
+  const billDate = useMemo(() => formatBillDate(bill.billDate), [bill.billDate]);
+  const dueDate = useMemo(() => formatBillDate(bill.dueDate), [bill.dueDate]);
   const billFetchId = useMemo(() => params.fetchBillData?.data?.billFetchId, [params.fetchBillData]);
   const rawMessage = useMemo(() => params.fetchBillData?.data?.raw?.message || '', [params.fetchBillData]);
 
@@ -181,7 +218,13 @@ const PaymentConfirmationScreenComponent = () => {
 
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
 
-      if (!verifyResponse?.success) {
+      // The backend can legitimately return success:false with a transaction_id
+      // when the payment was captured but bill processing is queued/retrying
+      // (HTTP 202) or already resolved by a webhook — the status screen still
+      // needs to open so the user can track that in-progress/refund state.
+      const transactionId = verifyResponse?.transaction_id ?? order.transaction_id;
+
+      if (verifyResponse?.success === false && !transactionId) {
         alert.warning(
           'Payment Verification Failed',
           verifyResponse?.message || 'Unable to verify payment.',
@@ -190,10 +233,17 @@ const PaymentConfirmationScreenComponent = () => {
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', {
-        transactionId: order.transaction_id,
-      });
+      navigation.navigate('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
+      // A rejected verify-payment call (e.g. HTTP 422 when the provider
+      // permanently rejected the transaction) still carries a transaction_id —
+      // route to the status screen instead of stranding the user on an alert.
+      const transactionId = error?.transaction_id;
+      if (transactionId) {
+        navigation.navigate('TransactionStatusScreen', { transactionId });
+        return;
+      }
+
       alert.error('Error', error?.message || 'Could not create bill payment order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {
       setProcessing(false);
@@ -243,9 +293,9 @@ const PaymentConfirmationScreenComponent = () => {
             <Text style={styles.cardSectionTitle}>Bill Summary</Text>
             <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} />
             <View style={styles.infoRowDivider} />
-            <InfoRow icon="event" label="Bill Date" value={bill.billDate || '-'} />
+            <InfoRow icon="event" label="Bill Date" value={billDate} />
             <View style={styles.infoRowDivider} />
-            <InfoRow icon="event-busy" label="Due Date" value={bill.dueDate || '-'} />
+            <InfoRow icon="event-busy" label="Due Date" value={dueDate} />
             <View style={styles.infoRowDivider} />
             <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} />
           </View>

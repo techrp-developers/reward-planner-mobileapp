@@ -89,6 +89,7 @@ OrderConfirmedScreen: {
   Privacy: undefined;
   Support: undefined;
   HelpForm: undefined;
+  MyTickets: undefined;
   ChangePassword: undefined;
 };
 

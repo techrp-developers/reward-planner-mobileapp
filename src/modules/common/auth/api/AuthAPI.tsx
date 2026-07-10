@@ -154,7 +154,9 @@
   };
 
   export type LoginPayload = {
-      email: string;
+      identifier: string;
+      email?: string;
+      phone?: string;
       password: string;
   };
 

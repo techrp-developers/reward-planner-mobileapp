@@ -16,10 +16,12 @@ import {
   PROMO_ESTIMATED_ITEM_SIZE,
 } from "../../constants/cardLayout";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
+import { queryClient } from "../../../../query/queryClient";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 const FEATURED_LIMIT = 10;
+const FEATURES_PRODUCTS_QUERY_KEY = ["ecommerce", "home", "features-products"] as const;
 
 const pickRandomProducts = (products: any[], limit = FEATURED_LIMIT) => {
   if (products.length <= limit) {
@@ -51,7 +53,7 @@ export default function FeaturesProduct() {
   const navigation = useNavigation<Nav>();
 
   const { data: allProducts = [], isLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "features-products"],
+    queryKey: FEATURES_PRODUCTS_QUERY_KEY,
     queryFn: async () => {
       const res = await fetchAllProducts();
       return getProductList(res).map(normalizeProduct);
@@ -125,6 +127,16 @@ export default function FeaturesProduct() {
     </LinearGradient>
   );
 }
+
+export const prefetchFeaturesProductSection = () =>
+  queryClient.prefetchQuery({
+    queryKey: FEATURES_PRODUCTS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await fetchAllProducts();
+      return getProductList(res).map(normalizeProduct);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
 // ================== RESPONSIVE STYLES ==================
 const styles = StyleSheet.create({

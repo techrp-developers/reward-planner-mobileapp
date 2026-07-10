@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import LinearGradient from "react-native-linear-gradient";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 import {
   addTodo,
@@ -52,13 +54,13 @@ type DateItem = {
   isToday?: boolean;
 };
 
-const PRIMARY = "#A654CD";
-const PRIMARY_DARK = "#7E2FA8";
+const PRIMARY = "#4F46E5";
+const PRIMARY_DARK = "#111827";
 
-const PINK_SOFT = "#FFF1F6";
-const PINK_BORDER = "#FFD6E4";
+const PINK_SOFT = "#EEF2FF";
+const PINK_BORDER = "#E5E7EB";
 
-const PAGE_BG = "#FFF7FB";
+const PAGE_BG = "#F8FAFC";
 const CARD_BG = "#FFFFFF";
 const TEXT_DARK = "#111111";
 const TEXT_MUTED = "#777777";
@@ -114,9 +116,10 @@ const buildTimeOptions = () => {
 
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
+  const { isDark, theme } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const dateListRef = useRef<FlatList<DateItem>>(null);
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const todayKey = formatDateKey(today);
 
   /**
@@ -155,8 +158,32 @@ const TodoListScreen = () => {
   const [saving, setSaving] = useState(false);
 
   const timeOptions = useMemo(() => buildTimeOptions(), []);
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        screen: { backgroundColor: isDark ? "#0B1120" : "#F6F5FA" },
+        surface: {
+          backgroundColor: isDark ? "#1F2937" : CARD_BG,
+          borderColor: isDark ? "#374151" : "#E7E5EE",
+        },
+        text: { color: theme.text },
+        accentText: { color: isDark ? "#FFFFFF" : "#111827" },
+        mutedText: { color: theme.secondaryText },
+        secondaryText: { color: isDark ? "#D1D5DB" : "#444444" },
+        completedSurface: { backgroundColor: isDark ? "#111827" : "#F3F3F3" },
+        overlay: { backgroundColor: isDark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.15)" },
+        divider: { borderBottomColor: isDark ? "#374151" : "#EEEEEE" },
+        softButton: { backgroundColor: isDark ? "#374151" : "#F1EFF8" },
+      }),
+    [isDark, theme.secondaryText, theme.text],
+  );
+  const placeholderColor = isDark ? "#9CA3AF" : TEXT_MUTED;
+  const accentColor = isDark ? "#FFFFFF" : "#111827";
+  const headerColors = isDark
+    ? ["#18181B", "#27233A", "#4338CA"]
+    : ["#111827", "#312E81", "#4F46E5"];
 
-  const normalizeTodos = (apiTodos: any[]): Todo[] => {
+  const normalizeTodos = useCallback((apiTodos: any[]): Todo[] => {
     return (apiTodos || []).map(item => ({
       id: String(item.id),
       createdBy: item.createdBy || item.created_by,
@@ -174,9 +201,9 @@ const TodoListScreen = () => {
       completed: Boolean(item.completed),
       status: item.status,
     }));
-  };
+  }, []);
 
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -200,11 +227,11 @@ const TodoListScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType, normalizeTodos, selectedDate, todayKey]);
 
   useEffect(() => {
     fetchTodos();
-  }, [selectedDate, filterType]);
+  }, [fetchTodos]);
 
   const pastDates = useMemo(() => {
     const arr = [];
@@ -221,7 +248,7 @@ const TodoListScreen = () => {
     }
 
     return arr;
-  }, [todayKey]);
+  }, [today]);
 
   const futureDates = useMemo(() => {
     const arr = [];
@@ -238,7 +265,7 @@ const TodoListScreen = () => {
     }
 
     return arr;
-  }, [todayKey]);
+  }, [today]);
 
   const dateItems = useMemo<DateItem[]>(() => {
     return [
@@ -251,7 +278,7 @@ const TodoListScreen = () => {
       },
       ...futureDates,
     ];
-  }, [futureDates, pastDates, todayKey]);
+  }, [futureDates, pastDates, today, todayKey]);
 
   const sidePadding = Math.max((windowWidth - DATE_BOX_WIDTH) / 2, 16);
   const todayIndex = pastDates.length;
@@ -592,13 +619,15 @@ const TodoListScreen = () => {
         style={[
           styles.dateBox,
           item.isToday && styles.todayDateBox,
+          themed.surface,
           active && styles.activeDateBox,
         ]}
       >
         <Text
           style={[
             styles.dateNumber,
-            item.isToday && !active && styles.todayDateText,
+            themed.text,
+            item.isToday && !active && [styles.todayDateText, themed.accentText],
             active && styles.activeDateText,
           ]}
         >
@@ -607,7 +636,8 @@ const TodoListScreen = () => {
         <Text
           style={[
             styles.dateDay,
-            item.isToday && !active && styles.todayDateText,
+            themed.mutedText,
+            item.isToday && !active && [styles.todayDateText, themed.accentText],
             active && styles.activeDateText,
           ]}
         >
@@ -618,12 +648,18 @@ const TodoListScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={PRIMARY} />
+    <SafeAreaView style={[styles.safeArea, themed.screen]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={headerColors[0]}
+      />
 
-      <View style={styles.header}>
-        <View style={styles.headerGloss} />
-
+      <LinearGradient
+        colors={headerColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => setMenuVisible(true)}>
             <MaterialCommunityIcons name="view-grid" size={20} color="#fff" />
@@ -661,12 +697,9 @@ const TodoListScreen = () => {
             <Text style={styles.addButtonText}>Add New</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
-      <View style={styles.body}>
-        <View style={styles.pageGlossOne} />
-        <View style={styles.pageGlossTwo} />
-
+      <View style={[styles.body, themed.screen]}>
         <View style={styles.dateStripWrapper}>
           <FlatList
             ref={dateListRef}
@@ -693,13 +726,13 @@ const TodoListScreen = () => {
         </View>
 
         {selectedTodo && !showCheckbox && !selectedTodo.completed && (
-          <View style={styles.actionBar}>
+          <View style={[styles.actionBar, themed.surface]}>
             <TouchableOpacity onPress={openEditModal}>
-              <Text style={styles.actionText}>Edit</Text>
+              <Text style={[styles.actionText, themed.accentText]}>Edit</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={shareTodo}>
-              <Text style={styles.actionText}>Share</Text>
+              <Text style={[styles.actionText, themed.accentText]}>Share</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleDeleteTodo}>
@@ -713,9 +746,9 @@ const TodoListScreen = () => {
         )}
 
         {showCheckbox && selectedTodoIds.length > 0 && (
-          <View style={styles.actionBar}>
+          <View style={[styles.actionBar, themed.surface]}>
             <TouchableOpacity onPress={shareSelectedTodos}>
-              <Text style={styles.actionText}>Share</Text>
+              <Text style={[styles.actionText, themed.accentText]}>Share</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleDeleteSelectedTodos}>
@@ -729,7 +762,7 @@ const TodoListScreen = () => {
         )}
 
         <View style={styles.myTaskHeader}>
-          <Text style={styles.myTaskTitle}>
+          <Text style={[styles.myTaskTitle, themed.text]}>
             {filterType === "ALL"
               ? "My Tasks"
               : filterType === "TODAY"
@@ -740,7 +773,7 @@ const TodoListScreen = () => {
           </Text>
 
           <TouchableOpacity onPress={toggleSelectAll}>
-            <Text style={styles.selectAllText}>
+            <Text style={[styles.selectAllText, themed.accentText]}>
               {allSelected ? "Unselect All" : "Select All"}
             </Text>
           </TouchableOpacity>
@@ -748,8 +781,8 @@ const TodoListScreen = () => {
 
         {loading && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={PRIMARY} />
-            <Text style={styles.loadingText}>Loading tasks...</Text>
+            <ActivityIndicator size="small" color={accentColor} />
+            <Text style={[styles.loadingText, themed.mutedText]}>Loading tasks...</Text>
           </View>
         )}
 
@@ -758,10 +791,10 @@ const TodoListScreen = () => {
             <MaterialCommunityIcons
               name="clipboard-text-outline"
               size={42}
-              color="#B7B7B7"
+              color={isDark ? "#6B7280" : "#B7B7B7"}
             />
-            <Text style={styles.emptyTitle}>No tasks found</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, themed.text]}>No tasks found</Text>
+            <Text style={[styles.emptyText, themed.mutedText]}>
               Add a new task for this selected date.
             </Text>
           </View>
@@ -786,14 +819,16 @@ const TodoListScreen = () => {
                 }}
                 style={[
                   styles.taskCard,
+                  themed.surface,
                   active && !showCheckbox && styles.selectedTaskCard,
-                  todo.completed && styles.completedDoneCard,
+                  todo.completed && [styles.completedDoneCard, themed.completedSurface],
                 ]}
               >
                 <View style={styles.taskTimeBox}>
                   <Text
                     style={[
                       styles.taskTime,
+                      themed.secondaryText,
                       active && !showCheckbox && styles.selectedTaskText,
                       todo.completed && styles.completedText,
                     ]}
@@ -806,6 +841,7 @@ const TodoListScreen = () => {
                   <Text
                     style={[
                       styles.taskTitle,
+                      themed.text,
                       active && !showCheckbox && styles.selectedTaskText,
                       todo.completed && styles.completedText,
                     ]}
@@ -816,6 +852,7 @@ const TodoListScreen = () => {
                   <Text
                     style={[
                       styles.taskSubtitle,
+                      themed.secondaryText,
                       active && !showCheckbox && styles.selectedTaskText,
                       todo.completed && styles.completedText,
                     ]}
@@ -824,7 +861,7 @@ const TodoListScreen = () => {
                   </Text>
 
                   {todo.reminder ? (
-                    <Text style={styles.reminderText}>
+                    <Text style={[styles.reminderText, themed.accentText]}>
                       Alarm: {todo.reminder}
                     </Text>
                   ) : null}
@@ -851,11 +888,11 @@ const TodoListScreen = () => {
 
       <Modal visible={menuVisible} transparent animationType="fade">
         <TouchableOpacity
-          style={styles.menuOverlay}
+          style={[styles.menuOverlay, themed.overlay]}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.menuBox}>
+          <View style={[styles.menuBox, themed.surface]}>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => applyFilter("ALL")}
@@ -863,9 +900,9 @@ const TodoListScreen = () => {
               <MaterialCommunityIcons
                 name="format-list-bulleted"
                 size={18}
-                color={PRIMARY}
+                color={accentColor}
               />
-              <Text style={styles.menuText}>All Tasks</Text>
+              <Text style={[styles.menuText, themed.text]}>All Tasks</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -875,9 +912,9 @@ const TodoListScreen = () => {
               <MaterialCommunityIcons
                 name="calendar-today"
                 size={18}
-                color={PRIMARY}
+                color={accentColor}
               />
-              <Text style={styles.menuText}>Today Tasks</Text>
+              <Text style={[styles.menuText, themed.text]}>Today Tasks</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -887,9 +924,9 @@ const TodoListScreen = () => {
               <MaterialCommunityIcons
                 name="clock-outline"
                 size={18}
-                color={PRIMARY}
+                color={accentColor}
               />
-              <Text style={styles.menuText}>Pending Tasks</Text>
+              <Text style={[styles.menuText, themed.text]}>Pending Tasks</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -899,49 +936,49 @@ const TodoListScreen = () => {
               <MaterialCommunityIcons
                 name="check-circle-outline"
                 size={18}
-                color={PRIMARY}
+                color={accentColor}
               />
-              <Text style={styles.menuText}>Completed Tasks</Text>
+              <Text style={[styles.menuText, themed.text]}>Completed Tasks</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.createTaskModal}>
-          <SafeAreaView style={styles.createTaskContainer}>
-            <View style={styles.createTaskHeader}>
+        <View style={[styles.createTaskModal, themed.screen]}>
+          <SafeAreaView style={[styles.createTaskContainer, themed.screen]}>
+            <View style={[styles.createTaskHeader, themed.surface]}>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <MaterialCommunityIcons
                   name="arrow-left"
                   size={22}
-                  color={TEXT_DARK}
+                  color={theme.text}
                 />
               </TouchableOpacity>
 
-              <Text style={styles.createTaskTitle}>
+              <Text style={[styles.createTaskTitle, themed.text]}>
                 {editingId ? "Edit Task" : "Create Task"}
               </Text>
 
               <MaterialCommunityIcons
                 name="calendar-clock"
                 size={22}
-                color={TEXT_DARK}
+                color={theme.text}
               />
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.calendarBox}>
+              <View style={[styles.calendarBox, themed.surface]}>
                 <View style={styles.calendarHeader}>
                   <TouchableOpacity onPress={() => changeCalendarMonth("prev")}>
                     <MaterialCommunityIcons
                       name="chevron-left"
                       size={24}
-                      color={TEXT_DARK}
+                      color={theme.text}
                     />
                   </TouchableOpacity>
 
-                  <Text style={styles.calendarMonth}>
+                  <Text style={[styles.calendarMonth, themed.text]}>
                     {calendarMonth.toLocaleDateString("en-US", {
                       month: "long",
                       year: "numeric",
@@ -952,14 +989,14 @@ const TodoListScreen = () => {
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={24}
-                      color={TEXT_DARK}
+                      color={theme.text}
                     />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.weekRow}>
                   {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(day => (
-                    <Text key={day} style={styles.weekText}>
+                    <Text key={day} style={[styles.weekText, themed.mutedText]}>
                       {day}
                     </Text>
                   ))}
@@ -986,8 +1023,9 @@ const TodoListScreen = () => {
                         <Text
                           style={[
                             styles.calendarDateText,
+                            themed.text,
                             !currentMonth && styles.calendarDateMuted,
-                            isToday && !active && styles.calendarTodayText,
+                            isToday && !active && [styles.calendarTodayText, themed.accentText],
                             active && styles.calendarDateActiveText,
                           ]}
                         >
@@ -1001,46 +1039,46 @@ const TodoListScreen = () => {
 
               <TextInput
                 placeholder="Task Name"
-                placeholderTextColor={TEXT_MUTED}
+                placeholderTextColor={placeholderColor}
                 value={title}
                 onChangeText={setTitle}
-                style={styles.createInput}
+                style={[styles.createInput, themed.surface, themed.text]}
               />
 
               <TextInput
                 placeholder="Task Description..."
-                placeholderTextColor={TEXT_MUTED}
+                placeholderTextColor={placeholderColor}
                 value={subtitle}
                 onChangeText={setSubtitle}
                 multiline
-                style={styles.createDescription}
+                style={[styles.createDescription, themed.surface, themed.text]}
               />
 
               <View style={styles.timeRow}>
                 <TouchableOpacity
-                  style={styles.timePickerButton}
+                  style={[styles.timePickerButton, themed.surface]}
                   onPress={() => openTimePicker("start")}
                 >
                   <MaterialCommunityIcons
                     name="clock-start"
                     size={18}
-                    color={PRIMARY}
+                    color={accentColor}
                   />
-                  <Text style={styles.timePickerText}>
+                  <Text style={[styles.timePickerText, themed.text]}>
                     {startTime || "Start Time"}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.timePickerButton}
+                  style={[styles.timePickerButton, themed.surface]}
                   onPress={() => openTimePicker("end")}
                 >
                   <MaterialCommunityIcons
                     name="clock-end"
                     size={18}
-                    color={PRIMARY}
+                    color={accentColor}
                   />
-                  <Text style={styles.timePickerText}>
+                  <Text style={[styles.timePickerText, themed.text]}>
                     {endTime || "End Time"}
                   </Text>
                 </TouchableOpacity>
@@ -1066,8 +1104,8 @@ const TodoListScreen = () => {
 
       <Modal visible={timePickerVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.timePickerModal}>
-            <Text style={styles.modalTitle}>
+          <View style={[styles.timePickerModal, themed.surface]}>
+            <Text style={[styles.modalTitle, themed.text]}>
               Select {timeTarget === "start" ? "Start" : "End"} Time
             </Text>
 
@@ -1075,19 +1113,19 @@ const TodoListScreen = () => {
               {timeOptions.map(item => (
                 <TouchableOpacity
                   key={item}
-                  style={styles.timeOption}
+                  style={[styles.timeOption, themed.divider]}
                   onPress={() => selectTime(item)}
                 >
-                  <Text style={styles.timeOptionText}>{item}</Text>
+                  <Text style={[styles.timeOptionText, themed.text]}>{item}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             <TouchableOpacity
-              style={styles.cancelFullButton}
+              style={[styles.cancelFullButton, themed.softButton]}
               onPress={() => setTimePickerVisible(false)}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1095,15 +1133,15 @@ const TodoListScreen = () => {
 
       <Modal visible={alarmModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Set Alarm Reminder</Text>
+          <View style={[styles.modalCard, themed.surface]}>
+            <Text style={[styles.modalTitle, themed.text]}>Set Alarm Reminder</Text>
 
             <TextInput
               placeholder="Reminder time e.g. 10:30 AM"
-              placeholderTextColor={TEXT_MUTED}
+              placeholderTextColor={placeholderColor}
               value={reminderTime}
               onChangeText={setReminderTime}
-              style={styles.input}
+              style={[styles.input, themed.surface, themed.text]}
             />
 
             <View style={styles.modalActions}>
@@ -1111,7 +1149,7 @@ const TodoListScreen = () => {
                 style={styles.cancelBtn}
                 onPress={() => setAlarmModalVisible(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.saveBtn} onPress={saveReminder}>
@@ -1151,16 +1189,6 @@ const styles = StyleSheet.create({
     elevation: 7,
 
     overflow: "hidden",
-  },
-
-  headerGloss: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: "rgba(255,255,255,0.13)",
-    right: -75,
-    top: -90,
   },
 
   topBar: {
@@ -1223,7 +1251,7 @@ const styles = StyleSheet.create({
   },
 
   addButtonText: {
-    color: PRIMARY,
+    color: "#111827",
     fontWeight: "700",
     fontSize: 13,
   },
@@ -1235,26 +1263,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 0,
     overflow: "visible",
-  },
-
-  pageGlossOne: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: "rgba(166,84,205,0.08)",
-    top: 40,
-    right: -120,
-  },
-
-  pageGlossTwo: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(252,139,173,0.12)",
-    bottom: 20,
-    left: -140,
   },
 
   dateStripWrapper: {

@@ -25,11 +25,13 @@ function ProductHeadColor({
   onBackPress,
   onSearchPress,
   showSearch = true,
+  isDark = false,
 }: {
   title?: string;
   onBackPress?: () => void;
   onSearchPress?: () => void;
   showSearch?: boolean;
+  isDark?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
 
@@ -46,15 +48,16 @@ function ProductHeadColor({
   };
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.header}>
+    <View style={[styles.safe, isDark && styles.safeDark]}>
+      <View style={[styles.header, isDark && styles.headerDark]}>
         <AppIconButton
           type="back"
           variant="ghost"
+          color={isDark ? '#FFFFFF' : '#222222'}
           onPress={handleBack} style={styles.backIcon}
         />
 
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, isDark && styles.titleDark]} numberOfLines={1}>
           {title}
         </Text>
                
@@ -83,6 +86,7 @@ const styles = StyleSheet.create({
         : width * 0.12,
     backgroundColor: '#fff',
   },
+  safeDark: { backgroundColor: '#111113' },
 
   header: {
     height: HEADER_HEIGHT,
@@ -92,6 +96,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
+  headerDark: { borderBottomColor: 'rgba(255,255,255,0.08)' },
 
   title: {
     flex: 1,
@@ -100,6 +105,7 @@ const styles = StyleSheet.create({
     color: '#111',
     marginLeft: width * 0.02,
   },
+  titleDark: { color: '#FFFFFF' },
 
   rightIcons: {
     flexDirection: 'row',

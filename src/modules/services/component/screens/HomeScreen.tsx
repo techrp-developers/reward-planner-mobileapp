@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { FlatList, Platform, StyleSheet, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { FlatList, InteractionManager, Platform, StyleSheet, View, ViewToken } from 'react-native';
 
 import Banner from '../constant/Banner';
 import ServicesHome from '../home/ServicesHome';
@@ -28,7 +28,18 @@ const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
   { key: 'bundles' },
 ];
 
-const ServiceSection = React.memo(({ sectionKey }: { sectionKey: ServiceSectionKey }) => {
+const INITIAL_SERVICE_SECTIONS = new Set<ServiceSectionKey>(['banner', 'services', 'slider']);
+const READY_SERVICE_SECTIONS = new Set<ServiceSectionKey>(INITIAL_SERVICE_SECTIONS);
+
+const ServiceSection = React.memo(({
+  sectionKey,
+  isReady,
+}: {
+  sectionKey: ServiceSectionKey;
+  isReady: boolean;
+}) => {
+  if (!isReady) return <View style={styles.sectionPlaceholder} />;
+
   switch (sectionKey) {
     case 'banner': return <Banner />;
     case 'services': return <ServicesHome />;
@@ -44,11 +55,45 @@ const ServiceSection = React.memo(({ sectionKey }: { sectionKey: ServiceSectionK
 ServiceSection.displayName = 'ServiceHomeSection';
 
 function HomeScreen() {
+  const [readySections, setReadySections] = useState<Set<ServiceSectionKey>>(
+    () => new Set(READY_SERVICE_SECTIONS),
+  );
+  const pendingReadySections = useRef<Set<ServiceSectionKey>>(new Set(READY_SERVICE_SECTIONS));
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      const nextKeys = viewableItems
+        .map((entry) => (entry.item as { key: ServiceSectionKey } | undefined)?.key)
+        .filter((key): key is ServiceSectionKey => Boolean(key));
+
+      const keysToAdd = nextKeys.filter((key) => !pendingReadySections.current.has(key));
+      if (keysToAdd.length === 0) return;
+
+      keysToAdd.forEach((key) => {
+        pendingReadySections.current.add(key);
+        READY_SERVICE_SECTIONS.add(key);
+      });
+
+      InteractionManager.runAfterInteractions(() => {
+        setReadySections((previous) => {
+          const next = new Set(previous);
+          keysToAdd.forEach((key) => next.add(key));
+          return next;
+        });
+      });
+    },
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 8,
+    minimumViewTime: 80,
+  }).current;
+
   const renderItem = useCallback(
     ({ item }: { item: { key: ServiceSectionKey } }) => (
-      <ServiceSection sectionKey={item.key} />
+      <ServiceSection sectionKey={item.key} isReady={readySections.has(item.key)} />
     ),
-    [],
+    [readySections],
   );
 
   return (
@@ -64,6 +109,8 @@ function HomeScreen() {
         updateCellsBatchingPeriod={32}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
     </View>
   );
@@ -79,5 +126,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 32,
+  },
+  sectionPlaceholder: {
+    minHeight: 180,
   },
 });

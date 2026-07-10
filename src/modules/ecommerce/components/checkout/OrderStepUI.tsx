@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   InteractionManager,
+  BackHandler,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
@@ -25,7 +26,7 @@ import { addToCart, deleteAllCartItems, fetchCartItems, updateCartQty } from "..
 import { fetchCheckoutCart, fetchBuyNowCheckout, addBuyNowOrder, addCartOrder } from "../../api/CheckoutApi";
 import { fetchAllAddress } from "../../api/AddressApi";
 import { createPaymentOrder, verifyPayment, checkPaymentStatus } from "../../api/Payment";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StackActions, CommonActions } from "@react-navigation/native";
 import type { HomeStackParamList } from "../../navigation/types";
@@ -39,6 +40,8 @@ import { useAlert } from "../alerts/useAlert";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import {
   addressesQueryKey,
+  cartItemsQueryKey,
+  cartSummaryQueryKey,
   checkoutPreviewQueryKey,
 } from "../../navigation/navigationPerformance";
 import RecommendedProducts from "../Promotion/RecommendedProducts";
@@ -140,6 +143,7 @@ export default function OrderStepUI() {
   const queryClient = useQueryClient();
   const skipItemsRefresh = useRef(false);
   const lastRedeemableCoins = useRef(0);
+  const isSkippingEmptyCheckoutBack = useRef(false);
 
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const handleUnauthorized = useCallback(async () => {
@@ -315,7 +319,10 @@ export default function OrderStepUI() {
     // disappear or jump back to the full-screen skeleton.
     placeholderData: previousData => previousData,
     select: parseCheckoutResponse,
-    retry: 1,
+    retry: (failureCount, error: any) => {
+      const status = Number(error?.response?.status || 0);
+      return status >= 500 && failureCount < 1;
+    },
     throwOnError: false,
   });
 
@@ -440,7 +447,12 @@ export default function OrderStepUI() {
     : lastRedeemableCoins.current;
 
   useEffect(() => {
-    if (checkoutData && useRewards && checkoutData.summary.reward.redeemCoins <= 0) {
+    if (
+      checkoutData &&
+      checkoutData.items.length > 0 &&
+      useRewards &&
+      checkoutData.summary.reward.redeemCoins <= 0
+    ) {
       setUseRewards(false);
     }
   }, [checkoutData, useRewards]);
@@ -451,9 +463,31 @@ export default function OrderStepUI() {
     return items.reduce((sum, item) => sum + Math.max(1, Number(item?.quantity || 1)), 0);
   }, [items]);
 
+  const markCartAsCleared = useCallback(() => {
+    const emptySummary = emptyCheckoutSummary();
+    const emptyCartSummary = {
+      cartTotal: 0,
+      finalPayable: 0,
+      totalRewardEarn: 0,
+      totalRedeemed: 0,
+    };
+
+    setItems([]);
+    setCartSummary(emptySummary);
+    queryClient.setQueryData(cartItemsQueryKey, { items: [] });
+    queryClient.setQueryData(cartSummaryQueryKey(true), emptyCartSummary);
+    queryClient.setQueryData(cartSummaryQueryKey(false), emptyCartSummary);
+    const emptyCheckoutData = {
+      items: [],
+      summary: emptySummary,
+    };
+    queryClient.setQueryData(checkoutPreviewQueryKey({ mode: "cart", use_rewards: true }), emptyCheckoutData);
+    queryClient.setQueryData(checkoutPreviewQueryKey({ mode: "cart", use_rewards: false }), emptyCheckoutData);
+  }, [queryClient]);
+
   const navigateToOrderConfirm = useCallback(
     (orderId: number) => {
-      console.log("🚀 Navigating to OrderConfirm with order_id:", orderId);
+      __DEV__ && console.log("🚀 Navigating to OrderConfirm with order_id:", orderId);
 
       try {
         // ✅ Use CommonActions.reset to completely reset navigation stack
@@ -497,9 +531,35 @@ export default function OrderStepUI() {
     [navigation]
   );
 
+  const handleEmptyCheckoutBack = useCallback(() => {
+    isSkippingEmptyCheckoutBack.current = true;
+    const state = navigation.getState();
+
+    if (state.index >= 2) {
+      navigation.dispatch(StackActions.pop(2));
+      return;
+    }
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      })
+    );
+  }, [navigation]);
+
+  const exitBuyNowCheckout = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate("Home");
+  }, [navigation]);
+
   const handlePlaceOrder = async () => {
     if (isCreatingOrder.current) {
-      console.log("⏸️ Order creation already in progress (ref guard)");
+      __DEV__ && console.log("⏸️ Order creation already in progress (ref guard)");
       return;
     }
     let createdCartOrder = false;
@@ -530,7 +590,7 @@ export default function OrderStepUI() {
         const existingItems = existingCart?.items || existingCart?.data || [];
 
         if (Array.isArray(existingItems) && existingItems.length > 0) {
-          console.log("ℹ️ Cart already has items after payment failure, skipping restore");
+          __DEV__ && console.log("ℹ️ Cart already has items after payment failure, skipping restore");
           await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
           return;
         }
@@ -539,7 +599,7 @@ export default function OrderStepUI() {
           await addToCart(cartItem);
         }
 
-        console.log("↩️ Cart restored after payment failure/cancel");
+        __DEV__ && console.log("↩️ Cart restored after payment failure/cancel");
         await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
       } catch (restoreErr) {
         console.error("❌ Failed to restore cart after payment failure:", restoreErr);
@@ -548,14 +608,14 @@ export default function OrderStepUI() {
 
     try {
       if (placing) {
-        console.log("⏸️ Order placement already in progress");
+        __DEV__ && console.log("⏸️ Order placement already in progress");
         return;
       }
       isCreatingOrder.current = true;
       setPlacing(true);
 
       const t0 = performance.now();
-      console.log("🕐 [t=0ms] Checkout tap");
+      __DEV__ && console.log("🕐 [t=0ms] Checkout tap");
 
       const selectedAddressId = address?.address_id ?? address?.id;
       if (!selectedAddressId) {
@@ -565,7 +625,7 @@ export default function OrderStepUI() {
         return;
       }
 
-      console.log("📦 Creating order...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
+      __DEV__ && console.log("📦 Creating order...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       // Fetch latest checkout summary — uses React Query cache if data is < 30s old,
       // otherwise re-fetches to ensure expected_total matches server price.
@@ -582,7 +642,7 @@ export default function OrderStepUI() {
       const latestSummary = parseCheckoutResponse(latestCheckoutData).summary;
       const expectedPrice = getCheckoutPayableAmount(latestSummary);
 
-      console.log("🧾 Checkout expected price:", {
+      __DEV__ && console.log("🧾 Checkout expected price:", {
         expectedPrice,
         useRewards,
         productTotal: latestSummary.productTotal,
@@ -601,7 +661,7 @@ export default function OrderStepUI() {
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
         };
-        console.log("📤 Buy Now order payload:", buyNowOrderPayload);
+        __DEV__ && console.log("📤 Buy Now order payload:", buyNowOrderPayload);
         orderRes = await addBuyNowOrder(buyNowOrderPayload);
       } else {
         const cartOrderPayload = {
@@ -610,7 +670,7 @@ export default function OrderStepUI() {
           expected_redeemable: useRewards ? safeToNumber(latestSummary.reward?.redeemCoins) : 0,
           use_rewards: useRewards,
         };
-        console.log("📤 Cart order payload:", cartOrderPayload);
+        __DEV__ && console.log("📤 Cart order payload:", cartOrderPayload);
         orderRes = await addCartOrder(cartOrderPayload);
         createdCartOrder = true;
       }
@@ -638,18 +698,18 @@ export default function OrderStepUI() {
       if (!Number.isFinite(orderId) || orderId <= 0) {
         isCreatingOrder.current = false;
         setPlacing(false);
-        console.log("Order ID missing");
+        __DEV__ && console.log("Order ID missing");
         alert.error("Order Error", "Order ID missing. Please try again.");
         return;
       }
 
       const paymentAmount = expectedPrice;
 
-      console.log("✅ Order created:", orderId, "Amount:", paymentAmount, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
+      __DEV__ && console.log("✅ Order created:", orderId, "Amount:", paymentAmount, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       // ✅ Step 2: Create Payment Order with Razorpay
       const paymentData = await createPaymentOrder(orderId, paymentAmount);
-      console.log("💳 Payment order created:", paymentData, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
+      __DEV__ && console.log("💳 Payment order created:", paymentData, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       const options = {
         key: paymentData.key,
@@ -666,11 +726,11 @@ export default function OrderStepUI() {
         theme: { color: "#8665FF" },
       };
 
-      console.log("🚀 Opening Razorpay...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
+      __DEV__ && console.log("🚀 Opening Razorpay...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
       // ✅ Step 3: Open Razorpay Checkout
       RazorpayCheckout.open(options)
         .then(async (response) => {
-          console.log("💰 Payment successful:", response);
+          __DEV__ && console.log("💰 Payment successful:", response);
 
           try {
             // ✅ Step 4: Verify payment
@@ -681,14 +741,15 @@ export default function OrderStepUI() {
               orderId,
             });
 
-            console.log("🔐 Verification response:", verifyRes);
+            __DEV__ && console.log("🔐 Verification response:", verifyRes);
 
             if (isPaymentVerified(verifyRes)) {
               // ✅ Payment verified, proceed with success flow
               if (mode !== "buy_now") {
                 try {
                   await deleteAllCartItems();
-                  console.log("🧹 Cart cleared");
+                  markCartAsCleared();
+                  __DEV__ && console.log("🧹 Cart cleared");
                 } catch (clearErr) {
                   console.error("❌ Cart clear failed:", clearErr);
                 }
@@ -701,16 +762,17 @@ export default function OrderStepUI() {
             }
 
             // ❌ Verification failed, check status with retries
-            console.log("⚠️ Verification failed, checking payment status...");
+            __DEV__ && console.log("⚠️ Verification failed, checking payment status...");
             let statusRes = await checkPaymentStatus(orderId);
-            console.log("📊 Payment status check:", statusRes);
+            __DEV__ && console.log("📊 Payment status check:", statusRes);
 
             if (isPaymentVerified(statusRes)) {
               // ✅ Status check passed
               if (mode !== "buy_now") {
                 try {
                   await deleteAllCartItems();
-                  console.log("🧹 Cart cleared after status check");
+                  markCartAsCleared();
+                  __DEV__ && console.log("🧹 Cart cleared after status check");
                 } catch (clearErr) {
                   console.error("❌ Cart clear failed:", clearErr);
                 }
@@ -764,7 +826,7 @@ export default function OrderStepUI() {
             /cancel|cancelled|dismiss|closed|back/i.test(String(errorText));
 
           if (isUserCancelled) {
-            console.log("👤 User cancelled payment");
+            __DEV__ && console.log("👤 User cancelled payment");
             await restoreCartAfterPaymentFailure();
             alert.warning("Payment Cancelled", "You cancelled the payment. Your cart has been restored.");
             return;
@@ -869,6 +931,11 @@ export default function OrderStepUI() {
   };
 
   const removeItem = async (item: any) => {
+    if (mode === "buy_now") {
+      exitBuyNowCheckout();
+      return;
+    }
+
     setItems(p => p.filter(i => i.cart_item_id !== item.cart_item_id));
     try {
       await removeFromCart(item.cart_item_id);
@@ -880,13 +947,57 @@ export default function OrderStepUI() {
   };
 
   const removeAll = async () => {
-    setItems([]);
+    if (mode === "buy_now") {
+      exitBuyNowCheckout();
+      return;
+    }
+
     await deleteAllCartItems();
-    await queryClient.invalidateQueries({ queryKey: checkoutQueryKey });
+    markCartAsCleared();
   };
 
   const checkoutDataItems = Array.isArray(checkoutData?.items) ? checkoutData.items : [];
   const checkoutHasItemsPendingSync = checkoutDataItems.length > 0 && items.length === 0;
+  const isEmptyCheckoutState =
+    items.length === 0 &&
+    checkoutDataItems.length === 0 &&
+    hasCheckoutStarted &&
+    !isCheckoutFetching &&
+    checkoutData !== undefined &&
+    mode !== "buy_now";
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isEmptyCheckoutState) {
+        return undefined;
+      }
+
+      const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+        handleEmptyCheckoutBack();
+        return true;
+      });
+
+      return () => subscription.remove();
+    }, [handleEmptyCheckoutBack, isEmptyCheckoutState])
+  );
+
+  useEffect(() => {
+    if (!isEmptyCheckoutState) {
+      isSkippingEmptyCheckoutBack.current = false;
+      return undefined;
+    }
+
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      if (isSkippingEmptyCheckoutBack.current) {
+        return;
+      }
+
+      event.preventDefault();
+      handleEmptyCheckoutBack();
+    });
+
+    return unsubscribe;
+  }, [handleEmptyCheckoutBack, isEmptyCheckoutState, navigation]);
 
   const loading =
     isAuthenticated &&
@@ -913,19 +1024,13 @@ export default function OrderStepUI() {
     );
   }
 
-if (
-  items.length === 0 &&
-  checkoutDataItems.length === 0 &&
-  hasCheckoutStarted &&
-  !isCheckoutFetching &&
-  checkoutData !== undefined &&
-  mode !== "buy_now"
-) {    return (
+  if (isEmptyCheckoutState) {
+    return (
       <View style={styles.container}>
         <ProductHeadColor
           title="Cart"
-          onBackPress={() => navigation.goBack()}
-          onSearchPress={() => Alert.alert("Search", "Open search")}
+          onBackPress={handleEmptyCheckoutBack}
+          showSearch={false}
         />
         <EmptyCart
           message="Your cart is empty. Add products to continue."
@@ -940,7 +1045,7 @@ if (
       <ProductHeadColor
         title="Checkout"
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => Alert.alert("Search", "Open search")}
+        showSearch={false}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -988,7 +1093,7 @@ if (
           </View>
 
           {/* Select/Remove Row */}
-          {items.length > 0 && (
+          {mode !== "buy_now" && items.length > 0 && (
             <View style={styles.actionsRow}>
               <TouchableOpacity onPress={removeAll}>
                 <Text style={styles.actionDanger}>Remove all</Text>

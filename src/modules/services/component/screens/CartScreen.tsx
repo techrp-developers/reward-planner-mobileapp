@@ -44,11 +44,28 @@ type ServiceCartItem = {
   description: string;
   price: number;
   mrp: number;
+  imageUrl?: string;
   documents: string[];
   isBundle?: boolean;
   bundle_id?: number;
   bundle_items?: any[];
 
+};
+
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sumBundleItemPrices = (items: any[], fields: string[]): number => {
+  return items.reduce((total, item) => {
+    const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
+    return total + parseMoney(field ? item?.[field] : 0);
+  }, 0);
 };
 
 // const parsePositiveId = (value: unknown): number | null => {
@@ -68,6 +85,15 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
   // ✅ Handle Bundles as SINGLE ITEM
   bundles.forEach((bundle: any) => {
     const bundleItems = bundle.items || [];
+    const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+    const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+      'individual_price',
+      'mrp',
+      'original_price',
+      'price',
+    ]);
+    const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+    const displayMrp = selectedItemsMrp || displayPrice;
 
     // ✅ Collect all documents
 
@@ -96,8 +122,9 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       // ✅ Real bundle description, falling back to item count
       description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-      price: Number(bundle.bundle_total || 0),
-      mrp: Number(bundle.bundle_total || 0),
+      price: displayPrice,
+      mrp: Math.max(displayMrp, displayPrice),
+      imageUrl: bundle.bundle_image ? String(bundle.bundle_image) : undefined,
 
       // 🔥 FIXED (no duplicate docs)
       documents: uniqueDocs,
@@ -119,6 +146,9 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       description: item.title,
       price: Number(item.price),
       mrp: Number(item.price),
+      imageUrl: item.image_url || item.variant_image
+        ? String(item.image_url || item.variant_image)
+        : undefined,
       documents: (item.documents || []).map((d: any) => d.document_name),
 
       isBundle: false,
@@ -138,8 +168,12 @@ function CartScreen() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
-  const [items, setItems] = useState<ServiceCartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedCartItems = useMemo(() => {
+    const cached = queryClient.getQueryData(serviceCartItemsQueryKey);
+    return cached ? normalizeCartItems(cached) : [];
+  }, [queryClient]);
+  const [items, setItems] = useState<ServiceCartItem[]>(cachedCartItems);
+  const [loading, setLoading] = useState(cachedCartItems.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | number | null>(null);
   const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null);
@@ -175,7 +209,7 @@ function CartScreen() {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(true);
+        setLoading(items.length === 0);
       }
 
       const response = await getServiceCartItems();
@@ -195,7 +229,7 @@ function CartScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [queryClient]);
+  }, [items.length, queryClient]);
 
   useEffect(() => {
     loadCart();
@@ -204,8 +238,8 @@ function CartScreen() {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
     animation.start();
@@ -225,12 +259,9 @@ function CartScreen() {
         return;
       }
 
-      const selected_items = item.bundle_items.map((i: any) => Number(i.bundle_item_id));
-
-      console.log("📦 Bundle Buy Now:", {
-        bundle_id: item.bundle_id,
-        selected_items,
-      });
+      const selected_items = item.bundle_items
+        .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
 
       const previewData = await getBuyNowBundlePreview({
         bundle_id: item.bundle_id,
@@ -241,6 +272,7 @@ function CartScreen() {
         mode: 'buy_now', // ✅ SAME MODE
         previewData,     // ✅ IMPORTANT
         bundle_id: item.bundle_id,
+        selected_items,
       });
 
       return;
@@ -335,6 +367,7 @@ function CartScreen() {
       description={item.description}
       price={item.price}
       mrp={item.mrp}
+      imageUrl={item.imageUrl}
       documents={item.documents}
       isBundle={item.isBundle} // ✅ ADD THIS
 

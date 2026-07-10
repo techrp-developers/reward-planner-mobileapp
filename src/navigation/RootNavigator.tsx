@@ -45,10 +45,12 @@ export type AppStackParamList = {
   BBPSHomeStack: undefined;
   Search: undefined;
   GlobalSearchScreen: undefined;
+  TrackOrders: undefined;
   Notification: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: undefined;
+  MyTickets: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
@@ -182,6 +184,12 @@ function AppNavigator() {
         }
       />
       <AppStack.Screen
+        name="MyTickets"
+        getComponent={() =>
+          require("../modules/ecommerce/constants/Support/MyTickets").default
+        }
+      />
+      <AppStack.Screen
         name="TermsAndConditions"
         getComponent={() =>
           require("../modules/ecommerce/profile/TermsandCondition").default
@@ -260,6 +268,12 @@ function AppNavigator() {
         name="GlobalSearchScreen"
         getComponent={() =>
           require("../modules/dashboard/dashboard/GlobalSearchScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="TrackOrders"
+        getComponent={() =>
+          require("../modules/dashboard/globalorder/TrackOrderScreen").default
         }
       />
       <AppStack.Screen

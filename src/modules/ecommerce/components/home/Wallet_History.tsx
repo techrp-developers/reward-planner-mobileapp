@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -16,8 +16,10 @@ import Reward from "../../../../assets/product/rewards.svg";
 import {
   fetchWalletBalance,
   fetchWalletTransactions,
+  type WalletBalanceResponse,
 } from "../../api/WalleteAPI";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Transaction = {
   id: string;
@@ -26,6 +28,7 @@ type Transaction = {
   title: string;
   subtitle?: string;
   date: string;
+  expiryLabel?: string;
   coins: number;
   icon: string;
   iconBg: string;
@@ -34,14 +37,38 @@ type Transaction = {
 const FILTERS = ["All Transactions", "Additions", "Deductions", "Expired"];
 
 export default function WalletHistoryScreen({ navigation }: any) {
+  const { isDark, theme } = useAppTheme();
   const [activeFilter, setActiveFilter] = useState("All Transactions");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
+  const [totalEarnedPoints, setTotalEarnedPoints] = useState(0);
   const [expiringCoins, setExpiringCoins] = useState(0);
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [txnLoading, setTxnLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const hasEarnedTotalFromBalance = useRef(false);
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        screen: { backgroundColor: isDark ? "#09090B" : "#F9FAFB" },
+        surface: {
+          backgroundColor: isDark ? "#18181B" : "#FFFFFF",
+          borderColor: isDark ? "#27272A" : "#E5E7EB",
+        },
+        text: { color: theme.text },
+        mutedText: { color: theme.secondaryText },
+        expiryStrip: {
+          backgroundColor: isDark ? "#211A14" : "#FFF8F0",
+          borderTopColor: isDark ? "#3F2D1D" : "#FDE9D0",
+        },
+        expiryText: { color: isDark ? "#FDBA74" : "#7C4A12" },
+        expiryDate: { color: isDark ? "#D6A66F" : "#9A6B33" },
+        creditIcon: { backgroundColor: isDark ? "rgba(16,185,129,0.14)" : "#ECFDF5" },
+        debitIcon: { backgroundColor: isDark ? "rgba(244,63,94,0.14)" : "#FEF2F2" },
+      }),
+    [isDark, theme.secondaryText, theme.text],
+  );
 
   const getType = (filter: string) => {
     if (filter === "Additions") return "credit";
@@ -50,7 +77,21 @@ export default function WalletHistoryScreen({ navigation }: any) {
     return "all";
   };
 
-  const mapTransactions = (rows: any[]) =>
+  const formatExpiryLabel = useCallback((txn: any) => {
+    if (!txn?.expiry_date) return undefined;
+
+    const formattedDate = new Date(txn.expiry_date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    return Number(txn.is_expired) === 1
+      ? `Expired on ${formattedDate}`
+      : `Expires on ${formattedDate}`;
+  }, []);
+
+  const mapTransactions = useCallback((rows: any[]) =>
     rows.map((txn: any) => ({
       id: String(txn.transaction_id),
       orderNo: txn.transaction_id,
@@ -62,25 +103,57 @@ export default function WalletHistoryScreen({ navigation }: any) {
         month: "short",
         year: "numeric",
       }),
+      expiryLabel: formatExpiryLabel(txn),
       coins: txn.transaction_type === "credit" ? txn.coins : -txn.coins,
       icon:
         txn.transaction_type === "credit"
           ? "file-document-outline"
           : "package-variant-closed",
       iconBg: txn.transaction_type === "credit" ? "#4F75FF" : "#A67B5B",
-    }));
+    })), [formatExpiryLabel]);
 
-  const loadBalance = async () => {
+  const getTotalEarnedFromBalance = (data: any) => {
+    const value =
+      data?.total_earned_points ??
+      data?.total_earned ??
+      data?.total_earned_coins ??
+      data?.earned_points ??
+      data?.earned_coins;
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+
+  const loadBalance = useCallback(async () => {
     const balanceRes = await fetchWalletBalance();
-    setBalance(balanceRes?.data?.balance || 0);
-    setExpiringCoins(balanceRes?.data?.expiring_coins || 0);
-    setExpiryDate(balanceRes?.data?.expiry_date || null);
-  };
+    const balanceData: WalletBalanceResponse["data"] =
+      balanceRes?.data || {
+        balance: 0,
+        expiring_coins: 0,
+        expiry_date: null,
+      };
+    setBalance(balanceData.balance || 0);
+    setExpiringCoins(balanceData.expiring_coins || 0);
+    setExpiryDate(balanceData.expiry_date || null);
 
-  const loadTransactions = async (type: any = "all") => {
+    const earnedFromBalance = getTotalEarnedFromBalance(balanceData);
+    if (earnedFromBalance !== null) {
+      hasEarnedTotalFromBalance.current = true;
+      setTotalEarnedPoints(earnedFromBalance);
+    }
+  }, []);
+
+  const loadTransactions = useCallback(async (type: any = "all") => {
     const txnRes = await fetchWalletTransactions(type);
+    if (type === "all" && !hasEarnedTotalFromBalance.current) {
+      const totalCredits = (txnRes.data || []).reduce((sum: number, txn: any) => {
+        if (txn?.transaction_type !== "credit") return sum;
+        return sum + (Number(txn?.coins) || 0);
+      }, 0);
+      setTotalEarnedPoints(totalCredits);
+    }
     setTransactions(mapTransactions(txnRes.data));
-  };
+  }, [mapTransactions]);
 
   // Initial load: fetch balance + transactions together, full-screen loader.
   useEffect(() => {
@@ -94,7 +167,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [loadBalance, loadTransactions]);
 
   // Filter switch: only refetch transactions, keep card/list mounted (no flicker).
   const onFilterChange = async (filter: string) => {
@@ -135,36 +208,51 @@ export default function WalletHistoryScreen({ navigation }: any) {
 
           <View style={styles.walletTopRow}>
             <Text style={styles.cardKicker}>REWARD WALLET</Text>
-            <View style={styles.chipBadge}>
-              <MaterialCommunityIcons
-                name="shield-check"
-                size={12}
-                color="#FFE9A8"
-              />
-              <Text style={styles.chipBadgeText}>Premium</Text>
+            <View style={styles.topRightMeta}>
+              {/* <View style={styles.chipBadge}>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={12}
+                  color="#FFE9A8"
+                />
+                <Text style={styles.chipBadgeText}>Premium</Text>
+              </View> */}
+
+              <View style={styles.rateBox}>
+                <Reward width={13} height={13} />
+                <Text style={styles.rateText}> 1 Coin = ₹1</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.leftSection}>
-            <View style={styles.coinIconWrap}>
-              <Reward width={30} height={30} />
+          <View style={styles.walletStatsRow}>
+            <View style={styles.leftSection}>
+              <View style={styles.coinIconWrap}>
+                <Reward width={30} height={30} />
+              </View>
+              <View style={styles.balanceBlock}>
+                <Text style={styles.label}>My Balance</Text>
+                <Text style={styles.balance}>{balance.toLocaleString("en-IN")}</Text>
+              </View>
             </View>
-            <View style={styles.balanceBlock}>
-              <Text style={styles.label}>My Balance</Text>
-              <Text style={styles.balance}>{balance.toLocaleString("en-IN")}</Text>
-            </View>
+
           </View>
 
           <View style={styles.cardBottomRow}>
-            <View style={styles.rateBox}>
-              <Reward width={13} height={13} />
-              <Text style={styles.rateText}> 1 Coin = ₹1</Text>
+            <View style={styles.earnedSummary}>
+              <View style={styles.earnedLine}>
+                <Text style={styles.earnedLineText}>Total earned -</Text>
+                <Reward width={13} height={13} />
+                <Text style={styles.earnedLineText}>
+                  {totalEarnedPoints.toLocaleString("en-IN")} coins
+                </Text>
+              </View>
             </View>
           </View>
         </LinearGradient>
 
         {/* EXPIRY STRIP */}
-        <View style={styles.expiryStrip}>
+        <View style={[styles.expiryStrip, themed.expiryStrip]}>
           <View style={styles.expiryLeft}>
             <View style={styles.expiryIconWrap}>
               <MaterialCommunityIcons
@@ -173,12 +261,12 @@ export default function WalletHistoryScreen({ navigation }: any) {
                 color="#F97316"
               />
             </View>
-            <Text style={styles.expiryText}>
+            <Text style={[styles.expiryText, themed.expiryText]}>
               {expiringCoins} Coins Expiring
             </Text>
           </View>
 
-          <Text style={styles.expiryDate}>
+          <Text style={[styles.expiryDate, themed.expiryDate]}>
             {expiryDate
               ? new Date(expiryDate).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -191,7 +279,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
       </View>
 
       {/* TITLE */}
-      <Text style={styles.sectionHeading}>Transaction History</Text>
+      <Text style={[styles.sectionHeading, themed.text]}>Transaction History</Text>
 
       {/* FILTERS */}
       <FlatList
@@ -205,12 +293,14 @@ export default function WalletHistoryScreen({ navigation }: any) {
             onPress={() => onFilterChange(item)}
             style={[
               styles.filterChip,
+              themed.surface,
               activeFilter === item && styles.filterChipActive,
             ]}
           >
             <Text
               style={[
                 styles.filterText,
+                themed.mutedText,
                 activeFilter === item && styles.filterTextActive,
               ]}
             >
@@ -229,19 +319,23 @@ export default function WalletHistoryScreen({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safe, themed.screen]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#111113" : "#FFFFFF"}
+      />
 
       {/* ✅ HEADER */}
       <ProductHeadColor
         title="Wallet"
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, themed.screen]}>
         {loading ? (
-          <Text style={styles.loading}>Loading...</Text>
+          <Text style={[styles.loading, themed.mutedText]}>Loading...</Text>
         ) : (
           <FlatList
             data={transactions}
@@ -251,7 +345,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
             onRefresh={onRefresh}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <TransactionCard item={item} />
+              <TransactionCard item={item} themed={themed} />
             )}
           />
         )}
@@ -261,16 +355,22 @@ export default function WalletHistoryScreen({ navigation }: any) {
 }
 
 /* TRANSACTION CARD */
-function TransactionCard({ item }: { item: Transaction }) {
+function TransactionCard({
+  item,
+  themed,
+}: {
+  item: Transaction;
+  themed: any;
+}) {
   const isPositive = item.coins > 0;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, themed.surface]}>
       <View style={styles.cardLeft}>
         <View
           style={[
             styles.iconBox,
-            { backgroundColor: isPositive ? "#ECFDF5" : "#FEF2F2" },
+            isPositive ? themed.creditIcon : themed.debitIcon,
           ]}
         >
           <MaterialCommunityIcons
@@ -281,11 +381,16 @@ function TransactionCard({ item }: { item: Transaction }) {
         </View>
 
         <View style={styles.textBlock}>
-          <Text style={styles.orderText}>Order No. {item.orderNo}</Text>
+          <Text style={[styles.orderText, themed.text]}>Order No. {item.orderNo}</Text>
           {item.txnId && (
-            <Text style={styles.subText}>Txn Id: {item.txnId}</Text>
+            <Text style={[styles.subText, themed.mutedText]}>Txn Id: {item.txnId}</Text>
           )}
-          <Text style={styles.categoryText}>{item.title}</Text>
+          <Text style={[styles.categoryText, themed.mutedText]}>{item.title}</Text>
+          {item.expiryLabel && (
+            <Text style={[styles.transactionExpiryText, themed.expiryDate]}>
+              {item.expiryLabel}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -301,7 +406,7 @@ function TransactionCard({ item }: { item: Transaction }) {
             {isPositive ? `+${item.coins}` : item.coins}
           </Text>
         </View>
-        <Text style={styles.dateText}>{item.date}</Text>
+        <Text style={[styles.dateText, themed.mutedText]}>{item.date}</Text>
       </View>
     </View>
   );
@@ -384,7 +489,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  leftSection: { flexDirection: "row", alignItems: "center" },
+  topRightMeta: {
+    alignItems: "flex-end",
+    gap: 7,
+  },
+
+  walletStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  leftSection: { flexDirection: "row", alignItems: "center", flex: 1 },
 
   coinIconWrap: {
     width: 48,
@@ -399,6 +516,21 @@ const styles = StyleSheet.create({
 
   label: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "500" },
   balance: { color: "#fff", fontSize: 28, fontWeight: "800", letterSpacing: 0.3 },
+
+  earnedSummary: { alignItems: "flex-start" },
+
+  earnedLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
+  earnedLineText: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
 
   cardBottomRow: {
     flexDirection: "row",
@@ -491,6 +623,8 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
@@ -520,6 +654,13 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
 
   categoryText: { fontSize: 12, color: "#6B7280", marginTop: 4 },
+
+  transactionExpiryText: {
+    fontSize: 11,
+    color: "#9A6B33",
+    marginTop: 4,
+    fontWeight: "600",
+  },
 
   cardRight: { alignItems: "flex-end" },
 

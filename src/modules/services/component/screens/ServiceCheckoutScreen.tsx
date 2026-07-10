@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,6 +32,7 @@ import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentSta
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import RazorpayCheckout from "react-native-razorpay";
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
+import { getServiceImageUrl } from '../../utils/serviceImage';
 
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCheckoutScreen'>;
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
@@ -64,6 +66,7 @@ type ServicePreviewItem = {
 
   price: number;
   mrp: number;
+  imageUrl?: string;
 
   documents: string[];
 
@@ -76,6 +79,31 @@ type PreviewSummary = {
   subtotal: number;
   discount: number;
   grandTotal: number;
+};
+
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sumBundleItemPrices = (items: any[], fields: string[]): number => {
+  return items.reduce((total, item) => {
+    const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
+    return total + parseMoney(field ? item?.[field] : 0);
+  }, 0);
+};
+
+const getFirstImage = (source: any, fields: string[]): string | undefined => {
+  const field = fields.find((key) => {
+    const value = source?.[key];
+    return typeof value === 'string' && value.trim();
+  });
+
+  return field ? String(source[field]).trim() : undefined;
 };
 
 function normalizePreview(
@@ -94,6 +122,15 @@ function normalizePreview(
     // ✅ Convert bundle → SINGLE ITEM
     const bundleCards = bundles.map((bundle: any) => {
       const bundleItems = bundle.items || [];
+      const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+      const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+        'individual_price',
+        'mrp',
+        'original_price',
+        'price',
+      ]);
+      const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+      const displayMrp = selectedItemsMrp || displayPrice;
 
       // ✅ Merge documents (no duplicate)
       const allDocs = bundleItems.flatMap((i: any) =>
@@ -111,8 +148,9 @@ function normalizePreview(
         variant_name: 'Bundle Pack',
         description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-        price: Number(bundle.bundle_total || 0),
-        mrp: Number(bundle.bundle_total || 0),
+        price: displayPrice,
+        mrp: Math.max(displayMrp, displayPrice),
+        imageUrl: getFirstImage(bundle, ['bundle_image']),
 
         documents: uniqueDocs,
 
@@ -132,6 +170,15 @@ function normalizePreview(
     if (raw?.bundle) {
       const bundle = raw.bundle;
       const bundleItems = bundle.items || [];
+      const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+      const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+        'individual_price',
+        'mrp',
+        'original_price',
+        'price',
+      ]);
+      const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+      const displayMrp = selectedItemsMrp || displayPrice;
 
       const bundleCard = {
         id: `bundle-${bundle.bundle_id}`,
@@ -142,8 +189,9 @@ function normalizePreview(
         variant_name: 'Bundle Pack',
         description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-        price: Number(bundle.bundle_total || 0),
-        mrp: Number(bundle.bundle_total || 0),
+        price: displayPrice,
+        mrp: Math.max(displayMrp, displayPrice),
+        imageUrl: getFirstImage(bundle, ['bundle_image']),
 
         documents: [],
 
@@ -154,7 +202,15 @@ function normalizePreview(
 
       sourceItems = [bundleCard]; // ✅ IMPORTANT
     } else {
-      sourceItems = Array.isArray(raw?.items) ? raw.items : [];
+      sourceItems = Array.isArray(raw?.items)
+        ? raw.items
+        : raw?.item
+          ? [raw.item]
+          : raw?.service
+            ? [raw.service]
+            : raw?.service_id || raw?.variant_id || raw?.image_url
+              ? [raw]
+              : [];
     }
   }
   const items: ServicePreviewItem[] = sourceItems
@@ -179,10 +235,10 @@ function normalizePreview(
         variant_name: String(entry?.variant_name ?? 'Plan').trim(),
         description: String(entry?.description ?? entry?.short_description ?? '').trim(),
 
-        price: Number(entry?.price ?? 0),
-        mrp: Number(entry?.mrp ?? entry?.price ?? 0),
+        price: parseMoney(entry?.price),
+        mrp: parseMoney(entry?.mrp ?? entry?.price),
 
-        image_url: entry?.image_url ? String(entry.image_url) : undefined,
+        imageUrl: getFirstImage(entry, ['image_url', 'variant_image']),
 
         documents: (() => {
           const docs = entry?.documents ?? entry?.required_documents ?? [];
@@ -204,21 +260,23 @@ function normalizePreview(
 let subtotal = 0;
 
 if (raw?.bundle?.bundle_total) {
-  subtotal = Number(raw.bundle.bundle_total); // ✅ MOST RELIABLE
+  subtotal = parseMoney(raw.bundle.bundle_total); // ✅ MOST RELIABLE
 } else if (items.length === 1 && items[0].isBundle) {
-  subtotal = Number(items[0].price || 0);
+  subtotal = parseMoney(items[0].price);
 } else {
-  subtotal = items.reduce((s, it) => s + Number(it.price || 0), 0);
+  subtotal = items.reduce((s, it) => s + parseMoney(it.price), 0);
 }
 
 // ✅ discount
 const discount =
-  Number(summaryRaw.discount ?? 0) +
-  Number(summaryRaw.reward_discount ?? 0);
+  parseMoney(summaryRaw.discount) +
+  parseMoney(summaryRaw.reward_discount);
 
 // ✅ total
 const grandTotal =
-  Number(summaryRaw.total ?? subtotal);
+  mode === 'cart'
+    ? Math.max(subtotal - discount, 0)
+    : parseMoney(summaryRaw.total ?? subtotal);
 
 return {
   items,
@@ -252,7 +310,14 @@ export default function ServiceCheckoutScreen() {
   const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
-  const { mode: routeMode, service_id, variant_id, bundle_id, previewData: passedPreview } = route.params ?? {};
+  const {
+    mode: routeMode,
+    service_id,
+    variant_id,
+    bundle_id,
+    selected_items: routeSelectedItems,
+    previewData: passedPreview,
+  } = route.params ?? {};
   const mode = routeMode === 'buy_now' ? 'buy_now' : 'cart';
 
   const { isAuthenticated } = useAuth();
@@ -276,8 +341,8 @@ export default function ServiceCheckoutScreen() {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -323,10 +388,10 @@ export default function ServiceCheckoutScreen() {
       return getCheckoutPreview();
     },
     enabled: isAuthenticated,
-    staleTime: 0,
+    staleTime: 30 * 1000,
     gcTime: THIRTY_MINUTES,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     // Keep the current service summary mounted during background refreshes
     // (including the refresh triggered after selecting an address).
     placeholderData: previousData => previousData,
@@ -395,7 +460,7 @@ export default function ServiceCheckoutScreen() {
           });
         }
 
-        console.log("↩️ Cart restored after payment failure/cancel");
+        __DEV__ && console.log("↩️ Cart restored after payment failure/cancel");
       } catch (restoreErr) {
         console.error("❌ Failed to restore cart after payment failure:", restoreErr);
       }
@@ -403,14 +468,14 @@ export default function ServiceCheckoutScreen() {
 
     try {
       if (placing) {
-        console.log("⏸️ Order placement already in progress");
+        __DEV__ && console.log("⏸️ Order placement already in progress");
         return;
       }
       setPlacing(true);
 
-      console.log("📦 Creating order...");
+      __DEV__ && console.log("📦 Creating order...");
 
-      console.log("🏠 Address debug:", JSON.stringify(address, null, 2));
+      __DEV__ && console.log("🏠 Address debug:", JSON.stringify(address, null, 2));
       const address_id = Number(address?.id ?? (address as any)?.address_id ?? 0);
       if (!address_id) {
         setPlacing(false);
@@ -428,9 +493,9 @@ export default function ServiceCheckoutScreen() {
       // ✅ Step 1: Create Order via API
       let orderRes;
       if (mode === "buy_now" && bundle_id) {
-        const selected_items = items
+        const selected_items = (routeSelectedItems?.length ? routeSelectedItems : items
           .flatMap((item) => item.bundle_items ?? [])
-          .map((i: any) => Number(i.bundle_item_id))
+          .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id)))
           .filter((id) => Number.isFinite(id) && id > 0);
 
         orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
@@ -482,7 +547,7 @@ export default function ServiceCheckoutScreen() {
         ? String(raw_uuid).trim()
         : String(numeric_order_id);
 
-      console.log("🔍 Order Extraction Debug:", {
+      __DEV__ && console.log("🔍 Order Extraction Debug:", {
         mode,
         numeric_order_id,
         parent_order_id,
@@ -497,14 +562,14 @@ export default function ServiceCheckoutScreen() {
         return;
       }
 
-      console.log("✅ Order created successfully:", { numeric_order_id, parent_order_id, mode });
+      __DEV__ && console.log("✅ Order created successfully:", { numeric_order_id, parent_order_id, mode });
 
       // ✅ Step 2: Create Payment Order
-      console.log("💳 Creating payment order with parent_order_id:", parent_order_id);
+      __DEV__ && console.log("💳 Creating payment order with parent_order_id:", parent_order_id);
       const paymentRes = await createServicePaymentOrder(parent_order_id);
       const paymentData = paymentRes.data;
 
-      console.log("💳 Payment Order Response:", paymentData);
+      __DEV__ && console.log("💳 Payment Order Response:", paymentData);
 
       const options = {
         key: paymentData.key || "rzp_test_xxx",
@@ -516,14 +581,14 @@ export default function ServiceCheckoutScreen() {
         theme: { color: "#8665FF" },
       };
 
-      console.log("🔑 Razorpay options:", { order_id: options.order_id, amount: options.amount, key: options.key });
+      __DEV__ && console.log("🔑 Razorpay options:", { order_id: options.order_id, amount: options.amount, key: options.key });
 
       setPlacing(false);
 
       // ✅ Step 3: Open Razorpay Checkout
       RazorpayCheckout.open(options)
         .then(async (response) => {
-          console.log("💰 Payment successful:", response);
+          __DEV__ && console.log("💰 Payment successful:", response);
           try {
             setPlacing(true);
 
@@ -531,7 +596,7 @@ export default function ServiceCheckoutScreen() {
             if (mode !== "buy_now") {
               try {
                 await clearServiceCart();
-                console.log("🧹 Cart cleared successfully");
+                __DEV__ && console.log("🧹 Cart cleared successfully");
                 await queryClient.invalidateQueries({ queryKey: SERVICE_CART_QUERY_KEY });
                 await queryClient.invalidateQueries({ queryKey: SERVICE_CHECKOUT_QUERY_KEY });
               } catch (clearErr) {
@@ -547,13 +612,13 @@ export default function ServiceCheckoutScreen() {
                 razorpay_signature: response.razorpay_signature,
               });
 
-              console.log("🔐 Payment verified:", verifyRes);
+              __DEV__ && console.log("🔐 Payment verified:", verifyRes);
 
               if (!verifyRes?.success) {
                 // Poll as fallback if verify response doesn't confirm success
                 await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
                 const statusRes = await checkServicePaymentStatus(parent_order_id);
-                console.log("📊 Payment status poll:", statusRes);
+                __DEV__ && console.log("📊 Payment status poll:", statusRes);
               }
             } catch (verifyError) {
               console.error("⚠️ Verification failed, proceeding to upload:", verifyError);
@@ -634,7 +699,7 @@ export default function ServiceCheckoutScreen() {
         "Failed to place order";
       alert.error?.("Error", serverMessage);
     }
-  }, [mode, service_id, variant_id, bundle_id, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
+  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
   const handleRemoveFromCheckout = useCallback(async (item: ServicePreviewItem) => {
     if (mode !== 'cart' || !item.id) return;
     if (removingId === item.id) return;
@@ -752,7 +817,15 @@ export default function ServiceCheckoutScreen() {
           <View key={`${item.id}-${item.service_id}-${item.variant_id}-${idx}`} style={styles.card}>
             <View style={styles.itemRow}>
               <View style={styles.iconBg}>
-                <MaterialIcons name="description" size={28} color="#8665FF" />
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: getServiceImageUrl(item.imageUrl) }}
+                    style={styles.itemImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <MaterialIcons name="description" size={28} color="#8665FF" />
+                )}
               </View>
               <View style={styles.itemInfo}>
                 {mode === 'cart' && !item.isBundle && (<View style={styles.itemTopActions}>
@@ -884,6 +957,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+  },
+  itemImage: {
+    width: 58,
+    height: 62,
+    borderRadius: 8,
   },
   itemInfo: { flex: 1 },
   itemTopActions: { alignItems: 'flex-end' },
