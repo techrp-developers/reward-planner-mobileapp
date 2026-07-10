@@ -19,9 +19,16 @@ type ComingSoonRouteParams = {
   ComingSoon: { moduleName?: string } | undefined;
 };
 
+// Internal route identifiers don't always match what should be shown to the user
+// (e.g. "DineOut" is the routing key for the Bus Booking tab).
+const MODULE_DISPLAY_NAMES: Record<string, string> = {
+  DineOut: 'Bus Booking',
+};
+
 const ComingSoonScreen = () => {
   const route = useRoute<RouteProp<ComingSoonRouteParams, 'ComingSoon'>>();
-  const moduleName = route?.params?.moduleName || 'Dashboard';
+  const rawModuleName = route?.params?.moduleName || 'Dashboard';
+  const moduleName = MODULE_DISPLAY_NAMES[rawModuleName] ?? rawModuleName;
   const [imageError, setImageError] = React.useState(false);
 
   return (
