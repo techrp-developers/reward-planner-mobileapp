@@ -18,7 +18,6 @@ import type { HomeStackParamList } from '../navigation/types';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import { LightTheme } from '../../../theme/colors';
 import { getStoredUserName, deleteCustomer, getAuthHeaders, updateProfile } from '../../common/auth/api/AuthAPI';
 import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirmationModal';
 import { rs, fs } from '../../../utils/responsive';
@@ -103,8 +102,8 @@ const ProfileScreen: React.FC = () => {
   const { isDark: appIsDark, theme: appTheme, toggleTheme } = useAppTheme();
   const profileContext: ProfileContext = route.params?.context ?? 'dashboard';
   const isDashboardProfile = profileContext === 'dashboard';
-  const isDark = isDashboardProfile && appIsDark;
-  const theme = isDashboardProfile ? appTheme : LightTheme;
+  const isDark = appIsDark;
+  const theme = appTheme;
   const { isAuthenticated, user: authUser, logout } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -442,13 +441,16 @@ const ProfileScreen: React.FC = () => {
               <View style={[styles.card, cardColor(isDark, theme)]}>
             {/* My Orders — expandable dropdown */}
             <TouchableOpacity
-              style={[styles.mrow, { borderBottomWidth: profileContext === 'ecommerce' ? 0.5 : 0, borderBottomColor: 'rgba(15,23,42,0.07)' }]}
+              style={[styles.mrow, {
+                borderBottomWidth: profileContext === 'ecommerce' ? 0.5 : 0,
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)',
+              }]}
               onPress={() => navigation.navigate(
                 (profileContext === 'bbps' ? 'OrderHistory' : 'MyOrder') as any
               )}
               activeOpacity={0.7}
             >
-              <View style={[styles.micon, { backgroundColor: '#EEF2FF' }]}>
+              <View style={[styles.micon, { backgroundColor: isDark ? 'rgba(129,140,248,0.12)' : '#EEF2FF' }]}>
                 <MaterialCommunityIcons name={profileContext === 'services' ? 'briefcase-check-outline' : 'shopping-outline'} size={17} color="#4F46E5" />
               </View>
               <View style={styles.flex1}>
@@ -491,7 +493,7 @@ const ProfileScreen: React.FC = () => {
           ════════════════════════════════════ */}
           <SectionHead title="Others" isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
-            {isDashboardProfile && <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />}
+            <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />
             <AccountRow icon="file-document-outline" label="Terms & Conditions" isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />

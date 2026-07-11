@@ -23,6 +23,7 @@ import {
   type ServiceCancellationReason,
 } from '../../api/OrderAPI';
 import type { HomeStackParamList } from '../../navigation/type';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCancellationRequest'>;
@@ -31,6 +32,7 @@ const PURPLE = '#7C3AED';
 
 export default function ServiceCancellationRequest() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const {
     service_order_id,
@@ -106,20 +108,20 @@ export default function ServiceCancellationRequest() {
 
   if (submitted) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.confirmScroll}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+        <ScrollView contentContainerStyle={[styles.confirmScroll, { backgroundColor: servicesTheme.colors.background }]}>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => navigation.navigate('ServiceOrderDetail', { parent_order_id })}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <MaterialCommunityIcons name="close" size={26} color="#111111" />
+            <MaterialCommunityIcons name="close" size={26} color={servicesTheme.colors.text} />
           </TouchableOpacity>
 
           <View style={styles.confirmCard}>
             <View style={styles.confirmCopy}>
-              <Text style={styles.confirmTitle}>Order Cancellation Requested</Text>
-              <Text style={styles.confirmSubtitle}>
+              <Text style={[styles.confirmTitle, { color: servicesTheme.colors.textStrong }]}>Order Cancellation Requested</Text>
+              <Text style={[styles.confirmSubtitle, { color: servicesTheme.colors.muted }]}>
                 We've received your request and our team will review it shortly.
               </Text>
               <TouchableOpacity
@@ -127,8 +129,8 @@ export default function ServiceCancellationRequest() {
                 activeOpacity={0.75}
                 onPress={() => navigation.navigate('ServiceOrderDetail', { parent_order_id })}
               >
-                <Text style={styles.confirmLinkText}>View Cancellation Details</Text>
-                <MaterialCommunityIcons name="chevron-right" size={22} color="#6B7280" />
+                <Text style={[styles.confirmLinkText, { color: servicesTheme.colors.primary }]}>View Cancellation Details</Text>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={servicesTheme.colors.subtle} />
               </TouchableOpacity>
             </View>
 
@@ -166,25 +168,25 @@ export default function ServiceCancellationRequest() {
             />
           </View>
 
-          <View style={styles.confirmActions}>
+          <View style={[styles.confirmActions, { backgroundColor: servicesTheme.colors.surface }]}>
             <TouchableOpacity
               style={styles.confirmActionRow}
               onPress={() => navigation.navigate('Home')}
               activeOpacity={0.75}
             >
-              <Text style={styles.confirmActionText}>Keep Shopping</Text>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="#6B7280" />
+              <Text style={[styles.confirmActionText, { color: servicesTheme.colors.text }]}>Keep Shopping</Text>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={servicesTheme.colors.subtle} />
             </TouchableOpacity>
 
-            <View style={styles.confirmDivider} />
+            <View style={[styles.confirmDivider, { backgroundColor: servicesTheme.colors.divider }]} />
 
             <TouchableOpacity
               style={styles.confirmActionRow}
               onPress={() => navigation.navigate('MyOrder')}
               activeOpacity={0.75}
             >
-              <Text style={styles.confirmActionText}>View All Orders</Text>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="#6B7280" />
+              <Text style={[styles.confirmActionText, { color: servicesTheme.colors.text }]}>View All Orders</Text>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={servicesTheme.colors.subtle} />
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -193,7 +195,7 @@ export default function ServiceCancellationRequest() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header title="Request Cancellation" onBack={() => navigation.goBack()} />
 
       <ScrollView
@@ -213,15 +215,15 @@ export default function ServiceCancellationRequest() {
           orderId={order_ref}
         />
 
-        <View style={styles.reasonCard}>
+        <View style={[styles.reasonCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
           <View style={styles.reasonHeader}>
-            <Text style={styles.reasonTitle}>Reason For Cancellation</Text>
+            <Text style={[styles.reasonTitle, { color: servicesTheme.colors.textStrong }]}>Reason For Cancellation</Text>
           </View>
 
           {loadingReasons ? (
             <View style={styles.loadingReasons}>
-              <ActivityIndicator color={PURPLE} />
-              <Text style={styles.loadingReasonText}>Loading reasons...</Text>
+              <ActivityIndicator color={servicesTheme.colors.primary} />
+              <Text style={[styles.loadingReasonText, { color: servicesTheme.colors.muted }]}>Loading reasons...</Text>
             </View>
           ) : null}
 
@@ -232,18 +234,18 @@ export default function ServiceCancellationRequest() {
               activeOpacity={0.75}
               onPress={() => setSelectedReason(reason)}
             >
-              <View style={styles.radioOuter} />
-              <Text style={styles.reasonText}>{reason.reason_text}</Text>
+              <View style={[styles.radioOuter, { borderColor: servicesTheme.colors.border }]} />
+              <Text style={[styles.reasonText, { color: servicesTheme.colors.text }]}>{reason.reason_text}</Text>
             </TouchableOpacity>
           ))}
 
           {!loadingReasons && !selectedReason && reasons.length === 0 ? (
-            <View style={styles.emptyReasonBox}>
-              <Text style={styles.emptyReasonText}>
+            <View style={[styles.emptyReasonBox, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
+              <Text style={[styles.emptyReasonText, { color: servicesTheme.colors.muted }]}>
                 No cancellation reasons are available right now.
               </Text>
               <TouchableOpacity onPress={loadReasons} style={styles.retryReasonsButton}>
-                <Text style={styles.retryReasonsText}>Retry</Text>
+                <Text style={[styles.retryReasonsText, { color: servicesTheme.colors.primary }]}>Retry</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -255,28 +257,28 @@ export default function ServiceCancellationRequest() {
                 activeOpacity={0.75}
                 onPress={() => setSelectedReason(null)}
               >
-                <View style={[styles.radioOuter, styles.radioOuterActive]}>
+                <View style={[styles.radioOuter, { borderColor: servicesTheme.colors.border }, styles.radioOuterActive]}>
                   <View style={styles.radioInner} />
                 </View>
-                <Text style={styles.reasonText}>{selectedReason.reason_text}</Text>
+                <Text style={[styles.reasonText, { color: servicesTheme.colors.text }]}>{selectedReason.reason_text}</Text>
               </TouchableOpacity>
             </>
           ) : null}
         </View>
 
         {selectedReason ? (
-          <View style={styles.commentBox}>
-            <Text style={styles.commentLabel}>
+          <View style={[styles.commentBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+            <Text style={[styles.commentLabel, { color: servicesTheme.colors.text }]}>
               Comments{isReasonOther ? '*' : ''}
             </Text>
             <TextInput
               placeholder="Enter any specific questions or requirements you'd like to share"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={servicesTheme.colors.subtle}
               value={comment}
               onChangeText={setComment}
               multiline
               textAlignVertical="top"
-              style={styles.commentInput}
+              style={[styles.commentInput, { color: servicesTheme.colors.text }]}
             />
           </View>
         ) : null}
@@ -287,7 +289,7 @@ export default function ServiceCancellationRequest() {
           onPress={submitCancellation}
         >
           <LinearGradient
-            colors={['#8665FF', '#5B47A3']}
+            colors={servicesTheme.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
@@ -305,16 +307,18 @@ export default function ServiceCancellationRequest() {
 }
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
         style={styles.headerBack}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={34} color="#777777" />
+        <MaterialCommunityIcons name="chevron-left" size={34} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
     </View>
   );
 }

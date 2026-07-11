@@ -33,6 +33,7 @@ import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../consta
 import RazorpayCheckout from "react-native-razorpay";
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
 import { getServiceImageUrl } from '../../utils/serviceImage';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCheckoutScreen'>;
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
@@ -303,6 +304,7 @@ const serviceCheckoutQueryKey = (
 
 export default function ServiceCheckoutScreen() {
   const navigation = useNavigation<NavProps>();
+  const servicesTheme = useServicesTheme();
   // MainLayout already reserves space for the services-module bottom bar via
   // paddingBottom on the content wrapper, so the CTA must not also offset by
   // the tab bar height itself (tabBarAware:false) — otherwise it floats above
@@ -747,10 +749,10 @@ export default function ServiceCheckoutScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
         <View style={styles.loadingWrapper}>
-          <View style={styles.checkoutSkeletonCard}>
+          <View style={[styles.checkoutSkeletonCard, { backgroundColor: servicesTheme.colors.surface }]}>
             <SkeletonBox pulse={pulse} width="60%" height={24} borderRadius={10} />
             <SkeletonBox pulse={pulse} width="100%" height={84} borderRadius={14} style={styles.checkoutSkeletonGap} />
             <SkeletonBox pulse={pulse} width="100%" height={112} borderRadius={14} style={styles.checkoutSkeletonGap} />
@@ -765,7 +767,7 @@ export default function ServiceCheckoutScreen() {
   // ── empty / error state ────────────────────────────────────────────────────
   if (!isLoading && hasStarted && !isCheckoutFetching && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
         <EmptyCart
           message={
@@ -780,7 +782,7 @@ export default function ServiceCheckoutScreen() {
 
   // ── main checkout UI ───────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
       <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
 
       <ScrollView
@@ -789,20 +791,20 @@ export default function ServiceCheckoutScreen() {
       >
 
         {/* Address card */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
           <View style={styles.addressRow}>
-            <MaterialCommunityIcons name="home-variant" size={28} color={address ? '#7C3AED' : '#EF4444'} />
+            <MaterialCommunityIcons name="home-variant" size={28} color={address ? servicesTheme.colors.primary : '#EF4444'} />
             <View style={styles.addressBody}>
               <View style={styles.addressTopRow}>
-                <Text style={styles.addressTitle}>
+                <Text style={[styles.addressTitle, { color: servicesTheme.colors.textStrong }]}>
                   {address ? `Delivering to ${address.contact_name || 'User'}` : 'No delivery address'}
                 </Text>
                 <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AddressSelect')}>
-                  <Text style={styles.changeText}>{address ? 'Change' : '+ Add Address'}</Text>
+                  <Text style={[styles.changeText, { color: servicesTheme.colors.primary }]}>{address ? 'Change' : '+ Add Address'}</Text>
                 </TouchableOpacity>
               </View>
               {address ? (
-                <Text style={styles.addressSub} numberOfLines={2}>{addressLine}</Text>
+                <Text style={[styles.addressSub, { color: servicesTheme.colors.muted }]} numberOfLines={2}>{addressLine}</Text>
               ) : (
                 <Text style={[styles.addressSub, styles.addressMissing]}>
                   Please add a delivery address to continue
@@ -814,9 +816,9 @@ export default function ServiceCheckoutScreen() {
 
         {/* Service item cards */}
         {items.map((item, idx) => (
-          <View key={`${item.id}-${item.service_id}-${item.variant_id}-${idx}`} style={styles.card}>
+          <View key={`${item.id}-${item.service_id}-${item.variant_id}-${idx}`} style={[styles.card, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
             <View style={styles.itemRow}>
-              <View style={styles.iconBg}>
+              <View style={[styles.iconBg, { backgroundColor: servicesTheme.colors.iconBg }]}>
                 {item.imageUrl ? (
                   <Image
                     source={{ uri: getServiceImageUrl(item.imageUrl) }}
@@ -838,18 +840,18 @@ export default function ServiceCheckoutScreen() {
                   </TouchableOpacity>
                 </View>
                 )}
-                <Text style={styles.serviceName} numberOfLines={2}>{item.service_name
+                <Text style={[styles.serviceName, { color: servicesTheme.colors.textStrong }]} numberOfLines={2}>{item.service_name
                 }</Text>
-                <View style={styles.variantTag}>
-                  <Text style={styles.variantText}>{item.variant_name}</Text>
+                <View style={[styles.variantTag, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#EDE9FE' }]}>
+                  <Text style={[styles.variantText, { color: servicesTheme.colors.primary }]}>{item.variant_name}</Text>
                 </View>
                 {!!item.description && (
-                  <Text style={styles.descText} numberOfLines={2}>{item.description}</Text>
+                  <Text style={[styles.descText, { color: servicesTheme.colors.muted }]} numberOfLines={2}>{item.description}</Text>
                 )}
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceText}>₹{item.price.toLocaleString('en-IN')}</Text>
+                  <Text style={[styles.priceText, { color: servicesTheme.colors.success }]}>₹{item.price.toLocaleString('en-IN')}</Text>
                   {item.mrp > item.price && (
-                    <Text style={styles.mrpText}>₹{item.mrp.toLocaleString('en-IN')}</Text>
+                    <Text style={[styles.mrpText, { color: servicesTheme.colors.subtle }]}>₹{item.mrp.toLocaleString('en-IN')}</Text>
                   )}
                   {item.mrp > item.price && (
                     <View style={styles.saveBadge}>
@@ -863,12 +865,12 @@ export default function ServiceCheckoutScreen() {
             </View>
 
             {item.documents.length > 0 && (
-              <View style={styles.docsSection}>
-                <Text style={styles.docsTitle}>Documents Required</Text>
+              <View style={[styles.docsSection, { borderTopColor: servicesTheme.colors.divider }]}>
+                <Text style={[styles.docsTitle, { color: servicesTheme.colors.textStrong }]} >Documents Required</Text>
                 {item.documents.map((doc, i) => (
                   <View key={`${doc}-${i}`} style={styles.docRow}>
                     <View style={styles.docDot} />
-                    <Text style={styles.docText}>{doc}</Text>
+                    <Text style={[styles.docText, { color: servicesTheme.colors.text }]}>{doc}</Text>
                   </View>
                 ))}
               </View>

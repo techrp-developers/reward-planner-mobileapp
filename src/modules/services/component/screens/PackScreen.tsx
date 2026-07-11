@@ -16,6 +16,7 @@ import { addBundleToCart, getBundleDetail, getBuyNowBundlePreview, type BundleEn
 import { useQueryClient } from '@tanstack/react-query';
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import PackBanner from '../../assete/service/PackBanner.png';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
 type PackRouteProp = RouteProp<HomeStackParamList, 'PackScreen'>;
 
@@ -100,6 +101,7 @@ const parseTrustStat = (raw: string): StatItem => {
 
 function PackScreen() {
   const navigation = useNavigation<NavProp>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<PackRouteProp>();
   const queryClient = useQueryClient();
   const [priceType, setPriceType] =
@@ -439,18 +441,18 @@ function PackScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={[styles.loaderContainer, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader
           title={screenTitle}
           onBackPress={() => navigation.goBack()}
         />
-        <ActivityIndicator size="large" color="#8665FF" style={styles.loader} />
+        <ActivityIndicator size="large" color={servicesTheme.colors.primary} style={styles.loader} />
       </View>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: servicesTheme.colors.background }]}>
       {/* HEADER */}
       <ScreenHeader
         title={screenTitle}
@@ -477,7 +479,7 @@ function PackScreen() {
         />
 
         {/* SELECTED COUNT */}
-        <Text style={styles.selectedText}>
+        <Text style={[styles.selectedText, { color: servicesTheme.colors.muted }]}>
           Selected {selectedItemIds.length} items
         </Text>
 
@@ -503,7 +505,7 @@ function PackScreen() {
         ))}
 
         {priceType === 'bundle' && totals.savings > 0 && (
-          <Text style={styles.savingsText}>You save ₹{totals.savings}</Text>
+          <Text style={[styles.savingsText, { color: servicesTheme.colors.success }]}>You save ₹{totals.savings}</Text>
         )}
 
         <PackFooterCTA

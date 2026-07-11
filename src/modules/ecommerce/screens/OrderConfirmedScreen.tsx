@@ -18,6 +18,7 @@ import OrderCancelModal from "../../common/order/OrderCancelModal";
 import { fetchOrderDetails } from "../api/OrderApi";
 import { fetchAllProducts, getProductImageUrl } from "../api/ProductApi";
 import { fetchReviewableOrder } from "../api/ReviewApi";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type OrderConfirmedRoute = RouteProp<HomeStackParamList, "OrderConfirmedScreen">;
@@ -129,6 +130,7 @@ const isTerminalStatus = (value?: string) => {
 export default function OrderConfirmedScreen() {
     const navigation = useNavigation<Nav>();
     const route = useRoute<OrderConfirmedRoute>();
+    const { isDark, theme } = useAppTheme();
 
     const [isModalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -368,14 +370,14 @@ export default function OrderConfirmedScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.safe}>
+            <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
                     title="Order Confirmed"
                     onBackPress={() => navigation.goBack()}
                 />
                 <View style={styles.centeredState}>
-                    <ActivityIndicator size="large" color="#0D862E" />
-                    <Text style={styles.stateText}>Loading order details...</Text>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                    <Text style={[styles.stateText, { color: theme.secondaryText }]}>Loading order details...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -383,7 +385,7 @@ export default function OrderConfirmedScreen() {
 
     if (error || !orderData?.order) {
         return (
-            <SafeAreaView style={styles.safe}>
+            <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
                     title="Order Confirmed"
                     onBackPress={() => navigation.goBack()}
@@ -396,7 +398,7 @@ export default function OrderConfirmedScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.safe}>
+        <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
             <OrderHeading
                 title="Order Confirmed"
                 onBackPress={() => navigation.goBack()}
@@ -434,29 +436,35 @@ export default function OrderConfirmedScreen() {
                 />
 
                 {isDeliveredOrder && orderData.items?.length ? (
-                    <View style={styles.reviewSection}>
-                        <Text style={styles.reviewSectionTitle}>Review your products</Text>
+                    <View style={[styles.reviewSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        <Text style={[styles.reviewSectionTitle, { color: theme.text }]}>Review your products</Text>
                         {orderData.items.map((item) => {
                             const canReview = Boolean(reviewableVariants[item.order_item_id]);
                             const title = [item.brand_name, item.product_name].filter(Boolean).join(" ");
 
                             return (
-                                <View key={item.order_item_id} style={styles.reviewItemRow}>
+                                <View key={item.order_item_id} style={[styles.reviewItemRow, { borderTopColor: theme.border }]}>
                                     <View style={styles.reviewItemCopy}>
-                                        <Text style={styles.reviewItemTitle} numberOfLines={2}>
+                                        <Text style={[styles.reviewItemTitle, { color: theme.text }]} numberOfLines={2}>
                                             {title || "Product"}
                                         </Text>
-                                        <Text style={styles.reviewItemMeta} numberOfLines={1}>
+                                        <Text style={[styles.reviewItemMeta, { color: theme.secondaryText }]} numberOfLines={1}>
                                             {item.attributes?.weight || item.attributes?.size || `Qty: ${item.quantity}`}
                                         </Text>
                                     </View>
                                     {canReview ? (
                                         <TouchableOpacity
-                                            style={styles.reviewButton}
+                                            style={[
+                                                styles.reviewButton,
+                                                {
+                                                    backgroundColor: isDark ? "#2D2148" : "#F5F3FF",
+                                                    borderColor: isDark ? "#5B4B86" : "#DDD6FE",
+                                                },
+                                            ]}
                                             activeOpacity={0.82}
                                             onPress={() => openReviewScreen(item)}
                                         >
-                                            <Text style={styles.reviewButtonText}>Write Review</Text>
+                                            <Text style={[styles.reviewButtonText, { color: theme.primary }]}>Write Review</Text>
                                         </TouchableOpacity>
                                     ) : (
                                         <Text style={styles.reviewDoneText}>Reviewed</Text>
@@ -486,7 +494,7 @@ export default function OrderConfirmedScreen() {
 
                 <InvoiceAndServiceBanner orderId={orderData.order.order_id} />
                 <View>
-                    <Text>You may also like this</Text>
+                    <Text style={[styles.relatedTitle, { color: theme.text }]}>You may also like this</Text>
 
                     <ProductCarousel products={relatedProducts} />
 
@@ -598,5 +606,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#DC2626",
         textAlign: "center",
+    },
+    relatedTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        marginBottom: 8,
     },
 });

@@ -28,6 +28,7 @@ import {
   type OrdersResponse,
   type ServiceOrder,
 } from "../../api/OrderAPI";
+import { useServicesTheme } from "../../utils/useServicesTheme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -63,6 +64,7 @@ const STATUS_META: Record<string, { color: string; label: string }> = {
 
 const PURPLE = "#8665FF";
 const GREEN = "#0D862E";
+type ServicesTheme = ReturnType<typeof useServicesTheme>;
 
 const toTitleCase = (value?: string) => {
   if (!value) return "Order Confirmed";
@@ -199,9 +201,11 @@ function ServiceDashboardBanner() {
 function ServiceOrderRow({
   order,
   onPress,
+  servicesTheme,
 }: {
   order: ServiceOrder;
   onPress: () => void;
+  servicesTheme: ServicesTheme;
 }) {
   const meta = STATUS_META[order.status] || {
     color: "#6B7280",
@@ -215,8 +219,8 @@ function ServiceOrderRow({
 
   return (
     <TouchableOpacity activeOpacity={0.82} onPress={onPress}>
-      <View style={styles.orderCard}>
-        <View style={styles.imageWrap}>
+      <View style={[styles.orderCard, { backgroundColor: servicesTheme.colors.surface }]}>
+        <View style={[styles.imageWrap, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
           {image ? (
             <Image source={{ uri: image }} style={styles.orderImage} />
           ) : (
@@ -234,18 +238,18 @@ function ServiceOrderRow({
             {meta.label.toUpperCase()}
           </Text>
           <View style={styles.titleRow}>
-            <Text style={styles.brandText} numberOfLines={1}>
+            <Text style={[styles.brandText, { color: servicesTheme.colors.textStrong }]} numberOfLines={1}>
               Service
             </Text>
-            <Text style={styles.productText} numberOfLines={1}>
+            <Text style={[styles.productText, { color: servicesTheme.colors.muted }]} numberOfLines={1}>
               {title}
             </Text>
           </View>
           <View style={styles.metaWrap}>
-            <Text style={styles.metaText} numberOfLines={1}>
+            <Text style={[styles.metaText, { color: servicesTheme.colors.muted }]} numberOfLines={1}>
               Order ID: {order.parent_order_id.slice(0, 8).toUpperCase()}
             </Text>
-            <Text style={styles.metaText} numberOfLines={1}>
+            <Text style={[styles.metaText, { color: servicesTheme.colors.muted }]} numberOfLines={1}>
               {[formatDisplayDate(order.created_at), subtitle].filter(Boolean).join(" | ")}
             </Text>
           </View>
@@ -264,10 +268,10 @@ function ServiceOrderRow({
               <Text style={styles.coinText}>+{coins}</Text>
             </View>
           ) : null}
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#9CA3AF" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color={servicesTheme.colors.subtle} />
         </View>
       </View>
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: servicesTheme.colors.divider }]} />
     </TouchableOpacity>
   );
 }
@@ -278,12 +282,14 @@ function FilterBottomSheet({
   currentStatus,
   onClose,
   onApply,
+  servicesTheme,
 }: {
   visible: boolean;
   currentTime: string;
   currentStatus: string;
   onClose: () => void;
   onApply: (time: string, status: string) => void;
+  servicesTheme: ServicesTheme;
 }) {
   const [selectedTime, setSelectedTime] = useState(currentTime);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
@@ -298,11 +304,11 @@ function FilterBottomSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+      <View style={[styles.sheet, { backgroundColor: servicesTheme.colors.surface }]}>
+        <View style={[styles.handle, { backgroundColor: servicesTheme.colors.divider }]} />
 
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Filter Orders</Text>
+          <Text style={[styles.sheetTitle, { color: servicesTheme.colors.textStrong }]}>Filter Orders</Text>
           <TouchableOpacity
             onPress={() => {
               setSelectedTime("");
@@ -313,7 +319,7 @@ function FilterBottomSheet({
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>Order Time</Text>
+        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>Order Time</Text>
         <View style={styles.chipGrid}>
           {TIME_FILTERS.map(item => (
             <TouchableOpacity
@@ -323,7 +329,7 @@ function FilterBottomSheet({
             >
               {selectedTime === item.key ? (
                 <LinearGradient
-                  colors={["#8665FF", "#5B47A3"]}
+                  colors={servicesTheme.gradients.primary}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.activeSheetChip}
@@ -331,15 +337,15 @@ function FilterBottomSheet({
                   <Text style={styles.activeSheetChipText}>{item.label}</Text>
                 </LinearGradient>
               ) : (
-                <View style={styles.sheetChip}>
-                  <Text style={styles.sheetChipText}>{item.label}</Text>
+                <View style={[styles.sheetChip, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
+                  <Text style={[styles.sheetChipText, { color: servicesTheme.colors.text }]}>{item.label}</Text>
                 </View>
               )}
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Order Status</Text>
+        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>Order Status</Text>
         <View style={styles.chipGrid}>
           {STATUS_FILTERS.map(item => (
             <TouchableOpacity
@@ -349,7 +355,7 @@ function FilterBottomSheet({
             >
               {selectedStatus === item.key ? (
                 <LinearGradient
-                  colors={["#8665FF", "#5B47A3"]}
+                  colors={servicesTheme.gradients.primary}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.activeSheetChip}
@@ -357,8 +363,8 @@ function FilterBottomSheet({
                   <Text style={styles.activeSheetChipText}>{item.label}</Text>
                 </LinearGradient>
               ) : (
-                <View style={styles.sheetChip}>
-                  <Text style={styles.sheetChipText}>{item.label}</Text>
+                <View style={[styles.sheetChip, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
+                  <Text style={[styles.sheetChipText, { color: servicesTheme.colors.text }]}>{item.label}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -370,7 +376,7 @@ function FilterBottomSheet({
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={["#8665FF", "#5B47A3"]}
+            colors={servicesTheme.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.applyBtn}
@@ -385,6 +391,7 @@ function FilterBottomSheet({
 
 export default function MyOrder() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const { isAuthenticated } = useAuth();
 
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
@@ -482,22 +489,22 @@ export default function MyOrder() {
   };
 
   const renderHeader = () => (
-    <View style={styles.headerContent}>
+    <View style={[styles.headerContent, { backgroundColor: servicesTheme.colors.background }]}>
       <ServiceDashboardBanner />
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <MaterialCommunityIcons name="magnify" size={20} color="#777777" />
+        <View style={[styles.searchBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+          <MaterialCommunityIcons name="magnify" size={20} color={servicesTheme.colors.muted} />
           <TextInput
             placeholder="Search your orders here"
-            placeholderTextColor="#999999"
-            style={styles.searchInput}
+            placeholderTextColor={servicesTheme.colors.subtle}
+            style={[styles.searchInput, { color: servicesTheme.colors.text }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 ? (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <MaterialCommunityIcons name="close-circle" size={18} color="#9CA3AF" />
+              <MaterialCommunityIcons name="close-circle" size={18} color={servicesTheme.colors.subtle} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -507,13 +514,13 @@ export default function MyOrder() {
           onPress={() => setIsFilterVisible(true)}
           activeOpacity={0.78}
         >
-          <MaterialCommunityIcons name="tune-variant" size={20} color="#555555" />
-          <Text style={styles.filterText}>Filters</Text>
+          <MaterialCommunityIcons name="tune-variant" size={20} color={servicesTheme.colors.muted} />
+          <Text style={[styles.filterText, { color: servicesTheme.colors.muted }]}>Filters</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.statsRow}>
-        <LinearGradient colors={["#EFFFF4", "#DDFFE8"]} style={styles.statCard}>
+        <LinearGradient colors={servicesTheme.isDark ? ["#132016", "#111113"] : ["#EFFFF4", "#DDFFE8"]} style={[styles.statCard, { borderColor: servicesTheme.colors.border }]}>
           <Text style={styles.statLabel}>Coins Earned Till Date:</Text>
           <View style={styles.statValueRow}>
             <Coin width={22} height={22} />
@@ -523,7 +530,7 @@ export default function MyOrder() {
           </View>
         </LinearGradient>
 
-        <LinearGradient colors={["#EFFFF4", "#DDFFE8"]} style={styles.statCard}>
+        <LinearGradient colors={servicesTheme.isDark ? ["#132016", "#111113"] : ["#EFFFF4", "#DDFFE8"]} style={[styles.statCard, { borderColor: servicesTheme.colors.border }]}>
           <Text style={styles.statLabel}>Total Savings Till Date:</Text>
           <Text style={[styles.statValue, styles.savingsText]}>
             {"\u20B9"}{summary.totalSavings.toLocaleString("en-IN")}
@@ -551,23 +558,23 @@ export default function MyOrder() {
       );
     }
 
-    return <Text style={styles.emptyText}>No orders found</Text>;
+    return <Text style={[styles.emptyText, { color: servicesTheme.colors.muted }]}>No orders found</Text>;
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.heading}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+      <View style={[styles.heading, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
           style={styles.backBtn}
         >
-          <MaterialCommunityIcons name="chevron-left" size={28} color="#374151" />
+          <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headingTitle}>My Orders</Text>
+        <Text style={[styles.headingTitle, { color: servicesTheme.colors.textStrong }]}>My Orders</Text>
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.helpBtn}
+          style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}
           onPress={() => navigation.navigate("HelpForm")}
         >
           <MaterialCommunityIcons
@@ -588,6 +595,7 @@ export default function MyOrder() {
         renderItem={({ item }) => (
           <ServiceOrderRow
             order={item}
+            servicesTheme={servicesTheme}
             onPress={() =>
               navigation.navigate("ServiceOrderDetail", {
                 parent_order_id: item.parent_order_id,
@@ -595,7 +603,7 @@ export default function MyOrder() {
             }
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { backgroundColor: servicesTheme.colors.background }]}
         showsVerticalScrollIndicator={false}
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
@@ -603,7 +611,7 @@ export default function MyOrder() {
           loadingMore ? (
             <ActivityIndicator size="small" color={GREEN} style={styles.footerLoader} />
           ) : orders.length > 0 && page >= totalPages ? (
-            <Text style={styles.noMoreText}>No More Orders</Text>
+            <Text style={[styles.noMoreText, { color: servicesTheme.colors.muted }]}>No More Orders</Text>
           ) : null
         }
       />
@@ -618,6 +626,7 @@ export default function MyOrder() {
           setStatusFilter(status);
           setIsFilterVisible(false);
         }}
+        servicesTheme={servicesTheme}
       />
     </SafeAreaView>
   );
