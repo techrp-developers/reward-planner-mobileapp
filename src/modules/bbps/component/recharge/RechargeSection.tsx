@@ -25,6 +25,7 @@ import {
   RechargePlanGroup,
 } from '../../api/BillsAPI';
 import { useAlert } from '../../../ecommerce/components/alerts';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 const getPlanId = (plan: RechargePlan) =>
   String(plan.planId || plan.plan_id || plan.id || plan.recharge_plan_id || '');
@@ -52,6 +53,7 @@ const rechargePlansCache = new Map<
 const isFresh = (timestamp: number) => Date.now() - timestamp < TEN_MINUTES;
 
 function RechargeSection({ navigation, route }: any) {
+  const bbpsTheme = useBbpsTheme();
   const { user } = useAuth();
   const alert = useAlert();
   const alertRef = useRef(alert);
@@ -304,7 +306,7 @@ function RechargeSection({ navigation, route }: any) {
 
   return (
     <>
-    <ScrollView style={styles.mainContainer} stickyHeaderIndices={[0]}>
+    <ScrollView style={[styles.mainContainer, { backgroundColor: bbpsTheme.colors.background }]} stickyHeaderIndices={[0]}>
       <BBPSHead
         user={{
           name: user?.name || 'User',
@@ -316,7 +318,7 @@ function RechargeSection({ navigation, route }: any) {
         onChangePress={() => navigation.goBack()}
       />
 
-      <View style={styles.outerContainer}>
+      <View style={[styles.outerContainer, { backgroundColor: bbpsTheme.colors.background }]}>
         {loading ? (
           <View>
             <View style={styles.headerRow}>
@@ -339,7 +341,7 @@ function RechargeSection({ navigation, route }: any) {
         ) : (
           <View>
             {hasPreselectedCircle && selectedLocation ? (
-              <View style={styles.circleSummaryRow}>
+              <View style={[styles.circleSummaryRow, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
                 <View style={styles.circleSummaryLeft}>
                   <View style={styles.circleBadge}>
                     <Text style={styles.circleBadgeText}>
@@ -358,7 +360,7 @@ function RechargeSection({ navigation, route }: any) {
                   onPress={() => navigation.goBack()}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.changeCircleText}>Change</Text>
+                  <Text style={[styles.changeCircleText, { color: bbpsTheme.colors.primary }]}>Change</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -370,6 +372,10 @@ function RechargeSection({ navigation, route }: any) {
                 <TouchableOpacity
                   style={[
                     styles.circleDropdown,
+                    {
+                      backgroundColor: bbpsTheme.colors.surfaceAlt,
+                      borderColor: bbpsTheme.colors.border,
+                    },
                     selectedLocation && styles.circleDropdownSelected,
                   ]}
                   onPress={() => setLocationModalVisible(true)}
@@ -406,21 +412,21 @@ function RechargeSection({ navigation, route }: any) {
               </>
             )}
 
-            <View style={styles.plansSection}>
-              <View style={styles.searchSection}>
-                <View style={styles.searchBar}>
-                  <MaterialIcons name="search" size={24} color="#9CA3AF" />
+            <View style={[styles.plansSection, { backgroundColor: bbpsTheme.colors.surface }]}>
+              <View style={[styles.searchSection, { backgroundColor: bbpsTheme.colors.surface }]}>
+                <View style={[styles.searchBar, { backgroundColor: bbpsTheme.colors.surfaceAlt, borderColor: bbpsTheme.colors.border }]}>
+                  <MaterialIcons name="search" size={24} color={bbpsTheme.colors.muted} />
                   <TextInput
                     placeholder="Search a Plan, e.g. 299 or 28 days"
-                    style={styles.searchInput}
-                    placeholderTextColor="#9CA3AF"
+                    style={[styles.searchInput, { color: bbpsTheme.colors.text }]}
+                    placeholderTextColor={bbpsTheme.colors.subtle}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                   />
                 </View>
               </View>
 
-              <View style={styles.tabContainer}>
+              <View style={[styles.tabContainer, { backgroundColor: bbpsTheme.colors.surface, borderBottomColor: bbpsTheme.colors.divider }]}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -470,7 +476,7 @@ function RechargeSection({ navigation, route }: any) {
                   <TouchableOpacity
                     key={`${getPlanId(plan) || getPlanAmount(plan)}-${index}`}
                     activeOpacity={0.9}
-                    style={styles.planCard}
+                    style={[styles.planCard, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}
                     onPress={() => handlePlanPress(plan)}
                   >
                     <View style={styles.planCardTop}>
@@ -479,7 +485,7 @@ function RechargeSection({ navigation, route }: any) {
                         <Text style={styles.planPriceText}>{getPlanAmount(plan)}</Text>
                       </View>
 
-                      <View style={styles.planDivider} />
+                      <View style={[styles.planDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
 
                       <View style={styles.planTagsCol}>
                         <View style={styles.planTagsRow}>
@@ -500,10 +506,10 @@ function RechargeSection({ navigation, route }: any) {
                       </View>
                     </View>
 
-                    <View style={styles.planCardFooter}>
+                    <View style={[styles.planCardFooter, { backgroundColor: bbpsTheme.colors.surfaceAlt }]}>
                       <Text style={styles.planFooterHint}>Recommended for you</Text>
                       <LinearGradient
-                        colors={['#8665FF', '#5B47A3']}
+                        colors={bbpsTheme.gradients.primary}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.planRechargeChip}

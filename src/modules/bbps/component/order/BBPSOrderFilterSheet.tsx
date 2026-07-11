@@ -11,6 +11,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 export type BBPSOrderStatus = '' | 'successful' | 'pending' | 'failed' | 'refunded';
 export type BBPSOrderTime = '' | '30days' | '3months' | '6months' | 'currentYear' | string;
@@ -21,6 +22,7 @@ type Props = {
   currentTime: BBPSOrderTime;
   onClose: () => void;
   onApply: (status: BBPSOrderStatus, time: BBPSOrderTime) => void;
+  bbpsTheme?: ReturnType<typeof useBbpsTheme>;
 };
 
 const STATUS_OPTIONS: Array<{ label: string; value: BBPSOrderStatus }> = [
@@ -50,8 +52,11 @@ export default function BBPSOrderFilterSheet({
   currentTime,
   onClose,
   onApply,
+  bbpsTheme: providedTheme,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const fallbackTheme = useBbpsTheme();
+  const bbpsTheme = providedTheme || fallbackTheme;
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, index) => String(currentYear - index));
@@ -69,16 +74,24 @@ export default function BBPSOrderFilterSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalRoot}>
         <Pressable style={styles.overlay} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <View
+          style={[
+            styles.sheet,
+            {
+              paddingBottom: Math.max(insets.bottom, 20),
+              backgroundColor: bbpsTheme.colors.surface,
+            },
+          ]}
+        >
           <View style={styles.header}>
-            <Text style={styles.title}>Filter</Text>
+            <Text style={[styles.title, { color: bbpsTheme.colors.textStrong }]}>Filter</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <MaterialCommunityIcons name="close" size={30} color="#3F3F46" />
+              <MaterialCommunityIcons name="close" size={30} color={bbpsTheme.colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-            <Text style={styles.sectionTitle}>SORT BY</Text>
+            <Text style={[styles.sectionTitle, { color: bbpsTheme.colors.muted }]}>SORT BY</Text>
             <View style={styles.statusRow}>
               {STATUS_OPTIONS.map((option) => {
                 const selected = status === option.value;
@@ -86,9 +99,17 @@ export default function BBPSOrderFilterSheet({
                   <TouchableOpacity
                     key={option.value}
                     onPress={() => setStatus(selected ? '' : option.value)}
-                    style={[styles.statusChip, selected && styles.statusChipSelected]}
+                    style={[
+                      styles.statusChip,
+                      {
+                        backgroundColor: bbpsTheme.colors.elevated,
+                        borderColor: bbpsTheme.colors.border,
+                      },
+                      selected && styles.statusChipSelected,
+                      selected && { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EEFF', borderColor: bbpsTheme.colors.primary },
+                    ]}
                   >
-                    <Text style={[styles.statusText, selected && styles.statusTextSelected]}>
+                    <Text style={[styles.statusText, { color: bbpsTheme.colors.muted }, selected && styles.statusTextSelected, selected && { color: bbpsTheme.colors.primary }]}>
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -96,7 +117,7 @@ export default function BBPSOrderFilterSheet({
               })}
             </View>
 
-            <Text style={styles.sectionTitle}>SORT BY TIME</Text>
+            <Text style={[styles.sectionTitle, { color: bbpsTheme.colors.muted }]}>SORT BY TIME</Text>
             {[
               ['30days', 'Last 30 days'],
               ['3months', 'Last 3 months'],
@@ -114,9 +135,9 @@ export default function BBPSOrderFilterSheet({
                   <MaterialCommunityIcons
                     name={selected ? 'radiobox-marked' : 'radiobox-blank'}
                     size={27}
-                    color={selected ? '#18181B' : '#D4D4D8'}
+                    color={selected ? bbpsTheme.colors.primary : bbpsTheme.colors.subtle}
                   />
-                  <Text style={styles.radioLabel}>{label}</Text>
+                  <Text style={[styles.radioLabel, { color: bbpsTheme.colors.text }]}>{label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -124,7 +145,7 @@ export default function BBPSOrderFilterSheet({
 
           <TouchableOpacity onPress={() => onApply(status, time)} activeOpacity={0.9}>
             <LinearGradient
-              colors={['#5B47A3', '#8665FF']}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.applyButton}

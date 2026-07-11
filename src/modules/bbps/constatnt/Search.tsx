@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import PaymentTop from '../../../navbar/assete/Payment_BG.png';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { BillCategory, fetchBillsCategories } from '../api/BillsAPI';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 import Recharge from '../assets/BBPS_Service/Recharge.svg';
 import DTH from '../assets/BBPS_Service/DTH.svg';
 import Subscriptions from '../assets/BBPS_Service/Subscriptions.svg';
@@ -99,6 +100,7 @@ const SearchResultIcon = ({ categoryName }: { categoryName: string }) => {
 };
 
 function Search({ navigation }: any) {
+  const bbpsTheme = useBbpsTheme();
   const { width } = useWindowDimensions();
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState<BillCategory[]>([]);
@@ -153,7 +155,7 @@ function Search({ navigation }: any) {
   const headerHeight = Math.round(width * 0.4);
 
   return (
-    <SafeAreaView style={styles.root} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.root, { backgroundColor: bbpsTheme.colors.background }]} edges={['left', 'right', 'bottom']}>
       <View style={[styles.header, { height: headerHeight }]}>
         <Image source={PaymentTop} style={styles.headerImage} resizeMode="cover" />
 
@@ -165,20 +167,29 @@ function Search({ navigation }: any) {
           <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <View style={styles.searchBox}>
-          <MaterialCommunityIcons name="magnify" size={20} color="#A654CD" />
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              borderColor: bbpsTheme.colors.border,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons name="magnify" size={20} color={bbpsTheme.colors.primary} />
           <TextInput
             autoFocus
             value={search}
             onChangeText={setSearch}
             placeholder='Search "Electricity, DTH, FASTag…"'
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={bbpsTheme.colors.muted}
             returnKeyType="search"
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: bbpsTheme.colors.text }]}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-              <MaterialCommunityIcons name="close-circle" size={18} color="#9CA3AF" />
+              <MaterialCommunityIcons name="close-circle" size={18} color={bbpsTheme.colors.subtle} />
             </TouchableOpacity>
           )}
         </View>
@@ -190,7 +201,7 @@ function Search({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         {!isSearchActive && (
-          <Text style={styles.hint}>Type at least 2 characters to search bill payments</Text>
+          <Text style={[styles.hint, { color: bbpsTheme.colors.subtle }]}>Type at least 2 characters to search bill payments</Text>
         )}
 
         {isSearchActive && loading && (
@@ -214,7 +225,7 @@ function Search({ navigation }: any) {
         )}
 
         {isSearchActive && !loading && failed && (
-          <Text style={styles.message}>Unable to load bill-payment services right now.</Text>
+          <Text style={[styles.message, { color: bbpsTheme.colors.muted }]}>Unable to load bill-payment services right now.</Text>
         )}
 
         {isSearchActive && !loading && !failed && results.length === 0 && (
@@ -225,7 +236,7 @@ function Search({ navigation }: any) {
           <TouchableOpacity
             key={item.operator_category_id}
             activeOpacity={0.8}
-            style={styles.resultRow}
+            style={[styles.resultRow, { borderBottomColor: bbpsTheme.colors.divider }]}
             onPress={() =>
               navigation.navigate('BillerSelectScreen', {
                 categoryId: item.operator_category_id,
@@ -234,7 +245,7 @@ function Search({ navigation }: any) {
             }
           >
             <LinearGradient
-              colors={['#8665FF', '#5B47A3']}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.resultIcon}
@@ -242,14 +253,14 @@ function Search({ navigation }: any) {
               <SearchResultIcon categoryName={item.operator_category_name} />
             </LinearGradient>
             <View style={styles.resultText}>
-              <Text style={styles.resultTitle} numberOfLines={1}>
+              <Text style={[styles.resultTitle, { color: bbpsTheme.colors.text }]} numberOfLines={1}>
                 {item.operator_category_name}
               </Text>
-              <Text style={styles.resultType} numberOfLines={1}>
+              <Text style={[styles.resultType, { color: bbpsTheme.colors.subtle }]} numberOfLines={1}>
                 {item.operator_category_group || 'Payments & bills'}
               </Text>
             </View>
-            <MaterialCommunityIcons name="arrow-top-left" size={20} color="#B6B6B6" />
+            <MaterialCommunityIcons name="arrow-top-left" size={20} color={bbpsTheme.colors.subtle} />
           </TouchableOpacity>
         ))}
       </ScrollView>

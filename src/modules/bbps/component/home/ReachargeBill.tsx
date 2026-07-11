@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SvgProps } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 // Asset Imports
 import Recharge from '../../assets/BBPS_Service/Recharge.svg';
@@ -41,13 +42,25 @@ const isVectorIcon = (icon: IconAsset): icon is VectorIconAsset =>
 const isSvgIcon = (icon: IconAsset): icon is SvgIconComponent =>
   typeof icon === 'function' && !isVectorIcon(icon);
 
-const ServiceItem = ({ icon, label, onPress }: { icon: IconAsset; label: string; onPress?: () => void }) => {
+type BbpsTheme = ReturnType<typeof useBbpsTheme>;
+
+const ServiceItem = ({
+  icon,
+  label,
+  onPress,
+  bbpsTheme,
+}: {
+  icon: IconAsset;
+  label: string;
+  onPress?: () => void;
+  bbpsTheme: BbpsTheme;
+}) => {
   const SvgIcon = isSvgIcon(icon) ? icon : null;
 
   return (
     <TouchableOpacity style={styles.itemContainer} activeOpacity={0.75} onPress={onPress}>
       <LinearGradient
-        colors={['#8665FF', '#5B47A3']}
+        colors={bbpsTheme.gradients.primary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.iconCircle}
@@ -60,15 +73,15 @@ const ServiceItem = ({ icon, label, onPress }: { icon: IconAsset; label: string;
           <Image source={icon} style={styles.iconImage} resizeMode="contain" />
         ) : null}
       </LinearGradient>
-      <Text style={styles.itemLabel}>{label}</Text>
+      <Text style={[styles.itemLabel, { color: bbpsTheme.colors.text }]}>{label}</Text>
     </TouchableOpacity>
   );
 };
 
-const SectionHeader = ({ title }: { title: string }) => (
+const SectionHeader = ({ title, bbpsTheme }: { title: string; bbpsTheme: BbpsTheme }) => (
   <View style={styles.sectionHeaderRow}>
-    <View style={styles.sectionHeaderAccent} />
-    <Text style={styles.sectionHeader}>{title}</Text>
+    <View style={[styles.sectionHeaderAccent, { backgroundColor: bbpsTheme.colors.primary }]} />
+    <Text style={[styles.sectionHeader, { color: bbpsTheme.colors.text }]}>{title}</Text>
   </View>
 );
 
@@ -216,7 +229,7 @@ const categoryRank = (section: SectionName, name: string) => {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 };
 
-const RechargeBillSkeleton = () => {
+const RechargeBillSkeleton = ({ bbpsTheme }: { bbpsTheme: BbpsTheme }) => {
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -244,17 +257,27 @@ const RechargeBillSkeleton = () => {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.skeletonTitle, { opacity: shimmerAnim }]} />
-      <Animated.View style={[styles.skeletonSearch, { opacity: shimmerAnim }]} />
+      <Animated.View style={[styles.skeletonTitle, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
+      <Animated.View style={[styles.skeletonSearch, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
 
       {[0, 1].map((section) => (
-        <View key={section} style={styles.sectionContainer}>
-          <Animated.View style={[styles.skeletonSectionHeader, { opacity: shimmerAnim }]} />
+        <View
+          key={section}
+          style={[
+            styles.sectionContainer,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              borderColor: bbpsTheme.colors.border,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
+          <Animated.View style={[styles.skeletonSectionHeader, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
           <View style={styles.grid}>
             {[0, 1, 2, 3].map((item) => (
               <View style={styles.itemContainer} key={item}>
-                <Animated.View style={[styles.skeletonCircle, { opacity: shimmerAnim }]} />
-                <Animated.View style={[styles.skeletonLabel, { opacity: shimmerAnim }]} />
+                <Animated.View style={[styles.skeletonCircle, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
+                <Animated.View style={[styles.skeletonLabel, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
               </View>
             ))}
           </View>
@@ -266,6 +289,7 @@ const RechargeBillSkeleton = () => {
 
 function RechargeBill() {
   const navigation = useNavigation<any>();
+  const bbpsTheme = useBbpsTheme();
   const { data: categories = [], isLoading: loading } = useQuery({
     queryKey: BILL_CATEGORIES_QUERY_KEY,
     queryFn: fetchBillsCategories,
@@ -319,14 +343,22 @@ function RechargeBill() {
   }, [categories]);
 
   if (loading) {
-    return <RechargeBillSkeleton />;
+    return <RechargeBillSkeleton bbpsTheme={bbpsTheme} />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.titleContainer}>
+      <View
+        style={[
+          styles.titleContainer,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.border,
+          },
+        ]}
+      >
         <LinearGradient
-          colors={['#8665FF', '#5B47A3']}
+          colors={bbpsTheme.gradients.primary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.titleIconWrap}
@@ -334,8 +366,8 @@ function RechargeBill() {
           <Recharge width={24} height={24} />
         </LinearGradient>
         <View style={styles.titleTextBlock}>
-          <Text style={styles.mainTitle}>Recharge & Bills</Text>
-          <Text style={styles.titleSubtitle}>Pay utilities, recharge mobile, and manage services</Text>
+          <Text style={[styles.mainTitle, { color: bbpsTheme.colors.textStrong }]}>Recharge & Bills</Text>
+          <Text style={[styles.titleSubtitle, { color: bbpsTheme.colors.muted }]}>Pay utilities, recharge mobile, and manage services</Text>
         </View>
       </View>
 
@@ -345,14 +377,25 @@ function RechargeBill() {
         }
 
         return (
-          <View key={section} style={styles.sectionContainer}>
-            <SectionHeader title={section} />
+          <View
+            key={section}
+            style={[
+              styles.sectionContainer,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                borderColor: bbpsTheme.colors.border,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
+            <SectionHeader title={section} bbpsTheme={bbpsTheme} />
             <View style={styles.grid}>
               {groupedData[section].map((item) => (
                 <ServiceItem
                   key={item.operator_category_id}
                   icon={ICON_MAP[item.operator_category_name] || FALLBACK_ICON}
                   label={item.operator_category_name}
+                  bbpsTheme={bbpsTheme}
                   onPress={() =>
                     navigation.navigate('BillerSelectScreen', {
                       categoryId: item.operator_category_id,
@@ -367,7 +410,7 @@ function RechargeBill() {
       })}
 
       {!SECTION_ORDER.some((section) => groupedData[section].length > 0) && (
-        <Text style={styles.emptyText}>No categories found.</Text>
+        <Text style={[styles.emptyText, { color: bbpsTheme.colors.muted }]}>No categories found.</Text>
       )}
     </View>
   );
