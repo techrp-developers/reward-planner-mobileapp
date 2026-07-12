@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
-import BackgroundImage from "../../../../assets/homepage/navbar_bg.jpg";
+import BackgroundImage from "../../../../navbar/assete/Background1.jpeg";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 type Props = {

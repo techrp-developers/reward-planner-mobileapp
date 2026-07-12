@@ -35,6 +35,7 @@ import {
   prefetchCheckoutScreenData,
 } from '../../navigation/navigationPerformance'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
@@ -116,6 +117,7 @@ export default function WithAddress() {
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current
+  const { theme } = useAppTheme()
   // const [showAllCoupons, setShowAllCoupons] = useState(false)
   const [useRewards, setUseRewards] = useState(true)
 
@@ -410,7 +412,7 @@ export default function WithAddress() {
 
   if (!loading && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart onBrowse={() => navigation.navigate('Home')} />
       </View>
@@ -419,9 +421,9 @@ export default function WithAddress() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -433,7 +435,7 @@ export default function WithAddress() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
 
       <FlatList
@@ -441,7 +443,8 @@ export default function WithAddress() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}
         removeClippedSubviews={true}
         windowSize={7}
         initialNumToRender={4}

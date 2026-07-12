@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import LinearGradient from 'react-native-linear-gradient'
 import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Props = {
   total: number;
@@ -25,6 +26,7 @@ export default function OrderProcedbutton({
   bottomOffset,
   onLayout,
 }: Props) {
+  const { isDark, theme } = useAppTheme()
   const safeTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
   const autoSticky = useStickyBottomCTA();
   const resolvedBottomOffset = bottomOffset ?? autoSticky.bottomOffset;
@@ -32,11 +34,18 @@ export default function OrderProcedbutton({
 
   return (
     <StickyBottomCTA bottomOffset={resolvedBottomOffset} onLayout={resolvedOnLayout}>
-    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}> 
+    <View style={[
+      styles.wrapper,
+      {
+        paddingBottom: wrapperPaddingBottom,
+        backgroundColor: isDark ? '#111827' : '#F4F5FF',
+        shadowColor: isDark ? '#000000' : '#111827',
+      },
+    ]}> 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.price}>₹{safeTotal}</Text>
-          <Text style={styles.items}>{count} items selected</Text>
+          <Text style={[styles.price, { color: theme.text }]}>₹{safeTotal}</Text>
+          <Text style={[styles.items, { color: theme.secondaryText }]}>{count} items selected</Text>
         </View>
 
         <TouchableOpacity activeOpacity={0.85} onPress={onPlaceOrder} disabled={loading || disabled}>

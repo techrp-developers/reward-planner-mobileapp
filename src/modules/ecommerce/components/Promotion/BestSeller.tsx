@@ -11,6 +11,7 @@ import HorizontalProductList from "../common/HorizontalProductList";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import { queryClient } from "../../../../query/queryClient";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 import {
   PROMO_CARD_WIDTH,
   PROMO_CARD_GAP,
@@ -55,6 +56,7 @@ export const prefetchBestSellerSection = async () => {
 function BestSeller() {
   const navigation = useNavigation<Nav>();
   const pulse = useState(() => new Animated.Value(0))[0];
+  const { isDark, theme } = useAppTheme();
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: BEST_SELLER_QUERY_KEY,
@@ -90,7 +92,7 @@ function BestSeller() {
 
   if (isLoading && products.length === 0) {
     return (
-      <View style={styles.loaderWrap}>
+      <View style={[styles.loaderWrap, { backgroundColor: theme.background }]}>
         <SkeletonBox width="92%" height={300} borderRadius={12} pulse={pulse} />
       </View>
     );
@@ -99,19 +101,13 @@ function BestSeller() {
   if (products.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.heading}>Best Sellers</Text>
-          <View style={styles.trendingBadge}>
-            <MaterialIcons name="trending-up" size={12} color="#FF3F6C" />
-            <Text style={styles.trendingText}>MOST POPULAR RIGHT NOW</Text>
-          </View>
-        </View>
+        <Text style={[styles.heading, { color: theme.text }]}>Best Sellers</Text>
 
         <TouchableOpacity style={styles.viewAllBtn} activeOpacity={0.7} onPress={handleViewAll}>
-          <Text style={styles.viewAllText}>View All</Text>
-          <MaterialIcons name="keyboard-arrow-right" size={20} color="#FF3F6C" />
+          <Text style={[styles.viewAllText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={20} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>
 
@@ -130,8 +126,8 @@ function BestSeller() {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#FAD4E5",
-    paddingVertical: 14,
-    marginTop: 8,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
   headerRow: {
     flexDirection: "row",
@@ -144,17 +140,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#1A1A1A",
-  },
-  trendingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  trendingText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#FF3F6C",
-    marginLeft: 4,
   },
   viewAllBtn: {
     flexDirection: "row",

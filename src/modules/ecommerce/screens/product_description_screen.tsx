@@ -27,6 +27,7 @@ import {
   productDetailsQueryKey,
 } from "../navigation/navigationPerformance";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 type RouteT = RouteProp<HomeStackParamList, "ProductDescription">;
 
@@ -53,6 +54,7 @@ export default function
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
   const { addItem, updateQuantity, totalQuantity, items: cartItems } = useCart();
+  const { theme } = useAppTheme();
   const queryClient = useQueryClient();
 
   const [product, setProduct] = useState<any>(null);
@@ -435,9 +437,9 @@ export default function
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHead cartCount={totalQuantity} />
-        <ScrollView contentContainerStyle={styles.skeletonContent}>
+        <ScrollView contentContainerStyle={[styles.skeletonContent, { backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={320} borderRadius={18} />
           <SkeletonBox pulse={pulse} width="58%" height={20} borderRadius={10} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="82%" height={14} borderRadius={999} style={styles.skeletonTextGap} />
@@ -448,7 +450,7 @@ export default function
       </View>
     );
   }
-  if (!product) return <Text style={styles.notFoundText}>Product not found</Text>;
+  if (!product) return <Text style={[styles.notFoundText, { color: theme.text, backgroundColor: theme.background }]}>Product not found</Text>;
   const variant = selectedVariant;
 
   const salePrice = variant ? `₹${variant.sale_price}` : "₹0";
@@ -478,10 +480,10 @@ export default function
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHead cartCount={totalQuantity} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { backgroundColor: theme.background }]}>
 
         <View>
           <MemoProductHero
@@ -491,7 +493,7 @@ export default function
             loadImages={allowHeroImageLoad}
           />
           <TouchableOpacity
-            style={styles.heartIcon}
+            style={[styles.heartIcon, { backgroundColor: theme.card, borderColor: theme.border }]}
             activeOpacity={0.8}
             onPress={handleWishlist}
             disabled={wishLoading}
@@ -499,23 +501,23 @@ export default function
             <MaterialCommunityIcons
               name={wishlisted ? "heart" : "heart-outline"}
               size={18}
-              color={wishlisted ? "#E53935" : "#4A4A4A"}
+              color={wishlisted ? "#E53935" : theme.secondaryText}
             />
           </TouchableOpacity>
         </View>
         <View style={styles.descriptionWrap}>
           {/* Brand + Product in one row */}
           <View style={styles.titleRow}>
-            <Text style={styles.productTitle}>
+            <Text style={[styles.productTitle, { color: theme.text }]}>
               {product.brand_name}
             </Text>
 
-            <Text style={styles.productName}>
+            <Text style={[styles.productName, { color: theme.text }]}>
               {product.product_name}
             </Text>
           </View>
 
-          <Text style={styles.productSubdescription}>
+          <Text style={[styles.productSubdescription, { color: theme.secondaryText }]}>
             {product?.short_description || productDescription || "No description available"}
           </Text>
         </View>
@@ -572,7 +574,7 @@ export default function
         </View>
 
         <View style={styles.relatedSection}>
-          <Text style={styles.relatedTitle}>Related Products</Text>
+          <Text style={[styles.relatedTitle, { color: theme.text }]}>Related Products</Text>
           <ProductGrid
             key={`related-${relatedProductId}`}
             useFlatList={false}

@@ -8,12 +8,12 @@ import {
   ViewToken,
 } from 'react-native';
 import CategoriesSection from '../components/home/categories_section';
-import HomeBanner from '../components/home/HomeBanner';
 import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import { useAuth } from '../../common/auth/context/AuthContext';
+import { useAppTheme } from '../../../theme/ThemeContext';
 
-// Keep only the immediately visible banner and categories in the cold-open
+// Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
 const LazyBestSeller = React.lazy(() =>
   Promise.resolve({ default: require('../components/Promotion/BestSeller').default }),
@@ -44,7 +44,6 @@ const LazyProductCategory = React.lazy(() =>
 );
 
 type SectionKey =
-  | 'banner'
   | 'categories'
   | 'bestSeller'
   | 'topRated'
@@ -61,7 +60,6 @@ type HomeSection = {
 };
 
 const HOME_SECTIONS: HomeSection[] = [
-  { key: 'banner' },
   { key: 'categories' },
   { key: 'bestSeller' },
   { key: 'topRated' },
@@ -74,12 +72,11 @@ const HOME_SECTIONS: HomeSection[] = [
   { key: 'productCategory' },
 ];
 
-const INITIAL_VISIBLE_SECTIONS = new Set<SectionKey>(['banner', 'categories']);
+const INITIAL_VISIBLE_SECTIONS = new Set<SectionKey>(['categories']);
 const READY_HOME_SECTIONS = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
 const HOME_SECTION_KEYS = HOME_SECTIONS.map((section) => section.key);
 const SECTION_PREFETCH_AHEAD = 3;
 
-const MemoHomeBanner = React.memo(HomeBanner);
 const MemoCategoriesSection = React.memo(CategoriesSection);
 
 const LazySection = ({ children }: { children: React.ReactNode }) => (
@@ -100,8 +97,6 @@ const SectionContent = React.memo(({
   }
 
   switch (sectionKey) {
-    case 'banner':
-      return <MemoHomeBanner />;
     case 'categories':
       return <MemoCategoriesSection />;
     case 'bestSeller':
@@ -135,6 +130,7 @@ ListFooterSpacer.displayName = 'HomeListFooterSpacer';
 
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
+  const { theme } = useAppTheme();
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(READY_HOME_SECTIONS),
   );
@@ -257,13 +253,13 @@ function HomeScreen() {
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FlatList
         data={HOME_SECTIONS}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { backgroundColor: theme.background }]}
         initialNumToRender={3}
         maxToRenderPerBatch={3}
         updateCellsBatchingPeriod={24}

@@ -7,6 +7,7 @@ import {
   Image,
 } from 'react-native'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Props = {
   title: string
@@ -39,63 +40,67 @@ export default function CartItemCard({
   onBuyNow,
   onPress,
 }: Props) {
+  const { isDark, theme } = useAppTheme()
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.row}>
         <TouchableOpacity style={styles.mainContent} activeOpacity={0.85} onPress={onPress}>
           {/* ✅ FIXED IMAGE */}
           {image ? (
-            <Image source={{ uri: image }} style={styles.image} />
+            <View style={[styles.imageWrap, { backgroundColor: isDark ? '#18181B' : '#F9FAFB' }]}>
+              <Image source={{ uri: image }} style={styles.image} />
+            </View>
           ) : (
-            <View style={[styles.image, { backgroundColor: '#E6E6E6', justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ fontSize: 12, color: '#999' }}>No Image</Text>
+            <View style={[styles.imageWrap, { backgroundColor: isDark ? '#18181B' : '#E6E6E6' }]}>
+              <Text style={{ fontSize: 12, color: theme.secondaryText }}>No Image</Text>
             </View>
           )}
 
           <View style={styles.info}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
 
             <View style={styles.deliveryRow}>
-              <MaterialIcons name="local-shipping" size={16} color="#777" />
-              <Text style={styles.deliveryText}>{deliveryText}</Text>
+              <MaterialIcons name="local-shipping" size={16} color={theme.secondaryText} />
+              <Text style={[styles.deliveryText, { color: theme.secondaryText }]}>{deliveryText}</Text>
             </View>
 
             <Text style={styles.returnText}>{returnText}</Text>
 
             <View style={styles.priceRow}>
-              <Text style={styles.mrp}>₹{mrp}</Text>
-              <Text style={styles.price}> ₹{price}</Text>
+              <Text style={[styles.mrp, { color: theme.secondaryText }]}>₹{mrp}</Text>
+              <Text style={[styles.price, { color: theme.text }]}> ₹{price}</Text>
               <Text style={styles.discount}> {discountText}</Text>
             </View>
           </View>
         </TouchableOpacity>
 
-        <View style={styles.qtyBox}>
+        <View style={[styles.qtyBox, { backgroundColor: isDark ? '#18181B' : '#FFFFFF', borderColor: theme.border }]}>
           <TouchableOpacity onPress={onDecrease} style={styles.qtyBtn}>
-            <Text style={styles.qtyText}>−</Text>
+            <Text style={[styles.qtyText, { color: theme.text }]}>−</Text>
           </TouchableOpacity>
 
-          <Text style={styles.qty}>{quantity}</Text>
+          <Text style={[styles.qty, { color: theme.text }]}>{quantity}</Text>
 
           <TouchableOpacity onPress={onIncrease} style={styles.qtyBtn}>
-            <Text style={styles.qtyText}>+</Text>
+            <Text style={[styles.qtyText, { color: theme.text }]}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtn} onPress={onRemove}>
-          <MaterialIcons name="delete-outline" size={18} color="#444" />
-          <Text style={styles.actionText}>Remove Item</Text>
+          <MaterialIcons name="delete-outline" size={18} color={theme.secondaryText} />
+          <Text style={[styles.actionText, { color: theme.text }]}>Remove Item</Text>
         </TouchableOpacity>
 
-        <View style={styles.verticalDivider} />
+        <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
         <TouchableOpacity style={styles.actionBtn} onPress={onBuyNow}>
-          <MaterialIcons name="auto-awesome" size={18} color="#444" />
-          <Text style={styles.actionText}>Buy this Now</Text>
+          <MaterialIcons name="auto-awesome" size={18} color={theme.secondaryText} />
+          <Text style={[styles.actionText, { color: theme.text }]}>Buy this Now</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -118,11 +123,19 @@ const styles = StyleSheet.create({
         padding: 12,
     },
 
-    image: {
+    imageWrap: {
         width: 64,
         height: 64,
-        resizeMode: 'contain',
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginRight: 10,
+    },
+
+    image: {
+        width: 58,
+        height: 58,
+        resizeMode: 'contain',
     },
 
     info: {

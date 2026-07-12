@@ -34,7 +34,7 @@ export default function DeliveryDetailsCard({
             style={styles.icon}
           />
           <Text style={[styles.addressText, { color: theme.secondaryText }]}>
-            <Text style={styles.addressType}>{addressType} – </Text>
+            <Text style={[styles.addressType, { color: theme.text }]}>{addressType} – </Text>
             {address}
           </Text>
         </View>

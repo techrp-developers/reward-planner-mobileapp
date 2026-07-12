@@ -374,6 +374,7 @@ export default function OrderConfirmedScreen() {
                 <OrderHeading
                     title="Order Confirmed"
                     onBackPress={() => navigation.goBack()}
+                    isDark={isDark}
                 />
                 <View style={styles.centeredState}>
                     <ActivityIndicator size="large" color={theme.primary} />
@@ -389,6 +390,7 @@ export default function OrderConfirmedScreen() {
                 <OrderHeading
                     title="Order Confirmed"
                     onBackPress={() => navigation.goBack()}
+                    isDark={isDark}
                 />
                 <View style={styles.centeredState}>
                     <Text style={styles.errorText}>{error || "Unable to load order details."}</Text>
@@ -402,6 +404,7 @@ export default function OrderConfirmedScreen() {
             <OrderHeading
                 title="Order Confirmed"
                 onBackPress={() => navigation.goBack()}
+                isDark={isDark}
             />
 
             <ScrollView
@@ -467,7 +470,7 @@ export default function OrderConfirmedScreen() {
                                             <Text style={[styles.reviewButtonText, { color: theme.primary }]}>Write Review</Text>
                                         </TouchableOpacity>
                                     ) : (
-                                        <Text style={styles.reviewDoneText}>Reviewed</Text>
+                                        <Text style={[styles.reviewDoneText, { color: "#16A34A" }]}>Reviewed</Text>
                                     )}
                                 </View>
                             );

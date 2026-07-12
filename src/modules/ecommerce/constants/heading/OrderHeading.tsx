@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import { handleNavigateWithPrefetch } from "../../navigation/navigationPerformance";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Props = {
   title?: string;
@@ -30,6 +31,9 @@ export default function OrderHeading({
   isDark = false,
 }: Props) {
   const navigation = useNavigation<Nav>();
+  const appTheme = useAppTheme();
+  const darkMode = isDark || appTheme.isDark;
+  const { theme } = appTheme;
 
   const handleBack = () => {
     handleNavigateWithPrefetch({
@@ -53,8 +57,8 @@ export default function OrderHeading({
   };
 
   return (
-    <SafeAreaView edges={["top"]} style={[styles.safe, isDark && styles.safeDark]}>
-      <View style={[styles.header, isDark && styles.headerDark]}>
+    <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor: theme.card }]}>
+      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         {/* Back Button */}
         <TouchableOpacity
           onPress={handleBack}
@@ -64,12 +68,12 @@ export default function OrderHeading({
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
-            color={isDark ? "#FFFFFF" : "#374151"}
+            color={theme.text}
           />
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={[styles.title, isDark && styles.titleDark]} numberOfLines={1}>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
           {title}
         </Text>
 
@@ -77,7 +81,13 @@ export default function OrderHeading({
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleHelp}
-            style={styles.helpBtn}
+            style={[
+              styles.helpBtn,
+              {
+                backgroundColor: darkMode ? "#18181B" : "#FFFFFF",
+                borderColor: theme.border,
+              },
+            ]}
           >
             <MaterialCommunityIcons
               name="chat-outline"

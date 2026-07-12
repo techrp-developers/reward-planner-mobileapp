@@ -13,6 +13,7 @@ import ProductCard from "../../constants/product_cart/ProductCard";
 import { fetchAllProducts, fetchSimilarProducts } from "../../api/ProductApi";
 import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Props = {
   products?: any[];
@@ -53,6 +54,7 @@ export default function ProductGrid({
   ListFooterComponent = null,
   onProductPress,
 }: Props) {
+  const { theme } = useAppTheme();
   const pulse = useRef(new Animated.Value(0)).current;
   const loadedProductIdsRef = useRef<Set<string>>(new Set());
   const [, forceVisibleTick] = React.useState(0);
@@ -236,11 +238,11 @@ export default function ProductGrid({
 
   if (isLoading) {
     return (
-      <View style={styles.listContent}>
+      <View style={[styles.listContent, { backgroundColor: theme.background }]}>
         <View style={styles.skeletonRow}>
           {skeletonItemStyles.map(({ key, wrapperStyle }) => (
             <View key={key} style={wrapperStyle}>
-              <View style={styles.skeletonCard}>
+              <View style={[styles.skeletonCard, { backgroundColor: theme.card }]}>
                 <SkeletonBox pulse={pulse} width="100%" height={Math.round(cardWidth * 1.08)} borderRadius={12} />
                 <SkeletonBox pulse={pulse} width="88%" height={12} borderRadius={999} style={styles.skeletonText} />
                 <SkeletonBox pulse={pulse} width="56%" height={10} borderRadius={999} style={styles.skeletonTextSmall} />
@@ -255,7 +257,7 @@ export default function ProductGrid({
   if (errorMsg) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{errorMsg}</Text>
+        <Text style={[styles.errorText, { color: theme.secondaryText }]}>{errorMsg}</Text>
       </View>
     );
   }
@@ -264,7 +266,7 @@ export default function ProductGrid({
 
   if (!useFlatList) {
     return (
-      <View style={styles.listContent}>
+      <View style={[styles.listContent, { backgroundColor: theme.background }]}>
         <View style={styles.staticGrid}>
           {dataToShow.map((item, index) => (
             <React.Fragment key={String(item?.id ?? item?.product_id ?? item?._id ?? index)}>
@@ -272,6 +274,13 @@ export default function ProductGrid({
             </React.Fragment>
           ))}
         </View>
+        {hasNextPage && !loadingMore && onEndReached ? (
+          <View
+            onLayout={() => {
+              onEndReached();
+            }}
+          />
+        ) : null}
         {ListFooterComponent}
       </View>
     );
@@ -284,7 +293,7 @@ export default function ProductGrid({
       keyExtractor={(item, index) => String(item?.id ?? item?.product_id ?? item?._id ?? index)}
       numColumns={columns}
       renderItem={renderItem}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, { backgroundColor: theme.background }]}
       columnWrapperStyle={styles.columnRow}
       showsVerticalScrollIndicator={false}
       onViewableItemsChanged={onViewableItemsChanged}

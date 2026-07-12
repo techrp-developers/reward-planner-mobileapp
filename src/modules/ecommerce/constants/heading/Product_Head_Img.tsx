@@ -6,7 +6,7 @@ import {
   useWindowDimensions,
   Image,
 } from "react-native";
-import BackgroundImage from "../../../../assets/homepage/navbar_bg.jpg";
+import BackgroundImage from "../../../../navbar/assete/Background1.jpeg";
 import AppIconButton from "../icons/AppIconButton";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +16,7 @@ import {
   prefetchCartScreenData,
 } from "../../navigation/navigationPerformance";
 import { useCart } from "../../context/CartContext";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -39,6 +40,7 @@ export default function ProductHead({
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
   const { totalQuantity: cartCount } = useCart();
+  const { isDark, theme } = useAppTheme();
 
   const calculatedHeaderHeight = Math.round(width * BASE_HEADER_RATIO);
   const HEADER_HEIGHT = headerHeight ?? calculatedHeaderHeight;
@@ -105,9 +107,16 @@ export default function ProductHead({
       >
         <AppIconButton
           type="back"
-          variant="ghost"
+          variant="solid"
+          color={theme.text}
           onPress={handleBack}
-          style={{ width: ICON, height: ICON }}
+          style={{
+            width: ICON,
+            height: ICON,
+            backgroundColor: isDark ? "rgba(24,24,27,0.92)" : "#FFFFFF",
+            borderColor: theme.border,
+            borderWidth: 1,
+          }}
         />
 
         <View
@@ -117,13 +126,15 @@ export default function ProductHead({
               height: SEARCH_HEIGHT,
               borderRadius: SEARCH_HEIGHT * 0.35,
               paddingHorizontal: width * 0.03,
+              backgroundColor: isDark ? "#1F2937" : "#FFFFFF",
+              borderColor: theme.border,
             },
           ]}
         >
           <AppIconButton
             type="search"
             variant="ghost"
-            color="#777"
+            color={theme.secondaryText}
             onPress={handleSearch}
           />
 
@@ -131,8 +142,8 @@ export default function ProductHead({
 
           <TextInput
             placeholder='Search "TRF Bling"'
-            placeholderTextColor="#777"
-            style={[styles.searchInput, { fontSize: width * 0.038 }]}
+            placeholderTextColor={theme.secondaryText}
+            style={[styles.searchInput, { fontSize: width * 0.038, color: theme.text }]}
             onFocus={handleSearch}
             showSoftInputOnFocus={false}
             caretHidden
@@ -141,9 +152,16 @@ export default function ProductHead({
 
         <AppIconButton
           type="cart"
+          color={theme.text}
           onPress={handleCart}
           badgeCount={cartCount}
-          style={{ width: ICON, height: ICON }}
+          style={{
+            width: ICON,
+            height: ICON,
+            backgroundColor: isDark ? "rgba(24,24,27,0.92)" : "#FFFFFF",
+            borderColor: theme.border,
+            borderWidth: 1,
+          }}
         />
       </View>
     </>

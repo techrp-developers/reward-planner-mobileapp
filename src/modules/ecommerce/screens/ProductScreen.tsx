@@ -29,6 +29,7 @@ import type {
   ProductCollectionSource,
 } from "../navigation/types";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type ProductScreenRoute = RouteProp<HomeStackParamList, "ProductScreen">;
@@ -105,6 +106,7 @@ function ProductScreen() {
   const route = useRoute<ProductScreenRoute>();
   const { width } = useWindowDimensions();
   const pulse = useRef(new Animated.Value(0)).current;
+  const { theme } = useAppTheme();
   const source = route.params?.source ?? "all";
   const title = COLLECTION_TITLES[source];
 
@@ -167,14 +169,14 @@ function ProductScreen() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <ProductHeadColor title={title} onBackPress={() => navigation.goBack()} />
 
       {isLoading ? (
-        <View style={styles.skeletonWrap}>
+        <View style={[styles.skeletonWrap, { backgroundColor: theme.background }]}>
           <View style={styles.skeletonRow}>
             {Array.from({ length: 6 }).map((_, index) => (
-              <View key={`product-skeleton-${index}`} style={[styles.skeletonCard, { width: cardWidth }]}>
+              <View key={`product-skeleton-${index}`} style={[styles.skeletonCard, { width: cardWidth, backgroundColor: theme.card }]}>
                 <SkeletonBox pulse={pulse} width="100%" height={Math.round(cardWidth * 1.05)} borderRadius={14} />
                 <SkeletonBox pulse={pulse} width="86%" height={12} borderRadius={999} style={styles.skeletonText} />
                 <SkeletonBox pulse={pulse} width="60%" height={10} borderRadius={999} style={styles.skeletonTextSmall} />
@@ -183,8 +185,8 @@ function ProductScreen() {
           </View>
         </View>
       ) : error && products.length === 0 ? (
-        <View style={styles.centerWrap}>
-          <Text style={styles.emptyText}>
+        <View style={[styles.centerWrap, { backgroundColor: theme.background }]}>
+          <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
             {(error as Error)?.message || `Failed to load ${title.toLowerCase()}.`}
           </Text>
         </View>
@@ -194,7 +196,8 @@ function ProductScreen() {
           keyExtractor={(item, index) => String(item?.id ?? item?.product_id ?? index)}
           numColumns={2}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          style={{ backgroundColor: theme.background }}
+          contentContainerStyle={[styles.listContent, { backgroundColor: theme.background }]}
           columnWrapperStyle={styles.row}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.35}
@@ -204,13 +207,13 @@ function ProductScreen() {
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#5B47A3" />
+                <ActivityIndicator size="small" color={theme.primary} />
               </View>
             ) : null
           }
           ListEmptyComponent={
-            <View style={styles.centerWrap}>
-              <Text style={styles.emptyText}>No {title.toLowerCase()} found.</Text>
+            <View style={[styles.centerWrap, { backgroundColor: theme.background }]}>
+              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No {title.toLowerCase()} found.</Text>
             </View>
           }
         />

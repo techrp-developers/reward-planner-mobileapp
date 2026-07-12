@@ -17,6 +17,7 @@ import { HomeStackParamList } from "../../navigation/types";
 import { fetchAllCategories, getProductImageUrl } from "../../api/ProductApi";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
 import { queryClient } from "../../../../query/queryClient";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 const CATEGORIES_QUERY_KEY = ["ecommerce", "home", "categories-section"] as const;
@@ -60,6 +61,7 @@ export const prefetchCategoriesSection = () =>
 export default function CategoriesSection() {
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
+  const { isDark, theme } = useAppTheme();
 
   const { data: categories = [], isLoading: loading } = useQuery<Category[]>({
     queryKey: CATEGORIES_QUERY_KEY,
@@ -70,12 +72,15 @@ export default function CategoriesSection() {
   });
 
   const layout = React.useMemo(() => {
-    const horizontalPadding = width >= 768 ? 20 : 16;
+    const sectionHorizontalMargin = 0;
+    const sectionInnerPadding = 16;
+    const horizontalPadding = width >= 768 ? 12 : 8;
     const gap = width >= 900 ? 16 : width >= 600 ? 14 : 12;
     const numColumns = width >= 900 ? 6 : width >= 600 ? 5 : width >= 380 ? 4 : 3;
+    const availableWidth = width - sectionHorizontalMargin * 2 - sectionInnerPadding * 2;
     const totalPadding = horizontalPadding * 2;
     const totalGap = gap * (numColumns - 1);
-    const cardSize = (width - totalPadding - totalGap) / numColumns;
+    const cardSize = (availableWidth - totalPadding - totalGap) / numColumns;
     const imageSize = cardSize * 0.68;
     const labelFontSize = width >= 900 ? 13 : width >= 600 ? 12 : width >= 380 ? 11 : 10;
     const labelLineHeight = labelFontSize + 4;
@@ -136,7 +141,7 @@ export default function CategoriesSection() {
           onPress={() => onPressCategory(item)}
         >
           <LinearGradient
-            colors={["#A654CD", "#FC8BAD"]}
+            colors={isDark ? ["#FACC15", "#FFFFFF"] : ["#FACC15", "#111827"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[
@@ -153,6 +158,7 @@ export default function CategoriesSection() {
                 styles.cardInner,
                 {
                   borderRadius: layout.cardSize * 0.22,
+                  backgroundColor: isDark ? "#18181B" : theme.card,
                 },
               ]}
             >
@@ -175,6 +181,7 @@ export default function CategoriesSection() {
                 fontSize: layout.labelFontSize,
                 lineHeight: layout.labelLineHeight,
                 minHeight: layout.labelLineHeight * 2,
+                color: theme.text,
               },
             ]}
             numberOfLines={2}
@@ -185,25 +192,25 @@ export default function CategoriesSection() {
         </TouchableOpacity>
       );
     },
-    [layout, onPressCategory]
+    [isDark, layout, onPressCategory, theme.card, theme.text]
   );
 
   if (loading) {
-    return <HomeSectionSkeleton height={240} />;
+    return <HomeSectionSkeleton height={240} backgroundColor={theme.background} />;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Categories</Text>
+        <Text style={[styles.heading, { color: theme.text }]}>Categories</Text>
 
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => navigation.navigate("CategoriesScreen")}
           style={styles.exploreBtn}
         >
-          <Text style={styles.exploreText}>View All</Text>
-          <MaterialIcons name="chevron-right" size={18} color="#3B82F6" />
+          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
+          <MaterialIcons name="chevron-right" size={18} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>
       <FlatList
@@ -230,9 +237,11 @@ export default function CategoriesSection() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
+    paddingVertical: 14,
     backgroundColor: "#fff",
-        paddingHorizontal:20,
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 4,
 
   },
   listContent: {
@@ -278,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerRow: {
-    // paddingHorizontal: 16,
+    paddingHorizontal: 0,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -299,5 +308,9 @@ const styles = StyleSheet.create({
   exploreBtn: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 7,
+    paddingLeft: 10,
+    paddingRight: 6,
+    borderRadius: 999,
   },
 });

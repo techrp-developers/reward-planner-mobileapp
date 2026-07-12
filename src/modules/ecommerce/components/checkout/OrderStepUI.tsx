@@ -46,6 +46,7 @@ import {
 } from "../../navigation/navigationPerformance";
 import RecommendedProducts from "../Promotion/RecommendedProducts";
 import { useStickyBottomCTA } from "../../../../bottombar/hooks/useStickyBottomCTA";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type RouteT = RouteProp<HomeStackParamList, "OrderStepUI">;
 type StepStatus = "done" | "current" | "upcoming";
@@ -127,6 +128,7 @@ const isPaymentVerified = (res: any) => {
 
 export default function OrderStepUI() {
   const { isAuthenticated, logout, user } = useAuth();
+  const { isDark, theme } = useAppTheme();
   const stickyCTA = useStickyBottomCTA();
   const { removeItem: removeFromCart } = useCart();
   const alert = useAlert();
@@ -1012,7 +1014,7 @@ export default function OrderStepUI() {
 
   if (loading) {
     return (
-      <View style={styles.loadingWrapper}>
+      <View style={[styles.loadingWrapper, { backgroundColor: theme.background }]}>
         <View style={styles.checkoutSkeletonCard}>
           <SkeletonBox pulse={pulse} width="60%" height={24} borderRadius={10} />
           <SkeletonBox pulse={pulse} width="100%" height={84} borderRadius={14} style={styles.checkoutSkeletonGap} />
@@ -1026,11 +1028,12 @@ export default function OrderStepUI() {
 
   if (isEmptyCheckoutState) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor
           title="Cart"
           onBackPress={handleEmptyCheckoutBack}
           showSearch={false}
+          isDark={isDark}
         />
         <EmptyCart
           message="Your cart is empty. Add products to continue."
@@ -1041,11 +1044,12 @@ export default function OrderStepUI() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor
         title="Checkout"
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -1062,18 +1066,18 @@ export default function OrderStepUI() {
           </View>
 
           {/* Address Card */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.cardRow}>
               <MaterialCommunityIcons
                 name="home-variant"
                 size={30}
-                color="#2D2A2A"
+                color={theme.text}
                 style={styles.homeIcon}
               />
 
               <View style={styles.cardContent}>
                 <View style={styles.cardTopRow}>
-                  <Text style={styles.title}>
+                  <Text style={[styles.title, { color: theme.text }]}>
                     {address
                       ? `Delivering to ${address.contact_name || "User"}`
                       : "Delivery address"}
@@ -1083,7 +1087,7 @@ export default function OrderStepUI() {
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.address}>
+                <Text style={[styles.address, { color: theme.secondaryText }]}>
                   {address
                     ? addressLine || "No address selected"
                     : "No address selected"}
@@ -1157,7 +1161,7 @@ export default function OrderStepUI() {
             <RecommendedProducts />
             {relatedProductId ? (
               <View style={styles.relatedSection}>
-                <Text style={styles.relatedTitle}>Related Products</Text>
+                <Text style={[styles.relatedTitle, { color: theme.text }]}>Related Products</Text>
                 <ProductGrid
                   key={`related-${relatedProductId}`}
                   useFlatList={false}

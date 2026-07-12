@@ -24,10 +24,10 @@ import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
 import PaymentTop from "./assete/Payment_BG.png";
 import BusBookingTop from "./assete/Bus_BG.png";
+import Background1 from "./assete/Background1.jpeg";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
@@ -109,7 +109,7 @@ const PAYMENT_ROUTES = new Set([
 ]);
 
 const BG_MAP: Record<TopTab, any> = {
-  Product: ProductTop,
+  Product: Background1,
   Services: ServiceTop,
   Payments: PaymentTop,
   DineOut: BusBookingTop,

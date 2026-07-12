@@ -8,6 +8,7 @@ import {
   Image,
 } from "react-native";
 import { getProductImageUrl } from "../../api/ProductApi";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Props = {
   attributes: Record<string, string[]>;
@@ -22,6 +23,7 @@ export default function ProductVariants({
   variants,
   onChange,
 }: Props) {
+  const { isDark, theme } = useAppTheme();
   const variantList = Array.isArray(variants) ? variants : [];
   const attrEntries = Object.entries(attributes || {}).sort(([a], [b]) => {
     const aIsSize = a.toLowerCase().includes("size") ? -1 : 0;
@@ -56,7 +58,7 @@ export default function ProductVariants({
 
         return (
           <View key={attrKey} style={styles.section}>
-            <Text style={styles.label}>
+            <Text style={[styles.label, { color: theme.text }]}>
               {sectionTitle}:
               <Text style={styles.value}> {selectedValue || "Select"}</Text>
             </Text>
@@ -89,8 +91,20 @@ export default function ProductVariants({
                     onPress={() => !disabled && onChange(attrKey, value)}
                     style={[
                       isColorAttr ? styles.colorCard : styles.optionChip,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
                       isSelected && (isColorAttr ? styles.colorCardActive : styles.optionChipActive),
+                      isSelected && {
+                        backgroundColor: isDark ? "#111827" : "#F9FAFB",
+                        borderColor: theme.text,
+                      },
                       disabled && (isColorAttr ? styles.colorCardDisabled : styles.optionChipDisabled),
+                      disabled && {
+                        backgroundColor: isDark ? "#18181B" : "#F3F4F6",
+                        borderColor: theme.border,
+                      },
                     ]}
                     activeOpacity={disabled ? 1 : 0.85}
                     disabled={disabled}
@@ -102,6 +116,7 @@ export default function ProductVariants({
                     <Text
                       style={[
                         styles.optionText,
+                        { color: theme.text },
                         isSelected && styles.optionTextActive,
                         disabled && styles.optionTextDisabled,
                       ]}
