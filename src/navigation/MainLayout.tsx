@@ -9,6 +9,7 @@ import BottomTabs from "../bottombar/BottomTabs";
 import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
+import { useAppTheme } from "../theme/ThemeContext";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -109,6 +110,7 @@ function MainLayout() {
   const route = useRoute<any>();
   const navigationState = useNavigationState((state) => state);
   const insets = useSafeAreaInsets();
+  const { theme } = useAppTheme();
   const moduleNavigationRef = React.useRef<any>(null);
 
   const routeChain = React.useMemo(
@@ -279,11 +281,11 @@ function MainLayout() {
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={showNavbar ? styles.navbarSlot : styles.navbarSlotHidden}>
         <Navbar activeModule={activeMode} onModuleChange={handleModuleChange} />
       </View>
-      <View style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
+      <View style={[styles.content, { paddingBottom: contentBottomSpacing, backgroundColor: theme.background }]}>
         <ModuleStack.Navigator
           initialRouteName="ProductModule"
           screenListeners={moduleScreenListeners}
@@ -292,7 +294,7 @@ function MainLayout() {
             animation: "none",
             gestureEnabled: true,
             freezeOnBlur: true,
-            contentStyle: { backgroundColor: "#FFFFFF" },
+            contentStyle: { backgroundColor: theme.background },
           }}
         >
           <ModuleStack.Screen

@@ -382,10 +382,30 @@ function Dashbord() {
           ]}
         >
           <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
-          <View style={styles.moduleLaunchContent}>
-            <View style={styles.moduleLaunchLineWide} />
-            <View style={styles.moduleLaunchLine} />
-            <View style={styles.moduleLaunchCard} />
+          <View
+            style={[
+              styles.moduleLaunchContent,
+              { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
+            ]}
+          >
+            <View
+              style={[
+                styles.moduleLaunchLineWide,
+                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+              ]}
+            />
+            <View
+              style={[
+                styles.moduleLaunchLine,
+                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+              ]}
+            />
+            <View
+              style={[
+                styles.moduleLaunchCard,
+                { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
+              ]}
+            />
           </View>
         </View>
       )}
@@ -510,26 +530,22 @@ const styles = StyleSheet.create({
     padding: rs(18),
     borderTopLeftRadius: rs(28),
     borderTopRightRadius: rs(28),
-    backgroundColor: '#F8FAFC',
   },
   moduleLaunchLineWide: {
     width: '58%',
     height: rs(18),
     borderRadius: rs(9),
-    backgroundColor: '#E2E8F0',
     marginBottom: rs(12),
   },
   moduleLaunchLine: {
     width: '34%',
     height: rs(12),
     borderRadius: rs(6),
-    backgroundColor: '#E2E8F0',
     marginBottom: rs(22),
   },
   moduleLaunchCard: {
     width: '100%',
     height: rs(210),
     borderRadius: rs(18),
-    backgroundColor: '#E2E8F0',
   },
 });
