@@ -113,7 +113,9 @@ const ProfileScreen: React.FC = () => {
   const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading]             = useState(true);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [logoutLoading, setLogoutLoading]           = useState(false);
+  const [deleteLoading, setDeleteLoading]           = useState(false);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -197,30 +199,25 @@ const ProfileScreen: React.FC = () => {
 
   // ── Delete account ───────────────────────────────────────────────────────
   const handleDeleteAccount = useCallback(() => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to permanently delete your account? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => {
-            try {
-              setLogoutLoading(true);
-              const res = await deleteCustomer();
-              if (res?.success || res?.status === 'ok' || res?.data) {
-                await logout();
-                rootNavigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
-              } else {
-                Alert.alert('Failed', 'Could not delete account. Please try again.');
-              }
-            } catch {
-              Alert.alert('Failed', 'Could not delete account. Please try again.');
-            } finally { setLogoutLoading(false); }
-          },
-        },
-      ]
-    );
+    setDeleteModalVisible(true);
+  }, []);
+
+  const handleDeleteAccountConfirm = useCallback(async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await deleteCustomer();
+      if (res?.success || res?.status === 'ok' || res?.data) {
+        await logout();
+        setDeleteModalVisible(false);
+        rootNavigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      } else {
+        Alert.alert('Failed', 'Could not delete account. Please try again.');
+      }
+    } catch {
+      Alert.alert('Failed', 'Could not delete account. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
   }, [logout, rootNavigation]);
 
   // ── Rate us ───────────────────────────────────────────────────────────────
@@ -524,8 +521,23 @@ const ProfileScreen: React.FC = () => {
       <LogoutConfirmationModal
         visible={logoutModalVisible}
         isLoading={logoutLoading}
+        isDark={isDark}
         onConfirm={handleLogoutConfirm}
         onCancel={() => setLogoutModalVisible(false)}
+      />
+      <LogoutConfirmationModal
+        visible={deleteModalVisible}
+        isLoading={deleteLoading}
+        isDark={isDark}
+        danger
+        icon="delete-outline"
+        title="Delete Account"
+        description="Are you sure you want to permanently delete your account?"
+        subText="This action cannot be undone."
+        confirmText="Delete Account"
+        loadingText="Deleting..."
+        onConfirm={handleDeleteAccountConfirm}
+        onCancel={() => setDeleteModalVisible(false)}
       />
     </LinearGradient>
   );

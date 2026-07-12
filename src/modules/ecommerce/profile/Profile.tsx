@@ -30,7 +30,9 @@ function Profile() {
     const HEADER_HEIGHT = Math.round(width * 0.25);
     const [name, setName] = useState("User");
     const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -76,37 +78,29 @@ function Profile() {
     };
 
     const handleDeleteAccount = async () => {
-        Alert.alert(
-            'Delete Account',
-            'Are you sure you want to permanently delete your account? This cannot be undone.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setLogoutLoading(true);
-                            const res = await deleteCustomer();
-                            if (res?.success || res?.status === 'ok' || res?.data) {
-                                await logout();
-                                rootNavigation?.reset({
-                                    index: 0,
-                                    routes: [{ name: 'Auth' }],
-                                });
-                            } else {
-                                Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
-                            }
-                        } catch (error) {
-                            console.error('Delete account failed', error);
-                            Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
-                        } finally {
-                            setLogoutLoading(false);
-                        }
-                    },
-                },
-            ]
-        );
+        setDeleteModalVisible(true);
+    };
+
+    const handleDeleteAccountConfirm = async () => {
+        try {
+            setDeleteLoading(true);
+            const res = await deleteCustomer();
+            if (res?.success || res?.status === 'ok' || res?.data) {
+                await logout();
+                setDeleteModalVisible(false);
+                rootNavigation?.reset({
+                    index: 0,
+                    routes: [{ name: 'Auth' }],
+                });
+            } else {
+                Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+            }
+        } catch (error) {
+            console.error('Delete account failed', error);
+            Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+        } finally {
+            setDeleteLoading(false);
+        }
     };
 
     const loadUser = useCallback(async () => {
@@ -324,6 +318,21 @@ function Profile() {
                     onConfirm={handleLogoutConfirm}
                     onCancel={handleLogoutCancel}
                     isLoading={logoutLoading}
+                    isDark={isDark}
+                />
+                <LogoutConfirmationModal
+                    visible={deleteModalVisible}
+                    onConfirm={handleDeleteAccountConfirm}
+                    onCancel={() => setDeleteModalVisible(false)}
+                    isLoading={deleteLoading}
+                    isDark={isDark}
+                    danger
+                    icon="delete-outline"
+                    title="Delete Account"
+                    description="Are you sure you want to permanently delete your account?"
+                    subText="This action cannot be undone."
+                    confirmText="Delete Account"
+                    loadingText="Deleting..."
                 />
             </ScrollView>
         </View>
