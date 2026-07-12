@@ -12,6 +12,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<AppStackParamList, "TrackOrders">;
 
@@ -21,6 +22,11 @@ type OrderSectionCardProps = {
   icon: string;
   iconBg: string;
   iconColor: string;
+  cardBg: string;
+  borderColor: string;
+  titleColor: string;
+  subtitleColor: string;
+  chevronColor: string;
   onPress: () => void;
 };
 
@@ -30,28 +36,58 @@ const OrderSectionCard = ({
   icon,
   iconBg,
   iconColor,
+  cardBg,
+  borderColor,
+  titleColor,
+  subtitleColor,
+  chevronColor,
   onPress,
 }: OrderSectionCardProps) => (
-  <TouchableOpacity style={styles.sectionCard} activeOpacity={0.88} onPress={onPress}>
+  <TouchableOpacity
+    style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}
+    activeOpacity={0.88}
+    onPress={onPress}
+  >
     <View style={[styles.sectionIconWrap, { backgroundColor: iconBg }]}>
       <MaterialCommunityIcons name={icon} size={22} color={iconColor} />
     </View>
 
     <View style={styles.sectionTextWrap}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      <Text style={[styles.sectionTitle, { color: titleColor }]}>{title}</Text>
+      <Text style={[styles.sectionSubtitle, { color: subtitleColor }]}>{subtitle}</Text>
     </View>
 
-    <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
+    <MaterialCommunityIcons name="chevron-right" size={20} color={chevronColor} />
   </TouchableOpacity>
 );
 
 export default function TrackOrderScreen() {
   const navigation = useNavigation<Nav>();
+  const { isDark } = useAppTheme();
+
+  const colors = {
+    rootGradient: isDark
+      ? ["#050507", "#09090B", "#050507"]
+      : ["#F8FAFC", "#EEF2FF", "#FFFFFF"],
+    headerText: isDark ? "#FFFFFF" : "#0F172A",
+    backBg: isDark ? "#111113" : "rgba(255,255,255,0.9)",
+    backIcon: isDark ? "#FFFFFF" : "#0F172A",
+    border: isDark ? "rgba(255,255,255,0.09)" : "rgba(148,163,184,0.14)",
+    borderStrong: isDark ? "rgba(255,255,255,0.12)" : "rgba(148,163,184,0.24)",
+    card: isDark ? "#111113" : "rgba(255,255,255,0.9)",
+    infoCard: isDark ? "#111113" : "#FFFFFF",
+    text: isDark ? "#FFFFFF" : "#0F172A",
+    muted: isDark ? "#A1A1AA" : "#64748B",
+    body: isDark ? "#D4D4D8" : "#475569",
+    chevron: isDark ? "#71717A" : "#94A3B8",
+    iconBlueBg: isDark ? "rgba(99,102,241,0.18)" : "#EEF2FF",
+    iconGreenBg: isDark ? "rgba(16,185,129,0.16)" : "#ECFDF5",
+    iconOrangeBg: isDark ? "rgba(249,115,22,0.16)" : "#FFF7ED",
+  };
 
   return (
     <LinearGradient
-      colors={["#F8FAFC", "#EEF2FF", "#FFFFFF"]}
+      colors={colors.rootGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.root}
@@ -63,13 +99,16 @@ export default function TrackOrderScreen() {
         >
           <View style={styles.headerRow}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={[
+                styles.backButton,
+                { backgroundColor: colors.backBg, borderColor: colors.borderStrong },
+              ]}
               onPress={() => navigation.goBack()}
               activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="arrow-left" size={20} color="#0F172A" />
+              <MaterialCommunityIcons name="arrow-left" size={20} color={colors.backIcon} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>All Orders</Text>
+            <Text style={[styles.headerTitle, { color: colors.headerText }]}>All Orders</Text>
             <View style={styles.headerSpacer} />
           </View>
 
@@ -88,14 +127,19 @@ export default function TrackOrderScreen() {
             </Text>
           </LinearGradient>
 
-          <Text style={styles.sectionLabel}>ORDER CATEGORIES</Text>
+          <Text style={[styles.sectionLabel, { color: colors.muted }]}>ORDER CATEGORIES</Text>
 
           <OrderSectionCard
             title="Shopping Orders"
             subtitle="Track your ecommerce product orders"
             icon="shopping-outline"
-            iconBg="#EEF2FF"
+            iconBg={colors.iconBlueBg}
             iconColor="#4F46E5"
+            cardBg={colors.card}
+            borderColor={colors.border}
+            titleColor={colors.text}
+            subtitleColor={colors.muted}
+            chevronColor={colors.chevron}
             onPress={() => navigation.navigate("MyOrder")}
           />
 
@@ -103,8 +147,13 @@ export default function TrackOrderScreen() {
             title="Service Orders"
             subtitle="View booked services and their progress"
             icon="briefcase-check-outline"
-            iconBg="#ECFDF5"
+            iconBg={colors.iconGreenBg}
             iconColor="#059669"
+            cardBg={colors.card}
+            borderColor={colors.border}
+            titleColor={colors.text}
+            subtitleColor={colors.muted}
+            chevronColor={colors.chevron}
             onPress={() => navigation.navigate("ServiceStack", { screen: "MyOrder" } as any)}
           />
 
@@ -112,24 +161,34 @@ export default function TrackOrderScreen() {
             title="BBPS Orders"
             subtitle="Open your recharge and bill payment history"
             icon="receipt-text-check-outline"
-            iconBg="#FFF7ED"
+            iconBg={colors.iconOrangeBg}
             iconColor="#EA580C"
+            cardBg={colors.card}
+            borderColor={colors.border}
+            titleColor={colors.text}
+            subtitleColor={colors.muted}
+            chevronColor={colors.chevron}
             onPress={() => navigation.navigate("BBPSHomeStack", { screen: "OrderHistory" } as any)}
           />
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>What you can manage here</Text>
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: colors.infoCard, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.infoTitle, { color: colors.text }]}>What you can manage here</Text>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>Product orders, service bookings, and BBPS transactions</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>Product orders, service bookings, and BBPS transactions</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>Status, payment details, invoices, and recent updates</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>Status, payment details, invoices, and recent updates</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={styles.infoText}>A quick route to each module's dedicated order list</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>A quick route to each module's dedicated order list</Text>
             </View>
           </View>
         </ScrollView>
