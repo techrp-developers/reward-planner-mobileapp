@@ -72,6 +72,8 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
     onClose();
   }, [onClose]);
 
+  if (!visible) return null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>

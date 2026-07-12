@@ -46,7 +46,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AppThemeProvider>         {/* ✅ your custom theme */}
+        <AppThemeProvider>
           <AlertProvider>
             <AuthProvider>
               <CartProvider>

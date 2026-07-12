@@ -295,6 +295,8 @@ export function AppUpdateModal({
     optional: ["#A654CD", "#6C63FF"],
   };
 
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}

@@ -40,6 +40,8 @@ const LogoutConfirmationModalComponent = ({
     onCancel();
   }, [onCancel]);
 
+  if (!visible) return null;
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
@@ -75,10 +77,10 @@ const LogoutConfirmationModalComponent = ({
             {title}
           </Text>
           <Text style={[styles.description, { color: isDark ? "#D4D4D8" : "#666666" }]}>
-            {description}{"\n"}
-            <Text style={[styles.subText, { color: isDark ? "#A1A1AA" : "#999999" }]}>
-              {subText}
-            </Text>
+            {description}
+          </Text>
+          <Text style={[styles.subText, { color: isDark ? "#A1A1AA" : "#999999" }]}>
+            {subText}
           </Text>
 
           {/* Button Row */}
@@ -167,11 +169,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
     lineHeight: 24,
-    marginBottom: 28,
+    marginBottom: 6,
   },
   subText: {
     fontWeight: "400",
     fontSize: 14,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
   },
   buttonRow: {
     flexDirection: "row",
