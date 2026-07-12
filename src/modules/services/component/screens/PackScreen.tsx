@@ -368,7 +368,7 @@ function PackScreen() {
 
       const selected_items = addBundlePayload.selected_items.map(Number);
 
-      console.log("🚀 FINAL PAYLOAD:", {
+      __DEV__ && console.log("🚀 FINAL PAYLOAD:", {
         bundle_id: finalBundleId,
         selected_items,
       });
@@ -378,7 +378,7 @@ function PackScreen() {
         selected_items,
       });
 
-      console.log("📦 PREVIEW RESPONSE:", preview);
+      __DEV__ && console.log("📦 PREVIEW RESPONSE:", preview);
 
       navigation.navigate("ServiceCheckoutScreen", {
         mode: "buy_now", // ✅ IMPORTANT
@@ -408,8 +408,8 @@ function PackScreen() {
 
     setIsAddingToCart(true);
     try {
-      console.log('[PackScreen] Selected item IDs:', selectedItemIds);
-      console.log('🧾 FINAL PAYLOAD:', addBundlePayload);
+      __DEV__ && console.log('[PackScreen] Selected item IDs:', selectedItemIds);
+      __DEV__ && console.log('🧾 FINAL PAYLOAD:', addBundlePayload);
 
       const response = await addBundleToCart(resolvedBundleId, addBundlePayload);
 

@@ -348,7 +348,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
 
       if (plans.some((p: any) => p.success)) {
         const enquiryData = buildHealthEnquiryData(data, coverAmountValue);
-        console.log("[Firebase][Health] enquiry_data:", enquiryData);
+        __DEV__ && console.log("[Firebase][Health] enquiry_data:", enquiryData);
 
         await createFirebaseEnquiry({
           service_id: 1,

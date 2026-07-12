@@ -131,7 +131,7 @@ function Profile() {
 
             setName(userName);
         } catch (error) {
-            console.log("Failed to load user", error);
+            __DEV__ && console.log("Failed to load user", error);
         }
     }, [isAuthenticated, user]);
 

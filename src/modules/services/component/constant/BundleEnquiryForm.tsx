@@ -315,7 +315,7 @@ function BundleEnquiryForm() {
       };
     }
 
-    console.log('📦 FINAL ENQUIRY PAYLOAD:', payload);
+    __DEV__ && console.log('📦 FINAL ENQUIRY PAYLOAD:', payload);
 
     const response = await createServiceEnquiry(payload);
 
@@ -335,7 +335,7 @@ function BundleEnquiryForm() {
     });
 
   } catch (error: any) {
-    console.log('❌ ENQUIRY ERROR:', error?.response?.data || error);
+    __DEV__ && console.log('❌ ENQUIRY ERROR:', error?.response?.data || error);
 
     alert.error(
       'Error',

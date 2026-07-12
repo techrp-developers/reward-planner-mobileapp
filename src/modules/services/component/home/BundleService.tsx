@@ -64,7 +64,7 @@ function BundleCard({ title, description, price, oldPrice, imageUrl, onPress, se
           source={!imgError && imageUrl ? { uri: imageUrl } : fallbackImage}
           style={styles.bundleImage}
           onError={e => {
-            console.log('BundleCard image error:', e.nativeEvent.error, 'url:', imageUrl);
+            __DEV__ && console.log('BundleCard image error:', e.nativeEvent.error, 'url:', imageUrl);
             setImgError(true);
           }}
         />

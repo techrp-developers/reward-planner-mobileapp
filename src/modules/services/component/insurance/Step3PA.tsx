@@ -230,11 +230,11 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
         plans = normalizeQuotesForUi(quotesResponse);
       }
 
-      console.log(`[PA] ✅ getQuotes returned ${plans.length} plans for enquiry: ${enquiryId}`);
+      __DEV__ && console.log(`[PA] ✅ getQuotes returned ${plans.length} plans for enquiry: ${enquiryId}`);
 
       if (plans.some((p: any) => p.success)) {
         const enquiryData = buildPersonalAccidentEnquiryData(data, coverAmountValue);
-        console.log("[Firebase][PersonalAccident] enquiry_data:", enquiryData);
+        __DEV__ && console.log("[Firebase][PersonalAccident] enquiry_data:", enquiryData);
 
         await createFirebaseEnquiry({
           service_id: 3,

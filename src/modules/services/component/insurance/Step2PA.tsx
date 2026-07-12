@@ -130,7 +130,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         await getAuthHeaders();
 
         const userInfo = await fetchUserInfo();
-        console.log("📱 Step2PA - User Info Received:", userInfo);
+        __DEV__ && console.log("📱 Step2PA - User Info Received:", userInfo);
 
         if (userInfo?.user) {
           const user = userInfo.user;

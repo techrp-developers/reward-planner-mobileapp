@@ -206,7 +206,7 @@ const WishlistScreen = () => {
         error?.response?.data?.error ||
         error?.message ||
         "Failed to remove from wishlist";
-      console.log("Wishlist remove failed", message);
+      __DEV__ && console.log("Wishlist remove failed", message);
       Alert.alert("Wishlist", String(message));
     }
   };

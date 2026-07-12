@@ -1,17 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import CartHead from '../constant/navbar/CartHead';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert, ScrollView, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Switch } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import OrderItemCard from '../../../common/order/OrderItemCard';
-import { fetchHistory } from '../../../ecommerce/api/OrderApi';
-import { FlatList } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/type';
 import type { RootStackParamList } from '../../../../navigation/RootNavigator';
 import { fetchUserInfo, getStoredUserName, deleteCustomer } from '../../../common/auth/api/AuthAPI';
-import { getProductImageUrl } from '../../../ecommerce/api/ProductApi';
 import { useAuth } from '../../../common/auth/context/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 import { LogoutConfirmationModal } from '../../../common/auth/screens/LogoutConfirmationModal';
@@ -28,22 +24,12 @@ function Profile() {
     const [name, setName] = useState("User");
     const [logoutModalVisible, setLogoutModalVisible] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
-    const [orders, setOrders] = useState<any[]>([]);
-    const [ordersLoading, setOrdersLoading] = useState(false);
 
     const handleOpenOrders = () => {
         navigation.navigate("MyOrder");
     };
     const handleOpenNotes = () => {
         navigation.navigate("TodoList");
-    };
-    const handleOpenOrdersDetails = (order: any) => {
-        const orderId = Number(order?.order_id ?? order?.id);
-        if (!orderId || Number.isNaN(orderId)) return;
-
-        navigation.navigate("OrderConfirmedScreen", {
-            order_id: orderId,
-        });
     };
     const OpenAddressDetails = () => {
         navigation.navigate("AddressSelect", { manageOnly: true });
@@ -133,7 +119,7 @@ function Profile() {
 
             setName(userName);
         } catch (error) {
-            console.log("Failed to load user", error);
+            __DEV__ && console.log("Failed to load user", error);
         }
     }, [isAuthenticated, user]);
 
@@ -146,47 +132,6 @@ function Profile() {
             loadUser();
         }, [loadUser])
     );
-
-    const loadOrders = useCallback(async () => {
-        if (!isAuthenticated) {
-            setOrders([]);
-            return;
-        }
-
-        try {
-            setOrdersLoading(true);
-            const res = await fetchHistory();
-            if (res?.success) {
-                setOrders(res.orders || []);
-            } else {
-                setOrders([]);
-            }
-        } finally {
-            setOrdersLoading(false);
-        }
-    }, [isAuthenticated]);
-
-    useEffect(() => {
-        loadOrders();
-    }, [loadOrders]);
-
-    const getOrderImageUri = (order: any) => {
-        const rawImage =
-            order?.image ||
-            order?.product_image ||
-            order?.product?.image ||
-            "";
-
-        if (!rawImage) {
-            return "https://via.placeholder.com/150";
-        }
-
-        if (/^https?:\/\//i.test(rawImage)) {
-            return rawImage;
-        }
-
-        return getProductImageUrl(rawImage) || "https://via.placeholder.com/150";
-    };
 
     return (
         <View style={[styles.screen, isDark && styles.screenDark]}>

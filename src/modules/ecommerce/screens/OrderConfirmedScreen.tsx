@@ -511,7 +511,7 @@ export default function OrderConfirmedScreen() {
                     productWeight={weightOrQuantity}
                     onCancelConfirm={() => {
                         setModalVisible(false);
-                        console.log("Order officially cancelled");
+                        __DEV__ && console.log("Order officially cancelled");
                     }}
                 />
 

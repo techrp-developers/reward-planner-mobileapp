@@ -121,7 +121,7 @@ export default function
       qty: Math.max(1, Number(qty) || 1),
     };
 
-    console.log("➡️ Buy Now params:", buyNowParams);
+    __DEV__ && console.log("➡️ Buy Now params:", buyNowParams);
 
     prefetchCheckoutScreenData({
       mode: "buy_now",
@@ -198,7 +198,7 @@ export default function
         if (!isMounted) return;
         applyProductState(p);
       } catch (error) {
-        console.log("Failed to load product details", error);
+        __DEV__ && console.log("Failed to load product details", error);
         if (!cachedProduct && isMounted) {
           setProduct(null);
         }

@@ -112,7 +112,7 @@ const CategoriesScreen = () => {
       setAllData(res?.data || []);
 
     } catch (e) {
-      console.log("ALL load error", e);
+      __DEV__ && console.log("ALL load error", e);
     } finally {
       setLoading(false);
     }

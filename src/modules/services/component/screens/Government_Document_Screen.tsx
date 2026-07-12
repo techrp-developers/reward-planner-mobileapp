@@ -109,7 +109,7 @@ export default function Government_Document_Screen() {
 
   useEffect(() => {
     effectRunsRef.current += 1;
-    console.log(
+    __DEV__ && console.log(
       '[Government_Document_Screen] direct nav effect run #',
       effectRunsRef.current,
       '| directServiceId:',
@@ -118,14 +118,14 @@ export default function Government_Document_Screen() {
 
     if (!directServiceId || directServiceId <= 0) return;
     if (hasNavigatedRef.current) {
-      console.log('[Government_Document_Screen] navigation skipped (already navigated once).');
+      __DEV__ && console.log('[Government_Document_Screen] navigation skipped (already navigated once).');
       return;
     }
 
     hasNavigatedRef.current = true;
 
     const cached = getCachedService(directServiceId) ?? undefined;
-    console.log(
+    __DEV__ && console.log(
       '[Government_Document_Screen] navigating to ServiceDescription for service',
       directServiceId,
       '| seededFromCache:',
@@ -140,7 +140,7 @@ export default function Government_Document_Screen() {
     });
 
     prefetchServiceDetails(directServiceId).then((prefetched) => {
-      console.log(
+      __DEV__ && console.log(
         '[Government_Document_Screen] prefetch finished for',
         directServiceId,
         '| hasData:',

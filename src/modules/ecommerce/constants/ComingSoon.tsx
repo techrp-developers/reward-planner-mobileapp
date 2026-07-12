@@ -58,10 +58,10 @@ const ComingSoonScreen = () => {
                   style={styles.mainImage}
                   resizeMode="contain"
                   onError={() => {
-                    console.log('Image failed to load');
+                    __DEV__ && console.log('Image failed to load');
                     setImageError(true);
                   }}
-                  onLoad={() => console.log('✅ Coming Soon image loaded')}
+                  onLoad={() => __DEV__ && console.log('✅ Coming Soon image loaded')}
                 />
               ) : (
                 <View style={styles.placeholderBox}>

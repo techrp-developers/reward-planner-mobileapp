@@ -49,7 +49,7 @@ export default function SelectCancellationReason() {
             const data = await fetchCancellationReasons();
             setReasons(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.log("Failed to load cancellation reasons", error);
+            __DEV__ && console.log("Failed to load cancellation reasons", error);
             setReasons([]);
         } finally {
             setLoadingReasons(false);
@@ -80,7 +80,7 @@ export default function SelectCancellationReason() {
 
             Alert.alert("Cancellation failed", res?.message || "Unable to cancel order");
         } catch (error) {
-            console.log("Cancel order failed", error);
+            __DEV__ && console.log("Cancel order failed", error);
             Alert.alert("Error", "Unable to cancel order. Please try again.");
         } finally {
             setSubmitting(false);

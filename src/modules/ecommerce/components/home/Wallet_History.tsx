@@ -162,7 +162,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
         setLoading(true);
         await Promise.all([loadBalance(), loadTransactions("all")]);
       } catch (err) {
-        console.log("Wallet error:", err);
+        __DEV__ && console.log("Wallet error:", err);
       } finally {
         setLoading(false);
       }
@@ -176,7 +176,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
       setTxnLoading(true);
       await loadTransactions(getType(filter));
     } catch (err) {
-      console.log("Wallet error:", err);
+      __DEV__ && console.log("Wallet error:", err);
     } finally {
       setTxnLoading(false);
     }
@@ -187,7 +187,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
     try {
       await Promise.all([loadBalance(), loadTransactions(getType(activeFilter))]);
     } catch (err) {
-      console.log("Wallet error:", err);
+      __DEV__ && console.log("Wallet error:", err);
     } finally {
       setRefreshing(false);
     }
