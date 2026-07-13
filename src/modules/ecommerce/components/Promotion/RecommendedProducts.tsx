@@ -11,6 +11,7 @@ import type { HomeStackParamList } from "../../navigation/types";
 import { getRecommendedProducts } from "../../api/PromotionalApi";
 import { queryClient } from "../../../../query/queryClient";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 import {
     PROMO_CARD_WIDTH,
     PROMO_CARD_GAP,
@@ -46,6 +47,7 @@ const fetchRecommendedData = async () => {
 function RecommendedProducts() {
     const navigation = useNavigation<Nav>();
     const { isAuthenticated, user } = useAuth();
+    const { isDark, theme } = useAppTheme();
     const recommendedQueryKey = useMemo(
         () => ["ecommerce", "promotion", "recommended", user?.user_id ?? "guest"] as const,
         [user?.user_id]
@@ -77,7 +79,7 @@ function RecommendedProducts() {
     );
 
     if (isLoading && products.length === 0) {
-        return <HomeSectionSkeleton height={350} />;
+        return <HomeSectionSkeleton height={350} backgroundColor={theme.background} />;
     }
 
     if (authRequired || products.length === 0) {
@@ -85,16 +87,16 @@ function RecommendedProducts() {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.headerRow}>
-                <Text style={styles.heading}>You May Like This</Text>
+                <Text style={[styles.heading, { color: theme.text }]}>You May Like This</Text>
                 <TouchableOpacity
                     style={styles.exploreBtn}
                     activeOpacity={0.85}
                     onPress={handleExplore}
                 >
-                    <Text style={styles.exploreText}>Explore More</Text>
-                    <MaterialIcons name="arrow-forward-ios" size={14} color="#5B47A3" />
+                    <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+                    <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
                 </TouchableOpacity>
             </View>
 
@@ -134,8 +136,8 @@ export default React.memo(RecommendedProducts);
 const styles = StyleSheet.create({
     container: {
         backgroundColor: "#FFFFFF", // Screen-best white background
-        paddingVertical: 16,
-        marginVertical: 4,
+        paddingTop: 22,
+        paddingBottom: 8,
     },
     headerRow: {
         flexDirection: "row",
@@ -162,7 +164,6 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         paddingHorizontal: 10,
         borderRadius: 14,
-        backgroundColor: "#F3F0FF",
     },
 
     exploreText: {

@@ -30,6 +30,7 @@ import type { ServiceItem as HomeServiceItem } from '../../navigation/type';
 import { useServiceHome } from '../../hooks/useServiceHome';
 import YouMayNeedServicesCarousel from '../constant/YouMayNeedServicesCarousel';
 import RecommendedServicesCarousel from '../constant/RecommendedServicesCarousel';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceCancellationDetails'>;
@@ -83,6 +84,7 @@ const normalizeName = (value?: string | null) =>
 
 export default function ServiceCancellationDetails() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const { service_order_id, parent_order_id, service_id } = route.params;
 
@@ -167,15 +169,15 @@ export default function ServiceCancellationDetails() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
           title="Order Details"
           onBack={() => navigation.goBack()}
           onHelp={() => navigation.navigate('HelpForm')}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={PURPLE} />
-          <Text style={styles.loadingText}>Loading cancellation details...</Text>
+          <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.muted }]}>Loading cancellation details...</Text>
         </View>
       </SafeAreaView>
     );
@@ -183,7 +185,7 @@ export default function ServiceCancellationDetails() {
 
   if (error || !details) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
           title="Order Details"
           onBack={() => navigation.goBack()}
@@ -191,8 +193,8 @@ export default function ServiceCancellationDetails() {
         />
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle-outline" size={46} color="#DC2626" />
-          <Text style={styles.errorText}>{error || 'Cancellation details not found.'}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchDetails()}>
+          <Text style={[styles.errorText, { color: servicesTheme.colors.muted }]}>{error || 'Cancellation details not found.'}</Text>
+          <TouchableOpacity style={[styles.retryBtn, { backgroundColor: servicesTheme.colors.primary }]} onPress={() => fetchDetails()}>
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -227,7 +229,7 @@ export default function ServiceCancellationDetails() {
       ];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header
         title="Order Details"
         onBack={() => navigation.goBack()}
@@ -241,8 +243,8 @@ export default function ServiceCancellationDetails() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[PURPLE]}
-            tintColor={PURPLE}
+            colors={[servicesTheme.colors.primary]}
+            tintColor={servicesTheme.colors.primary}
           />
         }
       >
@@ -260,7 +262,7 @@ export default function ServiceCancellationDetails() {
         />
 
         <TouchableOpacity
-          style={styles.reorderButton}
+          style={[styles.reorderButton, { borderColor: servicesTheme.colors.primary }]}
           activeOpacity={0.82}
           onPress={() => {
             if (Number.isFinite(reorderServiceId) && reorderServiceId > 0) {
@@ -277,10 +279,10 @@ export default function ServiceCancellationDetails() {
             );
           }}
         >
-          <Text style={styles.reorderText}>Reorder</Text>
+          <Text style={[styles.reorderText, { color: servicesTheme.colors.primary }]}>Reorder</Text>
         </TouchableOpacity>
 
-        <View style={styles.cancellationCard}>
+        <View style={[styles.cancellationCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
           <Text style={styles.cancelledTitle}>Order Cancelled</Text>
 
           {timeline.map((step, index) => (
@@ -288,12 +290,12 @@ export default function ServiceCancellationDetails() {
               <View style={styles.timelineRail}>
                 <MaterialCommunityIcons name="check-circle" size={16} color="#22C55E" />
               </View>
-              <Text style={styles.timelineLabel}>{step.label}</Text>
-              <Text style={styles.timelineDate}>{formatDate(step.date) || 'Update pending'}</Text>
+              <Text style={[styles.timelineLabel, { color: servicesTheme.colors.text }]}>{step.label}</Text>
+              <Text style={[styles.timelineDate, { color: servicesTheme.colors.muted }]}>{formatDate(step.date) || 'Update pending'}</Text>
             </View>
           ))}
 
-          <Text style={styles.totalRefund}>
+          <Text style={[styles.totalRefund, { color: servicesTheme.colors.textStrong }]}>
             Total Refund- {formatCurrency(details.refund.total || cancellation?.refund_amount)}
           </Text>
 
@@ -363,17 +365,19 @@ function Header({
   onBack: () => void;
   onHelp: () => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
         style={styles.headerBack}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={30} color="#777777" />
+        <MaterialCommunityIcons name="chevron-left" size={30} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={styles.helpBtn}>
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
         <MaterialCommunityIcons
           name="chat-outline"
           size={16}
@@ -397,17 +401,22 @@ function RefundStatusRow({
   label: string;
   status: string;
 }) {
+  const servicesTheme = useServicesTheme();
   const completed = status.toLowerCase() === 'completed';
 
   return (
-    <View style={styles.refundRow}>
+    <View style={[styles.refundRow, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
       <View style={styles.refundIcon}>
-        <MaterialCommunityIcons name={icon} size={16} color="#4B5563" />
+        <MaterialCommunityIcons name={icon} size={16} color={servicesTheme.colors.muted} />
       </View>
-      <Text style={styles.refundAmount}>{amount}</Text>
-      <Text style={styles.refundLabel}>{label}</Text>
-      <View style={[styles.refundStatusChip, completed && styles.refundStatusComplete]}>
-        <Text style={[styles.refundStatusText, completed && styles.refundStatusCompleteText]}>
+      <Text style={[styles.refundAmount, { color: servicesTheme.colors.text }]}>{amount}</Text>
+      <Text style={[styles.refundLabel, { color: servicesTheme.colors.muted }]}>{label}</Text>
+      <View style={[
+        styles.refundStatusChip,
+        { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border },
+        completed && styles.refundStatusComplete,
+      ]}>
+        <Text style={[styles.refundStatusText, { color: servicesTheme.colors.muted }, completed && styles.refundStatusCompleteText]}>
           {status}
         </Text>
       </View>
@@ -422,9 +431,11 @@ function InvoiceDownloadRow({
   downloading: boolean;
   onDownload: () => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.invoiceRow}>
-      <Text style={styles.invoiceText}>Save a copy of your order</Text>
+    <View style={[styles.invoiceRow, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>Save a copy of your order</Text>
       <TouchableOpacity
         style={styles.invoiceAction}
         activeOpacity={0.75}
@@ -432,9 +443,9 @@ function InvoiceDownloadRow({
         disabled={downloading}
       >
         {downloading ? (
-          <ActivityIndicator size="small" color={PURPLE} />
+          <ActivityIndicator size="small" color={servicesTheme.colors.primary} />
         ) : (
-          <Text style={styles.invoiceActionText}>Download Invoice</Text>
+          <Text style={[styles.invoiceActionText, { color: servicesTheme.colors.primary }]}>Download Invoice</Text>
         )}
       </TouchableOpacity>
     </View>

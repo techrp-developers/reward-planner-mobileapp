@@ -214,7 +214,7 @@ export default function MyTickets({ navigation }: any) {
       const res = await fetchSupportTickets();
       setTickets(res.data || []);
     } catch (error) {
-      console.log("Support ticket history error", error);
+      __DEV__ && console.log("Support ticket history error", error);
       setTickets([]);
     } finally {
       if (showLoader) {

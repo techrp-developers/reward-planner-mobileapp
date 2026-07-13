@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { forgotPassword } from "../api/AuthAPI";
 import { useAlert } from "../../../ecommerce/components/alerts";
 import type { AuthStackParamList } from "../navigation/types";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type ForgotPasswordNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -27,6 +28,7 @@ type ForgotPasswordNavigationProp = NativeStackNavigationProp<
 function ForgotPasswordScreen() {
   const navigation = useNavigation<ForgotPasswordNavigationProp>();
   const alert = useAlert();
+  const { isDark } = useAppTheme();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,7 +57,10 @@ function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={["left", "right", "top"]}>
+    <SafeAreaView
+      style={[styles.screen, { backgroundColor: isDark ? "#09090B" : "#F5F0FF" }]}
+      edges={["left", "right", "top"]}
+    >
       <KeyboardAvoidingView
         style={styles.keyboardWrap}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -69,21 +74,29 @@ function ForgotPasswordScreen() {
             <Logo width={160} height={160} />
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.title}>Forgot Password</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? "#111113" : "#FFFFFF" }]}>
+            <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#852BAF" }]}>Forgot Password</Text>
 
-            <Text style={styles.subText}>
+            <Text style={[styles.subText, { color: isDark ? "#D4D4D8" : "#666" }]}>
               Enter the email address associated with your account,
               and we'll send a password reset OTP.
             </Text>
 
-            <View style={styles.inputWrap}>
+            <View
+              style={[
+                styles.inputWrap,
+                {
+                  backgroundColor: isDark ? "#18181B" : "#F9F9F9",
+                  borderColor: isDark ? "rgba(255,255,255,0.10)" : "#E0E0E0",
+                },
+              ]}
+            >
               <TextInput
                 placeholder="Email"
-                placeholderTextColor="#999"
+                placeholderTextColor={isDark ? "#71717A" : "#999"}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                style={styles.input}
+                style={[styles.input, { color: isDark ? "#FFFFFF" : "#333" }]}
                 value={email}
                 onChangeText={setEmail}
                 editable={!loading}
@@ -106,10 +119,10 @@ function ForgotPasswordScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.bottomWrap}>
-            <Text style={styles.bottomText}>
+          <View style={[styles.bottomWrap, { backgroundColor: isDark ? "#09090B" : "#F2E8FF" }]}>
+            <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#555" }]}>
               Return to Login Screen -{" "}
-              <Text onPress={() => navigation.navigate("Login")} style={styles.signUp}>
+              <Text onPress={() => navigation.navigate("Login")} style={[styles.signUp, { color: isDark ? "#F472B6" : "#852BAF" }]}>
                 Login
               </Text>
             </Text>
@@ -125,7 +138,6 @@ export default ForgotPasswordScreen;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F5F0FF",
   },
 
   keyboardWrap: {
@@ -143,7 +155,6 @@ const styles = StyleSheet.create({
 
   card: {
     marginTop: 12,
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingHorizontal: 24,
@@ -167,18 +178,15 @@ const styles = StyleSheet.create({
 
   inputWrap: {
     borderWidth: 1,
-    borderColor: "#E0E0E0",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 48,
     justifyContent: "center",
     marginBottom: 20,
-    backgroundColor: "#F9F9F9",
   },
 
   input: {
     fontSize: 14,
-    color: "#333",
   },
 
   loginBtn: {
@@ -194,7 +202,6 @@ const styles = StyleSheet.create({
   },
 
   bottomWrap: {
-    backgroundColor: "#F2E8FF",
     paddingVertical: 18,
     alignItems: "center",
     paddingHorizontal: 20,

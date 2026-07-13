@@ -1,10 +1,13 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "./types";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export default function HomeStack() {
+  const { theme } = useAppTheme();
+
   return (
     <Stack.Navigator
       id="HomeStack"
@@ -13,7 +16,7 @@ export default function HomeStack() {
         animation: "slide_from_right",
         gestureEnabled: true,
         freezeOnBlur: true,
-        contentStyle: { backgroundColor: "#FFFFFF" },
+        contentStyle: { backgroundColor: theme.background },
       }}
     >
       <Stack.Screen name="Home" getComponent={() => require("../screens/homescreen").default} />
@@ -23,7 +26,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen
@@ -34,7 +37,7 @@ export default function HomeStack() {
           // Keep Home attached behind this opaque screen so popping cannot
           // briefly expose the outgoing product image while Home reattaches.
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen
@@ -43,7 +46,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen name="AddressSelect" getComponent={() => require("../components/ItemCardAddress/AddressSelectScreen").default} />
@@ -59,7 +62,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen name="Explore" getComponent={() => require("../screens/Explore").default} />
@@ -69,7 +72,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen name="WishList" getComponent={() => require("../screens/WishlistScreen").default} />
@@ -85,7 +88,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
       <Stack.Screen
@@ -95,7 +98,7 @@ export default function HomeStack() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: theme.background },
         }}
       />
 

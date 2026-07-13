@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 export type OrderStatusItem = {
   label: string;
@@ -24,11 +25,12 @@ export default function OrderStatusJourney({
   onCancelPress,
   tone = "success",
 }: Props) {
+  const { isDark, theme } = useAppTheme();
   const title = headerText || (arrivingBy ? `Status: ${arrivingBy}` : "Order status");
   const isDanger = tone === "danger";
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
       {/* Header */}
       <Text style={[styles.arrivalText, isDanger && styles.dangerText]}>
         {title}
@@ -49,6 +51,7 @@ export default function OrderStatusJourney({
                 <View
                   style={[
                     styles.circle,
+                    { backgroundColor: isDark ? "#4B5563" : "#CBD5E1" },
                     isHighlighted && styles.circleDone,
                     isHighlighted && isDanger && styles.circleDanger,
                   ]}
@@ -63,7 +66,7 @@ export default function OrderStatusJourney({
                   {isCurrent && <View style={styles.currentDot} />}
                 </View>
                 {!isLast && (
-                  <View style={[styles.line, isDanger && styles.lineDanger]} />
+                  <View style={[styles.line, { backgroundColor: isDark ? "#4B5563" : "#CBD5E1" }, isDanger && styles.lineDanger]} />
                 )}
               </View>
 
@@ -72,6 +75,7 @@ export default function OrderStatusJourney({
                 <Text
                   style={[
                     styles.label,
+                    { color: theme.secondaryText },
                     isHighlighted && styles.labelDone,
                     isCurrent && styles.labelCurrent,
                     isHighlighted && isDanger && styles.dangerText,
@@ -81,7 +85,7 @@ export default function OrderStatusJourney({
                 </Text>
 
                 {!!item.date && (
-                  <Text style={styles.date}>{item.date}</Text>
+                  <Text style={[styles.date, { color: theme.secondaryText }]}>{item.date}</Text>
                 )}
               </View>
             </View>
@@ -91,13 +95,13 @@ export default function OrderStatusJourney({
 
       {onCancelPress ? (
         <>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onCancelPress}
           >
-            <Text style={styles.cancelText}>Cancel Order</Text>
+            <Text style={[styles.cancelText, { color: theme.text }]}>Cancel Order</Text>
           </TouchableOpacity>
         </>
       ) : null}

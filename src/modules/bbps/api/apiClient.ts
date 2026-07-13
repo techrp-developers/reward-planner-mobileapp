@@ -147,7 +147,7 @@ api.interceptors.request.use((config: ConfigWithMetadata) => {
   config.metadata = { startTime: Date.now() };
 
   if (__DEV__) {
-    console.log(
+    __DEV__ && console.log(
       `[BBPS API →] ${(config.method || "GET").toUpperCase()} ${config.baseURL ?? ""}${config.url}`,
       {
         payload: config.data,
@@ -167,7 +167,7 @@ api.interceptors.response.use(
     const durationMs = config.metadata ? Date.now() - config.metadata.startTime : undefined;
 
     if (__DEV__) {
-      console.log(
+      __DEV__ && console.log(
         `[BBPS API ←] ${(config.method || "GET").toUpperCase()} ${config.url} — ${response.status} (${durationMs}ms)`,
         response.data
       );

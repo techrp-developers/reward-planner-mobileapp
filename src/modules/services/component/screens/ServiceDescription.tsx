@@ -27,6 +27,7 @@
         extractMiddleBlock,
         extractSafetyContent,
     } from '../../utils/normalizeServiceData';
+    import { useServicesTheme } from '../../utils/useServicesTheme';
     import type {
         NormalizedVariant,
         CartVariantItem,
@@ -81,6 +82,7 @@
     function ServiceDescription() {
         const route = useRoute<CartRouteProps>();
         const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+        const servicesTheme = useServicesTheme();
         const queryClient = useQueryClient();
         const serviceId = Number(route?.params?.serviceId ?? 0);
         const seededServiceData = route?.params?.serviceData;
@@ -410,10 +412,10 @@
 
         if (error || !serviceData) {
             return (
-                <View style={styles.root}>
+                <View style={[styles.root, { backgroundColor: servicesTheme.colors.background }]}>
                     <CartHead />
                     <View style={styles.errorWrap}>
-                        <Text style={styles.errorText}>
+                        <Text style={[styles.errorText, { color: servicesTheme.colors.muted }]}>
                             {error ?? 'Unable to load service details.'}
                         </Text>
                     </View>
@@ -422,7 +424,7 @@
         }
 
         return (
-            <View style={styles.root}>
+            <View style={[styles.root, { backgroundColor: servicesTheme.colors.background }]}>
                 {/* Fixed navbar */}
                 <CartHead />
 
@@ -451,10 +453,10 @@
 
                     {/* 2. Title & description */}
                     {!!serviceData?.service?.name && (
-                        <Text style={styles.serviceTitle}>{serviceData.service.name}</Text>
+                        <Text style={[styles.serviceTitle, { color: servicesTheme.colors.textStrong }]}>{serviceData.service.name}</Text>
                     )}
                     {!!activeVariant?.short_description && (
-                        <Text style={styles.serviceDescription}>
+                        <Text style={[styles.serviceDescription, { color: servicesTheme.colors.muted }]}>
                             {activeVariant.short_description}
                         </Text>
                     )}
@@ -472,8 +474,8 @@
 
                     {/* 4. Required documents */}
                     {requiredDocuments.length > 0 && (
-                        <View style={styles.documentsCard}>
-                            <Text style={styles.documentsTitle}>Required Documents</Text>
+                        <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
+                            <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Required Documents</Text>
                             {requiredDocuments.map((doc) => (
                                 <View key={String(doc.id) + doc.name} style={styles.documentRow}>
                                     <View
@@ -485,7 +487,9 @@
                                     <Text
                                         style={[
                                             styles.documentItem,
+                                            { color: servicesTheme.colors.muted },
                                             doc.mandatory && styles.documentItemMandatory,
+                                            doc.mandatory && { color: servicesTheme.colors.textStrong },
                                         ]}
                                     >
                                         {doc.name}

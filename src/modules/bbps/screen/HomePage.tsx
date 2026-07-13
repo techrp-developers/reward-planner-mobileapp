@@ -1,10 +1,13 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import RechargeBill from '../component/home/ReachargeBill';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 function HomePageComponent() {
+  const { colors } = useBbpsTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -18,7 +21,6 @@ function HomePageComponent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FE',
   },
   content: {
     paddingBottom: 24,

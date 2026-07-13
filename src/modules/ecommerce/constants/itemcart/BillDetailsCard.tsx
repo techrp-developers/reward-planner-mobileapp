@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, Text, StyleSheet, Switch } from 'react-native'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Props = {
   cartTotal?: number
@@ -42,6 +43,7 @@ export default function BillDetailsCard({
   rewardCoinsAvailable,
   onPayableChange,
 }: Props) {
+  const { isDark, theme } = useAppTheme()
   const safeCartTotal = useMemo(() => Math.max(0, Number(cartTotal ?? subtotal ?? 0)), [cartTotal, subtotal])
   const safeFinalPayable = useMemo(() => Math.max(0, Number(finalPayable ?? finalTotal ?? 0)), [finalPayable, finalTotal])
   const safeRewardEarn = useMemo(() => Math.max(0, Number(totalRewardEarn || 0)), [totalRewardEarn])
@@ -63,30 +65,30 @@ export default function BillDetailsCard({
   }, [onPayableChange, payableAmount])
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>Bill Details</Text>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <Text style={[styles.title, { color: theme.text }]}>Bill Details</Text>
 
       <View style={styles.rewardToggleRow}>
         <View>
-          <Text style={styles.label}>Use Reward Coins</Text>
-          <Text style={styles.helperText}>Available savings on this order</Text>
+          <Text style={[styles.label, { color: theme.secondaryText }]}>Use Reward Coins</Text>
+          <Text style={[styles.helperText, { color: theme.secondaryText }]}>Available savings on this order</Text>
         </View>
 
         <View style={styles.switchRow}>
-          <Text style={styles.coinValue}>
+          <Text style={[styles.coinValue, { color: theme.text }]}>
             {formatAmount(useRewards ? safeRedeemed : safeAvailableRewards)}
           </Text>
           <Switch
             value={canUseRewards && useRewards}
             onValueChange={onUseRewardsChange ?? (() => {})}
             disabled={!canUseRewards}
-            trackColor={{ false: '#E5E7EB', true: '#22C55E' }}
+            trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: '#22C55E' }}
             thumbColor="#FFFFFF"
           />
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
       <MemoRow label="Item Total" value={formatAmount(safeCartTotal)} />
       <MemoRow
@@ -111,11 +113,11 @@ export default function BillDetailsCard({
         <MemoRow label="Handling Fees" value={formatAmount(safeHandlingFees)} />
       )}
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
       <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>Order Total</Text>
-        <Text style={styles.totalValue}>{formatAmount(payableAmount)}</Text>
+        <Text style={[styles.totalLabel, { color: theme.text }]}>Order Total</Text>
+        <Text style={[styles.totalValue, { color: theme.text }]}>{formatAmount(payableAmount)}</Text>
       </View>
 
       {rewardDiscount > 0 && (
@@ -125,9 +127,9 @@ export default function BillDetailsCard({
       )}
 
       {safeRewardEarn > 0 && (
-        <View style={styles.rewardBanner}>
-          <MaterialIcons name="auto-awesome" size={18} color="#7C3AED" />
-          <Text style={styles.rewardText}>
+        <View style={[styles.rewardBanner, { backgroundColor: isDark ? '#2D2148' : '#F5F3FF' }]}>
+          <MaterialIcons name="auto-awesome" size={18} color={theme.primary} />
+          <Text style={[styles.rewardText, { color: theme.primary }]}>
             You will earn <Text style={styles.rewardBold}>{formatAmount(safeRewardEarn)}</Text> coins
           </Text>
         </View>
@@ -137,10 +139,12 @@ export default function BillDetailsCard({
 }
 
 function Row({ label, value, valueStyle }: any) {
+  const { theme } = useAppTheme()
+
   return (
     <View style={styles.rowBetween}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, valueStyle]}>{value}</Text>
+      <Text style={[styles.label, { color: theme.secondaryText }]}>{label}</Text>
+      <Text style={[styles.value, { color: theme.text }, valueStyle]}>{value}</Text>
     </View>
   )
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 type Props = {
   height?: number;
@@ -7,7 +8,10 @@ type Props = {
 };
 
 function HomeSectionSkeleton({ height = 350, backgroundColor = '#FFFFFF' }: Props) {
+  const { isDark } = useAppTheme();
   const opacity = useRef(new Animated.Value(0.55)).current;
+  const skeletonColor = isDark ? '#27272A' : '#E8EAED';
+  const skeletonHeaderColor = isDark ? '#3F3F46' : '#E3E5E8';
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -32,11 +36,11 @@ function HomeSectionSkeleton({ height = 350, backgroundColor = '#FFFFFF' }: Prop
   return (
     <View style={[styles.container, { height, backgroundColor }]}>
       <Animated.View style={[styles.content, { opacity }]}>
-        <View style={styles.header} />
+        <View style={[styles.header, { backgroundColor: skeletonHeaderColor }]} />
         <View style={styles.cards}>
-          <View style={styles.card} />
-          <View style={styles.card} />
-          <View style={styles.card} />
+          <View style={[styles.card, { backgroundColor: skeletonColor }]} />
+          <View style={[styles.card, { backgroundColor: skeletonColor }]} />
+          <View style={[styles.card, { backgroundColor: skeletonColor }]} />
         </View>
       </Animated.View>
     </View>

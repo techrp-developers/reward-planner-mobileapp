@@ -37,6 +37,7 @@ import {
 } from '../../navigation/navigationPerformance'
 import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 const { height } = Dimensions.get('window')
@@ -116,6 +117,7 @@ export default function WithoutAddress() {
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [useRewards, setUseRewards] = useState(true)
+  const { isDark, theme } = useAppTheme()
 
   const slideAnim = useRef(new Animated.Value(height)).current
   const pulse = useRef(new Animated.Value(0)).current
@@ -394,7 +396,7 @@ export default function WithoutAddress() {
 
   if (!loading && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart onBrowse={() => navigation.navigate('Home')} />
       </View>
@@ -403,9 +405,9 @@ export default function WithoutAddress() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={126} borderRadius={14} style={styles.skeletonGap} />
@@ -416,7 +418,7 @@ export default function WithoutAddress() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
 
       <FlatList
@@ -424,7 +426,8 @@ export default function WithoutAddress() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}
         removeClippedSubviews={true}
         windowSize={7}
         initialNumToRender={4}
@@ -434,7 +437,7 @@ export default function WithoutAddress() {
       />
 
       <StickyBottomCTA bottomOffset={0} onLayout={stickyCTA.onCtaLayout}>
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.navigate('AddressSelect')}>
           <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.button}>
             <Text style={styles.buttonText}>Select Address</Text>
@@ -445,10 +448,10 @@ export default function WithoutAddress() {
 
       <Modal visible={false} transparent animationType="none">
         <Pressable style={styles.overlay} />
-        <Animated.View style={[styles.sheet, { top: slideAnim }]}>
-          <View style={styles.handle} />
+        <Animated.View style={[styles.sheet, { top: slideAnim, backgroundColor: theme.card }]}>
+          <View style={[styles.handle, { backgroundColor: isDark ? '#52525B' : '#CCC' }]} />
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Address</Text>
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>Select Address</Text>
             <TouchableOpacity>
               <Text style={styles.close}>✕</Text>
             </TouchableOpacity>

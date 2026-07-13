@@ -17,6 +17,7 @@ import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
 import { compareRechargePayloads } from '../utils/rechargeDebug';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAlert } from '../../ecommerce/components/alerts';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 // Last successful create-order payload, kept in memory for this session so
 // a failing payload (e.g. a different operator) can be diffed against it —
@@ -47,6 +48,7 @@ const getPlanValidity = (plan: any) =>
 const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const { user } = useAuth();
   const alert = useAlert();
+  const bbpsTheme = useBbpsTheme();
   const [loading, setLoading] = useState(false);
   const [orderFailure, setOrderFailure] = useState<OrderFailure | null>(null);
   const params = useMemo(() => route?.params ?? {}, [route?.params]);
@@ -249,7 +251,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   }, [plan?.description, plan?.validity]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Confirm Recharge"
         onBackPress={() => navigation.goBack()}
@@ -260,9 +262,17 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.container}>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
             <LinearGradient
-              colors={[BRAND_START, BRAND_END]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.cardHeader}
@@ -279,24 +289,24 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             <View style={styles.cardBody}>
               <View style={styles.row}>
                 <View style={styles.labelWrap}>
-                  <MaterialIcons name="location-on" size={16} color="#8665FF" />
-                  <Text style={styles.label}>Circle</Text>
+                  <MaterialIcons name="location-on" size={16} color={bbpsTheme.colors.primary} />
+                  <Text style={[styles.label, { color: bbpsTheme.colors.muted }]}>Circle</Text>
                 </View>
-                <Text style={styles.value}>{params.circleName || params.circleId || '-'}</Text>
+                <Text style={[styles.value, { color: bbpsTheme.colors.text }]}>{params.circleName || params.circleId || '-'}</Text>
               </View>
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: bbpsTheme.colors.divider }]} />
               <View style={styles.row}>
                 <View style={styles.labelWrap}>
-                  <MaterialIcons name="event-available" size={16} color="#8665FF" />
-                  <Text style={styles.label}>Validity</Text>
+                  <MaterialIcons name="event-available" size={16} color={bbpsTheme.colors.primary} />
+                  <Text style={[styles.label, { color: bbpsTheme.colors.muted }]}>Validity</Text>
                 </View>
-                <Text style={styles.value}>{getPlanValidity(plan)}</Text>
+                <Text style={[styles.value, { color: bbpsTheme.colors.text }]}>{getPlanValidity(plan)}</Text>
               </View>
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: bbpsTheme.colors.divider }]} />
               <View style={styles.amountRow}>
-                <Text style={styles.amountLabel}>Total Amount</Text>
-                <View style={styles.amountPill}>
-                  <Text style={styles.amount}>Rs {amount || '-'}</Text>
+                <Text style={[styles.amountLabel, { color: bbpsTheme.colors.textStrong }]}>Total Amount</Text>
+                <View style={[styles.amountPill, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF', borderColor: bbpsTheme.colors.border }]}>
+                  <Text style={[styles.amount, { color: bbpsTheme.colors.primary }]}>Rs {amount || '-'}</Text>
                 </View>
               </View>
             </View>
@@ -339,10 +349,10 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             activeOpacity={0.85}
             disabled={loading}
             onPress={handleCreateOrder}
-            style={styles.buttonShadowWrap}
+            style={[styles.buttonShadowWrap, { backgroundColor: bbpsTheme.colors.primaryDark, shadowColor: bbpsTheme.colors.shadow }]}
           >
             <LinearGradient
-              colors={[BRAND_START, BRAND_END]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={[styles.button, loading && styles.disabledButton]}
@@ -357,38 +367,46 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
               )}
             </LinearGradient>
           </TouchableOpacity>
-          <View style={styles.planBenefitsCard}>
+          <View
+            style={[
+              styles.planBenefitsCard,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                borderColor: bbpsTheme.colors.border,
+              },
+            ]}
+          >
             <View style={styles.sectionHeader}>
               <MaterialIcons
                 name="local-offer"
                 size={20}
-                color="#8665FF"
+                color={bbpsTheme.colors.primary}
               />
-              <Text style={styles.sectionTitle}>
+              <Text style={[styles.sectionTitle, { color: bbpsTheme.colors.textStrong }]}>
                 Plan Benefits
               </Text>
             </View>
 
             <View style={styles.benefitsWrap}>
               {benefits.map((item, index) => (
-                <View key={index} style={styles.benefitChip}>
+                <View key={index} style={[styles.benefitChip, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF', borderColor: bbpsTheme.colors.border }]}>
                   <MaterialIcons
                     name={item.icon}
                     size={16}
-                    color="#8665FF"
+                    color={bbpsTheme.colors.primary}
                   />
-                  <Text style={styles.benefitText}>
+                  <Text style={[styles.benefitText, { color: bbpsTheme.colors.primary }]}>
                     {item.label}
                   </Text>
                 </View>
               ))}
             </View>
 
-            <Text style={styles.descriptionTitle}>
+            <Text style={[styles.descriptionTitle, { color: bbpsTheme.colors.textStrong }]}>
               Plan Description
             </Text>
 
-            <Text style={styles.descriptionText}>
+            <Text style={[styles.descriptionText, { color: bbpsTheme.colors.muted }]}>
               {plan?.description || 'No description available'}
             </Text>
           </View>

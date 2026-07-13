@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 // import RewardIcon from "../../../../assets/product/rewards.svg";
 import { prefetchCartScreenData } from "../../navigation/navigationPerformance";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -42,6 +43,7 @@ export default function BuySection({
     isInCart = false,
 }: Props) {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
   const [open, setOpen] = React.useState(false);
 
   const maxQty =
@@ -49,6 +51,7 @@ export default function BuySection({
       ? Math.max(0, Math.min(stock, 10))
       : 10;
   const quantities = Array.from({ length: maxQty }, (_, i) => i + 1);
+  const cartButtonTextColor = isDark ? "#FACC15" : "#111827";
 
   const handleGoToCart = () => {
     if (!inStock) return;
@@ -66,7 +69,7 @@ export default function BuySection({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.dividerFull} />
+      <View style={[styles.dividerFull, { backgroundColor: theme.border }]} />
 
       <View style={styles.buyWrap}>
         {/* Secure pill */}
@@ -83,31 +86,31 @@ export default function BuySection({
         {/* Price */}
         <View style={styles.priceRow}>
           <Text style={styles.offText}>{offPercent}</Text>
-          <Text style={styles.priceText}>{price}</Text>
+          <Text style={[styles.priceText, { color: theme.text }]}>{price}</Text>
         </View>
 
-        <Text style={styles.mrpText}>
+        <Text style={[styles.mrpText, { color: theme.secondaryText }]}>
           MRP: <Text style={styles.mrpStrike}>{mrp}</Text>
         </Text>
 
         {/* Quantity */}
         <View style={styles.qtyWrap}>
           <TouchableOpacity
-            style={styles.qtyBox}
+            style={[styles.qtyBox, { backgroundColor: theme.card, borderColor: theme.border }]}
             activeOpacity={0.85}
             disabled={!inStock}
             onPress={() => setOpen(o => !o)}
           >
-            <Text style={styles.qtyText}>Qty: {qty}</Text>
+            <Text style={[styles.qtyText, { color: theme.text }]}>Qty: {qty}</Text>
             <MaterialIcons
               name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
               size={22}
-              color="#444"
+              color={theme.secondaryText}
             />
           </TouchableOpacity>
 
           {open && inStock && (
-            <View style={styles.qtyDropdown}>
+            <View style={[styles.qtyDropdown, { backgroundColor: theme.card, borderColor: theme.border }]}>
               {quantities.map(n => (
                 <TouchableOpacity
                   key={n}
@@ -119,6 +122,7 @@ export default function BuySection({
                 >
                   <Text style={[
                     styles.qtyItemText,
+                    { color: theme.text },
                     n === qty && styles.qtyItemTextActive,
                   ]}>
                     {n}
@@ -142,19 +146,19 @@ export default function BuySection({
           onPress={onAddToCart}
         >
           <LinearGradient
-            colors={["#A654CD", "#FC8BAD"]}
+            colors={["#FACC15", "#111827"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradBorderBtn}
           >
-            <View style={[styles.gradBorderInner, (!inStock || isAdding) && styles.disabledInner]}>
+            <View style={[styles.gradBorderInner, { backgroundColor: theme.card }, (!inStock || isAdding) && styles.disabledInner]}>
               {isAdding ? (
                 <View style={styles.buttonContent}>
-                  <ActivityIndicator size="small" color="#7B3FF2" />
-                  <Text style={styles.addToCartText}>Adding...</Text>
+                  <ActivityIndicator size="small" color={cartButtonTextColor} />
+                  <Text style={[styles.addToCartText, { color: cartButtonTextColor }]}>Adding...</Text>
                 </View>
               ) : (
-                <Text style={styles.addToCartText}>{isInCart ? "Go to Cart" : "Add to Cart"}</Text>
+                <Text style={[styles.addToCartText, { color: cartButtonTextColor }]}>{isInCart ? "Go to Cart" : "Add to Cart"}</Text>
               )}
             </View>
           </LinearGradient>

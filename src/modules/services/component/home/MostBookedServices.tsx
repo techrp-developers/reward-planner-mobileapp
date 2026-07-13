@@ -48,7 +48,7 @@ export default function MostBookedServices() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={['#5B6CFF', '#4F6BFF', '#3F4FE0']}
+        colors={['#080B26', '#171F59', '#3545A3']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.container, styles.loaderContainer]}
@@ -65,7 +65,7 @@ export default function MostBookedServices() {
 
   return (
     <LinearGradient
-      colors={['#5B6CFF', '#4F6BFF', '#3F4FE0']}
+      colors={['#080B26', '#171F59', '#3545A3']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 20,
     overflow: 'hidden',
-    shadowColor: '#3F4FE0',
+    shadowColor: '#080B26',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.28,
     shadowRadius: 20,

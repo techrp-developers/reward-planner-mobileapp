@@ -31,6 +31,7 @@ import {
   handleNavigateWithPrefetch,
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -72,6 +73,7 @@ const FlashOfferProductCard = React.memo(({
   shouldLoadImage: boolean;
 }) => {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
 
@@ -254,12 +256,19 @@ const FlashOfferProductCard = React.memo(({
   };
 
   return (
-    <TouchableOpacity style={styles.cardContainer} activeOpacity={0.9} onPress={handlePress}>
-      <View style={styles.imageBox}>
+    <TouchableOpacity
+      style={[
+        styles.cardContainer,
+        { backgroundColor: theme.card, borderColor: theme.border },
+      ]}
+      activeOpacity={0.9}
+      onPress={handlePress}
+    >
+      <View style={[styles.imageBox, { backgroundColor: isDark ? "#111827" : "#FFF8E7" }]}>
         {shouldLoadImage ? (
           <RNImage source={{ uri: displayData.imageUrl }} style={styles.productImage} />
         ) : (
-          <View style={styles.productImagePlaceholder} />
+          <View style={[styles.productImagePlaceholder, { backgroundColor: theme.border }]} />
         )}
 
         {displayData.discountPercent !== "0%" && (
@@ -274,7 +283,7 @@ const FlashOfferProductCard = React.memo(({
         )}
 
         <TouchableOpacity
-          style={styles.heartIcon}
+          style={[styles.heartIcon, { backgroundColor: theme.card }]}
           activeOpacity={0.85}
           onPress={handleWishlist}
           disabled={wishLoading}
@@ -282,19 +291,19 @@ const FlashOfferProductCard = React.memo(({
           <FontAwesome
             name={wishlisted ? "heart" : "heart-o"}
             size={14}
-            color={wishlisted ? "#E53935" : "#000"}
+            color={wishlisted ? "#E53935" : theme.text}
           />
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoArea}>
-        <Text style={styles.brandText} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
-        <Text style={styles.titleText} numberOfLines={1}>{displayData.productTitle}</Text>
+        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
+        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.productTitle}</Text>
 
         <View style={styles.priceRow}>
           <Text style={styles.currentPrice}>₹{displayData.priceText}</Text>
           {displayData.originalPriceText && (
-            <Text style={styles.oldPrice}>₹{displayData.originalPriceText}</Text>
+            <Text style={[styles.oldPrice, { color: theme.secondaryText }]}>₹{displayData.originalPriceText}</Text>
           )}
         </View>
 
@@ -327,6 +336,7 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
+  const { theme } = useAppTheme();
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
@@ -390,11 +400,11 @@ export default function OfferHome() {
   };
 
   if (isProductsLoading || isCampaignLoading) {
-    return <HomeSectionSkeleton height={390} />;
+    return <HomeSectionSkeleton height={390} backgroundColor={theme.background} />;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Banner Carousel */}
       {banner.length > 0 && (
         <ScrollView
@@ -405,7 +415,7 @@ export default function OfferHome() {
           {banner.map((offer) => (
             <TouchableOpacity
               key={offer.id}
-              style={styles.offerCard}
+              style={[styles.offerCard, { backgroundColor: theme.card }]}
               activeOpacity={0.85}
               onPress={() => handleBannerPress(offer)}
             >
@@ -476,6 +486,7 @@ export const prefetchOfferHomeSection = async () => {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 14,
+    paddingBottom: 14,
     backgroundColor: '#fff',
   },
   loadingContainer: {
@@ -503,8 +514,9 @@ const styles = StyleSheet.create({
   },
   flashSectionContainer: {
     width: "100%",
-    height: CARD_WIDTH * 1.85,
+    height: CARD_WIDTH * 1.95,
     marginTop: 20,
+    marginBottom: 10,
     position: "relative",
   },
   flashContentRow: {

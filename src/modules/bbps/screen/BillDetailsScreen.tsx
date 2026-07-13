@@ -22,6 +22,7 @@ import {
 import { useAlert } from '../../ecommerce/components/alerts';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
@@ -69,6 +70,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const alert = useAlert();
   const alertRef = useRef(alert);
   const { user } = useAuth();
+  const bbpsTheme = useBbpsTheme();
   const routeParams = route?.params || {};
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -244,14 +246,22 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Enter Details"
         onBackPress={handleBackPress}
       />
 
       <View style={styles.content}>
-        <View style={styles.card}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
           <View style={styles.providerSection}>
             {detailsLoading ? (
               <>
@@ -263,14 +273,14 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
             ) : (
               <>
                 <LinearGradient
-                  colors={[BRAND_START, BRAND_END]}
+                  colors={bbpsTheme.gradients.primary}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.logoCircle}
                 >
                   <Icon name="flash" size={22} color="#FFFFFF" />
                 </LinearGradient>
-                <Text style={styles.providerName}>{providerName}</Text>
+                <Text style={[styles.providerName, { color: bbpsTheme.colors.textStrong }]}>{providerName}</Text>
               </>
             )}
           </View>
@@ -289,16 +299,23 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
             ) : (
               fields.map((field, index) => (
                 <View key={field.param_id || field.param_name} style={index > 0 && styles.mobileLabel}>
-                  <Text style={styles.label}>{field.param_label}</Text>
+                  <Text style={[styles.label, { color: bbpsTheme.colors.muted }]}>{field.param_label}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: bbpsTheme.colors.surfaceAlt,
+                        borderColor: bbpsTheme.colors.border,
+                        color: bbpsTheme.colors.text,
+                      },
+                    ]}
                     placeholder={`Enter ${field.param_label}`}
-                    placeholderTextColor="#AAA"
+                    placeholderTextColor={bbpsTheme.colors.subtle}
                     keyboardType={isNumericField(field) ? 'numeric' : 'default'}
                     value={formValues[field.param_name] || ''}
                     onChangeText={(value) => updateFieldValue(field, value)}
                   />
-                  <Text style={styles.helperText}>
+                  <Text style={[styles.helperText, { color: bbpsTheme.colors.subtle }]}>
                     {field.error_message || `Enter ${field.param_label}`}
                   </Text>
                 </View>
@@ -344,10 +361,10 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           onPress={handleContinue}
           disabled={isContinueDisabled}
           activeOpacity={0.85}
-          style={styles.buttonShadowWrap}
+          style={[styles.buttonShadowWrap, { backgroundColor: bbpsTheme.colors.primaryDark, shadowColor: bbpsTheme.colors.shadow }]}
         >
           <LinearGradient
-            colors={[BRAND_START, BRAND_END]}
+            colors={bbpsTheme.gradients.primary}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={[styles.button, isContinueDisabled && styles.disabledBtn]}

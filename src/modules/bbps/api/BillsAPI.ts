@@ -134,7 +134,10 @@ export const fetchBill = async (
       await clearAuthToken();
     }
 
-    if (__DEV__) { console.error("Fetch Bill Error:", error?.response?.data || error?.message); }
+    __DEV__ && console.log(
+      "Fetch Bill Error:",
+      error?.response?.data || error?.message
+    );
 
     if (error?.response?.data) {
       return error.response.data;

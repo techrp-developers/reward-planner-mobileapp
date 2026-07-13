@@ -53,7 +53,7 @@ export const fetchWalletBalance = async (): Promise<WalletBalanceResponse> => {
     const status = Number(error?.response?.status || 0);
 
     if (status === 503) {
-      console.log("Wallet balance API unavailable (503)");
+      __DEV__ && console.log("Wallet balance API unavailable (503)");
       return {
         success: false,
         data: {
@@ -90,7 +90,7 @@ export const fetchWalletTransactions = async (
     const status = Number(error?.response?.status || 0);
 
     if (status === 503) {
-      console.log("Wallet transactions API unavailable (503)");
+      __DEV__ && console.log("Wallet transactions API unavailable (503)");
       return { success: false, data: [] };
     }
 

@@ -21,6 +21,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import OrderItemCard from '../../../../modules/common/order/OrderItemCard';
 import { submitServiceFeedback } from '../../api/OrderAPI';
 import type { HomeStackParamList } from '../../navigation/type';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceFeedback'>;
@@ -59,6 +60,7 @@ const REUSE_OPTIONS = [
 
 export default function ServiceFeedback() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const {
     service_order_id,
@@ -118,7 +120,7 @@ export default function ServiceFeedback() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header
         title="Service Feedback"
         onBack={() => navigation.goBack()}
@@ -182,16 +184,16 @@ export default function ServiceFeedback() {
           onChange={setReuseIntent}
         />
 
-        <View style={styles.commentSection}>
-          <Text style={styles.commentTitle}>Anything you’d like us to improve?</Text>
+        <View style={[styles.commentSection, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+          <Text style={[styles.commentTitle, { color: servicesTheme.colors.textStrong }]}>Anything you’d like us to improve?</Text>
           <TextInput
             value={comment}
             onChangeText={setComment}
             placeholder="Type here"
-            placeholderTextColor="#B8B2C4"
+            placeholderTextColor={servicesTheme.colors.subtle}
             multiline
             textAlignVertical="top"
-            style={styles.commentInput}
+            style={[styles.commentInput, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border, color: servicesTheme.colors.text }]}
           />
         </View>
 
@@ -201,7 +203,7 @@ export default function ServiceFeedback() {
           onPress={handleSubmit}
         >
           <LinearGradient
-            colors={['#8665FF', '#5B47A3']}
+            colors={servicesTheme.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled]}
@@ -225,16 +227,18 @@ function Header({
   title: string;
   onBack: () => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={30} color="#777777" />
+        <MaterialCommunityIcons name="chevron-left" size={30} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
     </View>
   );
 }
@@ -248,9 +252,11 @@ function StarRatingCard({
   rating: number;
   onChange: (value: number) => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+    <View style={[styles.card, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.cardTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
       <View style={styles.starRow}>
         {[1, 2, 3, 4, 5].map(value => (
           <TouchableOpacity
@@ -264,7 +270,7 @@ function StarRatingCard({
               size={28}
               color={value <= rating ? '#F59E0B' : '#CBD5E1'}
             />
-            <Text style={[styles.starLabel, value === rating && styles.selectedLabel]}>
+            <Text style={[styles.starLabel, { color: servicesTheme.colors.muted }, value === rating && styles.selectedLabel, value === rating && { color: servicesTheme.colors.primary }]}>
               {EXPERIENCE_LABELS[value - 1]}
             </Text>
           </TouchableOpacity>
@@ -285,6 +291,7 @@ function IconScaleCard({
   labels: string[];
   onChange: (value: number) => void;
 }) {
+  const servicesTheme = useServicesTheme();
   const [trackWidth, setTrackWidth] = useState(0);
   const selectedValue = value || 1;
 
@@ -300,8 +307,8 @@ function IconScaleCard({
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+    <View style={[styles.card, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.cardTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
       <View style={styles.scaleOptionRow}>
         {TRACK_STEPS.map(option => {
           const selected = option === value;
@@ -312,14 +319,14 @@ function IconScaleCard({
               activeOpacity={0.75}
               onPress={() => onChange(option)}
             >
-              <View style={[styles.scaleIconWrap, selected && styles.scaleIconWrapActive]}>
+              <View style={[styles.scaleIconWrap, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }, selected && styles.scaleIconWrapActive]}>
                 <MaterialCommunityIcons
                   name={SCALE_ICONS[option - 1]}
                   size={20}
-                  color={selected ? PURPLE : '#9CA3AF'}
+                  color={selected ? servicesTheme.colors.primary : servicesTheme.colors.subtle}
                 />
               </View>
-              <Text style={[styles.scaleOptionLabel, selected && styles.selectedLabel]}>
+              <Text style={[styles.scaleOptionLabel, { color: servicesTheme.colors.muted }, selected && styles.selectedLabel, selected && { color: servicesTheme.colors.primary }]}>
                 {labels[option - 1]}
               </Text>
             </TouchableOpacity>
@@ -334,8 +341,8 @@ function IconScaleCard({
         onResponderMove={updateFromTrack}
         style={styles.scaleTrackTouch}
       >
-        <View style={styles.scaleTrack}>
-          <View style={[styles.scaleFill, { width: `${selectedValue * 20}%` }]} />
+        <View style={[styles.scaleTrack, { backgroundColor: servicesTheme.colors.divider }]}>
+          <View style={[styles.scaleFill, { width: `${selectedValue * 20}%`, backgroundColor: servicesTheme.colors.primary }]} />
           <View style={[styles.scaleThumb, { left: `${(selectedValue - 1) * 25}%` }]} />
         </View>
       </View>
@@ -354,9 +361,11 @@ function OptionCard({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+    <View style={[styles.card, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.cardTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
       <View style={styles.optionList}>
         {options.map(option => {
           const selected = option.value === value;
@@ -370,7 +379,7 @@ function OptionCard({
               <View style={[styles.radio, selected && styles.radioActive]}>
                 {selected ? <View style={styles.radioInner} /> : null}
               </View>
-              <Text style={styles.optionText}>{option.label}</Text>
+              <Text style={[styles.optionText, { color: servicesTheme.colors.text }]}>{option.label}</Text>
             </TouchableOpacity>
           );
         })}

@@ -16,6 +16,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import BBPSHead from '../constatnt/BBPSHead';
 import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
 import { useAlert } from '../../ecommerce/components/alerts';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 // Premium Design Theme Config
 const BRAND_PRIMARY = '#8665FF';
@@ -105,14 +106,15 @@ interface InfoRowProps {
   icon: string;
   label: string;
   value: string;
+  bbpsTheme: ReturnType<typeof useBbpsTheme>;
 }
-const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value }) => (
+const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value, bbpsTheme }) => (
   <View style={styles.infoRow}>
     <View style={styles.infoRowLeft}>
-      <MaterialIcons name={icon} size={16} color={BRAND_PRIMARY} />
-      <Text style={styles.infoRowLabel}>{label}</Text>
+      <MaterialIcons name={icon} size={16} color={bbpsTheme.colors.primary} />
+      <Text style={[styles.infoRowLabel, { color: bbpsTheme.colors.muted }]}>{label}</Text>
     </View>
-    <Text style={styles.infoRowValue} numberOfLines={1}>{value}</Text>
+    <Text style={[styles.infoRowValue, { color: bbpsTheme.colors.text }]} numberOfLines={1}>{value}</Text>
   </View>
 ));
 InfoRow.displayName = 'InfoRow';
@@ -121,6 +123,7 @@ const PaymentConfirmationScreenComponent = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const alert = useAlert();
+  const bbpsTheme = useBbpsTheme();
 
   const [processing, setProcessing] = useState(false);
 
@@ -253,7 +256,7 @@ const PaymentConfirmationScreenComponent = () => {
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* 1. Statically Positioned Header */}
       <BBPSHead title={headerTitle} onBackPress={handleBackPress} />
 
@@ -265,9 +268,9 @@ const PaymentConfirmationScreenComponent = () => {
         <View style={styles.mainContainer}>
 
           {/* Customer Card */}
-          <View style={styles.premiumCard}>
+          <View style={[styles.premiumCard, { backgroundColor: bbpsTheme.colors.surface }]}>
             <LinearGradient
-              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.premiumCardHeader}
@@ -282,22 +285,22 @@ const PaymentConfirmationScreenComponent = () => {
             </LinearGradient>
 
             <View style={styles.customerCardBody}>
-              <InfoRow icon="apartment" label="Operator" value={operatorName} />
-              <View style={styles.infoRowDivider} />
-              <InfoRow icon="category" label="Category" value={categoryName} />
+              <InfoRow icon="apartment" label="Operator" value={operatorName} bbpsTheme={bbpsTheme} />
+              <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+              <InfoRow icon="category" label="Category" value={categoryName} bbpsTheme={bbpsTheme} />
             </View>
           </View>
 
           {/* Bill Summary Card */}
-          <View style={styles.billSummaryCard}>
-            <Text style={styles.cardSectionTitle}>Bill Summary</Text>
-            <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="event" label="Bill Date" value={billDate} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="event-busy" label="Due Date" value={dueDate} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} />
+          <View style={[styles.billSummaryCard, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
+            <Text style={[styles.cardSectionTitle, { color: bbpsTheme.colors.textStrong }]}>Bill Summary</Text>
+            <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="event" label="Bill Date" value={billDate} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="event-busy" label="Due Date" value={dueDate} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} bbpsTheme={bbpsTheme} />
           </View>
 
           {/* Conditional Warning Notification Banner */}
@@ -312,10 +315,10 @@ const PaymentConfirmationScreenComponent = () => {
           )}
 
           {/* Amount Card */}
-          <View style={styles.amountCard}>
-            <Text style={styles.amountCardLabel}>Amount Payable</Text>
+          <View style={[styles.amountCard, { backgroundColor: bbpsTheme.colors.surface }]}>
+            <Text style={[styles.amountCardLabel, { color: bbpsTheme.colors.muted }]}>Amount Payable</Text>
             <LinearGradient
-              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.amountPill}
@@ -337,7 +340,15 @@ const PaymentConfirmationScreenComponent = () => {
       </ScrollView>
 
       {/* 3. Outer Locked Premium Bottom Action CTA Plate */}
-      <View style={styles.premiumStickyFooter}>
+      <View
+        style={[
+          styles.premiumStickyFooter,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.premiumCTA, isProceedDisabled && styles.premiumCTADisabled]}
           activeOpacity={0.9}
@@ -347,7 +358,7 @@ const PaymentConfirmationScreenComponent = () => {
           <LinearGradient
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            colors={isProceedDisabled ? ['#C4B5FD', '#A5B4FC'] : [BRAND_PRIMARY, BRAND_SECONDARY]}
+            colors={isProceedDisabled ? ['#C4B5FD', '#A5B4FC'] : bbpsTheme.gradients.primary}
             style={styles.ctaGradientLayout}
           >
             {processing ? (

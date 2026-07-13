@@ -8,6 +8,7 @@ import MostBookedServices from '../home/MostBookedServices';
 import QuickServices from '../home/QuickServices';
 import BundleService from '../home/BundleService';
 import ExclusiveOffers from '../home/ExclusiveOffers';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type ServiceSectionKey =
   | 'banner'
@@ -55,6 +56,7 @@ const ServiceSection = React.memo(({
 ServiceSection.displayName = 'ServiceHomeSection';
 
 function HomeScreen() {
+  const { colors } = useServicesTheme();
   const [readySections, setReadySections] = useState<Set<ServiceSectionKey>>(
     () => new Set(READY_SERVICE_SECTIONS),
   );
@@ -97,7 +99,7 @@ function HomeScreen() {
   );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={SERVICE_SECTIONS}
         renderItem={renderItem}

@@ -6,6 +6,7 @@ import type { NavigationProp } from '@react-navigation/native';
 import Card from './Card';
 import { HomeStackParamList, type ServiceItem } from '../../navigation/type';
 import { useServiceHome } from '../../hooks/useServiceHome';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const fallbackImg = require('../../assete/gov_documet/aadhar card.png');
 
@@ -19,6 +20,7 @@ const RecommendedServicesCarousel = ({
   subtitle = "Picked based on what's popular",
 }: RecommendedServicesCarouselProps) => {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
+  const servicesTheme = useServicesTheme();
   const { data, isLoading, error } = useServiceHome();
 
   const services = useMemo((): ServiceItem[] => {
@@ -31,8 +33,8 @@ const RecommendedServicesCarousel = ({
     return (
       <View style={styles.wrapper}>
         <View style={styles.headerRow}>
-          <Text style={styles.heading}>{title}</Text>
-          <Text style={styles.subheading}>{subtitle}</Text>
+          <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
+          <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>{subtitle}</Text>
         </View>
         <ActivityIndicator size="small" color="#8665FF" style={styles.loader} />
       </View>
@@ -44,8 +46,8 @@ const RecommendedServicesCarousel = ({
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>{title}</Text>
-        <Text style={styles.subheading}>{subtitle}</Text>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
+        <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>{subtitle}</Text>
       </View>
 
       <ScrollView

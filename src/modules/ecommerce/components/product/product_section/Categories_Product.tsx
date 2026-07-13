@@ -19,6 +19,7 @@ import ProductCard from "../../../constants/product_cart/ProductCard";
 import ProductHead from "../../../constants/heading/Product_Head_Img";
 import FilterChipsRow from "./FilterChipsRow";
 import AllIcons from "../../../../../assets/menu/AllCategories.svg";
+import { useAppTheme } from "../../../../../theme/ThemeContext";
 
 import {
   fetchCategoriesByID,
@@ -110,11 +111,13 @@ export default function Categories_Product() {
     () => initialSelection.subcategory,
   );
   const [filterQuery, setFilterQuery] = useState<string>("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(() => cachedCategoryTree.length === 0);
+  const { isDark, theme } = useAppTheme();
 
   const numColumns = 2;
   const cardWidth = useMemo(() => {
-    const availableWidth = width - SIDEBAR_WIDTH - CONTENT_PADDING * 2;
+    const availableWidth = width - CONTENT_PADDING * 2;
     return Math.floor((availableWidth - PROMO_CARD_GAP * (numColumns - 1)) / numColumns);
   }, [width, numColumns]);
 
@@ -302,122 +305,123 @@ export default function Categories_Product() {
 
   if (loadingCategories) {
     return (
-      <View style={styles.loaderScreen}>
-        <ActivityIndicator size="large" color="#16A34A" />
+      <View style={[styles.loaderScreen, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.fixedHeader, { height: HEADER_HEIGHT }]}>
         <ProductHead headerHeight={HEADER_HEIGHT} topSpacing={topSpacing} />
       </View>
 
-      <View style={[styles.mainContainer, { marginTop: HEADER_HEIGHT }]}>
-        <View style={styles.sidebar}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.sidebarScrollContent}
-          >
-            <TouchableOpacity
-              onPress={() => onSubcategoryPress(null)}
-              activeOpacity={0.85}
-              style={styles.sidebarItemTouch}
-            >
-              {selectedSubcategoryId === null && (
-                <View style={styles.activeAccent} />
-              )}
-              <View style={
-                selectedSubcategoryId === null
-                  ? styles.sidebarItemActive
-                  : styles.sidebarItem
-              }>
-                <View style={[
-                  styles.iconContainer,
-                  selectedSubcategoryId === null && styles.iconContainerActive,
-                ]}>
-                  <AllIcons width={26} height={26} />
-                </View>
-                <Text
-                  style={
-                    selectedSubcategoryId === null
-                      ? styles.sidebarTextActive
-                      : styles.sidebarText
-                  }
-                  numberOfLines={2}
-                >
-                  All
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            {subcategories.map((subcategory) => {
-              const isActive = String(selectedSubcategoryId) === String(subcategory.id);
-              return (
-                <TouchableOpacity
-                  key={String(subcategory.id)}
-                  onPress={() => onSubcategoryPress(subcategory.id)}
-                  activeOpacity={0.85}
-                  style={styles.sidebarItemTouch}
-                >
-                  {isActive && <View style={styles.activeAccent} />}
-                  <View style={isActive ? styles.sidebarItemActive : styles.sidebarItem}>
-                    <View style={[
-                      styles.iconContainer,
-                      isActive && styles.iconContainerActive,
-                    ]}>
-                      {subcategory.image ? (
-                        <Image
-                          source={{ uri: resolveImageUri(subcategory.image) }}
-                          style={styles.categoryIcon}
-                        />
-                      ) : (
-                        <View style={styles.placeholderIcon} />
-                      )}
-                    </View>
-                    <Text
-                      style={isActive ? styles.sidebarTextActive : styles.sidebarText}
-                      numberOfLines={2}
-                    >
-                      {subcategory.name?.trim()}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        <View style={styles.contentArea}>
+      <View style={[styles.mainContainer, { marginTop: HEADER_HEIGHT, backgroundColor: theme.background }]}>
+        <View style={[styles.contentArea, { backgroundColor: theme.background }]}>
           <FlatList
             key={`products-${numColumns}`}
             data={products}
             keyExtractor={(item, index) => String(item?.id ?? index)}
             numColumns={numColumns}
             columnWrapperStyle={styles.row}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
+            style={[styles.list, { backgroundColor: theme.background }]}
+            contentContainerStyle={[styles.listContent, { backgroundColor: theme.background }]}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.4}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             ListHeaderComponent={
               <View>
-                <View style={styles.categoryRow}>
-                  <MaterialIcons name="category" size={20} color="#16A34A" />
-                  <Text style={styles.categoryText} numberOfLines={1}>
+                <View style={styles.categoryHeaderRow}>
+                  <View style={styles.categoryTitleRow}>
+                  <MaterialIcons name="category" size={20} color={isDark ? "#FACC15" : "#D69A33"} />
+                  <Text style={[styles.categoryText, { color: theme.text }]} numberOfLines={1}>
                     {selectedCategory?.name || title}
                   </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.filterButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+                    activeOpacity={0.85}
+                    onPress={() => setFiltersOpen((prev) => !prev)}
+                  >
+                    <MaterialIcons name="tune" size={20} color={theme.text} />
+                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.line} />
-                <FilterChipsRow
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categorySliderRow}
+                >
+                  <TouchableOpacity
+                    onPress={() => onSubcategoryPress(null)}
+                    activeOpacity={0.85}
+                    style={[
+                      styles.sliderPill,
+                      {
+                        backgroundColor: selectedSubcategoryId === null ? "#FACC15" : theme.card,
+                        borderColor: selectedSubcategoryId === null ? "#111827" : theme.border,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.sliderPillIconWrap, { backgroundColor: selectedSubcategoryId === null ? "rgba(17,24,39,0.12)" : theme.background }]}>
+                      <AllIcons width={18} height={18} />
+                    </View>
+                    <Text
+                      style={[
+                        styles.sliderPillText,
+                        { color: selectedSubcategoryId === null ? "#111827" : theme.text },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      All
+                    </Text>
+                  </TouchableOpacity>
+
+                  {subcategories.map((subcategory) => {
+                    const isActive = String(selectedSubcategoryId) === String(subcategory.id);
+                    return (
+                      <TouchableOpacity
+                        key={String(subcategory.id)}
+                        onPress={() => onSubcategoryPress(subcategory.id)}
+                        activeOpacity={0.85}
+                        style={[
+                          styles.sliderPill,
+                          {
+                            backgroundColor: isActive ? "#FACC15" : theme.card,
+                            borderColor: isActive ? "#111827" : theme.border,
+                          },
+                        ]}
+                      >
+                        {subcategory.image ? (
+                          <Image
+                            source={{ uri: resolveImageUri(subcategory.image) }}
+                            style={styles.sliderPillImage}
+                          />
+                        ) : (
+                          <View style={[styles.sliderPillPlaceholder, { backgroundColor: isActive ? "rgba(17,24,39,0.18)" : theme.border }]} />
+                        )}
+                        <Text
+                          style={[
+                            styles.sliderPillText,
+                            { color: isActive ? "#111827" : theme.text },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {subcategory.name?.trim()}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {filtersOpen && <FilterChipsRow
                   onSelect={(chip) => {
                     setFilterQuery(chip.query || "");
                     // queryKey includes filterQuery → useInfiniteQuery reruns automatically
                   }}
-                />
+                />}
               </View>
             }
             renderItem={({ item }) => {
@@ -437,14 +441,14 @@ export default function Categories_Product() {
             ListEmptyComponent={
               !isProductsLoading ? (
                 <View style={styles.emptyWrap}>
-                  <Text style={styles.emptyText}>No products found in this category.</Text>
+                  <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No products found in this category.</Text>
                 </View>
               ) : null
             }
             ListFooterComponent={
               isFetchingNextPage ? (
                 <View style={styles.footerLoader}>
-                  <ActivityIndicator size="small" color="#16A34A" />
+                  <ActivityIndicator size="small" color={theme.primary} />
                 </View>
               ) : null
             }
@@ -453,7 +457,7 @@ export default function Categories_Product() {
       </View>
 
       {isProductsLoading && !isFetchingNextPage && (
-        <ActivityIndicator style={styles.loadingIndicator} color="#16A34A" />
+        <ActivityIndicator style={styles.loadingIndicator} color={theme.primary} />
       )}
     </View>
   );
@@ -479,7 +483,6 @@ const styles = StyleSheet.create({
 
   mainContainer: {
     flex: 1,
-    flexDirection: "row",
     backgroundColor: "#FFFFFF",
   },
 
@@ -487,8 +490,8 @@ const styles = StyleSheet.create({
     width: SIDEBAR_WIDTH,
     backgroundColor: "#F8F7FF",
     borderRightWidth: 1,
-    borderRightColor: "#EDE9FE",
-    shadowColor: "#8665FF",
+    borderRightColor: "#F6D58B",
+    shadowColor: "#D69A33",
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -515,7 +518,7 @@ const styles = StyleSheet.create({
     bottom: 10,
     width: 3,
     borderRadius: 2,
-    backgroundColor: "#8665FF",
+    backgroundColor: "#FACC15",
     zIndex: 1,
   },
 
@@ -532,7 +535,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 6,
     borderRadius: 14,
-    backgroundColor: "#EDE9FE",
+    backgroundColor: "#FFF3B0",
   },
 
   iconContainer: {
@@ -553,9 +556,9 @@ const styles = StyleSheet.create({
   },
 
   iconContainerActive: {
-    backgroundColor: "#8665FF",
-    borderColor: "#8665FF",
-    shadowColor: "#8665FF",
+    backgroundColor: "#FACC15",
+    borderColor: "#111827",
+    shadowColor: "#D69A33",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -586,7 +589,7 @@ const styles = StyleSheet.create({
 
   sidebarTextActive: {
     fontSize: 11,
-    color: "#5B47A3",
+    color: "#111827",
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 14,
@@ -600,7 +603,7 @@ const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: "#fff" },
 
   listContent: {
-    paddingTop: 8,
+    paddingTop: 10,
     paddingHorizontal: CONTENT_PADDING,
     paddingBottom: 100,
   },
@@ -619,6 +622,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
+  categoryHeaderRow: {
+    minHeight: 44,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 6,
+    gap: 10,
+  },
+
+  categoryTitleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   categoryText: {
     flex: 1,
     fontSize: 14,
@@ -627,8 +656,51 @@ const styles = StyleSheet.create({
   },
 
   categorySliderRow: {
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     gap: 10,
+  },
+
+  sliderPill: {
+    height: 38,
+    maxWidth: 180,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  sliderPillText: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  sliderPillIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+
+  sliderPillImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+    resizeMode: "cover",
+  },
+
+  sliderPillPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
   },
 
   sliderItem: {

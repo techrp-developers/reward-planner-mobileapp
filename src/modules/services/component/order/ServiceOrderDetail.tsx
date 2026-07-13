@@ -37,6 +37,7 @@ import {
   type ServiceItem,
 } from '../../api/OrderAPI';
 import type { HomeStackParamList } from '../../navigation/type';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceOrderDetail'>;
@@ -79,6 +80,7 @@ function formatDate(dateStr: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ServiceOrderDetail() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const { parent_order_id } = route.params;
 
@@ -177,14 +179,14 @@ export default function ServiceOrderDetail() {
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
           onBack={() => navigation.goBack()}
           onHelp={() => navigation.navigate('HelpForm')}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#7C3AED" />
-          <Text style={styles.loadingText}>Loading order details…</Text>
+          <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.muted }]}>Loading order details…</Text>
         </View>
       </SafeAreaView>
     );
@@ -192,7 +194,7 @@ export default function ServiceOrderDetail() {
 
   if (error || !order) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
           onBack={() => navigation.goBack()}
           onHelp={() => navigation.navigate('HelpForm')}
@@ -233,7 +235,7 @@ export default function ServiceOrderDetail() {
   const primaryImage = primaryService?.image_url;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header
         onBack={() => navigation.goBack()}
         onHelp={() => navigation.navigate('HelpForm')}
@@ -264,14 +266,14 @@ export default function ServiceOrderDetail() {
           orderId={parent_order_id.slice(0, 8).toUpperCase()}
         />
 
-        <View style={styles.statusSummaryCard}>
+        <View style={[styles.statusSummaryCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
           <View style={styles.statusSummaryHeader}>
             <Text style={[styles.statusSummaryTitle, { color: statusColor }]}>
               {statusLabel}
             </Text>
-            <Text style={styles.statusSummaryDate}>{formatDate(order.created_at)}</Text>
+            <Text style={[styles.statusSummaryDate, { color: servicesTheme.colors.muted }]}>{formatDate(order.created_at)}</Text>
           </View>
-          <Text style={styles.statusSummaryText}>
+          <Text style={[styles.statusSummaryText, { color: servicesTheme.colors.muted }]}>
             Track each service below for its individual document and completion timeline.
           </Text>
         </View>
@@ -420,17 +422,19 @@ export default function ServiceOrderDetail() {
 
 // ── Local layout helpers (not exported — presentational only) ─────────────────
 function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="chevron-left" size={28} color="#374151" />
+        <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Order Details</Text>
-      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={styles.helpBtn}>
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Order Details</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
         <MaterialCommunityIcons
           name="chat-outline"
           size={16}
@@ -450,9 +454,11 @@ function SectionCard({
   title?: string;
   children: React.ReactNode;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+    <View style={[styles.section, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      {title ? <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text> : null}
       {children}
     </View>
   );
@@ -469,11 +475,12 @@ function OrderDocumentsCard({
   pending: number;
   onUpload: () => void;
 }) {
+  const servicesTheme = useServicesTheme();
   const complete = pending === 0;
 
   return (
-    <View style={styles.documentsCard}>
-      <View style={styles.documentsIcon}>
+    <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <View style={[styles.documentsIcon, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#F0ECFF' }]}>
         <MaterialCommunityIcons
           name={complete ? 'file-check-outline' : 'file-upload-outline'}
           size={24}
@@ -481,8 +488,8 @@ function OrderDocumentsCard({
         />
       </View>
       <View style={styles.documentsCopy}>
-        <Text style={styles.documentsTitle}>Documents</Text>
-        <Text style={styles.documentsText}>
+        <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Documents</Text>
+        <Text style={[styles.documentsText, { color: servicesTheme.colors.muted }]}>
           {complete
             ? `${uploaded} of ${total} documents uploaded`
             : `${pending} document${pending > 1 ? 's' : ''} still needed`}
@@ -513,9 +520,11 @@ function InvoiceDownloadRow({
   downloading: boolean;
   onDownload: () => void;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.invoiceRow}>
-      <Text style={styles.invoiceText}>Save a copy of your order</Text>
+    <View style={[styles.invoiceRow, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>Save a copy of your order</Text>
 
       <TouchableOpacity
         style={[styles.invoiceButton, downloading && styles.invoiceButtonDisabled]}
@@ -524,9 +533,9 @@ function InvoiceDownloadRow({
         disabled={downloading}
       >
         {downloading ? (
-          <ActivityIndicator size="small" color={PURPLE} />
+          <ActivityIndicator size="small" color={servicesTheme.colors.primary} />
         ) : (
-          <Text style={styles.invoiceButtonText}>Download Invoice</Text>
+          <Text style={[styles.invoiceButtonText, { color: servicesTheme.colors.primary }]}>Download Invoice</Text>
         )}
       </TouchableOpacity>
     </View>

@@ -24,6 +24,7 @@ import {
 } from "../../constants/cardLayout";
 import HomeSectionSkeleton from "../home/HomeSectionSkeleton";
 import { queryClient } from "../../../../query/queryClient";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -50,6 +51,7 @@ const fetchRecentProductsData = async () => {
 const RecentProduct = () => {
     const navigation = useNavigation<Nav>();
     const { user, isAuthenticated } = useAuth();
+    const { isDark, theme } = useAppTheme();
     const RECENT_QUERY_KEY = recentQueryKey(user?.user_id);
 
     const { data: products = [], isLoading } = useQuery({
@@ -76,23 +78,30 @@ const RecentProduct = () => {
     );
 
     if (isAuthenticated && isLoading && products.length === 0) {
-        return <HomeSectionSkeleton height={350} backgroundColor="#F0E5FF" />;
+        return <HomeSectionSkeleton height={350} backgroundColor={theme.background} />;
     }
 
     if (!isAuthenticated || products.length === 0) return null;
 
     return (
-        <View style={styles.sectionWrapper}>
+        <View style={[styles.sectionWrapper, { backgroundColor: theme.background }]}>
             <LinearGradient
-                colors={['#BCC5FF', '#F9E1FF', '#FFB6D9']} 
+                colors={isDark ? ["#09090B", "#18120D", "#2A1A0C"] : ["#F6D58B", "#D69A33", "#8A531F"]} 
                 start={{ x: 0, y: 0 }} 
                 end={{ x: 1, y: 1 }}  
                 style={styles.gradientSection}
             >
                 <View style={styles.headerRow}>
-                    <Text style={styles.heading}>Recently Viewed</Text>
-                    <TouchableOpacity activeOpacity={0.8} onPress={handlePressAll} style={styles.viewAllBtn}>
-                        <Text style={styles.viewAllText}>View All</Text>
+                    <Text style={[styles.heading, { color: theme.text }]}>Recently Viewed</Text>
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={handlePressAll}
+                        style={[
+                            styles.viewAllBtn,
+                            { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.45)" },
+                        ]}
+                    >
+                        <Text style={[styles.viewAllText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -126,6 +135,7 @@ const styles = StyleSheet.create({
         width: '100%',
         paddingTop: 18,
         paddingBottom: 20,
+        marginTop: 12,
         // Ensure height is not fixed so flexible cards don't get cut off
     },
     headerRow: {

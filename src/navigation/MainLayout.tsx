@@ -9,6 +9,7 @@ import BottomTabs from "../bottombar/BottomTabs";
 import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
+import { useAppTheme } from "../theme/ThemeContext";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -28,6 +29,17 @@ type RouteStateLike = {
 };
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
+
+const ThemedSurface = React.memo(function ThemedSurface({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: any;
+}) {
+  const { theme } = useAppTheme();
+  return <View style={[style, { backgroundColor: theme.background }]}>{children}</View>;
+});
 
 const MODULE_MODE_BY_ROUTE: Record<keyof ModuleStackParamList, AppMode> = {
   ProductModule: "Product",
@@ -279,11 +291,11 @@ function MainLayout() {
 
 
   return (
-    <View style={styles.container}>
+    <ThemedSurface style={styles.container}>
       <View style={showNavbar ? styles.navbarSlot : styles.navbarSlotHidden}>
         <Navbar activeModule={activeMode} onModuleChange={handleModuleChange} />
       </View>
-      <View style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
+      <ThemedSurface style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
         <ModuleStack.Navigator
           initialRouteName="ProductModule"
           screenListeners={moduleScreenListeners}
@@ -292,7 +304,7 @@ function MainLayout() {
             animation: "none",
             gestureEnabled: true,
             freezeOnBlur: true,
-            contentStyle: { backgroundColor: "#FFFFFF" },
+            contentStyle: { backgroundColor: "transparent" },
           }}
         >
           <ModuleStack.Screen
@@ -316,7 +328,7 @@ function MainLayout() {
             initialParams={{ moduleName: "DineOut" }}
           />
         </ModuleStack.Navigator>
-      </View>
+      </ThemedSurface>
       {showBottomTabs ? (
         <BottomTabs
           activeMode={activeMode}
@@ -325,7 +337,7 @@ function MainLayout() {
           onTabPress={handleBottomTabPress}
           onCenterPress={handleCenterPress}
         />) : null}
-    </View>
+    </ThemedSurface>
   );
 }
 

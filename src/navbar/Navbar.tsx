@@ -24,18 +24,21 @@ import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import ProductTop from "./assete/Product_BG.jpg";
 import ServiceTop from "./assete/Service_BG.png";
 import PaymentTop from "./assete/Payment_BG.png";
 import BusBookingTop from "./assete/Bus_BG.png";
+import Background1 from "./assete/Background1.jpeg";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
 import Services from "../assets/menu/Services.svg";
 import Payments from "../assets/menu/Payments.svg";
+import Payments2 from "../assets/menu/Payments2.svg";
 // import Dine_Out from "../assets/menu/Dine_Out.svg";
 import Bus_Booking from "../assets/menu/Bus_Booking.svg";
+import Bus from "../assets/menu/Bus.svg";
 import Reward from "../assets/product/rewards.svg";
+import { useAppTheme } from "../theme/ThemeContext";
 
 import type { RootStackParamList } from "@/navigation/types";
 
@@ -109,17 +112,17 @@ const PAYMENT_ROUTES = new Set([
 ]);
 
 const BG_MAP: Record<TopTab, any> = {
-  Product: ProductTop,
+  Product: Background1,
   Services: ServiceTop,
   Payments: PaymentTop,
   DineOut: BusBookingTop,
 };
 
-const TAB_THEME: Record<TopTab, { bgColor: string }> = {
+const TAB_THEME: Record<TopTab, { bgColor: string; activeTint?: string }> = {
   Product: { bgColor: "#5F341A" },
   Services: { bgColor: "#4F6BFF" },
-  Payments: { bgColor: "#7C3AED" }, // looks closer to your screenshot (purple)
-  DineOut: { bgColor: "#DC2626" },
+  Payments: { bgColor: "#EAE2FF", activeTint: "#532C99" },
+  DineOut: { bgColor: "#FFE3E8", activeTint: "#CE1538" },
 };
 
 const TOP_TABS: TopTab[] = ["Product", "Services", "Payments", "DineOut"];
@@ -207,16 +210,27 @@ const TopIconWithLabel = React.memo(
     active,
     onPress,
     Icon,
+    ActiveIcon,
     label,
     activeColor,
+    activeTint,
+    inactiveTint,
+    inactiveBackground,
+    inactiveBorder,
   }: {
     active: boolean;
     onPress: () => void;
     Icon: SvgIcon;
+    ActiveIcon?: SvgIcon;
     label: string;
     activeColor: string;
+    activeTint?: string;
+    inactiveTint: string;
+    inactiveBackground: string;
+    inactiveBorder: string;
   }) => {
-    const tint = active ? "#FFFFFF" : "#374151";
+    const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
+    const RenderIcon = active && ActiveIcon ? ActiveIcon : Icon;
 
     return (
       <TouchableOpacity
@@ -224,13 +238,17 @@ const TopIconWithLabel = React.memo(
         onPress={onPress}
         style={[
           styles.topTabCard,
+          {
+            backgroundColor: inactiveBackground,
+            borderColor: inactiveBorder,
+          },
           active && styles.topTabCardActive,
           active && { backgroundColor: activeColor },
         ]}
       >
         {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
             We pass all 3 so it works in most cases. */}
-        <Icon width={28} height={28} fill={tint} stroke={tint} color={tint} />
+        <RenderIcon width={28} height={28} fill={tint} stroke={tint} color={tint} />
 
         <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
       </TouchableOpacity>
@@ -243,6 +261,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
+  const { isDark, theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [rewardPoints, setRewardPoints] = React.useState(0);
   const rewardPointsLabel = React.useMemo(() => {
@@ -277,6 +296,14 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
     [activeTab]
   );
+  const walletBadgeColor = React.useMemo(
+    () => TAB_THEME[activeTab]?.activeTint ?? activeThemeColor,
+    [activeTab, activeThemeColor]
+  );
+  const navbarSurface = isDark ? theme.card : "#FFFFFF";
+  const navbarBorder = isDark ? theme.border : "rgba(0,0,0,0.10)";
+  const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
+  const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
   const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
     Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
@@ -507,7 +534,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   return (
     <View style={[styles.wrapper, { paddingTop: insets.top + 8 }]}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={isDark ? "light-content" : "dark-content"}
         translucent
         backgroundColor="transparent"
       />
@@ -538,6 +565,10 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           Icon={Home_Nav as unknown as SvgIcon}
           label="Product"
           activeColor={TAB_THEME.Product.bgColor}
+          activeTint={TAB_THEME.Product.activeTint}
+          inactiveTint={navbarIconColor}
+          inactiveBackground={navbarSurface}
+          inactiveBorder={navbarBorder}
         />
 
         <TopIconWithLabel
@@ -546,22 +577,36 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           Icon={Services as unknown as SvgIcon}
           label="Services"
           activeColor={TAB_THEME.Services.bgColor}
+          activeTint={TAB_THEME.Services.activeTint}
+          inactiveTint={navbarIconColor}
+          inactiveBackground={navbarSurface}
+          inactiveBorder={navbarBorder}
         />
 
         <TopIconWithLabel
           active={activeTab === "Payments"}
           onPress={() => handleTab("Payments")}
           Icon={Payments as unknown as SvgIcon}
+          ActiveIcon={Payments2 as unknown as SvgIcon}
           label="Payments"
           activeColor={TAB_THEME.Payments.bgColor}
+          activeTint={TAB_THEME.Payments.activeTint}
+          inactiveTint={navbarIconColor}
+          inactiveBackground={navbarSurface}
+          inactiveBorder={navbarBorder}
         />
 
         <TopIconWithLabel
           active={activeTab === "DineOut"}
           onPress={() => handleTab("DineOut")}
           Icon={Bus_Booking as unknown as SvgIcon}
+          ActiveIcon={Bus as unknown as SvgIcon}
           label="Bus Booking"
           activeColor={TAB_THEME.DineOut.bgColor}
+          activeTint={TAB_THEME.DineOut.activeTint}
+          inactiveTint={navbarIconColor}
+          inactiveBackground={navbarSurface}
+          inactiveBorder={navbarBorder}
         />
       </View>
 
@@ -572,8 +617,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           pointerEvents={showLocation ? "auto" : "none"}
         >
           <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-          <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={styles.homeBold}>HOME- </Text>
+          <Text style={[styles.locationText, { color: "#111827" }]} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={[styles.homeBold, { color: "#111827" }]}>HOME- </Text>
             {displayName}
             {hasAddress ? `, ${displayAddress}` : ""}
           </Text>
@@ -601,7 +646,14 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
       <View style={styles.searchRow}>
         <TouchableOpacity
           activeOpacity={0.9}
-          style={styles.searchContainer}
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: navbarSurface,
+              borderColor: navbarBorder,
+              shadowColor: isDark ? "#000000" : "#000000",
+            },
+          ]}
           onPress={() => {
             if (activeTab === "Services") {
               navigateToScreen("ServiceSearch");
@@ -615,8 +667,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             }
           }}
         >
-          <MaterialCommunityIcons name="magnify" size={20} color="#111827" />
-          <Text style={styles.fakePlaceholder}>Search “Reward Planners”</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
+          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]}>Search “Reward Planners”</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -629,7 +681,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           <View
             style={[
               styles.walletTag,
-              { backgroundColor: activeThemeColor },
+              { backgroundColor: walletBadgeColor },
             ]}
           >
             <View style={styles.walletTagInner}>
