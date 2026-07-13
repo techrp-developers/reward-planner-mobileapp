@@ -16,11 +16,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import Navbar from '../../../../navbar/Navbar';
-import BottomTabs, {
-  TAB_BAR_HEIGHT,
-  type TabKey,
-} from '../../../../bottombar/BottomTabs';
-import { useCart } from '../../../ecommerce/context/CartContext';
+import HealthBottomTabs, {
+  HEALTH_TAB_BAR_HEIGHT,
+} from '../HealthBottomTabs';
 
 import BloodCheckupIcon from '../../assets/icons/blood_checkup_icon.svg';
 import FullBodyIcon from '../../assets/icons/full_body_icon.svg';
@@ -37,6 +35,10 @@ import CBCIcon from '../../assets/icons/CBC.svg';
 import LiverIcon from '../../assets/icons/LiverFunction.svg';
 import KidneyIcon from '../../assets/icons/KidneyFunction.svg';
 import RoutineIcon from '../../assets/icons/RoutineMarkers.svg';
+import CityLabIcon from '../../assets/icons/CityLab.svg';
+import HealthQuestIcon from '../../assets/icons/HealthQuest.svg';
+import DiagnosticProIcon from '../../assets/icons/DiagnosticPro.svg';
+import SafeTouchLabsIcon from '../../assets/icons/SafeTouchLabs.svg';
 
 import SarahJenkinsIcon from '../../assets/icons/sarah_jenkins.svg';
 import WorldBloodDonorBanner from '../../assets/banners/world-blood-donor-banner.svg';
@@ -210,6 +212,30 @@ const activeVenues: ActiveVenue[] = [
     Banner: VenueHospitalOne,
   },
 ];
+
+const certifiedLabPartners = [
+  {
+    id: 1,
+    title: 'City Lab',
+    Icon: CityLabIcon,
+  },
+  {
+    id: 2,
+    title: 'HealthQuest',
+    Icon: HealthQuestIcon,
+  },
+  {
+    id: 3,
+    title: 'Diagnostic Pro',
+    Icon: DiagnosticProIcon,
+  },
+  {
+    id: 4,
+    title: 'SafeTouch Labs',
+    Icon: SafeTouchLabsIcon,
+  },
+] as const;
+
 type HealthcareFaq = {
   id: number;
   question: string;
@@ -241,7 +267,7 @@ const healthcareFaqs: HealthcareFaq[] = [
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { totalQuantity } = useCart();
+  const scrollViewRef = useRef<ScrollView>(null);
   const eventListRef = useRef<FlatList<UpcomingEvent>>(null);
   const [selectedDiagnosticCategory, setSelectedDiagnosticCategory] =
     useState<'blood' | 'fullBody' | 'xray' | 'specialized'>('blood');
@@ -255,6 +281,10 @@ export default function HomeScreen() {
   const isAllSelected = selectedTestsCount === essentialMarkers.length;
   const [eventSliderWidth, setEventSliderWidth] = useState(0);
 const [expandedFaqId, setExpandedFaqId] = useState<number | null>(1);
+
+  const handleOpenBookAppointment = useCallback(() => {
+    navigation.navigate('BookAppointment');
+  }, [navigation]);
 
 
   const toggleMarker = useCallback((id: number) => {
@@ -313,13 +343,17 @@ const [expandedFaqId, setExpandedFaqId] = useState<number | null>(1);
             <Text style={styles.eventMetaText}>{item.location}</Text>
           </View>
 
-          <TouchableOpacity activeOpacity={0.85} style={styles.eventButton}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.eventButton}
+            onPress={handleOpenBookAppointment}
+          >
             <Text style={styles.eventButtonText}>{item.buttonText}</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
-  }, []);
+  }, [handleOpenBookAppointment]);
 
 const renderActiveVenueCard = useCallback(({ item }: { item: ActiveVenue }) => {
   const VenueBanner = item.Banner;
@@ -353,13 +387,17 @@ const renderActiveVenueCard = useCallback(({ item }: { item: ActiveVenue }) => {
           <Text style={styles.eventMetaText}>{item.distance}</Text>
         </View>
 
-       <TouchableOpacity activeOpacity={0.85} style={styles.activeVenueButton}>
+       <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.activeVenueButton}
+          onPress={handleOpenBookAppointment}
+        >
           <Text style={styles.eventButtonText}>{item.buttonText}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-}, []);
+}, [handleOpenBookAppointment]);
 
 const renderHealthcareFaqItem = useCallback(
   (item: HealthcareFaq) => {
@@ -403,35 +441,27 @@ const renderHealthcareFaqItem = useCallback(
   [expandedFaqId],
 );
 
-  const handleTabPress = useCallback(
-    (tab: TabKey) => {
-      if (tab === 'Home') return;
-
-      if (tab === 'Search') {
-        navigation.navigate('ServiceSearch');
+  const handleHealthTabPress = useCallback(
+    (tab: 'Home' | 'Providers' | 'Events' | 'Profile') => {
+      if (tab === 'Home') {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         return;
       }
 
-      if (tab === 'Cart') {
-        navigation.navigate('Cart');
+      if (tab === 'Providers') {
+        navigation.navigate('ProvidersScreen');
         return;
       }
 
-      if (tab === 'Profile') {
-        navigation.navigate('Profile');
+      if (tab === 'Events') {
+        navigation.navigate('EventsScreen');
         return;
       }
 
-      if (tab === 'Notes') {
-        navigation.navigate('TodoList');
-      }
+      navigation.navigate('Profile');
     },
     [navigation],
   );
-
-  const handleCenterPress = useCallback(() => {
-    navigation.navigate('Dashboard');
-  }, [navigation]);
 
   const navigateToDiagnosticCategory = useCallback(
     (
@@ -471,10 +501,11 @@ const renderHealthcareFaqItem = useCallback(
       <Navbar topTabsVariant="health" />
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.screen}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: TAB_BAR_HEIGHT + bottomInset + 16 },
+          { paddingBottom: HEALTH_TAB_BAR_HEIGHT + bottomInset + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -499,7 +530,11 @@ const renderHealthcareFaqItem = useCallback(
             <Text style={styles.heroSubtitleStrong}>₹0.</Text>
           </Text>
 
-          <TouchableOpacity activeOpacity={0.9} style={styles.heroCta}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.heroCta}
+            onPress={handleOpenBookAppointment}
+          >
             <Text style={styles.heroCtaText}>Book your free checkup now</Text>
           </TouchableOpacity>
 
@@ -522,6 +557,7 @@ const renderHealthcareFaqItem = useCallback(
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.appointmentHeaderAction}
+              onPress={() => navigation.navigate('UpcomingEvenetsScreen')}
             >
               <Text style={styles.appointmentAction}>See all</Text>
               <MaterialCommunityIcons
@@ -909,6 +945,26 @@ const renderHealthcareFaqItem = useCallback(
               decelerationRate="fast"
             />
           </View>
+
+          <View style={styles.certifiedPartnersCard}>
+            <Text style={styles.certifiedPartnersEyebrow}>
+              CERTIFIED LAB PARTNERS
+            </Text>
+
+            {certifiedLabPartners.map(item => {
+              const PartnerIcon = item.Icon;
+
+              return (
+                <View key={item.id} style={styles.certifiedPartnerRow}>
+                  <View style={styles.certifiedPartnerIconWrap}>
+                    <PartnerIcon width={24} height={24} />
+                  </View>
+                  <Text style={styles.certifiedPartnerText}>{item.title}</Text>
+                </View>
+              );
+            })}
+          </View>
+
           <View style={styles.activeVenuesSection}>
             <Text style={styles.activeVenuesHeading}>
               Active venues near you
@@ -957,13 +1013,7 @@ const renderHealthcareFaqItem = useCallback(
         </View>
       </ScrollView>
 
-      <BottomTabs
-        activeMode="Services"
-        activeTabKey="Home"
-        cartCount={totalQuantity}
-        onTabPress={handleTabPress}
-        onCenterPress={handleCenterPress}
-      />
+      <HealthBottomTabs activeTabKey="Home" onTabPress={handleHealthTabPress} />
     </View>
   );
 }
@@ -1007,7 +1057,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.7,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   heroTitle: {
@@ -1016,7 +1066,7 @@ const styles = StyleSheet.create({
     lineHeight: 39,
     fontWeight: '800',
     marginBottom: 16,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   heroSubtitle: {
@@ -1024,13 +1074,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 26,
     marginBottom: 28,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   heroSubtitleStrong: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   heroCta: {
@@ -1047,7 +1097,7 @@ const styles = StyleSheet.create({
     color: '#0B57BA',
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   heroFooterRow: {
@@ -1060,7 +1110,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '500',
     marginLeft: 10,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentSection: {
@@ -1080,7 +1130,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 19,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentHeaderAction: {
@@ -1092,7 +1142,7 @@ const styles = StyleSheet.create({
     color: '#0B57BA',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginRight: 6,
   },
 
@@ -1137,7 +1187,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentDateNumber: {
@@ -1145,7 +1195,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginTop: 2,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentMeta: {
@@ -1157,14 +1207,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 4,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentCardSubtitle: {
     color: '#475569',
     fontSize: 14,
     marginBottom: 8,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentTimeRow: {
@@ -1179,7 +1229,7 @@ const styles = StyleSheet.create({
   appointmentCardTime: {
     color: '#64748B',
     fontSize: 14,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentStatusPill: {
@@ -1203,17 +1253,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentStatusConfirmedText: {
     color: '#0F766E',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   appointmentStatusPendingText: {
     color: '#475569',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   diagnosticSection: {
@@ -1230,14 +1280,14 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 19,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
 
   diagnosticSectionCaption: {
     color: '#64748B',
     fontSize: 15,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   diagnosticGrid: {
@@ -1296,7 +1346,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 10,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     letterSpacing: 0.1,
   },
 
@@ -1305,7 +1355,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginTop: 10,
     marginBottom: 4,
   },
@@ -1315,7 +1365,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginTop: 10,
     marginBottom: 4,
   },
@@ -1324,7 +1374,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 0,
   },
 
@@ -1332,7 +1382,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 0,
   },
 
@@ -1352,7 +1402,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 29,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 2,
   },
 
@@ -1360,7 +1410,7 @@ const styles = StyleSheet.create({
     color: '#687489',
     fontSize: 13,
     lineHeight: 22,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 14,
   },
 
@@ -1416,7 +1466,7 @@ const styles = StyleSheet.create({
   selectAllText: {
     color: '#1A2438',
     fontSize: 15,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     fontWeight: '500',
   },
 
@@ -1424,7 +1474,7 @@ const styles = StyleSheet.create({
     color: '#0E61C9',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   markerCard: {
@@ -1462,7 +1512,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 3,
   },
 
@@ -1470,7 +1520,7 @@ const styles = StyleSheet.create({
     color: '#5E6A7E',
     fontSize: 14,
     lineHeight: 24,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   markerCheckedBox: {
@@ -1499,7 +1549,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 26,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 22,
   },
 
@@ -1540,7 +1590,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   stepLine: {
@@ -1555,7 +1605,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 26,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
 
@@ -1564,7 +1614,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   testimonialCard: {
@@ -1582,7 +1632,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 34,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 8,
   },
 
@@ -1591,7 +1641,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 30,
     fontWeight: '500',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 28,
   },
 
@@ -1627,7 +1677,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   testimonialRole: {
@@ -1636,7 +1686,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '800',
     letterSpacing: 0.8,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   upcomingEventsSection: {
@@ -1644,12 +1694,60 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  certifiedPartnersCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+
+  certifiedPartnersEyebrow: {
+    color: '#64748B',
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '700',
+    fontFamily: 'Manrope',
+    letterSpacing: 2.2,
+    marginBottom: 18,
+  },
+
+  certifiedPartnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: 170,
+    minHeight: 42,
+    marginBottom: 12,
+  },
+
+  certifiedPartnerIconWrap: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 18,
+  },
+
+  certifiedPartnerText: {
+    color: '#8D96A5',
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '700',
+    fontFamily: 'Manrope',
+    flexShrink: 0,
+  },
+
   upcomingEventsHeading: {
     color: '#0F172A',
     fontSize: 19,
     lineHeight: 22,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 10,
   },
 
@@ -1694,7 +1792,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 21,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 8,
   },
 
@@ -1703,7 +1801,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 12,
   },
 
@@ -1718,7 +1816,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '500',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 4,
   },
 
@@ -1736,7 +1834,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   activeVenuesSection: {
   marginTop: 4,
@@ -1748,7 +1846,7 @@ activeVenuesHeading: {
   fontSize: 19,
   lineHeight: 22,
   fontWeight: '800',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
   marginBottom: 10,
 },
 
@@ -1808,7 +1906,7 @@ activeVenueRatingText: {
   fontSize: 14,
   lineHeight: 16,
   fontWeight: '700',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
   marginLeft: 4,
 },
 healthcareFaqSection: {
@@ -1826,7 +1924,7 @@ healthcareFaqSmallTitle: {
   fontSize: 19,
   lineHeight: 25,
   fontWeight: '800',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
   marginBottom: 14,
   marginTop: 14,
   marginLeft: 14,
@@ -1853,7 +1951,7 @@ healthcareFaqTitle: {
   fontSize: 25,
   lineHeight: 31,
   fontWeight: '800',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
 },
 
 healthcareBellBtn: {
@@ -1892,7 +1990,7 @@ healthcareFaqQuestionText: {
   fontSize: 15,
   lineHeight: 21,
   fontWeight: '700',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
   marginLeft: 18,
 },
 
@@ -1908,7 +2006,7 @@ healthcareFaqAnswerText: {
   fontSize: 15,
   lineHeight: 26,
   fontWeight: '400',
-  fontFamily: 'Poppins',
+  fontFamily: 'Manrope',
 },
 healthcareAvatar: {
   width: 42,
@@ -1920,3 +2018,4 @@ healthcareAvatar: {
   justifyContent: 'center',
 },
 });
+

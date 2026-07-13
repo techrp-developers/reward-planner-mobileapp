@@ -84,6 +84,10 @@ export default function SpecializedGoalsScreen({ navigation }: Props) {
     navigation.goBack();
   }, [navigation]);
 
+  const handleOpenBookAppointment = useCallback(() => {
+    navigation.navigate('BookAppointment');
+  }, [navigation]);
+
   const toggleScreeningSelection = useCallback((screeningId: string) => {
     setSelectedScreeningIds(prev => {
       if (prev.includes(screeningId)) {
@@ -224,7 +228,11 @@ export default function SpecializedGoalsScreen({ navigation }: Props) {
           );
           })}
 
-          <TouchableOpacity activeOpacity={0.9} style={styles.bookNowButton}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.bookNowButton}
+            onPress={handleOpenBookAppointment}
+          >
             <MaterialCommunityIcons
               name="calendar-month-outline"
               size={21}
@@ -274,7 +282,7 @@ const styles = StyleSheet.create({
     color: '#075BC8',
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   heroCard: {
     backgroundColor: '#1976E6',
@@ -288,14 +296,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 18,
   },
   heroSubtitle: {
     color: 'rgba(241, 245, 249, 0.96)',
     fontSize: 17,
     lineHeight: 28,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 24,
   },
   heroImageWrap: {
@@ -312,7 +320,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 26,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
   targetedSubtitle: {
@@ -320,7 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 16,
   },
   planPill: {
@@ -337,7 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '500',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   screeningCard: {
     backgroundColor: '#FFFFFF',
@@ -378,7 +386,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
   screeningDescription: {
@@ -386,7 +394,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 12,
   },
   tagRow: {
@@ -405,7 +413,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   screeningDivider: {
     height: 1,
@@ -422,7 +430,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   bookNowButton: {
     height: 48,
@@ -439,7 +447,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '500',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 10,
   },
 });
+

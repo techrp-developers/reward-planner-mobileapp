@@ -127,6 +127,9 @@ export default function BloodTestScreen({ navigation }: Props) {
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
+  const handleOpenBookAppointment = useCallback(() => {
+    navigation.navigate('BookAppointment');
+  }, [navigation]);
   const toggleMarker = useCallback((id: number) => {
     setSelectedMarkerIds(prev => {
       if (prev.includes(id)) {
@@ -362,6 +365,7 @@ export default function BloodTestScreen({ navigation }: Props) {
             <TouchableOpacity
               activeOpacity={0.88}
               style={styles.bookNowButton}
+              onPress={handleOpenBookAppointment}
             >
               <MaterialCommunityIcons
                 name="calendar-month-outline"
@@ -423,7 +427,7 @@ const styles = StyleSheet.create({
     color: '#075BC8',
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   heroCard: {
     marginHorizontal: 6,
@@ -461,14 +465,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   heroTitle: {
     color: '#FFFFFF',
     fontSize: 25,
     lineHeight: 33,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 16,
   },
   heroSubtitle: {
@@ -477,7 +481,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 28,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   contentSection: {
     marginHorizontal: 14,
@@ -490,14 +494,14 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 20,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 6,
   },
   sectionSubtitle: {
     color: '#64748B',
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 14,
   },
   testCard: {
@@ -526,14 +530,14 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
   testSubtitle: {
     color: '#64748B',
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   noteCard: {
     flexDirection: 'row',
@@ -550,7 +554,7 @@ const styles = StyleSheet.create({
     color: '#1E3A5F',
     fontSize: 13,
     lineHeight: 21,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   markersSection: {
     backgroundColor: '#EFF4FF',
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 29,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 2,
   },
 
@@ -576,7 +580,7 @@ const styles = StyleSheet.create({
     color: '#687489',
     fontSize: 13,
     lineHeight: 22,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 14,
   },
 
@@ -632,7 +636,7 @@ const styles = StyleSheet.create({
   selectAllText: {
     color: '#1A2438',
     fontSize: 15,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     fontWeight: '500',
   },
 
@@ -640,7 +644,7 @@ const styles = StyleSheet.create({
     color: '#0E61C9',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   markerCard: {
@@ -678,7 +682,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 3,
   },
 
@@ -686,7 +690,7 @@ const styles = StyleSheet.create({
     color: '#5E6A7E',
     fontSize: 14,
     lineHeight: 24,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   markerCheckedBox: {
@@ -714,7 +718,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 26,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 22,
   },
 
@@ -755,7 +759,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
 
   stepLine: {
@@ -767,10 +771,10 @@ const styles = StyleSheet.create({
 
   stepTitle: {
     color: '#0F172A',
-    fontSize: 19,
+    fontSize: 17,
     lineHeight: 26,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 4,
   },
 
@@ -779,7 +783,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsCard: {
     marginTop: 20,
@@ -808,7 +812,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsItem: {
     flexDirection: 'row',
@@ -825,14 +829,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsItemSubtitle: {
     color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   bookingBar: {
     flexDirection: 'row',
@@ -856,7 +860,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 2,
   },
   priceValue: {
@@ -864,7 +868,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   bookNowButton: {
     flex: 1,
@@ -880,7 +884,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 10,
   },
 });
+

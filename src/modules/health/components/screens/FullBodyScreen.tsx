@@ -51,6 +51,10 @@ const includedItems = [
 ];
 
 export default function FullBodyScreen({ navigation }: Props) {
+  const handleOpenBookAppointment = useCallback(() => {
+    navigation.navigate('BookAppointment');
+  }, [navigation]);
+
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
@@ -136,7 +140,11 @@ export default function FullBodyScreen({ navigation }: Props) {
             Secure your slot at our Central Diagnostic Center.
           </Text>
 
-          <TouchableOpacity activeOpacity={0.9} style={styles.scheduleButton}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.scheduleButton}
+            onPress={handleOpenBookAppointment}
+          >
             <Text style={styles.scheduleButtonText}>
               Schedule Full Body Check
             </Text>
@@ -214,7 +222,11 @@ export default function FullBodyScreen({ navigation }: Props) {
             <Text style={styles.priceValue}>₹199.00</Text>
           </View>
 
-          <TouchableOpacity activeOpacity={0.88} style={styles.bookNowButton}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={styles.bookNowButton}
+            onPress={handleOpenBookAppointment}
+          >
             <MaterialCommunityIcons
               name="calendar-month-outline"
               size={22}
@@ -264,7 +276,7 @@ const styles = StyleSheet.create({
     color: '#075BC8',
     fontSize: 17,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   heroCard: {
     backgroundColor: '#FFFFFF',
@@ -293,7 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 4,
   },
   heroTitle: {
@@ -301,14 +313,14 @@ const styles = StyleSheet.create({
     fontSize: 21,
     lineHeight: 30,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 16,
   },
   heroSubtitle: {
     color: '#475569',
     fontSize: 16,
     lineHeight: 31,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 24,
   },
   infoRow: {
@@ -330,7 +342,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 8,
   },
   infoIconBox: {
@@ -348,7 +360,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 4,
   },
   availabilityCard: {
@@ -371,7 +383,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 1.6,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 16,
   },
   availabilityTime: {
@@ -379,7 +391,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 8,
   },
   availabilitySubtitle: {
@@ -387,7 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 28,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 18,
   },
   scheduleButton: {
@@ -403,7 +415,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   includedSection: {
     marginTop: 24,
@@ -413,7 +425,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 14,
   },
   includedCard: {
@@ -446,14 +458,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 2,
   },
   includedCardDescription: {
     color: '#64748B',
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsCard: {
     marginTop: 20,
@@ -482,7 +494,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 24,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsItem: {
     flexDirection: 'row',
@@ -505,14 +517,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   instructionsItemSubtitle: {
     color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '400',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   bookingBar: {
     flexDirection: 'row',
@@ -536,7 +548,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginBottom: 2,
   },
   priceValue: {
@@ -544,7 +556,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '800',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
   },
   bookNowButton: {
     flex: 1,
@@ -560,7 +572,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '600',
-    fontFamily: 'Poppins',
+    fontFamily: 'Manrope',
     marginLeft: 10,
   },
 });
+
