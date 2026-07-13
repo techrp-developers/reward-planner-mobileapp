@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import Reward from '../../../../assets/product/rewards.svg';
 import { HomeStackParamList } from '../../navigation/type';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 const fallbackImage = require('../../assete/gov_documet/aadhar card.png');
@@ -111,17 +110,9 @@ function Card({
             end={{ x: 1, y: 0 }}
             style={styles.cta}
           >
-            <Text style={styles.ctaText}>
-              {offerPrice || price}
-              {coins ? ' + ' : ''}
-            </Text>
-
-            {!!coins && (
-              <View style={styles.coinWrapper}>
-                <Reward width={14} height={14} />
-                <Text style={styles.ctaText}> {coins}</Text>
-              </View>
-            )}
+          <Text style={styles.ctaText}>
+            {offerPrice || price}
+          </Text>
           </LinearGradient>
         </View>
       </View>
@@ -238,9 +229,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
-  },
-  coinWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

@@ -75,7 +75,7 @@ export default function QuickServices() {
         <Card
           title={item.title || item.name}
           image={getImageSource(item)}
-          price={`${item.price}`}
+          price={Number(item.price) > 0 ? `₹${item.price}` : 'Get Quote'}
           oldPrice={item.mrp ? `${item.mrp}` : `${item.price}`}
           rating={item.rating}
           users={orders}
