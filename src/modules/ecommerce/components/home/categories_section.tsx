@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   Image,
   FlatList,
+  InteractionManager,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -117,6 +118,21 @@ export default function CategoriesSection() {
     }));
 
     return [...categories, ...placeholders];
+  }, [categories, layout.numColumns]);
+
+  React.useEffect(() => {
+    if (!categories.length) return;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      categories.slice(0, layout.numColumns).forEach((item) => {
+        const imageUrl = getProductImageUrl(item.image, "thumbnail", 45);
+        if (imageUrl) {
+          Image.prefetch(imageUrl).catch(() => {});
+        }
+      });
+    });
+
+    return () => task.cancel();
   }, [categories, layout.numColumns]);
 
   const renderItem = React.useCallback(
