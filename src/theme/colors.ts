@@ -9,9 +9,9 @@ export const LightTheme = {
 
 export const DarkTheme = {
   background: "#09090B",
-  card: "#111113",
+  card: "#1C1C20",
   text: "#FFFFFF",
   secondaryText: "#A1A1AA",
-  border: "rgba(255,255,255,0.08)",
+  border: "rgba(255,255,255,0.12)",
   primary: "#A78BFA",
 };

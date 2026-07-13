@@ -43,7 +43,7 @@ export default function BuySection({
     isInCart = false,
 }: Props) {
   const navigation = useNavigation<Nav>();
-  const { theme } = useAppTheme();
+  const { isDark, theme } = useAppTheme();
   const [open, setOpen] = React.useState(false);
 
   const maxQty =
@@ -51,6 +51,7 @@ export default function BuySection({
       ? Math.max(0, Math.min(stock, 10))
       : 10;
   const quantities = Array.from({ length: maxQty }, (_, i) => i + 1);
+  const cartButtonTextColor = isDark ? "#FACC15" : "#111827";
 
   const handleGoToCart = () => {
     if (!inStock) return;
@@ -153,11 +154,11 @@ export default function BuySection({
             <View style={[styles.gradBorderInner, { backgroundColor: theme.card }, (!inStock || isAdding) && styles.disabledInner]}>
               {isAdding ? (
                 <View style={styles.buttonContent}>
-                  <ActivityIndicator size="small" color="#111827" />
-                  <Text style={[styles.addToCartText, { color: "#111827" }]}>Adding...</Text>
+                  <ActivityIndicator size="small" color={cartButtonTextColor} />
+                  <Text style={[styles.addToCartText, { color: cartButtonTextColor }]}>Adding...</Text>
                 </View>
               ) : (
-                <Text style={[styles.addToCartText, { color: "#111827" }]}>{isInCart ? "Go to Cart" : "Add to Cart"}</Text>
+                <Text style={[styles.addToCartText, { color: cartButtonTextColor }]}>{isInCart ? "Go to Cart" : "Add to Cart"}</Text>
               )}
             </View>
           </LinearGradient>

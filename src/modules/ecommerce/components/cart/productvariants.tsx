@@ -60,7 +60,7 @@ export default function ProductVariants({
           <View key={attrKey} style={styles.section}>
             <Text style={[styles.label, { color: theme.text }]}>
               {sectionTitle}:
-              <Text style={styles.value}> {selectedValue || "Select"}</Text>
+              <Text style={[styles.value, { color: theme.text }]}> {selectedValue || "Select"}</Text>
             </Text>
 
             <ScrollView
@@ -118,7 +118,9 @@ export default function ProductVariants({
                         styles.optionText,
                         { color: theme.text },
                         isSelected && styles.optionTextActive,
+                        isSelected && { color: isDark ? "#FACC15" : "#111827" },
                         disabled && styles.optionTextDisabled,
+                        disabled && { color: isDark ? "#71717A" : "#9CA3AF" },
                       ]}
                       numberOfLines={1}
                     >

@@ -10,6 +10,7 @@ import CartIcon from "../assets/menu/Cart.svg";
 import ExploreIcon from "../assets/menu/Explore.svg";
 import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
+import { useAppTheme } from "../theme/ThemeContext";
 
 export const TAB_BAR_HEIGHT = 68;
 
@@ -43,7 +44,9 @@ type TabItemProps = {
   Icon: React.ComponentType<{ width: number; height: number; color?: string }>;
   activeIconColor: string;
   activeLabelColor: string;
+  inactiveColor: string;
   badgeCount?: number;
+  badgeBorderColor: string;
 };
 
 // Defined outside render — stable reference, no allocation per press.
@@ -130,8 +133,18 @@ const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string;
 const ACTIVE_ICON_SCALE = 1.22;
 const ICON_SPRING_CONFIG = { useNativeDriver: true, tension: 220, friction: 5 };
 
-const TabItem = React.memo(({ label, active, onPress, Icon, activeIconColor, activeLabelColor, badgeCount }: TabItemProps) => {
-  const iconColor = active ? activeIconColor : INACTIVE_COLOR;
+const TabItem = React.memo(({
+  label,
+  active,
+  onPress,
+  Icon,
+  activeIconColor,
+  activeLabelColor,
+  inactiveColor,
+  badgeCount,
+  badgeBorderColor,
+}: TabItemProps) => {
+  const iconColor = active ? activeIconColor : inactiveColor;
   const iconScale = useRef(new Animated.Value(active ? ACTIVE_ICON_SCALE : 1)).current;
 
   useEffect(() => {
@@ -153,12 +166,12 @@ const TabItem = React.memo(({ label, active, onPress, Icon, activeIconColor, act
           <Icon width={24} height={24} color={iconColor} />
         </Animated.View>
         {(badgeCount ?? 0) > 0 && (
-          <View style={styles.badge}>
+          <View style={[styles.badge, { borderColor: badgeBorderColor }]}>
             <Text style={styles.badgeText}>{badgeCount}</Text>
           </View>
         )}
       </View>
-      <Text style={[styles.label, active && styles.labelActive, active && { color: activeLabelColor }]}>
+      <Text style={[styles.label, { color: inactiveColor }, active && styles.labelActive, active && { color: activeLabelColor }]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -217,6 +230,7 @@ function BottomTabs({
 }: Props) {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
+  const { isDark, theme } = useAppTheme();
   const bottomInset = Math.max(insets.bottom, 8);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
@@ -240,6 +254,11 @@ function BottomTabs({
       ? PAYMENT_TABS
       : TABS;
   const tabTheme = TAB_ICON_THEME[activeMode] ?? TAB_ICON_THEME.Product;
+  const inactiveColor = isDark ? theme.secondaryText : INACTIVE_COLOR;
+  const barBackgroundColor = isDark ? theme.card : "#FFFFFF";
+  const barBorderColor = isDark ? theme.border : "rgba(17,24,39,0.08)";
+  const homeIndicatorColor = isDark ? "rgba(255,255,255,0.24)" : "#D1D5DB";
+  const activeLabelColor = isDark ? tabTheme.activeIcon : tabTheme.activeLabel;
 
   const animateDashboardIndicator = useCallback((index: number) => {
     Animated.spring(dashboardIndicatorX, {
@@ -349,13 +368,22 @@ function BottomTabs({
     <View
       style={[
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
-        { height: TAB_BAR_HEIGHT + bottomInset },
+        {
+          height: TAB_BAR_HEIGHT + bottomInset,
+          backgroundColor: layoutMode === "navigator" ? barBackgroundColor : "transparent",
+        },
       ]}
     >
       <View
         style={[
           styles.bar,
-          { height: TAB_BAR_HEIGHT + bottomInset, paddingBottom: bottomInset },
+          {
+            height: TAB_BAR_HEIGHT + bottomInset,
+            paddingBottom: bottomInset,
+            backgroundColor: barBackgroundColor,
+            borderTopColor: barBorderColor,
+            shadowColor: isDark ? "#000000" : "#000000",
+          },
         ]}
       >
         {/* LEFT SIDE */}
@@ -367,7 +395,9 @@ function BottomTabs({
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
             activeIconColor={tabTheme.activeIcon}
-            activeLabelColor={tabTheme.activeLabel}
+            activeLabelColor={activeLabelColor}
+            inactiveColor={inactiveColor}
+            badgeBorderColor={barBackgroundColor}
           />
         ))}
 
@@ -382,8 +412,10 @@ function BottomTabs({
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
             activeIconColor={tabTheme.activeIcon}
-            activeLabelColor={tabTheme.activeLabel}
+            activeLabelColor={activeLabelColor}
+            inactiveColor={inactiveColor}
             badgeCount={tab.key === "Cart" ? cartCount : undefined}
+            badgeBorderColor={barBackgroundColor}
           />
         ))}
 
@@ -395,7 +427,7 @@ function BottomTabs({
           onPress={onCenterPress ?? NOOP}
         />
       </View>
-      <View style={styles.homeIndicator} />
+      <View style={[styles.homeIndicator, { backgroundColor: homeIndicatorColor }]} />
     </View>
   );
 }
