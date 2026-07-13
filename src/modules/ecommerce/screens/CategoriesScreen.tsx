@@ -5,8 +5,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   LayoutAnimation,
+  ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -19,6 +19,7 @@ import {
 } from "../api/ProductApi";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import CachedImage from "../../../modules/common/components/CachedImage";
 
 type NavigationProp = NativeStackNavigationProp<
   HomeStackParamList,
@@ -151,112 +152,6 @@ const CategoriesScreen = () => {
     [navigation]
   );
 
-  // ─── Sidebar ────────────────────────────────────────────────────────────────
-
-  const SidebarAllButton = useMemo(
-    () => (
-      <TouchableOpacity
-        style={[styles.sidebarItem, isAllMode && styles.sidebarItemActive]}
-        onPress={loadAllCategories}
-      >
-        <View style={styles.iconContainer}>
-          <AllIcons width={32} height={32} />
-        </View>
-        <Text style={styles.sidebarText}>All</Text>
-      </TouchableOpacity>
-    ),
-    [isAllMode, loadAllCategories]
-  );
-
-  const renderSidebarItem = useCallback(
-    ({ item }: { item: CategoryWithSubcategories }) => (
-      <TouchableOpacity
-        style={[
-          styles.sidebarItem,
-          !isAllMode && selectedCatId === item.id && styles.sidebarItemActive,
-        ]}
-        onPress={() => handleCategoryPress(item.id)}
-      >
-        <View style={styles.iconContainer}>
-          {item.image ? (
-            <CachedImage
-              uri={resolveImageUri(item.image)}
-              style={styles.categoryIcon}
-              resizeMode="contain"
-              priority="normal"
-            />
-          ) : (
-            <View style={styles.placeholderIcon} />
-          )}
-        </View>
-        <Text style={styles.sidebarText} numberOfLines={2}>
-          {item.name?.trim()}
-        </Text>
-      </TouchableOpacity>
-    ),
-    [isAllMode, selectedCatId, handleCategoryPress, resolveImageUri]
-  );
-
-  // ─── Content area ────────────────────────────────────────────────────────────
-
-  const renderCategoryBlock = useCallback(
-    ({ item }: { item: CategoryWithSubcategories }) => {
-      const isExpanded = isAllMode ? expandedCategories[String(item.id)] : true;
-      const visibleSubs = isExpanded
-        ? (item.subcategories || [])
-        : (item.subcategories || []).slice(0, 3);
-
-      return (
-        <View style={styles.allCategoryBlock}>
-          <Text style={styles.allCategoryTitle}>{item.name}</Text>
-          <View style={styles.allGrid}>
-            {visibleSubs.map((sub) => (
-              <TouchableOpacity
-                key={sub.id}
-                style={styles.allItem}
-                onPress={() => handleSubcategoryPress(item, sub)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.allImageWrap}>
-                  {sub.image ? (
-                    <CachedImage
-                      uri={resolveImageUri(sub.image)}
-                      style={styles.allImage}
-                      resizeMode="contain"
-                      priority="normal"
-                    />
-                  ) : (
-                    <View style={styles.placeholderImage} />
-                  )}
-                </View>
-                <Text numberOfLines={2} style={styles.allLabel}>
-                  {sub.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {isAllMode && (item.subcategories || []).length > 3 && (
-            <TouchableOpacity onPress={() => onToggleExpanded(item.id)}>
-              <Text style={styles.viewMore}>
-                {isExpanded ? "View Less" : "View More"}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      );
-    },
-    [expandedCategories, isAllMode, resolveImageUri, handleSubcategoryPress, onToggleExpanded]
-  );
-
-  const ContentEmpty = useMemo(
-    () => (
-      <View style={styles.emptyWrap}>
-        <Text style={styles.emptyText}>No subcategories available</Text>
-      </View>
-    ),
-    []
-  );
-
   // ─── Derived data ────────────────────────────────────────────────────────────
 
   const categoriesToRender = useMemo(
@@ -326,7 +221,7 @@ const CategoriesScreen = () => {
               <Text style={[styles.sidebarText, { color: theme.text }]}>All</Text>
             </TouchableOpacity>
 
-            {sidebarCategories.map((category) => (
+            {allData.map((category) => (
               <TouchableOpacity
                 key={String(category.id)}
                 style={[
@@ -338,9 +233,10 @@ const CategoriesScreen = () => {
               >
                 <View style={[styles.iconContainer, { backgroundColor: isDark ? "#111827" : "#F3F4F6" }]}>
                   {category.image ? (
-                    <Image
-                      source={{ uri: resolveImageUri(category.image) }}
+                    <CachedImage
+                      uri={resolveImageUri(category.image)}
                       style={styles.categoryIcon}
+                      resizeMode="contain"
                     />
                   ) : (
                     <View style={styles.placeholderIcon} />
@@ -419,9 +315,10 @@ const AllCategoriesView = ({ data, expanded, onToggle, resolveImageUri, showView
                 >
                   <View style={[styles.allImageWrap, { backgroundColor: isDark ? "#0B1220" : "#F8FAFC" }]}>
                     {sub.image ? (
-                      <Image
-                        source={{ uri: resolveImageUri(sub.image) }}
+                      <CachedImage
+                        uri={resolveImageUri(sub.image)}
                         style={styles.allImage}
+                        resizeMode="contain"
                       />
                     ) : (
                       <View style={styles.placeholderImage} />
