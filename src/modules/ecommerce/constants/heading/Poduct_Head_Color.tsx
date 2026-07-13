@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/types';
 import { handleNavigateWithPrefetch } from '../../navigation/navigationPerformance';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +35,9 @@ function ProductHeadColor({
   isDark?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
+  const appTheme = useAppTheme();
+  const darkMode = isDark || appTheme.isDark;
+  const { theme } = appTheme;
 
   const handleBack = () => {
     handleNavigateWithPrefetch({
@@ -48,16 +52,25 @@ function ProductHeadColor({
   };
 
   return (
-    <View style={[styles.safe, isDark && styles.safeDark]}>
-      <View style={[styles.header, isDark && styles.headerDark]}>
+    <View style={[styles.safe, { backgroundColor: theme.card }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <AppIconButton
           type="back"
-          variant="ghost"
-          color={isDark ? '#FFFFFF' : '#222222'}
-          onPress={handleBack} style={styles.backIcon}
+          variant={darkMode ? "solid" : "ghost"}
+          color={theme.text}
+          onPress={handleBack}
+          style={{
+            ...styles.backIcon,
+            ...(darkMode
+              ? {
+              backgroundColor: '#18181B',
+              borderColor: theme.border,
+                }
+              : {}),
+          }}
         />
 
-        <Text style={[styles.title, isDark && styles.titleDark]} numberOfLines={1}>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
           {title}
         </Text>
                
@@ -66,7 +79,12 @@ function ProductHeadColor({
             <AppIconButton
               type="search"
               variant="solid"
-              style={styles.circleIcon}
+              color={theme.text}
+              style={{
+                ...styles.circleIcon,
+                backgroundColor: darkMode ? '#18181B' : '#FFFFFF',
+                borderColor: theme.border,
+              }}
               onPress={handleSearch}
             />
           ) : null}

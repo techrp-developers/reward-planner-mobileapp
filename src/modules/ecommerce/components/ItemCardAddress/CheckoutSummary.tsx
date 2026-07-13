@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { HomeStackParamList } from '../../navigation/types'
 import StickyBottomCTA from '../../../../bottombar/StickyBottomCTA'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
@@ -31,22 +32,23 @@ export default function CheckoutSummary({
 }: Props) {
   const navigation = useNavigation<Nav>()
   const autoSticky = useStickyBottomCTA()
+  const { theme } = useAppTheme()
   const resolvedBottomOffset = bottomOffset ?? autoSticky.bottomOffset
   const resolvedOnLayout = onLayout ?? autoSticky.onCtaLayout
   
   return (
     <StickyBottomCTA bottomOffset={resolvedBottomOffset} onLayout={resolvedOnLayout}>
-    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom }]}>
+    <View style={[styles.wrapper, { paddingBottom: wrapperPaddingBottom, backgroundColor: theme.card, borderTopColor: theme.border }]}>
       <View style={styles.addressRow}>
         <View style={styles.addressLeft}>
           <MaterialCommunityIcons name="home-outline" size={22} color="#7C3AED" />
           <View style={styles.addressTextWrap}>
-            <Text style={styles.addressTitle}>
+            <Text style={[styles.addressTitle, { color: theme.text }]}>
               {address
                 ? `Delivering to ${address.contact_name || 'User'}`
                 : 'Delivery address'}
             </Text>
-            <Text style={styles.addressSub}>
+            <Text style={[styles.addressSub, { color: theme.secondaryText }]}>
               {address ? `${address.address1}, ${address.city}` : 'No address selected'}
             </Text>
           </View>
@@ -59,8 +61,8 @@ export default function CheckoutSummary({
 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.price}>₹{total}</Text>
-          <Text style={styles.items}>{count} items selected</Text>
+          <Text style={[styles.price, { color: theme.text }]}>₹{total}</Text>
+          <Text style={[styles.items, { color: theme.secondaryText }]}>{count} items selected</Text>
         </View>
 
         <TouchableOpacity onPress={() => (onProceedToBuy ? onProceedToBuy() : navigation.navigate('OrderStepUI'))}>
@@ -80,6 +82,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    borderTopWidth: 1,
     elevation: 12,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: -2 },

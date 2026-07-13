@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { ServiceCancellation } from '../../api/OrderAPI';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Props = {
   cancellation: ServiceCancellation;
@@ -18,17 +19,19 @@ export default function ServiceCancellationCard({
   onCancelPress,
   onViewDetailsPress,
 }: Props) {
+  const servicesTheme = useServicesTheme();
   const hasCancellation = Boolean(cancellation.status);
   const enabled = cancellation.can_cancel && canCancelByStatus;
   const actionEnabled = hasCancellation || enabled;
   const isDetailsAction = hasCancellation;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
         style={[
           styles.cancelBtn,
           isDetailsAction && styles.detailsBtn,
+          isDetailsAction && { backgroundColor: servicesTheme.isDark ? '#18112A' : '#F5F3FF' },
           !actionEnabled && styles.cancelBtnDisabled,
         ]}
         onPress={isDetailsAction ? onViewDetailsPress : onCancelPress}

@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 // Sample assets mapping based on your imports
 import bill1 from '../../assets/Sample/HDFC.png';
 import bill2 from '../../assets/Sample/SBI_card.png';
@@ -38,33 +39,67 @@ const BILL_DATA = [
   },
 ];
 
-const BillItem = ({ item, isLast, onPress }) => (
+type BbpsTheme = ReturnType<typeof useBbpsTheme>;
+
+const BillItem = ({
+  item,
+  isLast,
+  onPress,
+  bbpsTheme,
+}: {
+  item: (typeof BILL_DATA)[number];
+  isLast: boolean;
+  onPress: () => void;
+  bbpsTheme: BbpsTheme;
+}) => (
   <TouchableOpacity
     activeOpacity={0.8}
     onPress={onPress}
-    style={[styles.billItemContainer, !isLast && styles.borderBottom]}
+    style={[
+      styles.billItemContainer,
+      !isLast && styles.borderBottom,
+      !isLast && { borderBottomColor: bbpsTheme.colors.divider },
+    ]}
   >
     <View style={styles.leftRow}>
-      <View style={styles.logoContainer}>
+      <View
+        style={[
+          styles.logoContainer,
+          {
+            backgroundColor: bbpsTheme.colors.iconBg,
+            borderColor: bbpsTheme.colors.borderSoft,
+          },
+        ]}
+      >
         <Image source={item.logo} style={styles.logo} resizeMode="contain" />
       </View>
       <View style={styles.details}>
-        <Text style={styles.billTitle}>{item.title}</Text>
-        <Text style={styles.billSubtitle}>{item.subtitle}</Text>
+        <Text style={[styles.billTitle, { color: bbpsTheme.colors.text }]}>{item.title}</Text>
+        <Text style={[styles.billSubtitle, { color: bbpsTheme.colors.muted }]}>{item.subtitle}</Text>
         <Text style={[styles.statusText, { color: item.statusColor }]}>{item.status}</Text>
       </View>
     </View>
-    <Text style={styles.amountText}>{item.amount}</Text>
+    <Text style={[styles.amountText, { color: bbpsTheme.colors.textStrong }]}>{item.amount}</Text>
   </TouchableOpacity>
 );
 
 const BillsCard = () => {
   const navigation = useNavigation<any>();
+  const bbpsTheme = useBbpsTheme();
 
   return (
-    <View style={styles.cardContainer}>
+    <View
+      style={[
+        styles.cardContainer,
+        {
+          backgroundColor: bbpsTheme.colors.surface,
+          borderColor: bbpsTheme.colors.border,
+          shadowColor: bbpsTheme.colors.shadow,
+        },
+      ]}
+    >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Bills</Text>
+        <Text style={[styles.headerTitle, { color: bbpsTheme.colors.textStrong }]}>Your Bills</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ReachargeHomeScreen')}>
           {/* MASKED VIEW FOR GRADIENT TEXT */}
           <MaskedView
@@ -74,7 +109,7 @@ const BillsCard = () => {
               </Text>
             }>
             <LinearGradient
-              colors={['#8665FF', '#5B47A3']} // Gradient from 100% to 0% as per your 270deg
+              colors={bbpsTheme.gradients.primary} // Gradient from 100% to 0% as per your 270deg
               start={{ x: 1, y: 0 }}
               end={{ x: 0, y: 0 }}
               style={styles.gradientBox}
@@ -90,6 +125,7 @@ const BillsCard = () => {
           key={item.id} 
           item={item} 
           isLast={index === BILL_DATA.length - 1}
+          bbpsTheme={bbpsTheme}
           onPress={() => navigation.navigate('RechargeSection')}
         />
       ))}

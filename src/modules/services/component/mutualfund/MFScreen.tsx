@@ -29,6 +29,7 @@ import type { HomeStackParamList } from '../../navigation/type';
 import FAQSection from './FAQSection';
 import MFBeginners from './MFBeginners';
 import MFInformedInvestors from './MFInformedInvestors';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 import SIP_Calculator from '../../assete/mutualfund/SIPCalculator.png';
 import Goal_SIP_Calculator from '../../assete/mutualfund/Goal_SIP_Calculator.png';
@@ -135,10 +136,13 @@ interface FooterProps extends Props {
 // LIST HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ListHeader = memo<Props>(({ navigation }) => (
+const ListHeader = memo<Props>(({ navigation }) => {
+  const servicesTheme = useServicesTheme();
+
+  return (
   <>
     <LinearGradient
-      colors={['#24174E', '#5B3CB4', '#8B5CF6']}
+      colors={['#080B26', '#171F59', '#3545A3']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.heroSection}
@@ -175,15 +179,16 @@ const ListHeader = memo<Props>(({ navigation }) => (
 
     <View style={styles.sectionHeadingRow}>
       <View style={styles.sectionHeadingLeft}>
-        <MaterialCommunityIcons name="calculator-variant-outline" size={18} color="#8665FF" />
-        <Text style={styles.sectionHeading}>MF Calculators</Text>
+        <MaterialCommunityIcons name="calculator-variant-outline" size={18} color="#3545A3" />
+        <Text style={[styles.sectionHeading, { color: servicesTheme.colors.textStrong }]}>MF Calculators</Text>
       </View>
-      <View style={styles.sectionBadge}>
-        <Text style={styles.sectionBadgeText}>{CALCULATORS.length} tools</Text>
+      <View style={[styles.sectionBadge, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+        <Text style={[styles.sectionBadgeText, { color: servicesTheme.colors.primary }]}>{CALCULATORS.length} tools</Text>
       </View>
     </View>
   </>
-));
+  );
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LIST FOOTER
@@ -199,7 +204,7 @@ const ListFooter = memo<FooterProps>(
         style={styles.viewMoreOuter}
       >
         <LinearGradient
-          colors={['#8665FF', '#5B47A3']}
+          colors={['#3545A3', '#080B26']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.viewMoreGradient}
@@ -240,6 +245,7 @@ const ListFooter = memo<FooterProps>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MFScreen: React.FC<Props> = ({ navigation }) => {
+  const servicesTheme = useServicesTheme();
   const [expanded, setExpanded] = useState(false);
   const chevronAnim = useRef(new Animated.Value(0)).current;
   const hiddenCount = CALCULATORS.length - INITIAL_VISIBLE;
@@ -299,33 +305,33 @@ const MFScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F4FF" />
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]} edges={['top']}>
+      <StatusBar barStyle={servicesTheme.isDark ? 'light-content' : 'dark-content'} backgroundColor={servicesTheme.colors.background} />
 
       {/* ── Top Header ──────────────────────────────────────── */}
       <LinearGradient
-        colors={['#FFFFFF', '#F7F4FF']}
+        colors={servicesTheme.isDark ? ['#111113', '#18181B'] : ['#FFFFFF', '#F7F4FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, { borderBottomColor: servicesTheme.colors.divider }]}
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backBtn}
+          style={[styles.backBtn, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#1F2937" />
+          <MaterialCommunityIcons name="chevron-left" size={24} color={servicesTheme.colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerTextBlock}>
-          <Text style={styles.headerTitle}>Mutual Funds</Text>
-          <Text style={styles.headerSubtitle}>Calculators · Learn · Grow</Text>
+          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Mutual Funds</Text>
+          <Text style={[styles.headerSubtitle, { color: servicesTheme.colors.muted }]}>Calculators · Learn · Grow</Text>
         </View>
 
-        <View style={styles.badge}>
+        <View style={[styles.badge, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
           <Text style={styles.badgeCount}>{CALCULATORS.length}</Text>
-          <Text style={styles.badgeLabel}>Tools</Text>
+          <Text style={[styles.badgeLabel, { color: servicesTheme.colors.primaryDark }]}>Tools</Text>
         </View>
       </LinearGradient>
 
@@ -416,13 +422,13 @@ const styles = StyleSheet.create({
   badgeCount: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#8665FF',
+    color: '#3545A3',
     lineHeight: 21,
   },
   badgeLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#5B47A3',
+    color: '#171F59',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
@@ -559,7 +565,7 @@ const styles = StyleSheet.create({
   sectionBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8665FF',
+    color: '#3545A3',
   },
 
   // ── List ─────────────────────────────────────────────────────

@@ -86,7 +86,7 @@ export default function TransactionHistory() {
 
       setData(mapped);
     } catch (err) {
-      console.log("Transaction error:", err);
+      __DEV__ && console.log("Transaction error:", err);
     } finally {
       setLoading(false);
     }

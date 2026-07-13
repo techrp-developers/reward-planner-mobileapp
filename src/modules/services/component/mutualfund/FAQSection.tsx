@@ -12,12 +12,14 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/type';
 import { getMutualFundCategories, type MFCategory } from '../../api/MutualFundAPI';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 interface Props {
     navigation: NativeStackNavigationProp<HomeStackParamList>;
 }
 
 const FAQSection: React.FC<Props> = ({ navigation }) => {
+    const servicesTheme = useServicesTheme();
     const [categories, setCategories] = useState<MFCategory[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,7 @@ const FAQSection: React.FC<Props> = ({ navigation }) => {
 
     const renderCard = ({ item }: { item: MFCategory }) => (
         <TouchableOpacity
-            style={styles.card}
+            style={[styles.card, { borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}
             activeOpacity={0.82}
             onPress={() =>
                 navigation.navigate('FAQListing', {
@@ -46,17 +48,17 @@ const FAQSection: React.FC<Props> = ({ navigation }) => {
             }
         >
             <LinearGradient
-                colors={['#FFFFFF', '#FBF8FF']}
+                colors={servicesTheme.isDark ? ['#18181B', '#111113'] : ['#FFFFFF', '#FBF8FF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.cardGradient}
             >
                 <View style={styles.cardContent}>
-                    <Text style={styles.cardText}>
+                    <Text style={[styles.cardText, { color: servicesTheme.colors.text }]}>
                         {item.title}
                     </Text>
-                    <View style={styles.chevronContainer}>
-                        <MaterialCommunityIcons name="chevron-right" size={18} color="#8665FF" />
+                    <View style={[styles.chevronContainer, { backgroundColor: servicesTheme.isDark ? '#18112A' : 'rgba(134,101,255,0.08)' }]}>
+                        <MaterialCommunityIcons name="chevron-right" size={18} color="#3545A3" />
                     </View>
                 </View>
             </LinearGradient>
@@ -67,18 +69,18 @@ const FAQSection: React.FC<Props> = ({ navigation }) => {
         <View style={styles.container}>
             <View style={styles.headingRow}>
                 <View>
-                    <Text style={styles.eyebrow}>QUICK CLARITY</Text>
-                    <Text style={styles.heading}>Commonly Asked Questions</Text>
+                    <Text style={[styles.eyebrow, { color: servicesTheme.colors.primary }]}>QUICK CLARITY</Text>
+                    <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Commonly Asked Questions</Text>
                 </View>
-                <View style={styles.headingIcon}>
-                    <MaterialCommunityIcons name="lightbulb-on-outline" size={18} color="#8665FF" />
+                <View style={[styles.headingIcon, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+                    <MaterialCommunityIcons name="lightbulb-on-outline" size={18} color="#3545A3" />
                 </View>
             </View>
 
             {loading ? (
                 <ActivityIndicator
                     size="small"
-                    color="#8665FF"
+                    color="#3545A3"
                     style={styles.loader}
                 />
             ) : (
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
     eyebrow: {
         fontSize: 10,
         fontWeight: '900',
-        color: '#8B5CF6',
+        color: '#3545A3',
         letterSpacing: 1.1,
         marginBottom: 3,
     },
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(134,101,255,0.12)',
         overflow: 'hidden',
-        shadowColor: '#8665FF',
+        shadowColor: '#080B26',
         shadowOffset: {
             width: 0,
             height: 4,

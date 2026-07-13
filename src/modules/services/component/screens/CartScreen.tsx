@@ -28,6 +28,7 @@ import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowBundlePreview } from '../../api/BundleAPI';
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
@@ -160,6 +161,7 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
+  const servicesTheme = useServicesTheme();
   // MainLayout already reserves space for the services-module bottom bar via
   // paddingBottom on the content wrapper, so the CTA must not also offset by
   // the tab bar height itself (tabBarAware:false) — otherwise it floats above
@@ -404,7 +406,7 @@ function CartScreen() {
 
   if (!loading && !error && !refreshing && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart
           onBrowse={() => navigation.goBack()}
@@ -416,7 +418,7 @@ function CartScreen() {
 
   if (showInitialSkeleton) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
@@ -431,11 +433,11 @@ function CartScreen() {
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <View style={styles.centeredWrap}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadCart()}>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: servicesTheme.colors.textStrong }]} onPress={() => loadCart()}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -444,7 +446,7 @@ function CartScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
       <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
 
       <FlatList

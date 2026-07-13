@@ -20,6 +20,7 @@ import OptimizedImage from "../../components/common/OptimizedImage";
 import RPpriceBadge from "./RPpriceBadge";
 import { normalizeProduct } from "../../utils/normalizeProduct";
 import { fetchProductDetailsByID } from "../../api/ProductApi";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -78,6 +79,7 @@ const StarRating = React.memo(function StarRating({
 
 const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProductPress }: Props) => {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
   const [resolvedVariantId, setResolvedVariantId] = useState<any>(() => getVariantId(item));
@@ -275,11 +277,22 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           width: usedCardWidth,
           minHeight: calculations.cardMinHeight,
           borderRadius: calculations.borderRadius,
+          backgroundColor: theme.card,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: theme.border,
         },
       ]}
     >
       <TouchableOpacity activeOpacity={0.85} onPress={goToDetails}>
-        <View style={[styles.imageWrap, { height: calculations.imageWrapHeight, borderRadius: calculations.borderRadius, paddingTop: Math.round(usedCardWidth * 0.1) }]}>
+        <View style={[
+          styles.imageWrap,
+          {
+            height: calculations.imageWrapHeight,
+            borderRadius: calculations.borderRadius,
+            paddingTop: Math.round(usedCardWidth * 0.1),
+            backgroundColor: isDark ? "#303038" : "#F9FAFB",
+          },
+        ]}>
           {!!rp_price && (
             <View style={styles.discountWrap}>
               <RPpriceBadge value={rp_price} />
@@ -287,7 +300,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           )}
 
           <TouchableOpacity
-            style={styles.heartIcon}
+            style={[styles.heartIcon, { backgroundColor: isDark ? "rgba(38,38,43,0.92)" : "rgba(255,255,255,0.9)" }]}
             activeOpacity={0.85}
             onPress={handleWishlistPress}
             disabled={wishLoading}
@@ -295,7 +308,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
             <FontAwesome
               name={wishlisted ? "heart" : "heart-o"}
               size={14}
-              color={wishlisted ? "#E53935" : "#4A4A4A"}
+              color={wishlisted ? "#E53935" : theme.secondaryText}
             />
           </TouchableOpacity>
 
@@ -320,6 +333,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
             style={[
               styles.productTitle,
               { fontSize: calculations.fontSizeLabel },
+              { color: theme.text },
             ]}
             numberOfLines={2}
             ellipsizeMode="tail"
@@ -330,7 +344,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
 
         <View style={styles.ratingRow}>
           <StarRating starCount={starCount} />
-          <Text style={[styles.reviews, { fontSize: calculations.fontSizeReview }]}>
+          <Text style={[styles.reviews, { fontSize: calculations.fontSizeReview, color: theme.secondaryText }]}>
             {reviewText}
           </Text>
         </View>
@@ -356,7 +370,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           {!!originalPriceText && (
             <Text 
               numberOfLines={1} 
-              style={[styles.original, { fontSize: calculations.fontSizeOriginal }]}
+              style={[styles.original, { fontSize: calculations.fontSizeOriginal, color: theme.secondaryText }]}
             >
               {originalPriceText}
             </Text>
@@ -365,7 +379,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           {/* Final price */}
           <Text 
             numberOfLines={1} 
-            style={[styles.price, { fontSize: calculations.fontSizePrice }]}
+            style={[styles.price, { fontSize: calculations.fontSizePrice, color: theme.text }]}
           >
             {priceText}
           </Text>

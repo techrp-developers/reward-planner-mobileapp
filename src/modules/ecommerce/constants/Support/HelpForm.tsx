@@ -68,7 +68,7 @@ export default function HelpForm({ navigation }: HelpFormProps) {
         setCategories(res.data || []);
       }
     } catch (error) {
-      console.log('Category load failed', error);
+      __DEV__ && console.log('Category load failed', error);
     } finally {
       setCategoryLoading(false);
     }

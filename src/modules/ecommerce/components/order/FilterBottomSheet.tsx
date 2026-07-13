@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 // Generate dynamic years based on the current date
 const getDynamicTimeOptions = () => {
@@ -28,6 +29,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function FilterBottomSheet({ visible, onClose, currentTime, currentStatus, onApply }) {
+  const { isDark, theme } = useAppTheme();
   const TIME_OPTIONS = useMemo(() => getDynamicTimeOptions(), []);
   const [selectedTime, setSelectedTime] = useState(currentTime);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
@@ -35,17 +37,17 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+      <View style={[styles.sheet, { backgroundColor: theme.card }]}>
+        <View style={[styles.handle, { backgroundColor: theme.border }]} />
         
         <View style={styles.header}>
-          <Text style={styles.title}>Filter Orders</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Filter Orders</Text>
           <TouchableOpacity onPress={() => { setSelectedTime('30days'); setSelectedStatus(''); }}>
             <Text style={styles.reset}>Reset</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>Order Time</Text>
+        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>Order Time</Text>
         <View style={styles.chipGrid}>
           {TIME_OPTIONS.map((item) => (
             <TouchableOpacity 
@@ -63,15 +65,15 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
                   <Text style={styles.activeChipText}>{item.label}</Text>
                 </LinearGradient>
               ) : (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{item.label}</Text>
+                <View style={[styles.chip, { backgroundColor: isDark ? '#111827' : '#F3F4F6', borderColor: theme.border }]}>
+                  <Text style={[styles.chipText, { color: theme.text }]}>{item.label}</Text>
                 </View>
               )}
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Order Status</Text>
+        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>Order Status</Text>
         <View style={styles.chipGrid}>
           {STATUS_OPTIONS.map((item) => (
             <TouchableOpacity 
@@ -89,8 +91,8 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
                   <Text style={styles.activeChipText}>{item.label}</Text>
                 </LinearGradient>
               ) : (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{item.label}</Text>
+                <View style={[styles.chip, { backgroundColor: isDark ? '#111827' : '#F3F4F6', borderColor: theme.border }]}>
+                  <Text style={[styles.chipText, { color: theme.text }]}>{item.label}</Text>
                 </View>
               )}
             </TouchableOpacity>

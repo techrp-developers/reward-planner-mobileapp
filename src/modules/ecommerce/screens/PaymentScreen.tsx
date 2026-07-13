@@ -50,7 +50,7 @@ const PaymentScreen = () => {
             }
 
           } catch (error) {
-            console.log("Verification error:", error);
+            __DEV__ && console.log("Verification error:", error);
             pollPaymentStatus();
           }
         })

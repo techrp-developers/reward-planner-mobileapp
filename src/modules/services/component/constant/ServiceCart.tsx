@@ -4,6 +4,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SelectableServiceCard from '../government/SelectableServiceCard';
 import { getServiceImageUrl } from '../../utils/serviceImage';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type VariantItem = {
     id: string;
@@ -47,6 +48,7 @@ export default function ServiceCart({
     onAddToCart,
     showAddToCart = true,
 }: ServiceCartProps) {
+    const servicesTheme = useServicesTheme();
     const services = useMemo(() => {
         if (Array.isArray(variants)) {
             return variants;
@@ -104,7 +106,7 @@ export default function ServiceCart({
     };
 
     return (
-        <ScrollView style={styles.mainContainer}>
+        <ScrollView style={[styles.mainContainer, { backgroundColor: servicesTheme.colors.background }]}>
             {/* 1. Main Image Section with Discount Badge */}
             <View style={styles.imageContainer}>
                 <Image
@@ -126,7 +128,7 @@ export default function ServiceCart({
                 </TouchableOpacity> */}
             </View>
 
-            <View style={styles.contentPadding}>
+            <View style={[styles.contentPadding, { backgroundColor: servicesTheme.colors.background }]}>
                 {/* 2. Horizontal Service Selector */}
                 {showVariantSelector && services.length > 1 && (
                     <ScrollView
@@ -147,12 +149,12 @@ export default function ServiceCart({
 
                 {/* 3. Description Section */}
                 <View style={styles.descriptionHeader}>
-                    <Text style={styles.mainTitle}>
+                    <Text style={[styles.mainTitle, { color: servicesTheme.colors.textStrong }]}>
                         {mainTitle || selectedService?.title}
                     </Text>
 
                     <View style={styles.ratingRow}>
-                        <Text style={styles.ratingText}>{numericRating.toFixed(1)}</Text>
+                        <Text style={[styles.ratingText, { color: servicesTheme.colors.textStrong }]}>{numericRating.toFixed(1)}</Text>
                         {[1, 2, 3, 4, 5].map((star) => {
                             const iconName = numericRating >= star
                                 ? 'star'
@@ -172,7 +174,7 @@ export default function ServiceCart({
                     </View>
                 </View>
 
-                <Text style={styles.subText}>
+                <Text style={[styles.subText, { color: servicesTheme.colors.muted }]}>
                     {selectedService?.subtitle || subText || 'Complete assistance from application to delivery for your document needs.'}
                 </Text>
 
@@ -194,15 +196,19 @@ export default function ServiceCart({
 
                 {/* 5. Action Buttons */}
                 <TouchableOpacity activeOpacity={0.9} onPress={onPrimaryPress} style={styles.primaryButtonShadow}>
-                    <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.primaryButton}>
+                    <LinearGradient colors={servicesTheme.gradients.primary} style={styles.primaryButton}>
                         <Text style={styles.buttonText}>{primaryButtonText}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
 
                 {showAddToCart && (
-                    <TouchableOpacity style={styles.outlineButtonBorder} onPress={onAddToCart} activeOpacity={0.9}>
-                        <View style={styles.outlineButtonInner}>
-                            <Text style={styles.outlineButtonText}>Add To Cart</Text>
+                    <TouchableOpacity
+                        style={[styles.outlineButtonBorder, { backgroundColor: servicesTheme.colors.primary }]}
+                        onPress={onAddToCart}
+                        activeOpacity={0.9}
+                    >
+                        <View style={[styles.outlineButtonInner, { backgroundColor: servicesTheme.colors.surface }]}>
+                            <Text style={[styles.outlineButtonText, { color: servicesTheme.colors.primary }]}>Add To Cart</Text>
                         </View>
                     </TouchableOpacity>
                 )}

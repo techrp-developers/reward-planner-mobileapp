@@ -16,6 +16,7 @@ import HorizontalProductList from "../common/HorizontalProductList";
 import { getProductImageUrl } from "../../api/ProductApi";
 import { queryClient } from "../../../../query/queryClient";
 import { normalizeProduct } from "../../utils/normalizeProduct";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 import {
   PROMO_CARD_WIDTH,
   PROMO_CARD_GAP,
@@ -96,6 +97,7 @@ const fetchNewArrivalsData = async () => {
 
 function NewArrivals() {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: NEW_ARRIVALS_QUERY_KEY,
@@ -119,25 +121,25 @@ function NewArrivals() {
 
   
   if (isLoading && products.length === 0) {
-    return <HomeSectionSkeleton height={350} backgroundColor="#FFFBF5" />;
+    return <HomeSectionSkeleton height={350} backgroundColor={theme.background} />;
   }
 
   if (products.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.heading}>New Arrivals</Text>
-          <Text style={styles.subHeading}>The latest trends, just for you</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>New Arrivals</Text>
+          <Text style={[styles.subHeading, { color: theme.secondaryText }]}>The latest trends, just for you</Text>
         </View>
         <TouchableOpacity
           style={styles.exploreBtn}
           activeOpacity={0.7}
           onPress={handleViewAll}
         >
-          <Text style={styles.exploreText}>View All</Text>
-          <MaterialIcons name="chevron-right" size={18} color="#3B82F6" />
+          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
+          <MaterialIcons name="chevron-right" size={18} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>
 
@@ -164,7 +166,8 @@ export const prefetchNewArrivalsSection = async () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#FFFBF5",
-    paddingVertical: 20,
+    paddingTop: 22,
+    paddingBottom: 8,
   },
   headerRow: {
     flexDirection: "row",

@@ -24,7 +24,7 @@ longitude?: number;
 
 
 export const addAddress = async (payload: AddToAddressPayload) => {
-  console.log("📦 Sending Address payload:", payload);
+  __DEV__ && console.log("📦 Sending Address payload:", payload);
   const headers = await getAuthHeaders();
   const res = await axios.post(`${API_BASE_URL}/v1/auth/address`, payload, {
     headers,

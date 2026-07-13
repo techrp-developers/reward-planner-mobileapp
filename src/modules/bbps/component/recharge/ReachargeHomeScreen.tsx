@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BBPSHead from '../../constatnt/BBPSHead';
 import { useAuth } from '../../../common/auth/context/AuthContext';
 import { fetchBillLocations, BillLocation } from '../../api/BillsAPI';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 // Assets
 import jio from '../../assets/Sample/jio.png';
@@ -27,6 +28,7 @@ const CONTACTS: any[] = [];
 
 function ReachargeHomeScreen({ navigation, route }: any) {
   const { user } = useAuth();
+  const bbpsTheme = useBbpsTheme();
   const [mobileNumber, setMobileNumber] = useState(
     route?.params?.mobileNumber ?? user?.phone ?? '',
   );
@@ -186,7 +188,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Recharge or Pay Mobile Bill"
         onBackPress={() => navigation.goBack()}
@@ -195,7 +197,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View>
             {/* ── Input Section ── */}
-            <View style={styles.content}>
+            <View style={[styles.content, { backgroundColor: bbpsTheme.colors.surface, shadowColor: bbpsTheme.colors.shadow }]}>
               {/* Mobile Number */}
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Enter Mobile Number</Text>
@@ -205,9 +207,9 @@ function ReachargeHomeScreen({ navigation, route }: any) {
                   <Image source={vi} style={styles.operatorIcon} />
                 </View>
               </View>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, { backgroundColor: bbpsTheme.colors.surfaceAlt, borderColor: bbpsTheme.colors.border }]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: bbpsTheme.colors.text }]}
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
                   keyboardType="phone-pad"
@@ -227,6 +229,10 @@ function ReachargeHomeScreen({ navigation, route }: any) {
               <TouchableOpacity
                 style={[
                   styles.inputContainer,
+                  {
+                    backgroundColor: bbpsTheme.colors.surfaceAlt,
+                    borderColor: bbpsTheme.colors.border,
+                  },
                   selectedLocation ? styles.inputContainerSelected : null,
                 ]}
                 onPress={() => setLocationModalVisible(true)}
@@ -244,7 +250,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.placeholderText}>
+                  <Text style={[styles.placeholderText, { color: bbpsTheme.colors.subtle }]}>
                     {locationsLoading ? 'Loading circles…' : 'Choose your telecom circle'}
                   </Text>
                 )}
@@ -271,7 +277,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
                 onPress={() => handleRechargePress()}
               >
                 <LinearGradient
-                  colors={['#8665FF', '#5B47A3']}
+                  colors={bbpsTheme.gradients.primary}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.proceedBtn}
@@ -287,7 +293,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
               <View style={styles.sectionAccent} />
               <Text style={styles.sectionTitle}>My Number</Text>
             </View>
-            <View style={styles.listBackground}>
+            <View style={[styles.listBackground, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
               {myNumberEntry && renderItem(myNumberEntry)}
             </View>
 
@@ -296,7 +302,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
               <View style={styles.sectionAccent} />
               <Text style={styles.sectionTitle}>My Recharges & Bill</Text>
             </View>
-            <View style={styles.listBackground}>
+            <View style={[styles.listBackground, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
               {RECENT_RECHARGES.map((item, index, arr) => (
                 <View key={item.id}>
                   {renderItem(item)}
@@ -312,7 +318,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
                 <Icon name="magnify" size={22} color="#7F5DF0" />
               </View>
             </View>
-            <View style={styles.sectionContainer}>
+            <View style={[styles.sectionContainer, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
               {CONTACTS.map((contact) => (
                 <View key={contact.id} style={styles.listItem}>
                   <View style={[styles.avatarCircle, { backgroundColor: contact.color }]} />

@@ -11,6 +11,7 @@ import BBPSOrderFilterSheet, {
   TIME_LABELS,
 } from './BBPSOrderFilterSheet';
 import { bbpsOrderHistoryQueryKey, fetchOrderHistory, OrderHistoryItem } from '../../api/BillsAPI';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 type TemporaryOrder = {
   id: string;
@@ -96,25 +97,37 @@ function statusTextStyle(status: BBPSOrderStatus) {
   }
 }
 
-const OrderCard = ({ order }: { order: TemporaryOrder }) => (
-  <View style={styles.orderCard}>
-    <View style={styles.logoWrap}>
-      <Text style={styles.logoInitial}>
+type BbpsTheme = ReturnType<typeof useBbpsTheme>;
+
+const OrderCard = ({ order, bbpsTheme }: { order: TemporaryOrder; bbpsTheme: BbpsTheme }) => (
+  <View
+    style={[
+      styles.orderCard,
+      {
+        backgroundColor: bbpsTheme.colors.surface,
+        borderColor: bbpsTheme.colors.border,
+        shadowColor: bbpsTheme.colors.shadow,
+      },
+    ]}
+  >
+    <View style={[styles.logoWrap, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F7F4FF', borderColor: bbpsTheme.colors.border }]}>
+      <Text style={[styles.logoInitial, { color: bbpsTheme.colors.primary }]}>
         {(order.title || 'B').trim().charAt(0).toUpperCase()}
       </Text>
     </View>
     <View style={styles.orderDetails}>
-      <Text style={styles.orderTitle} numberOfLines={1}>{order.title}</Text>
-      <Text style={styles.orderId}>{order.id}</Text>
+      <Text style={[styles.orderTitle, { color: bbpsTheme.colors.text }]} numberOfLines={1}>{order.title}</Text>
+      <Text style={[styles.orderId, { color: bbpsTheme.colors.muted }]}>{order.id}</Text>
       <Text style={[styles.orderStatus, statusTextStyle(order.status)]}>
         {`\u20B9${order.amount.toLocaleString('en-IN')}, ${order.statusText}`}
       </Text>
-      <Text style={styles.orderDate}>{order.dateLabel}</Text>
+      <Text style={[styles.orderDate, { color: bbpsTheme.colors.subtle }]}>{order.dateLabel}</Text>
     </View>
   </View>
 );
 
 function OrderHistory({ navigation }: any) {
+  const bbpsTheme = useBbpsTheme();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BBPSOrderStatus>('');
   const [timeFilter, setTimeFilter] = useState<BBPSOrderTime>('');
@@ -155,32 +168,32 @@ function OrderHistory({ navigation }: any) {
   }, [orders, search, statusFilter, timeFilter]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <OrderHeading
         title="My Orders"
         onBackPress={() => navigation.goBack()}
         onHelpPress={() => navigation.navigate('HelpForm')}
       />
 
-      <View style={styles.toolbar}>
-        <View style={styles.searchBox}>
-          <MaterialCommunityIcons name="magnify" size={24} color="#4B5563" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Search transactions" placeholderTextColor="#8B8B91" style={styles.searchInput} />
+      <View style={[styles.toolbar, { backgroundColor: bbpsTheme.colors.surface }]}>
+        <View style={[styles.searchBox, { backgroundColor: bbpsTheme.colors.elevated, borderColor: bbpsTheme.colors.border }]}>
+          <MaterialCommunityIcons name="magnify" size={24} color={bbpsTheme.colors.muted} />
+          <TextInput value={search} onChangeText={setSearch} placeholder="Search transactions" placeholderTextColor={bbpsTheme.colors.subtle} style={[styles.searchInput, { color: bbpsTheme.colors.text }]} />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <MaterialCommunityIcons name="close-circle" size={19} color="#A1A1AA" />
+              <MaterialCommunityIcons name="close-circle" size={19} color={bbpsTheme.colors.subtle} />
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
-          <MaterialCommunityIcons name="tune-variant" size={25} color="#4B5563" />
+        <TouchableOpacity style={[styles.filterButton, { backgroundColor: bbpsTheme.colors.elevated, borderColor: bbpsTheme.colors.border }]} onPress={() => setFilterVisible(true)}>
+          <MaterialCommunityIcons name="tune-variant" size={25} color={bbpsTheme.colors.text} />
         </TouchableOpacity>
       </View>
 
       {(statusFilter || timeFilter) && (
-        <View style={styles.activeFilters}>
-          {statusFilter && <FilterChip label={STATUS_LABELS[statusFilter]} onPress={() => setStatusFilter('')} />}
-          {timeFilter && <FilterChip label={TIME_LABELS[timeFilter] || timeFilter} onPress={() => setTimeFilter('')} />}
+        <View style={[styles.activeFilters, { backgroundColor: bbpsTheme.colors.surface }]}>
+          {statusFilter && <FilterChip label={STATUS_LABELS[statusFilter]} onPress={() => setStatusFilter('')} bbpsTheme={bbpsTheme} />}
+          {timeFilter && <FilterChip label={TIME_LABELS[timeFilter] || timeFilter} onPress={() => setTimeFilter('')} bbpsTheme={bbpsTheme} />}
         </View>
       )}
 
@@ -191,29 +204,29 @@ function OrderHistory({ navigation }: any) {
       >
         {isLoading ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator color="#8665FF" size="large" />
+            <ActivityIndicator color={bbpsTheme.colors.primary} size="large" />
           </View>
         ) : isError ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Could not load transactions</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-              <Text style={styles.retryText}>Retry</Text>
+            <Text style={[styles.emptyTitle, { color: bbpsTheme.colors.text }]}>Could not load transactions</Text>
+            <TouchableOpacity style={[styles.retryButton, { borderColor: bbpsTheme.colors.primary }]} onPress={() => refetch()}>
+              <Text style={[styles.retryText, { color: bbpsTheme.colors.primary }]}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : groupedOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No transaction found</Text>
+            <Text style={[styles.emptyTitle, { color: bbpsTheme.colors.text }]}>No transaction found</Text>
           </View>
         ) : groupedOrders.map((group) => {
           const total = group.orders.reduce((sum, order) => sum + order.amount, 0);
           return (
             <View key={group.month}>
-              <View style={styles.monthHeader}>
-                <Text style={styles.monthText}>{group.month}</Text>
-                <Text style={styles.monthTotal}>{`\u20B9${total.toLocaleString('en-IN')}`}</Text>
+              <View style={[styles.monthHeader, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F0F1FF' }]}>
+                <Text style={[styles.monthText, { color: bbpsTheme.colors.text }]}>{group.month}</Text>
+                <Text style={[styles.monthTotal, { color: bbpsTheme.colors.textStrong }]}>{`\u20B9${total.toLocaleString('en-IN')}`}</Text>
               </View>
               {group.orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard key={order.id} order={order} bbpsTheme={bbpsTheme} />
               ))}
             </View>
           );
@@ -231,15 +244,16 @@ function OrderHistory({ navigation }: any) {
           setTimeFilter(time);
           setFilterVisible(false);
         }}
+        bbpsTheme={bbpsTheme}
       />
     </View>
   );
 }
 
-const FilterChip = ({ label, onPress }: { label: string; onPress: () => void }) => (
-  <TouchableOpacity style={styles.activeChip} onPress={onPress}>
-    <Text style={styles.activeChipText}>{label}</Text>
-    <MaterialCommunityIcons name="close" size={18} color="#52525B" />
+const FilterChip = ({ label, onPress, bbpsTheme }: { label: string; onPress: () => void; bbpsTheme: BbpsTheme }) => (
+  <TouchableOpacity style={[styles.activeChip, { backgroundColor: bbpsTheme.colors.elevated, borderColor: bbpsTheme.colors.border }]} onPress={onPress}>
+    <Text style={[styles.activeChipText, { color: bbpsTheme.colors.muted }]}>{label}</Text>
+    <MaterialCommunityIcons name="close" size={18} color={bbpsTheme.colors.muted} />
   </TouchableOpacity>
 );
 

@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../navigation/types";
 import ProductHeadColor from "../constants/heading/Poduct_Head_Color";
 import { useCart } from "../context/CartContext";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type WishlistItem = any;
@@ -69,6 +70,7 @@ const uniqueIds = (values: unknown[]) => {
 const WishlistScreen = () => {
   const navigation = useNavigation<Nav>();
   const { addItem, items: cartItems } = useCart();
+  const { isDark, theme } = useAppTheme();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -204,7 +206,7 @@ const WishlistScreen = () => {
         error?.response?.data?.error ||
         error?.message ||
         "Failed to remove from wishlist";
-      console.log("Wishlist remove failed", message);
+      __DEV__ && console.log("Wishlist remove failed", message);
       Alert.alert("Wishlist", String(message));
     }
   };
@@ -310,7 +312,7 @@ const WishlistScreen = () => {
 
     return (
       <TouchableOpacity 
-        style={styles.card} 
+        style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]} 
         activeOpacity={0.9}
         onPress={() => {
           if (productId) {
@@ -318,7 +320,7 @@ const WishlistScreen = () => {
           }
         }}
       >
-        <View style={styles.imageWrapper}>
+        <View style={[styles.imageWrapper, { backgroundColor: isDark ? "#111827" : "#F9FAFB" }]}>
           <Image
             source={{ uri: imageUrl }}
             style={styles.productImage}
@@ -333,8 +335,8 @@ const WishlistScreen = () => {
         </View>
 
         <View style={styles.details}>
-          <Text style={styles.brand} numberOfLines={1}>{String(brand).toUpperCase()}</Text>
-          <Text style={styles.name} numberOfLines={2}>{name}</Text>
+          <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>{String(brand).toUpperCase()}</Text>
+          <Text style={[styles.name, { color: theme.secondaryText }]} numberOfLines={2}>{name}</Text>
 
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -345,23 +347,27 @@ const WishlistScreen = () => {
                 color={star <= Math.round(rating) ? "#F5B400" : "#E5E7EB"}
               />
             ))}
-            <Text style={styles.reviewText}>{reviewText}</Text>
+            <Text style={[styles.reviewText, { color: theme.secondaryText }]}>{reviewText}</Text>
           </View>
           
           <View style={styles.priceRow}>
-            <Text style={styles.salePrice}>₹{salePrice || 0}</Text>
-            <Text style={styles.mrp}>₹{mrp || 0}</Text>
+            <Text style={[styles.salePrice, { color: theme.text }]}>₹{salePrice || 0}</Text>
+            <Text style={[styles.mrp, { color: theme.secondaryText }]}>₹{mrp || 0}</Text>
             {discount > 0 && <Text style={styles.discountText}>{discount}% OFF</Text>}
           </View>
 
           <TouchableOpacity
-            style={[styles.productNavBtn, inCart && styles.goToCartBtn]}
+            style={[
+              styles.productNavBtn,
+              { backgroundColor: inCart ? "#111827" : "#F6D58B" },
+              inCart && styles.goToCartBtn,
+            ]}
             activeOpacity={0.85}
             onPress={() => handleCartAction(item)}
             disabled={cartBusy}
           >
             {cartBusy ? (
-              <ActivityIndicator size="small" color={inCart ? "#FFFFFF" : "#8B5CF6"} />
+              <ActivityIndicator size="small" color={inCart ? "#FACC15" : "#111827"} />
             ) : (
               <Text style={[styles.btnText, inCart && styles.goToCartText]}>
                 {inCart ? "GO TO CART" : "ADD TO CART"}
@@ -375,22 +381,23 @@ const WishlistScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color="#E91E63" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor
         title="My Wishlist"
         onBackPress={() => navigation.goBack()}
         showSearch={false}
+        isDark={isDark}
       />
 
       <View style={styles.countRow}>
-        <Text style={styles.itemCount}>{items.length} items</Text>
+        <Text style={[styles.itemCount, { color: theme.secondaryText }]}>{items.length} items</Text>
       </View>
 
       <FlatList
@@ -401,16 +408,16 @@ const WishlistScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadWishlist(true)}
-            tintColor="#8B5CF6"
+            tintColor="#D69A33"
           />
         }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
             <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="heart-outline" size={80} color="#ddd" />
-                <Text style={styles.emptyText}>Your wishlist is empty</Text>
-                <Text style={styles.emptySubText}>Save products you love to find them quickly.</Text>
+                <MaterialCommunityIcons name="heart-outline" size={80} color={theme.border} />
+                <Text style={[styles.emptyText, { color: theme.text }]}>Your wishlist is empty</Text>
+                <Text style={[styles.emptySubText, { color: theme.secondaryText }]}>Save products you love to find them quickly.</Text>
             </View>
         }
       />
@@ -533,23 +540,24 @@ const styles = StyleSheet.create({
   productNavBtn: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: "#8B5CF6",
+    borderColor: "#111827",
     borderRadius: 8,
     paddingVertical: 8,
     alignItems: "center",
   },
 
   goToCartBtn: {
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#111827",
+    borderColor: "#FACC15",
   },
 
   btnText: {
-    color: "#8B5CF6",
+    color: "#111827",
     fontWeight: "700",
     fontSize: 12,
   },
   goToCartText: {
-    color: "#FFFFFF",
+    color: "#FACC15",
   },
   centered: {
     flex: 1,

@@ -103,7 +103,12 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <StepTrackerProvider>
-    <AppStack.Navigator screenOptions={defaultScreenOptions}>
+    <AppStack.Navigator
+      screenOptions={{
+        ...defaultScreenOptions,
+        contentStyle: { backgroundColor: "transparent" },
+      }}
+    >
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
       <AppStack.Screen
@@ -162,7 +167,7 @@ function AppNavigator() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: "#FFFFFF" },
+          contentStyle: { backgroundColor: "transparent" },
         }}
       />
       <AppStack.Screen

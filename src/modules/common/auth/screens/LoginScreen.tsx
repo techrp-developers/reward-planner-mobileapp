@@ -22,11 +22,13 @@ import {
   getLoginIdentifierKeyboardType,
   parseLoginIdentifier,
 } from "../utils/loginIdentifier";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login, loading } = useAuth();
+  const { isDark } = useAppTheme();
   const alert = useAlert();
   const insets = useSafeAreaInsets();
 
@@ -83,7 +85,10 @@ export default function LoginScreen({ navigation }: Props) {
   }, [identifier, password, login, alert]);
 
   return (
-      <SafeAreaView style={styles.screen} edges={["left", "right", "top"]}>
+      <SafeAreaView
+        style={[styles.screen, { backgroundColor: isDark ? "#09090B" : "#F5F0FF" }]}
+        edges={["left", "right", "top"]}
+      >
         <KeyboardAvoidingView
           style={styles.keyboardWrap}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -97,47 +102,63 @@ export default function LoginScreen({ navigation }: Props) {
               <Logo width={180} height={180} />
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.title}>Login to Your Account</Text>
+            <View style={[styles.card, { backgroundColor: isDark ? "#111113" : "#FFFFFF" }]}>
+              <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#852BAF" }]}>Login to Your Account</Text>
 
               <View style={styles.identifierGroup}>
-                <View style={styles.inputWrap}>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      backgroundColor: isDark ? "#18181B" : "#F8F8F8",
+                      borderColor: isDark ? "rgba(255,255,255,0.10)" : "#EEE",
+                    },
+                  ]}
+                >
                   <MaterialCommunityIcons
                     name="account-outline"
                     size={18}
-                    color="#999"
+                    color={isDark ? "#A1A1AA" : "#999"}
                     style={styles.inputIcon}
                   />
 
                   <TextInput
                     placeholder="Email Address or Phone Number"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={isDark ? "#71717A" : "#999"}
                     autoCapitalize="none"
                     keyboardType={getLoginIdentifierKeyboardType(identifier)}
-                    style={styles.input}
+                    style={[styles.input, { color: isDark ? "#FFFFFF" : "#333" }]}
                     value={identifier}
                     onChangeText={setIdentifier}
                   />
                 </View>
 
-                <Text style={styles.helperText}>
+                <Text style={[styles.helperText, { color: isDark ? "#A1A1AA" : "#777" }]}>
                   Registered email or mobile number
                 </Text>
               </View>
 
-              <View style={styles.inputWrap}>
+              <View
+                style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: isDark ? "#18181B" : "#F8F8F8",
+                    borderColor: isDark ? "rgba(255,255,255,0.10)" : "#EEE",
+                  },
+                ]}
+              >
                 <MaterialCommunityIcons
                   name="lock-outline"
                   size={18}
-                  color="#999"
+                  color={isDark ? "#A1A1AA" : "#999"}
                   style={styles.inputIcon}
                 />
 
                 <TextInput
                   placeholder="Password"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={isDark ? "#71717A" : "#999"}
                   secureTextEntry={!passwordVisible}
-                  style={styles.input}
+                  style={[styles.input, { color: isDark ? "#FFFFFF" : "#333" }]}
                   value={password}
                   onChangeText={setPassword}
                 />
@@ -148,7 +169,7 @@ export default function LoginScreen({ navigation }: Props) {
                   <MaterialCommunityIcons
                     name={passwordVisible ? "eye-off-outline" : "eye-outline"}
                     size={18}
-                    color="#A654CD"
+                    color={isDark ? "#F472B6" : "#A654CD"}
                   />
                 </TouchableOpacity>
               </View>
@@ -157,7 +178,7 @@ export default function LoginScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate("ForgotPassword")}
                 style={styles.forgotWrap}
               >
-                <Text style={styles.forgotText}>Forgot Password?</Text>
+                <Text style={[styles.forgotText, { color: isDark ? "#F472B6" : "#A654CD" }]}>Forgot Password?</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -181,14 +202,23 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           </ScrollView>
 
-          <View style={[styles.bottomWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <View
+            style={[
+              styles.bottomWrap,
+              {
+                paddingBottom: Math.max(insets.bottom, 16),
+                backgroundColor: isDark ? "#09090B" : "#F5F0FF",
+                borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#E8DCF7",
+              },
+            ]}
+          >
             <View style={styles.bottomRow}>
-              <Text style={styles.bottomText}>New to Rewards Planners?</Text>
+              <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#666" }]}>New to Rewards Planners?</Text>
 
               <TouchableOpacity
                 onPress={() => navigation.navigate("AccountActivate")}
               >
-                <Text style={styles.signUp}>Activate Account</Text>
+                <Text style={[styles.signUp, { color: isDark ? "#F472B6" : "#7B2CBF" }]}>Activate Account</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -200,7 +230,6 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F5F0FF",
   },
   keyboardWrap: {
     flex: 1,
@@ -214,7 +243,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   card: {
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingHorizontal: 24,
@@ -230,9 +258,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F8F8",
     borderWidth: 1,
-    borderColor: "#EEE",
     borderRadius: 10,
     paddingHorizontal: 12,
     marginBottom: 15,
@@ -247,7 +273,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: "#333",
   },
   helperText: {
     marginTop: -8,
@@ -266,9 +291,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   bottomWrap: {
-    backgroundColor: "#F5F0FF",
     borderTopWidth: 1,
-    borderTopColor: "#E8DCF7",
     paddingTop: 16,
     alignItems: "center",
     paddingHorizontal: 20,

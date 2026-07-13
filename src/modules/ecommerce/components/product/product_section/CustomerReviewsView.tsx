@@ -16,6 +16,7 @@ import {
   markReviewHelpful,
   removeHelpfulReview,
 } from "../../../api/ReviewApi";
+import { useAppTheme } from "../../../../../theme/ThemeContext";
 
 type CustomerReviewsViewProps = {
   productId: number | string;
@@ -132,6 +133,7 @@ const extractReviews = (response: any): ReviewItem[] => {
 export default function CustomerReviewsView({
   productId,
 }: CustomerReviewsViewProps) {
+  const { theme } = useAppTheme();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
 
@@ -213,23 +215,23 @@ export default function CustomerReviewsView({
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.mainTitle}>Customer Reviews</Text>
+    <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <Text style={[styles.mainTitle, { color: theme.text }]}>Customer Reviews</Text>
 
       {loading ? (
         <ActivityIndicator style={styles.loader} />
       ) : (
         <>
           <View style={styles.summaryRow}>
-            <Text style={styles.ratingValue}>{summary.average.toFixed(1)}</Text>
-            <Text style={styles.subtitle}>out of 5 • {reviews.length} ratings</Text>
+            <Text style={[styles.ratingValue, { color: theme.text }]}>{summary.average.toFixed(1)}</Text>
+            <Text style={[styles.subtitle, { color: theme.secondaryText }]}>out of 5 • {reviews.length} ratings</Text>
           </View>
 
           <View style={styles.breakdownContainer}>
             {summary.stars.map((item) => (
               <View style={styles.starRow} key={item.star}>
-                <Text style={styles.rowLabel}>{item.star} Star</Text>
-                <View style={styles.progressTrack}>
+                <Text style={[styles.rowLabel, { color: theme.text }]}>{item.star} Star</Text>
+                <View style={[styles.progressTrack, { backgroundColor: theme.background, borderColor: theme.border }]}>
                   {item.percent > 0 && (
                     <LinearGradient
                       colors={["#A855F7", "#EC4899"]}
@@ -239,7 +241,7 @@ export default function CustomerReviewsView({
                     />
                   )}
                 </View>
-                <Text style={styles.rowPercentage}>{item.percent}%</Text>
+                <Text style={[styles.rowPercentage, { color: theme.text }]}>{item.percent}%</Text>
               </View>
             ))}
           </View>
@@ -247,12 +249,12 @@ export default function CustomerReviewsView({
           {reviews.slice(0, MAX_VISIBLE).map((review) => (
             <View style={styles.reviewCardContainer} key={String(review.id)}>
               <View style={styles.userHeader}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{review.author.charAt(0).toUpperCase()}</Text>
+                <View style={[styles.avatar, { backgroundColor: theme.background }]}>
+                  <Text style={[styles.avatarText, { color: theme.text }]}>{review.author.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{review.author}</Text>
-                  <Text style={styles.reviewMeta}>
+                  <Text style={[styles.userName, { color: theme.text }]}>{review.author}</Text>
+                  <Text style={[styles.reviewMeta, { color: theme.secondaryText }]}>
                     {review.createdAt || ""}</Text>
                 </View>
               </View>
@@ -268,38 +270,38 @@ export default function CustomerReviewsView({
                 ))}
               </View>
 
-              {Boolean(review.title) && <Text style={styles.reviewHeadline}>{review.title}</Text>}
-              <Text style={styles.reviewBody}>{review.text || "No comment"}</Text>
+              {Boolean(review.title) && <Text style={[styles.reviewHeadline, { color: theme.text }]}>{review.title}</Text>}
+              <Text style={[styles.reviewBody, { color: theme.secondaryText }]}>{review.text || "No comment"}</Text>
 
               {review.media.length > 0 && (
                 <View style={styles.imageGrid}>
                   {review.media.slice(0, 3).map((image, index) => (
-                    <Image key={`${review.id}-${index}`} source={{ uri: image }} style={styles.reviewContentImage} />
+                    <Image key={`${review.id}-${index}`} source={{ uri: image }} style={[styles.reviewContentImage, { backgroundColor: theme.background }]} />
                   ))}
                 </View>
               )}
 
               <View style={styles.interactionRow}>
-                <TouchableOpacity style={styles.helpfulBtn} onPress={() => toggleHelpful(review)}>
+                <TouchableOpacity style={[styles.helpfulBtn, { backgroundColor: theme.background, borderColor: theme.border }]} onPress={() => toggleHelpful(review)}>
                   <MaterialCommunityIcons
                     name={review.isHelpfulByMe ? "thumb-up" : "thumb-up-outline"}
                     size={16}
-                    color={review.isHelpfulByMe ? "#7C3AED" : "#1E293B"}
+                    color={review.isHelpfulByMe ? "#7C3AED" : theme.text}
                   />
-                  <Text style={styles.btnText}>Helpful ({review.helpfulCount})</Text>
+                  <Text style={[styles.btnText, { color: theme.text }]}>Helpful ({review.helpfulCount})</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.shareBtn} onPress={() => handleShare(review)}>
-                  <MaterialCommunityIcons name="share-variant-outline" size={16} color="#1E293B" />
-                  <Text style={styles.btnText}>Share</Text>
+                  <MaterialCommunityIcons name="share-variant-outline" size={16} color={theme.text} />
+                  <Text style={[styles.btnText, { color: theme.text }]}>Share</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.bottomDivider} />
+              <View style={[styles.bottomDivider, { backgroundColor: theme.border }]} />
             </View>
           ))}
 
-          {!reviews.length && <Text style={styles.emptyText}>No reviews yet.</Text>}
+          {!reviews.length && <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No reviews yet.</Text>}
         </>
       )}
     </View>

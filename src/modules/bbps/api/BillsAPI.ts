@@ -140,7 +140,7 @@ export const fetchBill = async (
       await clearAuthToken();
     }
 
-    console.log(
+    __DEV__ && console.log(
       "Fetch Bill Error:",
       error?.response?.data || error?.message
     );

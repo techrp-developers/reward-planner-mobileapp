@@ -4,6 +4,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { useNavigation } from '@react-navigation/native';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 interface UserInfo {
   name: string;
@@ -23,6 +24,7 @@ interface Props {
 
 const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onChangePress }) => {
   const navigation = useNavigation<any>();
+  const bbpsTheme = useBbpsTheme();
   const operatorInitial = user?.operatorInitial?.trim()?.charAt(0)?.toUpperCase() || 'O';
 
   const handleHelpPress = useCallback(() => {
@@ -31,22 +33,30 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
   }, [onHelpPress, navigation]);
 
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, { backgroundColor: bbpsTheme.colors.surface }]}>
       <View style={styles.headerContent}>
         <View style={styles.leftSection}>
           <TouchableOpacity onPress={onBackPress} style={styles.backButton} activeOpacity={0.7}>
-            <MaterialIcons name="chevron-left" size={32} color="#4B5563" />
+            <MaterialIcons name="chevron-left" size={32} color={bbpsTheme.colors.text} />
           </TouchableOpacity>
 
           {/* Conditional Rendering: Profile vs Standard Title */}
           {user ? (
             <View style={styles.profileSection}>
-              <View style={styles.logoContainer}>
+              <View
+                style={[
+                  styles.logoContainer,
+                  {
+                    backgroundColor: bbpsTheme.colors.iconBg,
+                    borderColor: bbpsTheme.colors.borderSoft,
+                  },
+                ]}
+              >
                 {user.operatorLogo ? (
                   <Image source={user.operatorLogo} style={styles.operatorLogo} resizeMode="contain" />
                 ) : (
                   <LinearGradient
-                    colors={['#8665FF', '#5B47A3']}
+                    colors={bbpsTheme.gradients.primary}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.operatorInitialCircle}
@@ -56,19 +66,19 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
                 )}
               </View>
               <View style={styles.userInfo}>
-                <Text style={styles.userNameText} numberOfLines={1}>
+                <Text style={[styles.userNameText, { color: bbpsTheme.colors.text }]} numberOfLines={1}>
                   {user.name} - {user.number}
                 </Text>
                 <View style={styles.typeRow}>
-                  <Text style={styles.typeText}>{user.type} - </Text>
+                  <Text style={[styles.typeText, { color: bbpsTheme.colors.muted }]}>{user.type} - </Text>
                   <TouchableOpacity onPress={onChangePress}>
-                    <Text style={styles.changeText}>Change</Text>
+                    <Text style={[styles.changeText, { color: bbpsTheme.colors.primary }]}>Change</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
           ) : (
-            <Text style={styles.headerTitleText} numberOfLines={1}>
+            <Text style={[styles.headerTitleText, { color: bbpsTheme.colors.textStrong }]} numberOfLines={1}>
               {title}
             </Text>
           )}
@@ -76,21 +86,21 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
 
         {/* Right Section: Help Button */}
         <TouchableOpacity activeOpacity={0.8} onPress={handleHelpPress} style={styles.helpButtonWrap}>
-          <LinearGradient colors={['#A654CD', '#FC8BAD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradientBorder}>
-            <View style={styles.helpInnerContainer}>
+          <LinearGradient colors={bbpsTheme.gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradientBorder}>
+            <View style={[styles.helpInnerContainer, { backgroundColor: bbpsTheme.colors.surface }]}>
               <MaskedView style={styles.maskedView} maskElement={
                 <View style={styles.row}>
                   <MaterialIcons name="chat-bubble-outline" size={18} color="black" />
                   <Text style={styles.helpText}>Help</Text>
                 </View>
               }>
-                <LinearGradient colors={['#A654CD', '#FC8BAD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fullStretch} />
+                <LinearGradient colors={bbpsTheme.gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fullStretch} />
               </MaskedView>
             </View>
           </LinearGradient>
         </TouchableOpacity>
       </View>
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: bbpsTheme.colors.divider }]} />
     </View>
   );
 };

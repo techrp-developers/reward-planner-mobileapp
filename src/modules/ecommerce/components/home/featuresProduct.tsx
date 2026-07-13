@@ -17,6 +17,7 @@ import {
 } from "../../constants/cardLayout";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
 import { queryClient } from "../../../../query/queryClient";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -51,6 +52,7 @@ const getProductList = (payload: any) => {
 
 export default function FeaturesProduct() {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: FEATURES_PRODUCTS_QUERY_KEY,
@@ -83,26 +85,31 @@ export default function FeaturesProduct() {
   );
 
   if (isLoading && allProducts.length === 0) {
-    return <HomeSectionSkeleton height={620} backgroundColor="#FFF0DA" />;
+    return <HomeSectionSkeleton height={620} backgroundColor={theme.background} />;
   }
 
   if (randomProducts.length === 0) return null;
 
   return (
-    <LinearGradient colors={["#FFF4D6", "#FFECD6", "#FFDDCE"]} style={styles.fullScreen}>
+    <LinearGradient
+      colors={isDark ? ["#09090B", "#18120D", "#2A1A0C"] : ["#F6D58B", "#D69A33", "#8A531F"]}
+      style={styles.fullScreen}
+    >
       <View style={styles.contentWrap}>
-        <View style={styles.headerCurve} />
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.heading}>Featured This Week</Text>
+            <Text style={[styles.heading, { color: isDark ? "#FFFFFF" : "#111827" }]}>Featured This Week</Text>
           </View>
           <TouchableOpacity
-            style={styles.exploreBtn}
+            style={[
+              styles.exploreBtn,
+              { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.35)" },
+            ]}
             activeOpacity={0.85}
             onPress={handleExplore}
           >
-            <Text style={styles.exploreText}>Explore More</Text>
-            <MaterialIcons name="arrow-forward-ios" size={14} color="#5B47A3" />
+            <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+            <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
           </TouchableOpacity>
         </View>
         <HorizontalProductList
@@ -140,7 +147,10 @@ export const prefetchFeaturesProductSection = () =>
 
 // ================== RESPONSIVE STYLES ==================
 const styles = StyleSheet.create({
-  fullScreen: { flex: 1 },
+  fullScreen: {
+    flex: 1,
+    marginTop: 12,
+  },
   contentWrap: { paddingBottom: 8 },
   headerCurve: {
     height: 20,

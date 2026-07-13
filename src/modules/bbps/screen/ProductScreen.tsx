@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 type RewardItem = { id: string; title: string; sub: string; image: string; brand: string };
 
@@ -23,28 +24,38 @@ const REWARDS: RewardItem[] = [
 
 const ProductScreenComponent = () => {
   const navigation = useNavigation();
+  const bbpsTheme = useBbpsTheme();
 
   const renderItem = useCallback(({ item: reward }: { item: RewardItem }) => {
     return (
-      <View style={styles.cardContainer}>
+      <View
+        style={[
+          styles.cardContainer,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.border,
+            shadowColor: bbpsTheme.colors.shadow,
+          },
+        ]}
+      >
         {/* Top Image Section with Brand Badge */}
-        <View style={styles.imageSection}>
+        <View style={[styles.imageSection, { backgroundColor: bbpsTheme.colors.iconBg }]}>
           <Image source={{ uri: reward.image }} style={styles.productImg} />
-          <View style={styles.brandBadge}>
-            <Text style={styles.brandBadgeText}>{reward.brand}</Text>
+          <View style={[styles.brandBadge, { backgroundColor: bbpsTheme.isDark ? 'rgba(17,17,19,0.92)' : 'rgba(255,255,255,0.95)' }]}>
+            <Text style={[styles.brandBadgeText, { color: bbpsTheme.colors.text }]}>{reward.brand}</Text>
           </View>
         </View>
 
         {/* Bottom Text Content */}
         <View style={styles.detailsSection}>
-          <Text style={styles.cardTitle}>{reward.title}</Text>
-          <Text style={styles.cardSubTitle} numberOfLines={2}>
+          <Text style={[styles.cardTitle, { color: bbpsTheme.colors.textStrong }]}>{reward.title}</Text>
+          <Text style={[styles.cardSubTitle, { color: bbpsTheme.colors.muted }]} numberOfLines={2}>
             {reward.sub}
           </Text>
         </View>
       </View>
     );
-  }, []);
+  }, [bbpsTheme]);
 
   const keyExtractor = useCallback(
     (item: RewardItem) => item.id,
@@ -54,7 +65,7 @@ const ProductScreenComponent = () => {
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* Strict use of custom ScreenHeader */}
       <BBPSHead
         title="Rewards"
