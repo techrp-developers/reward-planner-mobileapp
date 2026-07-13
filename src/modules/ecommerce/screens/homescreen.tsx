@@ -128,9 +128,17 @@ const ListFooterSpacer = React.memo(() => <View style={styles.footerSpacer} />);
 
 ListFooterSpacer.displayName = 'HomeListFooterSpacer';
 
+const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { theme } = useAppTheme();
+  return <View style={[styles.container, { backgroundColor: theme.background }]}>{children}</View>;
+});
+
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
-  const { theme } = useAppTheme();
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(READY_HOME_SECTIONS),
   );
@@ -253,13 +261,13 @@ function HomeScreen() {
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ThemedHomeSurface>
       <FlatList
         data={HOME_SECTIONS}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.listContent, { backgroundColor: theme.background }]}
+        contentContainerStyle={styles.listContent}
         initialNumToRender={3}
         maxToRenderPerBatch={3}
         updateCellsBatchingPeriod={24}
@@ -269,7 +277,7 @@ function HomeScreen() {
         viewabilityConfig={viewabilityConfig}
         ListFooterComponent={ListFooterSpacer}
       />
-    </View>
+    </ThemedHomeSurface>
   );
 }
 

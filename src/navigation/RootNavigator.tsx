@@ -23,7 +23,6 @@ import ForgotPasswordScreen from "../modules/common/auth/screens/ForgotPasswordS
 import PasswordUpdatedSuccess from "../modules/common/auth/screens/PasswordUpdatedSuccess";
 import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
-import { useAppTheme } from "../theme/ThemeContext";
 export type { AuthStackParamList };
 
 export type AppStackParamList = {
@@ -102,14 +101,12 @@ function AuthNavigator() {
 // ─── App Navigator ────────────────────────────────────────────────────────────
 
 function AppNavigator() {
-  const { theme } = useAppTheme();
-
   return (
     <StepTrackerProvider>
     <AppStack.Navigator
       screenOptions={{
         ...defaultScreenOptions,
-        contentStyle: { backgroundColor: theme.background },
+        contentStyle: { backgroundColor: "transparent" },
       }}
     >
 
@@ -170,7 +167,7 @@ function AppNavigator() {
         options={{
           animation: "fade",
           presentation: "transparentModal",
-          contentStyle: { backgroundColor: theme.background },
+          contentStyle: { backgroundColor: "transparent" },
         }}
       />
       <AppStack.Screen
