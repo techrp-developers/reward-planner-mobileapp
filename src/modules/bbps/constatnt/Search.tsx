@@ -229,7 +229,7 @@ function Search({ navigation }: any) {
         )}
 
         {isSearchActive && !loading && !failed && results.length === 0 && (
-          <Text style={styles.message}>No bill-payment services found for “{search.trim()}”</Text>
+          <Text style={[styles.message, { color: bbpsTheme.colors.muted }]}>No bill-payment services found for “{search.trim()}”</Text>
         )}
 
         {isSearchActive && !loading && !failed && results.map((item) => (

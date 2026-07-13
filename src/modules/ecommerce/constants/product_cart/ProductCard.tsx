@@ -277,7 +277,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           width: usedCardWidth,
           minHeight: calculations.cardMinHeight,
           borderRadius: calculations.borderRadius,
-          backgroundColor: isDark ? "#18181B" : theme.card,
+          backgroundColor: theme.card,
           borderWidth: isDark ? 1 : 0,
           borderColor: theme.border,
         },
@@ -290,7 +290,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
             height: calculations.imageWrapHeight,
             borderRadius: calculations.borderRadius,
             paddingTop: Math.round(usedCardWidth * 0.1),
-            backgroundColor: isDark ? "#18181B" : "#F9FAFB",
+            backgroundColor: isDark ? "#303038" : "#F9FAFB",
           },
         ]}>
           {!!rp_price && (
@@ -300,7 +300,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           )}
 
           <TouchableOpacity
-            style={[styles.heartIcon, { backgroundColor: isDark ? "rgba(24,24,27,0.92)" : "rgba(255,255,255,0.9)" }]}
+            style={[styles.heartIcon, { backgroundColor: isDark ? "rgba(38,38,43,0.92)" : "rgba(255,255,255,0.9)" }]}
             activeOpacity={0.85}
             onPress={handleWishlistPress}
             disabled={wishLoading}

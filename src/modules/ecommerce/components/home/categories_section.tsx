@@ -158,7 +158,7 @@ export default function CategoriesSection() {
                 styles.cardInner,
                 {
                   borderRadius: layout.cardSize * 0.22,
-                  backgroundColor: isDark ? "#18181B" : theme.card,
+                  backgroundColor: theme.card,
                 },
               ]}
             >
