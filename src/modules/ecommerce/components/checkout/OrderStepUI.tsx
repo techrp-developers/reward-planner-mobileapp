@@ -136,7 +136,9 @@ export default function OrderStepUI() {
   alertRef.current = alert;
   const [items, setItems] = useState<any[]>([]);
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
-  const [useRewards, setUseRewards] = useState(true);
+  // Temporary frontend-only compatibility mode. The current backend quotes
+  // shipping differently between reward previews and order creation.
+  const [useRewards, setUseRewards] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const isCreatingOrder = useRef(false);
@@ -635,15 +637,9 @@ export default function OrderStepUI() {
         queryKey: checkoutQueryKey,
         queryFn: async () => {
           if (mode === "buy_now") {
-            return fetchBuyNowCheckout(
-              product_id,
-              variant_id,
-              buyNowQty,
-              useRewards,
-              safeToNumber(selectedAddressId)
-            );
+            return fetchBuyNowCheckout(product_id, variant_id, buyNowQty, useRewards);
           }
-          return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
+          return fetchCheckoutCart(useRewards);
         },
         staleTime: 0,
       });

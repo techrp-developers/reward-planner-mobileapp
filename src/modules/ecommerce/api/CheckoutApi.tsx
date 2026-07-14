@@ -34,10 +34,10 @@ export const addCartOrder = async (payload?: CartOrderPayload) => {
 /**
  * Fetch cart checkout preview
  */
-export const fetchCheckoutCart = async (useRewards = true, addressId?: number) => {
+export const fetchCheckoutCart = async (useRewards = true) => {
   try {
     const res = await api.get("/v1/checkout/get-cart", {
-      params: { use_rewards: useRewards, address_id: addressId },
+      params: { use_rewards: useRewards },
     });
     return res.data;
   } catch (error: any) {
@@ -73,11 +73,10 @@ export const fetchBuyNowCheckout = async (
   product_id: number,
   variant_id: number,
   qty: number,
-  useRewards = true,
-  addressId?: number
+  useRewards = true
 ) => {
   const res = await api.get("/v1/checkout/get-buy-now", {
-    params: { product_id, variant_id, qty, use_rewards: useRewards, address_id: addressId },
+    params: { product_id, variant_id, qty, use_rewards: useRewards },
   });
   return res.data;
 };
