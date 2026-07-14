@@ -2,12 +2,11 @@ import React from "react";
 import { TouchableOpacity, StyleSheet, View, Text, ViewStyle } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
-type IconType = "back" | "cart" | "notification" | "filter" | "wishlist" | "search";
+type IconType = "back" | "cart" | "filter" | "wishlist" | "search";
 
 const ICON_MAP: Record<IconType, { name: any; size: number }> = {
   back: { name: "arrow-back-ios", size: 18 },
   cart: { name: "shopping-cart", size: 20 },
-  notification: { name: "notifications-none", size: 20 },
   filter: { name: "tune", size: 20 },
   wishlist: { name: "favorite-border", size: 20 },
   search: { name: "search", size: 18 },
@@ -24,7 +23,7 @@ type Props = {
   variant?: "solid" | "ghost";
   disabled?: boolean;
 
-  // badge support (notification/cart etc.)
+  // badge support (cart etc.)
   badgeCount?: number; // if > 0 then badge shows
   showDotBadge?: boolean; // just red dot (like your UI)
 };

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   View,
+  Text,
   Image,
   ScrollView,
   StyleSheet,
@@ -13,12 +14,14 @@ import type { NavigationProp } from '@react-navigation/native';
 import Card from './Card';
 import { HomeStackParamList, type ServiceItem } from '../../navigation/type';
 import { useServiceHome } from '../../hooks/useServiceHome';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const LimitedImage = require('../../assete/service/Limited_offer.png');
-const fallbackImg = require('../../assete/gov_documet/aadhar card.png');
+const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
 
 export default function LimitedOffer() {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
+  const servicesTheme = useServicesTheme();
   const { data, isLoading, error } = useServiceHome();
 
   const services = useMemo((): ServiceItem[] => {
@@ -29,88 +32,125 @@ export default function LimitedOffer() {
 
   if (isLoading) {
     return (
-      <LinearGradient
-        colors={['#E6ECFF', '#5B7CFA']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.container, styles.loadingBox]}
-      >
-        <ActivityIndicator size="large" color="#5B47A3" />
-      </LinearGradient>
+      <View style={styles.shadowWrap}>
+        <LinearGradient
+          colors={['#E6ECFF', '#5B7CFA']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.container, styles.loadingBox]}
+        >
+          <ActivityIndicator size="large" color="#5B47A3" />
+        </LinearGradient>
+      </View>
     );
   }
 
   if (error || services.length === 0) return null;
 
+  const getImageSource = (item: ServiceItem) => {
+    const imageUrl = item.variant_image || item.service_image || item.image;
+    return imageUrl ? { uri: imageUrl } : fallbackImg;
+  };
+
   return (
     <View style={styles.wrapper}>
-      <LinearGradient
-        colors={['#E6ECFF', '#5B7CFA']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.container}
-      >
-        {/* Left: promotional banner image */}
-        <View style={styles.left}>
-          <Image
-            source={LimitedImage}
-            style={styles.limitedImage}
-            resizeMode="contain"
-          />
-        </View>
+      <View style={styles.headerRow}>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Limited Time Offers</Text>
+        <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>Grab them before they're gone</Text>
+      </View>
 
-        {/* Right: horizontal card scroll */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-          style={styles.right}
+      <View style={styles.shadowWrap}>
+        <LinearGradient
+          colors={['#E6ECFF', '#5B7CFA']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.container}
         >
-          {services.map(item => {
-            const imageUri = item.variant_image || item.service_image || item.image;
-            const imageSource = imageUri ? { uri: imageUri } : fallbackImg;
-            const discount =
-              item.discount_percent && item.discount_percent > 0
-                ? `${item.discount_percent}%`
-                : undefined;
-            const coinsText = item.coins ? String(item.coins) : '';
+          <View style={styles.left}>
+            <Image
+              source={LimitedImage}
+              style={styles.limitedImage}
+              resizeMode="contain"
+            />
+          </View>
 
-            return (
-              <Card
-                key={`${item.service_id}-${item.variant_id}`}
-                title={item.name}
-                image={imageSource}
-                price={item.price > 0 ? `₹${item.price}` : 'Get Quote'}
-                oldPrice={
-                  item.mrp && item.mrp > item.price
-                    ? `₹${item.mrp}`
-                    : undefined
-                }
-                users="18.9K"
-                coins={coinsText}
-                discount={discount}
-                onPress={() =>
-                  navigation.navigate('ServiceDescription', {
-                    serviceId: item.service_id,
-                    title: item.name,
-                  })
-                }
-              />
-            );
-          })}
-        </ScrollView>
-      </LinearGradient>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scroll}
+            style={styles.right}
+          >
+            {services.map(item => {
+              const discount =
+                item.discount_percent && item.discount_percent > 0
+                  ? `${item.discount_percent}%`
+                  : undefined;
+              const coinsText = item.coins ? `${item.coins}` : '0';
+              const orders = item.total_orders
+                ? `${(item.total_orders / 1000).toFixed(1)}K`
+                : '0';
+
+              return (
+                <Card
+                  key={`${item.service_id}-${item.variant_id}`}
+                  title={item.title || item.name}
+                  image={getImageSource(item)}
+                  price={Number(item.price) > 0 ? `₹${item.price}` : 'Get Quote'}
+                  oldPrice={item.mrp ? `${item.mrp}` : `${item.price}`}
+                  rating={item.rating}
+                  users={orders}
+                  coins={coinsText}
+                  discount={discount}
+                  onPress={() =>
+                    navigation.navigate('ServiceDescription', {
+                      serviceId: item.service_id,
+                      title: item.name,
+                    })
+                  }
+                />
+              );
+            })}
+          </ScrollView>
+        </LinearGradient>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 16,
+    marginTop: 20,
+  },
+  headerRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  heading: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: 12.5,
+    color: '#6B7280',
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  shadowWrap: {
+    marginHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#3F4FE0',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 6,
   },
   container: {
     overflow: 'hidden',
     flexDirection: 'row',
+    borderRadius: 22,
   },
   loadingBox: {
     height: 180,

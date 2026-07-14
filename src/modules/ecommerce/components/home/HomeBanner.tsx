@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import BannerImage from '../../../../assets/homepage/banner_gift.svg';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -9,10 +10,12 @@ const BANNER_HEIGHT = width * 0.35;
 const IMAGE_SIZE = width * 0.45;
 
 function HomeBanner() {
+  const { isDark } = useAppTheme();
+
   return (
     <View style={styles.wrapper}>
       <LinearGradient
-        colors={['#A95ACD', '#FC8BAD']}
+        colors={isDark ? ['#18181B', '#3B0764', '#BE185D'] : ['#A95ACD', '#FC8BAD']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.bannerBox}
@@ -37,7 +40,9 @@ export default HomeBanner;
 
 const styles = StyleSheet.create({
   wrapper: {
-    // paddingHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
 
   bannerBox: {
@@ -45,6 +50,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: width * 0.08,
+    borderRadius: 22,
     overflow: 'hidden',
     elevation: 4,
     shadowColor: '#000',

@@ -3,7 +3,8 @@ import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vi
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../constatnt/BBPSHead';
-import { pollTransactionStatus, TransactionStatus } from '../api/BillsAPI';
+import { pollTransactionStatus, TERMINAL_TRANSACTION_STATUSES, TransactionStatus } from '../api/BillsAPI';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 const BRAND_PRIMARY = '#8665FF';
 const BRAND_SECONDARY = '#5B47A3';
@@ -22,9 +23,22 @@ const STATUS_PRESENTATION: Record<
     bg: '#FFFBEB',
     title: 'Reconciliation Required',
   },
+  RETRYING: {
+    icon: 'hourglass-empty',
+    color: '#8665FF',
+    bg: '#F3EFFF',
+    title: 'Payment Captured, Retrying',
+  },
+  REFUND_PENDING: {
+    icon: 'hourglass-empty',
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    title: 'Refund In Progress',
+  },
 };
 
 const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
+  const bbpsTheme = useBbpsTheme();
   const transactionId = route?.params?.transactionId;
   const [status, setStatus] = useState<TransactionStatus>('PENDING');
   const [message, setMessage] = useState('Checking transaction status...');
@@ -45,7 +59,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   }, [transactionId]);
 
   const isTerminal = useMemo(
-    () => status !== 'PENDING',
+    () => TERMINAL_TRANSACTION_STATUSES.includes(status as any),
     [status]
   );
 
@@ -58,11 +72,19 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead title="Payment Status" onBackPress={handleGoBack} />
 
       <View style={styles.container}>
-        <View style={styles.card}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
           <View style={[styles.iconCircle, { backgroundColor: presentation.bg }]}>
             {!isTerminal ? (
               <ActivityIndicator color={presentation.color} size="large" />
@@ -71,20 +93,27 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
             )}
           </View>
 
-          <Text style={styles.title}>{presentation.title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text style={[styles.title, { color: bbpsTheme.colors.textStrong }]}>{presentation.title}</Text>
+          <Text style={[styles.message, { color: bbpsTheme.colors.muted }]}>{message}</Text>
 
           {transactionId ? (
-            <View style={styles.transactionPill}>
-              <Text style={styles.transactionPillText}>Txn ID: {String(transactionId)}</Text>
+            <View style={[styles.transactionPill, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF' }]}>
+              <Text style={[styles.transactionPillText, { color: bbpsTheme.colors.primary }]}>Txn ID: {String(transactionId)}</Text>
             </View>
           ) : null}
         </View>
 
         {isTerminal && (
-          <TouchableOpacity activeOpacity={0.85} onPress={handleGoHome} style={styles.ctaShadowWrap}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleGoHome}
+            style={[
+              styles.ctaShadowWrap,
+              { backgroundColor: bbpsTheme.colors.primaryDark, shadowColor: bbpsTheme.colors.shadow },
+            ]}
+          >
             <LinearGradient
-              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.cta}

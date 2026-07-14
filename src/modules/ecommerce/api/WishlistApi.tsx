@@ -3,72 +3,43 @@ import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 
 const API_BASE_URL = "https://rewardplanners.com/api/crm";
 
+const normalizeId = (value: unknown, label: string) => {
+  const parsed = Number(value);
+
+  if (!parsed || Number.isNaN(parsed)) {
+    throw new Error(`${label} is required`);
+  }
+
+  return parsed;
+};
+
 export const addWishlist = async (productId: number, variantId?: number) => {
   const headers = await getAuthHeaders();
-  const parsedProductId = Number(productId);
-  const hasProvidedVariantId = variantId !== null && variantId !== undefined;
-  const parsedVariantId = hasProvidedVariantId ? Number(variantId) : undefined;
+  const parsedProductId = normalizeId(productId, "Product id");
+  const parsedVariantId = normalizeId(variantId, "Variant id");
 
-  if (!parsedProductId || Number.isNaN(parsedProductId)) {
-    throw new Error("Invalid product id");
-  }
-
-  const candidates = [
-    ...(parsedVariantId && !Number.isNaN(parsedVariantId)
-      ? [
-          {
-            product_id: parsedProductId,
-            variant_id: parsedVariantId,
-          },
-        ]
-      : []),
+  const res = await axios.post(
+    `${API_BASE_URL}/v1/wishlist/add-wishlist`,
     {
       product_id: parsedProductId,
-      variant_id: parsedProductId,
+      variant_id: parsedVariantId,
     },
-    {
-      product_id: parsedProductId,
-    },
-  ];
+    { headers }
+  );
 
-  let lastError: any = null;
-
-  for (const body of candidates) {
-    try {
-      const res = await axios.post(`${API_BASE_URL}/v1/wishlist/add-wishlist`, body, { headers });
-      return res.data;
-    } catch (error: any) {
-      lastError = error;
-
-      const status = Number(error?.response?.status || 0);
-      const message = String(
-        error?.response?.data?.message ||
-          error?.response?.data?.error ||
-          ""
-      ).toLowerCase();
-
-      if (
-        status === 400 &&
-        (message.includes("already") || message.includes("exist") || message.includes("duplicate"))
-      ) {
-        return { success: true, alreadyAdded: true };
-      }
-
-      if (status !== 400) {
-        throw error;
-      }
-    }
-  }
-
-  throw lastError;
+  return res.data;
 };
 
 export const checkWishlist = async (productId: number, variantId?: number) => {
   const headers = await getAuthHeaders();
+  const parsedProductId = normalizeId(productId, "Product id");
+  const parsedVariantId = normalizeId(variantId, "Variant id");
+
   const res = await axios.get(
-    `${API_BASE_URL}/v1/wishlist/check/${productId}/${variantId ?? productId}`,
+    `${API_BASE_URL}/v1/wishlist/check/${parsedProductId}/${parsedVariantId}`,
     { headers }
   );
+
   return res.data;
 };
 
@@ -77,10 +48,14 @@ export const isWishlistPresent = (response: any) => {
     response?.isPresent ??
     response?.exists ??
     response?.inWishlist ??
+    response?.in_wishlist ??
+    response?.is_wishlist ??
     response?.is_wishlisted ??
     response?.data?.isPresent ??
     response?.data?.exists ??
     response?.data?.inWishlist ??
+    response?.data?.in_wishlist ??
+    response?.data?.is_wishlist ??
     response?.data?.is_wishlisted ??
     false;
 
@@ -94,105 +69,47 @@ export const getWishlist = async () => {
 };
 
 export const removeWishlist = async (payload: {
-  wishlistId?: number;
   productId?: number;
   variantId?: number;
+  strict?: boolean;
 }) => {
   const headers = await getAuthHeaders();
-  const parsedProductId = Number(payload.productId);
-  const parsedVariantId = Number(payload.variantId ?? payload.productId);
-  const parsedWishlistId = Number(payload.wishlistId);
+  const parsedProductId = normalizeId(payload.productId, "Product id");
+  const parsedVariantId = normalizeId(payload.variantId, "Variant id");
 
-  const canUseProductVariant =
-    !!parsedProductId &&
-    !Number.isNaN(parsedProductId) &&
-    !!parsedVariantId &&
-    !Number.isNaN(parsedVariantId);
-  const canUseWishlistId = !!parsedWishlistId && !Number.isNaN(parsedWishlistId);
+  try {
+    const res = await axios.delete(
+      `${API_BASE_URL}/v1/wishlist/remove/${parsedProductId}/${parsedVariantId}`,
+      { headers }
+    );
 
-  const body = {
-    wishlist_id: canUseWishlistId ? parsedWishlistId : undefined,
-    product_id: canUseProductVariant ? parsedProductId : undefined,
-    variant_id: canUseProductVariant ? parsedVariantId : undefined,
-  };
+    return res.data;
+  } catch (error: any) {
+    const status = Number(error?.response?.status || 0);
+    const message = String(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        ""
+    ).toLowerCase();
 
-  const attempts: Array<() => Promise<any>> = [
-    ...(canUseProductVariant
-      ? [
-          () =>
-            axios.delete(
-              `${API_BASE_URL}/v1/wishlist/remove/${parsedProductId}/${parsedVariantId}`,
-              { headers }
-            ),
-        ]
-      : []),
-    ...(canUseWishlistId
-      ? [
-          () =>
-            axios.delete(`${API_BASE_URL}/v1/wishlist/remove-wishlist/${parsedWishlistId}`, {
-              headers,
-            }),
-        ]
-      : []),
-    () => axios.post(`${API_BASE_URL}/v1/wishlist/remove-wishlist`, body, { headers }),
-  ];
-
-  let lastError: any = null;
-
-  for (const attempt of attempts) {
-    try {
-      const res = await attempt();
-      return res.data;
-    } catch (error: any) {
-      lastError = error;
-
-      const status = Number(error?.response?.status || 0);
-      const message = String(
-        error?.response?.data?.message ||
-          error?.response?.data?.error ||
-          error?.message ||
-          ""
-      ).toLowerCase();
-
-      const canTryNextFallback =
-        status >= 400 &&
-        status < 500 &&
-        (message.includes("not found") ||
-          message.includes("already") ||
-          message.includes("removed"));
-
-      if (!canTryNextFallback) {
-        throw error;
-      }
-    }
-  }
-
-  const message = String(
-    lastError?.response?.data?.message ||
-      lastError?.response?.data?.error ||
-      ""
-  ).toLowerCase();
-
-  if (message.includes("not found") && canUseProductVariant) {
-    try {
+    if (!payload.strict && status === 404 && message.includes("not found")) {
       const state = await checkWishlist(parsedProductId, parsedVariantId);
       if (!isWishlistPresent(state)) {
         return { success: true, alreadyRemoved: true };
       }
-    } catch {
-      // ignore check failure and throw original error
     }
-  }
 
-  throw lastError;
+    throw error;
+  }
 };
 
 export const toggleWishlist = async (productId: number, variantId?: number) => {
-  const safeVariantId = variantId ?? productId;
+  const parsedProductId = normalizeId(productId, "Product id");
+  const parsedVariantId = normalizeId(variantId, "Variant id");
   let checkRes: any;
 
   try {
-    checkRes = await checkWishlist(productId, safeVariantId);
+    checkRes = await checkWishlist(parsedProductId, parsedVariantId);
   } catch (err: any) {
     throw new Error(
       `Failed to check wishlist status: ${err?.message || "Unknown error"}`
@@ -202,10 +119,15 @@ export const toggleWishlist = async (productId: number, variantId?: number) => {
   const present = isWishlistPresent(checkRes);
 
   if (present) {
-    await removeWishlist({
-      productId,
-      variantId: safeVariantId,
-    });
+    try {
+      await removeWishlist({
+        productId: parsedProductId,
+        variantId: parsedVariantId,
+      });
+    } catch (error: any) {
+      const status = Number(error?.response?.status || 0);
+      if (status !== 404) throw error;
+    }
 
     return {
       wishlisted: false,
@@ -213,11 +135,11 @@ export const toggleWishlist = async (productId: number, variantId?: number) => {
     };
   }
 
-  await addWishlist(productId, safeVariantId);
+  const addRes = await addWishlist(parsedProductId, parsedVariantId);
 
   return {
-    wishlisted: true,
-    action: "added" as const,
+    wishlisted: addRes?.action !== "removed",
+    action: (addRes?.action || "added") as "added" | "removed",
   };
 };
 
@@ -226,19 +148,30 @@ export const setWishlistState = async (
   variantId: number | undefined,
   shouldWishlist: boolean
 ) => {
-  const safeVariantId = variantId ?? productId;
+  const parsedProductId = normalizeId(productId, "Product id");
+  const parsedVariantId = normalizeId(variantId, "Variant id");
 
   if (shouldWishlist) {
-    await addWishlist(productId, safeVariantId);
+    const current = await checkWishlist(parsedProductId, parsedVariantId);
+
+    if (isWishlistPresent(current)) {
+      return {
+        wishlisted: true,
+        action: "added" as const,
+      };
+    }
+
+    const addRes = await addWishlist(parsedProductId, parsedVariantId);
+
     return {
-      wishlisted: true,
-      action: "added" as const,
+      wishlisted: addRes?.action !== "removed",
+      action: (addRes?.action || "added") as "added" | "removed",
     };
   }
 
   await removeWishlist({
-    productId,
-    variantId: safeVariantId,
+    productId: parsedProductId,
+    variantId: parsedVariantId,
   });
 
   return {

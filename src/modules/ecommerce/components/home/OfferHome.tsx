@@ -12,6 +12,7 @@ import {
   Linking,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import HomeSectionSkeleton from "./HomeSectionSkeleton";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
@@ -22,13 +23,15 @@ import {
   fetchProductDetailsByID,
 } from "../../api/ProductApi";
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
+import { queryClient } from "../../../../query/queryClient";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
-import { setWishlistState } from "../../api/WishlistApi";
+import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
 import {
   handleNavigateWithPrefetch,
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -37,23 +40,127 @@ const OFFER_HEIGHT = OFFER_WIDTH * 1.8;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
+const CAMPAIGN_HOME_QUERY_KEY = ["ecommerce", "home", "campaign-home"] as const;
+const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
+  ["ecommerce", "home", "flash-products", campaignId] as const;
+// The campaign-home endpoint can omit flash_sales even while the dedicated
+// flash-sale campaign remains available. Keep the configured campaign visible
+// until the API starts returning an active flash sale again.
+const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+
+const hasWishlistFlag = (item: any) =>
+  item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
+
+const getWishlistFlag = (item: any) => {
+  const value = item?.is_wishlisted ?? item?.is_wishlist;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y"].includes(normalized);
+};
 
 // ---------------------------------------------------------------------
 // Product Card Component
 // ---------------------------------------------------------------------
-const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
+const FlashOfferProductCard = React.memo(({
+  item,
+  shouldLoadImage,
+}: {
+  item: any;
+  shouldLoadImage: boolean;
+}) => {
   const navigation = useNavigation<Nav>();
+  const { isDark, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
-  const [wishlisted, setWishlisted] = useState(Boolean(item?.is_wishlisted));
+  const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
 
   const productId = item.product_id ?? item.id;
-  const variantId = item?.variant_id ?? item?.variantId ?? item?.default_variant_id ?? item?.variants?.[0]?.variant_id;
+  const variantId =
+    item?.variant_id ??
+    item?.variantId ??
+    item?.default_variant_id ??
+    item?.variants?.[0]?.variant_id ??
+    item?.variants?.[0]?.id;
+  const [resolvedVariantId, setResolvedVariantId] = useState<any>(variantId);
 
   useEffect(() => {
-    setWishlisted(Boolean(item?.is_wishlisted));
-  }, [item?.is_wishlisted]);
+    setWishlisted(getWishlistFlag(item));
+    setResolvedVariantId(variantId);
+  }, [item, variantId]);
+
+  useEffect(() => {
+    const parsedProductId = Number(productId);
+    const initialVariantId = Number(variantId);
+
+    if (
+      hasWishlistFlag(item) ||
+      !shouldLoadImage ||
+      !parsedProductId ||
+      Number.isNaN(parsedProductId)
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncWishlistState = async () => {
+      const candidateVariantIds: number[] = [];
+      const addCandidate = (value: unknown) => {
+        const parsed = Number(value);
+        if (parsed && !Number.isNaN(parsed) && !candidateVariantIds.includes(parsed)) {
+          candidateVariantIds.push(parsed);
+        }
+      };
+
+      addCandidate(initialVariantId);
+
+      if (candidateVariantIds.length === 0) {
+        try {
+          const details = await fetchProductDetailsByID(parsedProductId);
+          addCandidate(details?.default_variant_id);
+          addCandidate(details?.variant_id);
+
+          const variants = Array.isArray(details?.variants) ? details.variants : [];
+          variants.forEach((variant: any) => addCandidate(variant?.variant_id ?? variant?.id));
+        } catch {
+          return;
+        }
+      }
+
+      for (const candidateVariantId of candidateVariantIds) {
+        try {
+          const response = await checkWishlist(parsedProductId, candidateVariantId);
+
+          if (cancelled) return;
+
+          if (isWishlistPresent(response)) {
+            setResolvedVariantId(candidateVariantId);
+            setWishlisted(true);
+            return;
+          }
+        } catch {
+          // Ignore auth/check failures and keep the list-provided flag.
+        }
+      }
+
+      if (!cancelled) {
+        setWishlisted(false);
+      }
+
+      if (!cancelled && candidateVariantIds[0]) {
+        setResolvedVariantId(candidateVariantIds[0]);
+      }
+    };
+
+    syncWishlistState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item, productId, shouldLoadImage, variantId]);
 
   const displayData = useMemo(() => {
     // Parse price values from API response (format: "₹1349" or 1349)
@@ -119,10 +226,15 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
   const handleWishlist = async () => {
     if (wishLoading) return;
     const parsedProductId = Number(productId);
-    const parsedVariantId = Number(variantId ?? parsedProductId);
+    const parsedVariantId = Number(resolvedVariantId ?? variantId);
 
     if (!parsedProductId || isNaN(parsedProductId)) {
       Alert.alert("Wishlist", "Invalid product");
+      return;
+    }
+
+    if (!parsedVariantId || isNaN(parsedVariantId)) {
+      Alert.alert("Wishlist", "Product variant is missing");
       return;
     }
 
@@ -131,16 +243,33 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
       const result = await setWishlistState(parsedProductId, parsedVariantId, !wishlisted);
       setWishlisted(result.wishlisted);
     } catch (error: any) {
-      Alert.alert("Wishlist", error?.response?.data?.message || "Failed to update wishlist");
+      Alert.alert(
+        "Wishlist",
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to update wishlist"
+      );
     } finally {
       setWishLoading(false);
     }
   };
 
   return (
-    <TouchableOpacity style={styles.cardContainer} activeOpacity={0.9} onPress={handlePress}>
-      <View style={styles.imageBox}>
-        <RNImage source={{ uri: displayData.imageUrl }} style={styles.productImage} />
+    <TouchableOpacity
+      style={[
+        styles.cardContainer,
+        { backgroundColor: theme.card, borderColor: theme.border },
+      ]}
+      activeOpacity={0.9}
+      onPress={handlePress}
+    >
+      <View style={[styles.imageBox, { backgroundColor: isDark ? "#111827" : "#FFF8E7" }]}>
+        {shouldLoadImage ? (
+          <RNImage source={{ uri: displayData.imageUrl }} style={styles.productImage} />
+        ) : (
+          <View style={[styles.productImagePlaceholder, { backgroundColor: theme.border }]} />
+        )}
 
         {displayData.discountPercent !== "0%" && (
           <LinearGradient
@@ -154,7 +283,7 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
         )}
 
         <TouchableOpacity
-          style={styles.heartIcon}
+          style={[styles.heartIcon, { backgroundColor: theme.card }]}
           activeOpacity={0.85}
           onPress={handleWishlist}
           disabled={wishLoading}
@@ -162,19 +291,19 @@ const FlashOfferProductCard = React.memo(({ item }: { item: any }) => {
           <FontAwesome
             name={wishlisted ? "heart" : "heart-o"}
             size={14}
-            color={wishlisted ? "#E53935" : "#000"}
+            color={wishlisted ? "#E53935" : theme.text}
           />
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoArea}>
-        <Text style={styles.brandText} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
-        <Text style={styles.titleText} numberOfLines={1}>{displayData.productTitle}</Text>
+        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
+        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.productTitle}</Text>
 
         <View style={styles.priceRow}>
           <Text style={styles.currentPrice}>₹{displayData.priceText}</Text>
           {displayData.originalPriceText && (
-            <Text style={styles.oldPrice}>₹{displayData.originalPriceText}</Text>
+            <Text style={[styles.oldPrice, { color: theme.secondaryText }]}>₹{displayData.originalPriceText}</Text>
           )}
         </View>
 
@@ -207,17 +336,19 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
+  const { theme } = useAppTheme();
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "campaign-home"],
+    queryKey: CAMPAIGN_HOME_QUERY_KEY,
     queryFn: getCampaignHome,
     staleTime: 10 * 60 * 1000,
   });
 
-  const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
+  const flashCampaignId =
+    campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
 
   const { data: products = [], isLoading: isProductsLoading } = useQuery({
-    queryKey: ["ecommerce", "home", "flash-products", flashCampaignId],
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId!),
     queryFn: () => getCampaignProducts(flashCampaignId!),
     enabled: flashCampaignId != null,
     staleTime: 5 * 60 * 1000,
@@ -269,15 +400,11 @@ export default function OfferHome() {
   };
 
   if (isProductsLoading || isCampaignLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading offers...</Text>
-      </View>
-    );
+    return <HomeSectionSkeleton height={390} backgroundColor={theme.background} />;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Banner Carousel */}
       {banner.length > 0 && (
         <ScrollView
@@ -288,7 +415,7 @@ export default function OfferHome() {
           {banner.map((offer) => (
             <TouchableOpacity
               key={offer.id}
-              style={styles.offerCard}
+              style={[styles.offerCard, { backgroundColor: theme.card }]}
               activeOpacity={0.85}
               onPress={() => handleBannerPress(offer)}
             >
@@ -307,7 +434,11 @@ export default function OfferHome() {
               <RNImage source={{ uri: flashSalesPoster }} style={styles.flashPosterImage} resizeMode="contain" />
             ) : (
               <View style={styles.placeholderFlash}>
-                <Text style={styles.placeholderText}>Flash Sales</Text>
+                <RNImage
+                  source={require('../../../../assets/homepage/flash_sale_title.png')}
+                  style={styles.flashSaleTitleImage}
+                  resizeMode="contain"
+                />
               </View>
             )}
           </View>
@@ -316,14 +447,18 @@ export default function OfferHome() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.innerProductsScroll}
-            snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
+            snapToInterval={CARD_WIDTH + CARD_MARGIN}
             decelerationRate="fast"
+            nestedScrollEnabled
           >
-            <View style={{ width: CARD_MARGIN }} />
             {products.map((item: any, index: number) => (
-              <FlashOfferProductCard key={item.id ?? index} item={item} />
+              <View
+                key={String(item?.id ?? item?.product_id ?? index)}
+                style={index < products.length - 1 ? styles.flashProductItem : undefined}
+              >
+                <FlashOfferProductCard item={item} shouldLoadImage />
+              </View>
             ))}
-            <View style={{ width: CARD_MARGIN }} />
           </ScrollView>
         </View>
       </View>
@@ -331,9 +466,27 @@ export default function OfferHome() {
   );
 }
 
+export const prefetchOfferHomeSection = async () => {
+  const campaignHome = await queryClient.fetchQuery({
+    queryKey: CAMPAIGN_HOME_QUERY_KEY,
+    queryFn: getCampaignHome,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
+  if (flashCampaignId == null) return;
+
+  await queryClient.prefetchQuery({
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId),
+    queryFn: () => getCampaignProducts(flashCampaignId),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 14,
+    paddingBottom: 14,
     backgroundColor: '#fff',
   },
   loadingContainer: {
@@ -361,8 +514,9 @@ const styles = StyleSheet.create({
   },
   flashSectionContainer: {
     width: "100%",
-    height: CARD_WIDTH * 1.85,
+    height: CARD_WIDTH * 1.95,
     marginTop: 20,
+    marginBottom: 10,
     position: "relative",
   },
   flashContentRow: {
@@ -386,21 +540,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  placeholderText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#666",
+  flashSaleTitleImage: {
+    width: "92%",
+    height: "72%",
   },
   innerProductsScroll: {
     alignItems: "center",
-    paddingRight: 20,
+    paddingLeft: CARD_MARGIN,
+    paddingRight: CARD_MARGIN + 20,
+  },
+  flashProductItem: {
+    marginRight: CARD_MARGIN,
   },
   cardContainer: {
     width: CARD_WIDTH,
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 8,
-    marginHorizontal: CARD_MARGIN,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -421,6 +577,12 @@ const styles = StyleSheet.create({
     width: "85%",
     height: "85%",
     resizeMode: "contain",
+  },
+  productImagePlaceholder: {
+    width: "85%",
+    height: "85%",
+    borderRadius: 10,
+    backgroundColor: "#F2E8CC",
   },
   discountBadgeTopLeft: {
     position: "absolute",

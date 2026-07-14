@@ -6,11 +6,13 @@ import type { NavigationProp } from '@react-navigation/native';
 import Card from './Card';
 import { HomeStackParamList, type ServiceItem } from '../../navigation/type';
 import { useServiceHome } from '../../hooks/useServiceHome';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const fallbackImg = require('../../assete/gov_documet/aadhar card.png');
 
 const YouMayNeedServicesCarousel = () => {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
+  const servicesTheme = useServicesTheme();
   const { data, isLoading, error } = useServiceHome();
 
   const services = useMemo((): ServiceItem[] => {
@@ -22,7 +24,10 @@ const YouMayNeedServicesCarousel = () => {
   if (isLoading) {
     return (
       <View style={styles.wrapper}>
-        <Text style={styles.heading}>You may also need</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>You may also need</Text>
+          <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>Handy add-ons for this service</Text>
+        </View>
         <ActivityIndicator size="small" color="#8665FF" style={styles.loader} />
       </View>
     );
@@ -32,7 +37,10 @@ const YouMayNeedServicesCarousel = () => {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.heading}>You may also need</Text>
+      <View style={styles.headerRow}>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>You may also need</Text>
+        <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>Handy add-ons for this service</Text>
+      </View>
 
       <ScrollView
         horizontal
@@ -59,7 +67,8 @@ const YouMayNeedServicesCarousel = () => {
                   ? `₹${item.mrp}`
                   : undefined
               }
-              users="18.9K"
+              rating={item.rating}
+              users={String(item.total_orders ?? 0)}
               coins={coinsText}
               discount={discount}
               onPress={() =>
@@ -80,14 +89,23 @@ export default YouMayNeedServicesCarousel;
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 16,
+    marginTop: 22,
+  },
+  headerRow: {
+    marginHorizontal: 16,
+    marginBottom: 14,
   },
   heading: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111111',
-    marginHorizontal: 16,
-    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: 12.5,
+    color: '#6B7280',
+    marginTop: 3,
+    fontWeight: '500',
   },
   scroll: {
     paddingHorizontal: 16,

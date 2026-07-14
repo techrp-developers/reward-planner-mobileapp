@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import Eko from '../assets/BBPS_Service/serviceorg-medium.png';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 interface RechargeModalProps {
   visible: boolean;
@@ -21,6 +22,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
   visible,
   onClose,
 }) => {
+  const bbpsTheme = useBbpsTheme();
   const scaleValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -51,12 +53,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
               { transform: [{ scale: scaleValue }] },
             ]}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.logoCircle}>
+            <View style={[styles.modalContainer, { backgroundColor: bbpsTheme.colors.surface }]}>
+              <View style={[styles.logoCircle, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3E9FB' }]}>
                 <Image source={Eko} style={styles.logoImage} resizeMode="contain" />
               </View>
 
-              <Text style={styles.companyName}>
+              <Text style={[styles.companyName, { color: bbpsTheme.colors.textStrong }]}>
                 Eko India Financial Services Pvt. Ltd.
               </Text>
 
@@ -64,7 +66,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
 
               <Text style={styles.title}>Service Temporarily Unavailable</Text>
 
-              <Text style={styles.detailsText}>
+              <Text style={[styles.detailsText, { color: bbpsTheme.colors.muted }]}>
                 BBPS (Eko) services are currently unavailable.{'\n'}
                 Please avoid initiating any transactions{'\n'}
                 until the service is restored.
@@ -72,7 +74,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={styles.okBtn}
+                style={[styles.okBtn, { backgroundColor: bbpsTheme.colors.primary }]}
                 onPress={onClose}
               >
                 <Text style={styles.okBtnText}>Okay, Got It</Text>

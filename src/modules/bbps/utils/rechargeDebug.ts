@@ -47,10 +47,10 @@ export const compareRechargePayloads = (
   });
 
   if (__DEV__) {
-    console.log(`[compareRechargePayloads] ${labelA} vs ${labelB}`);
+    __DEV__ && console.log(`[compareRechargePayloads] ${labelA} vs ${labelB}`);
     diffs.forEach((diff) => {
       const marker = diff.same ? "=" : "≠";
-      console.log(
+      __DEV__ && console.log(
         `  ${marker} ${diff.field}: ${labelA}=${JSON.stringify(diff.a)} (${typeof diff.a}) | ${labelB}=${JSON.stringify(diff.b)} (${typeof diff.b})`
       );
     });
@@ -62,7 +62,7 @@ export const compareRechargePayloads = (
         mismatches.map((d) => d.field)
       );
     } else {
-      console.log("[compareRechargePayloads] Payloads are structurally identical.");
+      __DEV__ && console.log("[compareRechargePayloads] Payloads are structurally identical.");
     }
   }
 

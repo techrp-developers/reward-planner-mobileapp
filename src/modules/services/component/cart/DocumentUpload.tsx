@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
+import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary, type Asset as PickerAsset } from 'react-native-image-picker';
@@ -23,6 +24,7 @@ import {
   type ServiceDocument,
   type SubmitDocumentPayload,
 } from '../../api/DocumentAPI';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
@@ -61,6 +63,7 @@ type DocCardProps = {
 };
 
 const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
+  const servicesTheme = useServicesTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
@@ -93,8 +96,12 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
     ? '#7C3AED'
     : '#6B7280';
 
-  const cardBorderColor = ready ? '#BBF7D0' : hasError ? '#FECACA' : '#E5E7EB';
-  const cardBg = ready ? '#F0FDF4' : hasError ? '#FEF2F2' : '#FFFFFF';
+  const cardBorderColor = ready ? '#BBF7D0' : hasError ? '#FECACA' : servicesTheme.colors.border;
+  const cardBg = ready
+    ? (servicesTheme.isDark ? '#102016' : '#F0FDF4')
+    : hasError
+      ? (servicesTheme.isDark ? '#261314' : '#FEF2F2')
+      : servicesTheme.colors.surface;
 
   const displayName =
     doc.localName ||
@@ -105,6 +112,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
   const showThumb =
     doc.localUri &&
     (doc.localType?.startsWith('image/') || doc.localUri.match(/\.(jpg|jpeg|png|webp)$/i));
+  const isPersistedUpload = doc.uploaded && !doc.localUri;
 
   return (
     <Animated.View
@@ -136,7 +144,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
       {/* Text block */}
       <View style={styles.cardBody}>
         <View style={styles.cardTitleRow}>
-          <Text style={styles.docName} numberOfLines={1}>
+          <Text style={[styles.docName, { color: servicesTheme.colors.textStrong }]} numberOfLines={1}>
             {doc.document_name}
           </Text>
           {doc.is_mandatory && (
@@ -157,7 +165,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
 
         {/* Document number info */}
         {doc.document_number && (
-          <Text style={styles.docNumberText}>#{doc.document_number}</Text>
+          <Text style={[styles.docNumberText, { color: servicesTheme.colors.muted }]}>#{doc.document_number}</Text>
         )}
 
         {/* File name or status */}
@@ -172,7 +180,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
             {doc.localName}
           </Text>
         ) : (
-          <Text style={styles.hintText}>JPG · PNG · PDF · max 5 MB</Text>
+          <Text style={[styles.hintText, { color: servicesTheme.colors.subtle }]}>JPG · PNG · PDF · max 5 MB</Text>
         )}
       </View>
 
@@ -181,17 +189,23 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
         {isUploading ? (
           <ActivityIndicator size="small" color="#7C3AED" />
         ) : ready ? (
-          <TouchableOpacity
-            style={styles.removeBtn}
-            onPress={() => onRemove(doc.document_key)}
-            disabled={disabled}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close-circle" size={22} color="#9CA3AF" />
-          </TouchableOpacity>
+          isPersistedUpload ? (
+            <View style={styles.persistedUpload}>
+              <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.removeBtn}
+              onPress={() => onRemove(doc.document_key)}
+              disabled={disabled}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={22} color="#9CA3AF" />
+            </TouchableOpacity>
+          )
         ) : (
           <TouchableOpacity
-            style={styles.uploadBtn}
+            style={[styles.uploadBtn, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#EDE9FE' }]}
             onPress={() => onPick(doc)}
             disabled={disabled}
             activeOpacity={0.75}
@@ -208,39 +222,60 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
 };
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
-const ProgressBar = ({ done, total }: { done: number; total: number }) => {
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+const ProgressBar = ({
+  done,
+  total,
+  isUploading,
+}: {
+  done: number;
+  total: number;
+  isUploading: boolean;
+}) => {
+  const servicesTheme = useServicesTheme();
+  // While actively submitting, show the bar racing to 100% as a live
+  // "uploading" indicator instead of the static selected-file count.
+  const pct = isUploading ? 100 : total === 0 ? 0 : Math.round((done / total) * 100);
   const animWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(animWidth, {
       toValue: pct,
-      duration: 400,
+      duration: isUploading ? 900 : 400,
       useNativeDriver: false,
     }).start();
-  }, [pct, animWidth]);
+  }, [pct, isUploading, animWidth]);
+
+  const fillColors: [string, string] = pct === 100 && !isUploading
+    ? ['#22C55E', '#16A34A']
+    : ['#A78BFA', '#7C3AED'];
 
   return (
-    <View style={styles.progressWrap}>
+    <View style={[styles.progressWrap, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
       <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>
-          {done} of {total} uploaded
+        <Text style={[styles.progressLabel, { color: servicesTheme.colors.text }]}>
+          {isUploading ? 'Uploading documents…' : `${done} of ${total} selected`}
         </Text>
-        <Text style={styles.progressPct}>{pct}%</Text>
+        <Text style={[styles.progressPct, { color: servicesTheme.colors.primary }]}>{pct}%</Text>
       </View>
-      <View style={styles.progressTrack}>
+      <View style={[styles.progressTrack, { backgroundColor: servicesTheme.colors.divider }]}>
         <Animated.View
           style={[
-            styles.progressFill,
+            styles.progressFillWrap,
             {
               width: animWidth.interpolate({
                 inputRange: [0, 100],
                 outputRange: ['0%', '100%'],
               }),
-              backgroundColor: pct === 100 ? '#16A34A' : '#7C3AED',
             },
           ]}
-        />
+        >
+          <LinearGradient
+            colors={fillColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.progressFill}
+          />
+        </Animated.View>
       </View>
     </View>
   );
@@ -249,6 +284,7 @@ const ProgressBar = ({ done, total }: { done: number; total: number }) => {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const DocumentUpload = () => {
   const navigation = useNavigation<NavProps>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const parentOrderId = String(route.params?.parent_order_id ?? '');
 
@@ -291,7 +327,9 @@ const DocumentUpload = () => {
   // ── Derived counts ──
   const { totalDocs, uploadedDocs, pendingMandatory } = useMemo(() => {
     const total = docs.length;
-    const uploaded = docs.filter(isDocReady).length;
+    // Count as "selected" once a file is picked locally, not only once it's
+    // actually been submitted — so the bar fills as you go, not just at the end.
+    const uploaded = docs.filter(isDocFulfilled).length;
     const pending = docs.filter(d => d.is_mandatory && !isDocFulfilled(d)).length;
     return { totalDocs: total, uploadedDocs: uploaded, pendingMandatory: pending };
   }, [docs]);
@@ -309,7 +347,7 @@ const DocumentUpload = () => {
     const result = await launchImageLibrary({
       mediaType: 'mixed',
       selectionLimit: 1,
-      quality: 0.85,
+      quality: 0.8,
     });
 
     if (result.didCancel || !result.assets?.[0]) {
@@ -434,6 +472,8 @@ const DocumentUpload = () => {
         title: 'Documents Uploaded Successfully',
         description: 'Our team will verify your documents and process your service order shortly.',
         enquiryId: parentOrderId,
+        redirectToHome: true,
+        redirectDelayMs: 3000,
       });
     } catch (err: any) {
       // Mark errored docs
@@ -456,33 +496,35 @@ const DocumentUpload = () => {
   // Render
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
       <ScreenHeader title="Documents Required" onBackPress={() => navigation.goBack()} />
 
       {loading ? (
         <View style={styles.centeredWrap}>
-          <ActivityIndicator size="large" color="#7C3AED" />
-          <Text style={styles.loadingText}>Loading documents…</Text>
+          <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.muted }]}>Loading documents…</Text>
         </View>
       ) : error ? (
         <View style={styles.centeredWrap}>
           <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#DC2626" />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: '#F87171' }]}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadDocs}>
             <Text style={styles.retryBtnText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
+          {/* Sticky progress — stays visible while scrolling the document list */}
+          <View style={[styles.stickyProgress, { backgroundColor: servicesTheme.colors.background }]}>
+            <ProgressBar done={uploadedDocs} total={totalDocs} isUploading={submitting || anyUploading} />
+          </View>
+
           <ScrollView
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
-            {/* Progress */}
-            <ProgressBar done={uploadedDocs} total={totalDocs} />
-
             {/* Helper */}
-            <Text style={styles.helperText}>
+            <Text style={[styles.helperText, { color: servicesTheme.colors.muted }]}>
               Select files for each document below. All required documents must be uploaded before
               submitting.
             </Text>
@@ -492,7 +534,7 @@ const DocumentUpload = () => {
               <>
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionDot} />
-                  <Text style={styles.sectionTitle}>Required Documents</Text>
+                  <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>Required Documents</Text>
                 </View>
                 {mandatoryDocs.map((doc, i) => (
                   <DocCard
@@ -512,7 +554,7 @@ const DocumentUpload = () => {
               <>
                 <View style={[styles.sectionHeader, { marginTop: 20 }]}>
                   <View style={[styles.sectionDot, { backgroundColor: '#9CA3AF' }]} />
-                  <Text style={styles.sectionTitle}>Optional Documents</Text>
+                  <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>Optional Documents</Text>
                 </View>
                 {optionalDocs.map((doc, i) => (
                   <DocCard
@@ -531,7 +573,7 @@ const DocumentUpload = () => {
           </ScrollView>
 
           {/* Sticky footer */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { backgroundColor: servicesTheme.colors.background, borderTopColor: servicesTheme.colors.divider }]}>
             {pendingMandatory > 0 && (
               <Text style={styles.footerHint}>
                 {pendingMandatory} required document{pendingMandatory > 1 ? 's' : ''} still needed
@@ -571,23 +613,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
 
+  // Sticky progress (always visible, sits below ScreenHeader)
+  stickyProgress: {
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+
   // Progress
   progressWrap: {
     backgroundColor: '#FFF',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 4,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
   },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { fontSize: 13, color: '#4B5563', fontWeight: '600' },
-  progressPct: { fontSize: 13, color: '#7C3AED', fontWeight: '700' },
-  progressTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 99 },
-  progressFill: { height: 6, borderRadius: 99 },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  progressLabel: { fontSize: 13.5, color: '#374151', fontWeight: '700' },
+  progressPct: { fontSize: 13.5, color: '#7C3AED', fontWeight: '800' },
+  progressTrack: { height: 8, backgroundColor: '#F1EFFF', borderRadius: 99, overflow: 'hidden' },
+  progressFillWrap: { height: 8 },
+  progressFill: { flex: 1, borderRadius: 99 },
 
   // Helper
-  helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16, lineHeight: 19 },
+  helperText: { fontSize: 13, color: '#6B7280', marginTop: 14, marginBottom: 16, lineHeight: 19 },
 
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
@@ -598,15 +652,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   iconBox: {
     width: 44,
@@ -643,6 +697,7 @@ const styles = StyleSheet.create({
 
   cardRight: { alignItems: 'center', justifyContent: 'center' },
   removeBtn: { padding: 4 },
+  persistedUpload: { padding: 4 },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -671,8 +726,13 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 5,
   },
-  submitBtnDisabled: { backgroundColor: '#C4B5FD' },
+  submitBtnDisabled: { backgroundColor: '#C4B5FD', shadowOpacity: 0, elevation: 0 },
   submitBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
 
   // States

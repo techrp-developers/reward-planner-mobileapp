@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
-  Animated,
   View,
   Text,
   StyleSheet,
@@ -15,9 +14,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import RazorpayCheckout from 'react-native-razorpay';
 import BBPSHead from '../constatnt/BBPSHead';
-import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
 import { useAlert } from '../../ecommerce/components/alerts';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 // Premium Design Theme Config
 const BRAND_PRIMARY = '#8665FF';
@@ -27,6 +26,7 @@ const WHITE_CARD = '#FFFFFF';
 const COLOR_DARK = '#1F2937';
 const COLOR_LIGHT = '#6B7280';
 const COLOR_SUCCESS = '#22C55E';
+const PAYMENT_MESSAGE_DURATION_MS = 10000;
 
 type ConfirmationRouteParams = {
   operatorName?: string;
@@ -56,7 +56,8 @@ type ConfirmationRouteParams = {
 
 const hasDisplayValue = (value?: string | number | null) => {
   if (value === null || value === undefined) return false;
-  return String(value).trim().length > 0;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized.length > 0 && normalized !== 'null' && normalized !== 'undefined' && normalized !== '-';
 };
 
 const formatAmount = (value?: string | number) => {
@@ -66,19 +67,54 @@ const formatAmount = (value?: string | number) => {
   return Number.isNaN(amount) ? normalized : amount.toString();
 };
 
+const formatBillDate = (value?: string | number | null) => {
+  if (!hasDisplayValue(value)) {
+    return '-';
+  }
+
+  const rawValue = String(value).trim();
+  const compactDate = rawValue.match(/^(\d{4})(\d{2})(\d{2})$/);
+  const dashedDate = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const parts = compactDate || dashedDate;
+
+  if (!parts) {
+    return rawValue;
+  }
+
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return rawValue;
+  }
+
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 // Reusable Info Row — icon + label + value, used across the Bill Summary card
 interface InfoRowProps {
   icon: string;
   label: string;
   value: string;
+  bbpsTheme: ReturnType<typeof useBbpsTheme>;
 }
-const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value }) => (
+const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value, bbpsTheme }) => (
   <View style={styles.infoRow}>
     <View style={styles.infoRowLeft}>
-      <MaterialIcons name={icon} size={16} color={BRAND_PRIMARY} />
-      <Text style={styles.infoRowLabel}>{label}</Text>
+      <MaterialIcons name={icon} size={16} color={bbpsTheme.colors.primary} />
+      <Text style={[styles.infoRowLabel, { color: bbpsTheme.colors.muted }]}>{label}</Text>
     </View>
-    <Text style={styles.infoRowValue} numberOfLines={1}>{value}</Text>
+    <Text style={[styles.infoRowValue, { color: bbpsTheme.colors.text }]} numberOfLines={1}>{value}</Text>
   </View>
 ));
 InfoRow.displayName = 'InfoRow';
@@ -87,10 +123,9 @@ const PaymentConfirmationScreenComponent = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const alert = useAlert();
+  const bbpsTheme = useBbpsTheme();
 
-  const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const pulse = useRef(new Animated.Value(0)).current;
 
   // Memoizing Parameter Dependencies To Eradicate Hook Warnings
   const params = useMemo(() => (route.params || {}) as ConfirmationRouteParams, [route.params]);
@@ -115,6 +150,8 @@ const PaymentConfirmationScreenComponent = () => {
   }, [params.nickname, customerName]);
 
   const billAmount = useMemo(() => formatAmount(bill.amount), [bill.amount]);
+  const billDate = useMemo(() => formatBillDate(bill.billDate), [bill.billDate]);
+  const dueDate = useMemo(() => formatBillDate(bill.dueDate), [bill.dueDate]);
   const billFetchId = useMemo(() => params.fetchBillData?.data?.billFetchId, [params.fetchBillData]);
   const rawMessage = useMemo(() => params.fetchBillData?.data?.raw?.message || '', [params.fetchBillData]);
 
@@ -125,23 +162,6 @@ const PaymentConfirmationScreenComponent = () => {
   const isProceedDisabled = useMemo(() => processing || !billAmount, [processing, billAmount]);
   const headerTitle = useMemo(() => `Pay ${categoryName}`, [categoryName]);
   const logoText = useMemo(() => operatorName.slice(0, 2).toUpperCase() || 'BB', [operatorName]);
-
-  // Pulse & Initial Load Animation Hooks
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
-      ])
-    );
-    anim.start();
-    const timer = setTimeout(() => setLoading(false), 900);
-
-    return () => {
-      clearTimeout(timer);
-      anim.stop();
-    };
-  }, [pulse]);
 
   // Handle Order Generation & Verification Execution
   const handleProceed = useCallback(async () => {
@@ -160,7 +180,11 @@ const PaymentConfirmationScreenComponent = () => {
       const response = await createBillPayOrder(payload);
 
       if (response.success === false) {
-        alert.warning('Order Failed', response.message || 'Unable to create bill payment order.');
+        alert.warning(
+          'Order Failed',
+          response.message || 'Unable to create bill payment order.',
+          PAYMENT_MESSAGE_DURATION_MS
+        );
         return;
       }
 
@@ -168,7 +192,7 @@ const PaymentConfirmationScreenComponent = () => {
       const order = response.data;
 
       if (!order?.key || !order?.orderId) {
-        alert.warning('Payment Failed', 'Payment order details are missing.');
+        alert.warning('Payment Failed', 'Payment order details are missing.', PAYMENT_MESSAGE_DURATION_MS);
         return;
       }
 
@@ -197,16 +221,33 @@ const PaymentConfirmationScreenComponent = () => {
 
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
 
-      if (!verifyResponse?.success) {
-        alert.warning('Payment Verification Failed', verifyResponse?.message || 'Unable to verify payment.');
+      // The backend can legitimately return success:false with a transaction_id
+      // when the payment was captured but bill processing is queued/retrying
+      // (HTTP 202) or already resolved by a webhook — the status screen still
+      // needs to open so the user can track that in-progress/refund state.
+      const transactionId = verifyResponse?.transaction_id ?? order.transaction_id;
+
+      if (verifyResponse?.success === false && !transactionId) {
+        alert.warning(
+          'Payment Verification Failed',
+          verifyResponse?.message || 'Unable to verify payment.',
+          PAYMENT_MESSAGE_DURATION_MS
+        );
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', {
-        transactionId: order.transaction_id,
-      });
+      navigation.navigate('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
-      alert.error('Error', error?.message || 'Could not create bill payment order.');
+      // A rejected verify-payment call (e.g. HTTP 422 when the provider
+      // permanently rejected the transaction) still carries a transaction_id —
+      // route to the status screen instead of stranding the user on an alert.
+      const transactionId = error?.transaction_id;
+      if (transactionId) {
+        navigation.navigate('TransactionStatusScreen', { transactionId });
+        return;
+      }
+
+      alert.error('Error', error?.message || 'Could not create bill payment order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {
       setProcessing(false);
     }
@@ -214,35 +255,8 @@ const PaymentConfirmationScreenComponent = () => {
 
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
-  // Loading State UI Render Block
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <BBPSHead title={headerTitle} onBackPress={handleBackPress} />
-        <View style={styles.mainContainer}>
-          <View style={styles.skeletonPremiumCard}>
-            <View style={styles.shimmerHeaderBlock}>
-              <SkeletonBox pulse={pulse} width={52} height={52} borderRadius={26} />
-              <View style={styles.skeletonHeaderTextWrap}>
-                <SkeletonBox pulse={pulse} width={180} height={16} borderRadius={8} />
-                <SkeletonBox pulse={pulse} width={130} height={12} borderRadius={8} style={styles.skeletonTopGap} />
-              </View>
-            </View>
-            <View style={styles.shimmerGrid}>
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-              <SkeletonBox pulse={pulse} width={70} height={20} borderRadius={6} />
-            </View>
-          </View>
-          <SkeletonBox pulse={pulse} width="100%" height={90} borderRadius={20} style={styles.skeletonTopGap} />
-          <SkeletonBox pulse={pulse} width="100%" height={54} borderRadius={12} style={styles.skeletonTopGap} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* 1. Statically Positioned Header */}
       <BBPSHead title={headerTitle} onBackPress={handleBackPress} />
 
@@ -254,9 +268,9 @@ const PaymentConfirmationScreenComponent = () => {
         <View style={styles.mainContainer}>
 
           {/* Customer Card */}
-          <View style={styles.premiumCard}>
+          <View style={[styles.premiumCard, { backgroundColor: bbpsTheme.colors.surface }]}>
             <LinearGradient
-              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.premiumCardHeader}
@@ -271,22 +285,22 @@ const PaymentConfirmationScreenComponent = () => {
             </LinearGradient>
 
             <View style={styles.customerCardBody}>
-              <InfoRow icon="apartment" label="Operator" value={operatorName} />
-              <View style={styles.infoRowDivider} />
-              <InfoRow icon="category" label="Category" value={categoryName} />
+              <InfoRow icon="apartment" label="Operator" value={operatorName} bbpsTheme={bbpsTheme} />
+              <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+              <InfoRow icon="category" label="Category" value={categoryName} bbpsTheme={bbpsTheme} />
             </View>
           </View>
 
           {/* Bill Summary Card */}
-          <View style={styles.billSummaryCard}>
-            <Text style={styles.cardSectionTitle}>Bill Summary</Text>
-            <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="event" label="Bill Date" value={bill.billDate || '-'} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="event-busy" label="Due Date" value={bill.dueDate || '-'} />
-            <View style={styles.infoRowDivider} />
-            <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} />
+          <View style={[styles.billSummaryCard, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
+            <Text style={[styles.cardSectionTitle, { color: bbpsTheme.colors.textStrong }]}>Bill Summary</Text>
+            <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="event" label="Bill Date" value={billDate} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="event-busy" label="Due Date" value={dueDate} bbpsTheme={bbpsTheme} />
+            <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
+            <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} bbpsTheme={bbpsTheme} />
           </View>
 
           {/* Conditional Warning Notification Banner */}
@@ -301,10 +315,10 @@ const PaymentConfirmationScreenComponent = () => {
           )}
 
           {/* Amount Card */}
-          <View style={styles.amountCard}>
-            <Text style={styles.amountCardLabel}>Amount Payable</Text>
+          <View style={[styles.amountCard, { backgroundColor: bbpsTheme.colors.surface }]}>
+            <Text style={[styles.amountCardLabel, { color: bbpsTheme.colors.muted }]}>Amount Payable</Text>
             <LinearGradient
-              colors={[BRAND_PRIMARY, BRAND_SECONDARY]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.amountPill}
@@ -326,7 +340,15 @@ const PaymentConfirmationScreenComponent = () => {
       </ScrollView>
 
       {/* 3. Outer Locked Premium Bottom Action CTA Plate */}
-      <View style={styles.premiumStickyFooter}>
+      <View
+        style={[
+          styles.premiumStickyFooter,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.premiumCTA, isProceedDisabled && styles.premiumCTADisabled]}
           activeOpacity={0.9}
@@ -336,7 +358,7 @@ const PaymentConfirmationScreenComponent = () => {
           <LinearGradient
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            colors={isProceedDisabled ? ['#C4B5FD', '#A5B4FC'] : [BRAND_PRIMARY, BRAND_SECONDARY]}
+            colors={isProceedDisabled ? ['#C4B5FD', '#A5B4FC'] : bbpsTheme.gradients.primary}
             style={styles.ctaGradientLayout}
           >
             {processing ? (

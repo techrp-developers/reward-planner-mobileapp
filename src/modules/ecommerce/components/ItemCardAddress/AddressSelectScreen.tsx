@@ -19,11 +19,16 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import ProductHeadColor from "../../constants/heading/Poduct_Head_Color";
-import { deleteAddress, fetchAddressByID, fetchAllAddress } from "../../api/AddressApi";
+import { deleteAddress, fetchAddressByID, fetchAllAddress, updateAddress } from "../../api/AddressApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { useQueryClient } from "@tanstack/react-query";
+import { addressesQueryKey } from "../../navigation/navigationPerformance";
 import { useAlert } from "../alerts";
+import StickyBottomCTA from "../../../../bottombar/StickyBottomCTA";
+import { useStickyBottomCTA } from "../../../../bottombar/hooks/useStickyBottomCTA";
+import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'AddressSelect'>;
@@ -40,7 +45,12 @@ type ApiAddress = {
   is_default: number;
   address1: string;
   address2?: string | null;
+  landmark?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
   city: string;
+  state?: string | null;
+  state_id?: number | null;
   zipcode: string;
 };
 
@@ -49,12 +59,23 @@ export default function AddressSelectScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const alert = useAlert();
-  const fromCart = route.params?.fromCart === true;
+  const { isDark, theme } = useAppTheme();
+  const queryClient = useQueryClient();
+  const manageOnly = route.params?.manageOnly === true;
+  // MainLayout already reserves space for the bottom navigation bar. Keep this
+  // CTA anchored to that boundary instead of letting the search keyboard lift
+  // it into the middle of the address list.
+  const stickyCTA = useStickyBottomCTA({
+    tabBarAware: false,
+    keyboardAware: false,
+    extraSpacing: 0,
+  });
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const rawAddressesRef = useRef<Map<string, ApiAddress>>(new Map());
 
   const loadAddresses = useCallback(async () => {
     try {
@@ -62,6 +83,10 @@ export default function AddressSelectScreen() {
 
       const res = await fetchAllAddress();
       const list = Array.isArray(res.data) ? res.data : [];
+
+      rawAddressesRef.current = new Map(
+        list.map((a: ApiAddress) => [String(a.address_id), a])
+      );
 
       const mapped: AddressItem[] = list.map((a: ApiAddress) => ({
         id: String(a.address_id),
@@ -86,14 +111,14 @@ export default function AddressSelectScreen() {
     }
   }, [alert]);
 
-  // Load on mount, then reload on focus
-  useEffect(() => {
-    loadAddresses();
-  }, [loadAddresses]);
-
+  // `useFocusEffect` already fires once when the screen is first focused
+  // (i.e. as soon as it's opened) and again every time it regains focus —
+  // which covers "on open" and "after Add/Edit/Delete navigates back" in a
+  // single place. A separate mount `useEffect` here used to double-fetch on
+  // open, and combined with `alert`/`loadAddresses` not being referentially
+  // stable, it turned into a continuous fetch loop.
   useFocusEffect(
     React.useCallback(() => {
-      // Reload addresses when screen comes into focus
       loadAddresses();
     }, [loadAddresses])
   );
@@ -102,32 +127,119 @@ export default function AddressSelectScreen() {
   const onDeleteAddress = async () => {
     if (!sheetItem) return;
 
+    const deletedId = sheetItem.id;
+    const previousAddresses = addresses;
+    const previousSelectedId = selectedId;
+
+    // Close immediately and update the list optimistically so the UI doesn't
+    // sit there waiting on two sequential network calls (delete + full reload).
+    closeSheet();
+    setAddresses(prev => prev.filter(a => a.id !== deletedId));
+    setSelectedId(prev => (prev === deletedId ? "" : prev));
+
     try {
-      await deleteAddress(Number(sheetItem.id));
-      await loadAddresses();
-      closeSheet();
+      await deleteAddress(Number(deletedId));
+      rawAddressesRef.current.delete(deletedId);
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
       alert.success("Deleted", "Address deleted successfully");
     } catch {
+      setAddresses(previousAddresses);
+      setSelectedId(previousSelectedId);
       alert.error("Error", "Could not delete address");
+    }
+  };
+
+  const applyDefaultToQueryCache = (targetId: string) => {
+    queryClient.setQueryData(addressesQueryKey, (old: any) => {
+      if (!old || !Array.isArray(old.data)) return old;
+      return {
+        ...old,
+        data: old.data.map((a: ApiAddress) => ({
+          ...a,
+          is_default: String(a.address_id) === targetId ? 1 : 0,
+        })),
+      };
+    });
+  };
+
+  const setAddressAsDefault = async (targetId: string): Promise<boolean> => {
+    const previousAddresses = addresses;
+
+    setAddresses(prev =>
+      prev.map(a => ({ ...a, isDefault: a.id === targetId }))
+    );
+    // Write straight into the shared query cache so the cart/checkout/navbar
+    // update instantly, instead of waiting on a background refetch round-trip.
+    applyDefaultToQueryCache(targetId);
+
+    try {
+      await updateAddress(Number(targetId), { is_default: 1 });
+
+      const cached = rawAddressesRef.current.get(targetId);
+      if (cached) rawAddressesRef.current.set(targetId, { ...cached, is_default: 1 });
+      rawAddressesRef.current.forEach((value, key) => {
+        if (key !== targetId && value.is_default === 1) {
+          rawAddressesRef.current.set(key, { ...value, is_default: 0 });
+        }
+      });
+
+      // Quietly re-sync with the server in the background for eventual consistency.
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
+      return true;
+    } catch {
+      setAddresses(previousAddresses);
+      queryClient.invalidateQueries({ queryKey: addressesQueryKey }).catch(() => {});
+      return false;
+    }
+  };
+
+  const onSetDefaultAddress = async () => {
+    if (!sheetItem || sheetItem.isDefault) return;
+
+    const targetId = sheetItem.id;
+    closeSheet();
+
+    const success = await setAddressAsDefault(targetId);
+    if (success) {
+      alert.success("Default address updated", "This address is now your default");
+    } else {
+      alert.error("Error", "Could not set this address as default");
     }
   };
 
   const canSubmit = !!selectedId;
 
-  const handleUseCurrentLocation = () => {
-    navigation.navigate("AddAddressMap", { fromCart });
-  };
+  const handleSubmit = async () => {
+    if (!selectedId) return;
 
+    const selected = addresses.find(a => a.id === selectedId);
 
-
-  const handleSubmit = () => {
-    if (selectedId) {
-      if (fromCart) {
-        navigation.navigate('Home');
-      } else {
-        navigation.navigate('WithAddress');
+    // Make the chosen address the default so the cart/checkout actually uses
+    // it for the order, instead of always falling back to whichever address
+    // was previously default. Apply locally + to the shared cache right away
+    // only after the server has accepted the new default. Otherwise checkout
+    // can refetch too early and cache an addressless preview with zero shipping.
+    if (selected && !selected.isDefault) {
+      const success = await setAddressAsDefault(selectedId);
+      if (!success) {
+        alert.error("Error", "Could not save your selected address. Please try again.");
+        return;
       }
     }
+
+    // Refresh both reward modes and cart/buy-now previews after the address is
+    // committed so shipping charges and EDD use the newly selected pincode.
+    await queryClient.invalidateQueries({
+      queryKey: ["ecommerce", "checkout-preview"],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["service-checkout"],
+    });
+
+    // Go back to whichever screen pushed this one (cart, checkout, service
+    // checkout, etc.) instead of hardcoding an ecommerce-only destination -
+    // this screen is shared across the ecommerce and services stacks.
+    navigation.goBack();
   };
 
 
@@ -185,8 +297,14 @@ export default function AddressSelectScreen() {
   const onEditAddress = async () => {
     if (!sheetItem) return;
 
+    const sheetItemId = sheetItem.id;
+    closeSheet();
+
     try {
-      const apiAddress = await fetchAddressByID(sheetItem.id);
+      // Use the already-fetched address data instead of hitting the network again,
+      // which was causing a noticeable delay before the edit screen opened.
+      const cached = rawAddressesRef.current.get(sheetItemId);
+      const apiAddress = cached ?? (await fetchAddressByID(sheetItemId));
 
       const normalizedType = String(apiAddress?.address_type || "other").toLowerCase();
       const saveAs =
@@ -196,10 +314,10 @@ export default function AddressSelectScreen() {
           ? "Work"
           : "Other";
 
-      closeSheet();
       navigation.navigate("AddressDetails", {
         mode: "edit",
         addressId: Number(sheetItem.id),
+        manageOnly,
         initialData: {
           saveAs,
           flatHouseBuilding: apiAddress?.address1 || "",
@@ -222,65 +340,34 @@ export default function AddressSelectScreen() {
   // -------------------- Header actions (UI only) --------------------
 
   const handleAddNewAddress = () => {
-    navigation.navigate("AddressDetails");
+    navigation.navigate("AddressDetails", { manageOnly });
   };
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, isDark && darkStyles.safe]}>
       <ProductHeadColor
         title="Select Address"
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => alert.info("Search", "Search functionality coming soon")}
-        onBellPress={() => alert.info("Notifications", "Notifications coming soon")}
+        showSearch={false}
+        isDark={isDark}
       />
 
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, isDark && darkStyles.safe]}>
         {/* Search */}
-        <View style={styles.searchWrap}>
-          <MaterialCommunityIcons name="magnify" size={18} color="#777" />
+        <View style={[styles.searchWrap, isDark && darkStyles.surface]}>
+          <MaterialCommunityIcons name="magnify" size={18} color={isDark ? "#A1A1AA" : "#777"} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Search for area, street name..."
-            placeholderTextColor="#9A9AA5"
-            style={styles.searchInput}
+            placeholderTextColor={isDark ? "#71717A" : "#9A9AA5"}
+            selectionColor={theme.primary}
+            style={[styles.searchInput, isDark && darkStyles.primaryText]}
           />
         </View>
 
         {/* Top options card */}
-        <View style={styles.topCard}>
-          {/* Use Current Location */}
-          <TouchableOpacity
-            style={styles.topRow}
-            activeOpacity={0.85}
-            onPress={handleUseCurrentLocation}
-          >
-            <View style={styles.rowLeft}>
-              <View style={styles.iconCircleSoft}>
-                <MaterialCommunityIcons
-                  name="target"
-                  size={18}
-                  color="#6D28D9"
-                />
-              </View>
-              <View style={styles.rowTextWrap}>
-                <Text style={styles.rowTitlePurple}>Use Current Location</Text>
-                <Text style={styles.rowSubText} numberOfLines={2}>
-                  B-25, KPCT Mall, 16/1/1 Wanworie Road, Fatima Nagar, Wanwadi,
-                  Pune, 411040
-                </Text>
-              </View>
-            </View>
-
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color="#B2B2BD"
-            />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
+        <View style={[styles.topCard, isDark && darkStyles.surface]}>
           {/* Add New Address */}
           <TouchableOpacity
             style={styles.topRow}
@@ -288,14 +375,14 @@ export default function AddressSelectScreen() {
             onPress={handleAddNewAddress}
           >
             <View style={styles.rowLeft}>
-              <View style={styles.iconCircleSoft}>
+              <View style={[styles.iconCircleSoft, isDark && darkStyles.iconCircle]}>
                 <MaterialCommunityIcons
                   name="plus"
                   size={18}
-                  color="#6D28D9"
+                  color={theme.primary}
                 />
               </View>
-              <Text style={styles.rowTitlePurple}>Add New Address</Text>
+              <Text style={[styles.rowTitlePurple, isDark && darkStyles.accentText]}>Add New Address</Text>
             </View>
 
             <MaterialCommunityIcons
@@ -306,16 +393,20 @@ export default function AddressSelectScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Saved Addresses</Text>
+        <Text style={[styles.sectionTitle, isDark && darkStyles.secondaryText]}>Saved Addresses</Text>
         {isInitialLoad && loading && (
-          <Text style={styles.loadingText}>
+          <Text style={[styles.loadingText, isDark && darkStyles.secondaryText]}>
             Loading addresses...
           </Text>
         )}
 
         {/* List */}
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 200 + insets.bottom }}
+          contentContainerStyle={{
+            paddingBottom: manageOnly || !canSubmit
+              ? 16 + insets.bottom
+              : stickyCTA.scrollContentPaddingBottom,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {filtered.map((item) => {
@@ -326,48 +417,48 @@ export default function AddressSelectScreen() {
                 key={item.id}
                 activeOpacity={0.9}
                 onPress={() => setSelectedId(item.id)}
-                style={styles.addrCard}
+                style={[styles.addrCard, isDark && darkStyles.surface]}
               >
                 <View style={styles.addrTop}>
                   <View style={styles.addrLeft}>
-                    <View style={styles.pinCircle}>
+                    <View style={[styles.pinCircle, isDark && darkStyles.iconCircle]}>
                       <MaterialCommunityIcons
                         name="map-marker-outline"
                         size={18}
-                        color="#7B7B86"
+                        color={isDark ? "#D4D4D8" : "#7B7B86"}
                       />
                     </View>
 
                     <View style={styles.flexOne}>
                       <View style={styles.titleRow}>
-                        <Text style={styles.addrTitle}>{item.title}</Text>
+                        <Text style={[styles.addrTitle, isDark && darkStyles.primaryText]}>{item.title}</Text>
                         {item.isDefault ? (
-                          <View style={styles.defaultPill}>
-                            <Text style={styles.defaultPillText}>Default</Text>
+                          <View style={[styles.defaultPill, isDark && darkStyles.defaultPill]}>
+                            <Text style={[styles.defaultPillText, isDark && darkStyles.secondaryText]}>Default</Text>
                           </View>
                         ) : null}
                       </View>
 
-                      <Text style={styles.addrText}>{item.address}</Text>
+                      <Text style={[styles.addrText, isDark && darkStyles.secondaryText]}>{item.address}</Text>
 
                       {/* ✅ only 3 dots like screenshot */}
                       <TouchableOpacity
-                        style={styles.moreBtn}
+                        style={[styles.moreBtn, isDark && darkStyles.iconButton]}
                         onPress={() => openSheet(item.id)}
                         activeOpacity={0.9}
                       >
                         <MaterialCommunityIcons
                           name="dots-horizontal"
                           size={18}
-                          color="#6B6B76"
+                          color={isDark ? "#D4D4D8" : "#6B6B76"}
                         />
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {/* Radio */}
-                  <View style={styles.radioOuter}>
-                    {selected ? <View style={styles.radioInner} /> : null}
+                  <View style={[styles.radioOuter, isDark && darkStyles.radioOuter]}>
+                    {selected ? <View style={[styles.radioInner, isDark && darkStyles.radioInner]} /> : null}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -375,27 +466,29 @@ export default function AddressSelectScreen() {
           })}
         </ScrollView>
 
-        {/* Bottom CTA */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            activeOpacity={0.9}
-            style={[styles.ctaWrapper, { marginBottom: insets.bottom + 14 }]}
-          >
-            <LinearGradient
-              colors={["#8665FF", "#5B47A3"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={[styles.cta, !canSubmit && styles.ctaDisabled]}
-            >
-              <Text style={styles.ctaText}>
-                {fromCart ? "Update address" : "Continue to checkout and buy"}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
       </View>
+
+      {/* Bottom CTA - hidden when managing addresses (no checkout context) or when there's no address yet */}
+      {!manageOnly && canSubmit && (
+        <StickyBottomCTA bottomOffset={stickyCTA.bottomOffset} onLayout={stickyCTA.onCtaLayout}>
+          <View style={[styles.bottomBar, isDark && darkStyles.bottomBar]}>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              activeOpacity={0.9}
+              style={styles.ctaWrapper}
+            >
+              <LinearGradient
+                colors={["#8665FF", "#5B47A3"]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.cta}
+              >
+                <Text style={styles.ctaText}>Select address</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </StickyBottomCTA>
+      )}
 
       {/* -------------------- Bottom Sheet Modal -------------------- */}
       <Modal
@@ -409,26 +502,42 @@ export default function AddressSelectScreen() {
         <Animated.View
           style={[
             styles.sheet,
+            isDark && darkStyles.sheet,
             {
               transform: [{ translateY }],
             },
           ]}
         >
-          <View style={styles.sheetHandle} />
+          <View style={[styles.sheetHandle, isDark && darkStyles.sheetHandle]} />
 
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Option</Text>
+            <Text style={[styles.sheetTitle, isDark && darkStyles.primaryText]}>Select Option</Text>
             <TouchableOpacity onPress={closeSheet} style={styles.sheetCloseBtn}>
-              <MaterialCommunityIcons name="close" size={20} color="#1C1C22" />
+              <MaterialCommunityIcons name="close" size={20} color={isDark ? "#FFFFFF" : "#1C1C22"} />
             </TouchableOpacity>
           </View>
 
+          {!sheetItem?.isDefault && (
+            <TouchableOpacity
+              style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
+              activeOpacity={0.9}
+              onPress={onSetDefaultAddress}
+            >
+              <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Set as Default</Text>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color="#B2B2BD"
+              />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={styles.sheetRow}
+            style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
             activeOpacity={0.9}
-            onPress={onDeleteAddress}
+            onPress={onEditAddress}
           >
-            <Text style={styles.sheetRowText}>Delete Address</Text>
+            <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Edit Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -437,11 +546,11 @@ export default function AddressSelectScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sheetRow}
+            style={[styles.sheetRow, isDark && darkStyles.sheetRow]}
             activeOpacity={0.9}
-            onPress={onEditAddress}
+            onPress={onDeleteAddress}
           >
-            <Text style={styles.sheetRowText}>Edit Address</Text>
+            <Text style={[styles.sheetRowText, isDark && darkStyles.primaryText]}>Delete Address</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={22}
@@ -533,7 +642,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   rowLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  rowTextWrap: { flex: 1, marginLeft: 10 },
   iconCircleSoft: {
     width: 28,
     height: 28,
@@ -547,14 +655,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  rowSubText: {
-    marginTop: 3,
-    color: "#8A8A95",
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  divider: { height: 1, backgroundColor: "#EFEFF6" },
-
   sectionTitle: {
     marginTop: 14,
     marginBottom: 8,
@@ -643,11 +743,11 @@ const styles = StyleSheet.create({
   },
 
   bottomBar: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 100,
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: "#FFFFFF",
   },
 
   buttonText: { color: '#FFF', fontSize: 16, fontWeight: '600', },
@@ -661,7 +761,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaDisabled: { opacity: 0.5, },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: {
     color: "#FFFFFF",
     fontSize: 16,
@@ -732,5 +832,34 @@ const styles = StyleSheet.create({
   },
   sheetBottomSpacer: {
     height: Platform.OS === "ios" ? 18 : 10,
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  safe: { backgroundColor: "#09090B" },
+  surface: {
+    backgroundColor: "#18181B",
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  primaryText: { color: "#F4F4F5" },
+  secondaryText: { color: "#A1A1AA" },
+  accentText: { color: "#C4B5FD" },
+  iconCircle: {
+    backgroundColor: "#27233A",
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  defaultPill: { backgroundColor: "#27272A" },
+  iconButton: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  radioOuter: { borderColor: "#C4B5FD" },
+  radioInner: { backgroundColor: "#A78BFA" },
+  bottomBar: { backgroundColor: "#09090B" },
+  sheet: { backgroundColor: "#18181B" },
+  sheetHandle: { backgroundColor: "#52525B" },
+  sheetRow: {
+    backgroundColor: "#27272A",
+    borderColor: "rgba(255,255,255,0.16)",
   },
 });

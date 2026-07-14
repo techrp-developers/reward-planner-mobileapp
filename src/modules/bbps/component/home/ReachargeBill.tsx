@@ -1,47 +1,88 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { SvgProps } from 'react-native-svg';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 // Asset Imports
-import Recharge from '../../assets/BBPS_Service/Recharge.png';
-import DTH from '../../assets/BBPS_Service/DTH.png';
-import Subscriptions from '../../assets/BBPS_Service/Subscriptions.png';
-import FASTagRecharge from '../../assets/BBPS_Service/FASTag Recharge.png';
-import Electricity from '../../assets/BBPS_Service/Electricity.png';
-import water from '../../assets/BBPS_Service/Water.png';
-import PipedGas from '../../assets/BBPS_Service/solid.png';
-import LPGCylender from '../../assets/BBPS_Service/LPG.png';
-import Landline from '../../assets/BBPS_Service/LandLine.png';
-import Broadband from '../../assets/BBPS_Service/Broadband.png';
-import MobilePostpaid from '../../assets/BBPS_Service/Recharge.png';
-import Credit from '../../assets/BBPS_Service/Creadit.png';
-import Loan from '../../assets/BBPS_Service/Loan_Emi.png';
-import Insurance from '../../assets/BBPS_Service/Insurance.png';
-import Tax from '../../assets/BBPS_Service/Tax.png';
-import Housing from '../../assets/BBPS_Service/Housing_Socity.png';
-import Municipal from '../../assets/BBPS_Service/Munsiple_taxes.png';
-import Education from '../../assets/BBPS_Service/Education.png';
-import Hospital from '../../assets/BBPS_Service/Hospital_bill.png';
-import Balance from '../../assets/BBPS_Service/Balance.png';
+import Recharge from '../../assets/BBPS_Service/Recharge.svg';
+import DTH from '../../assets/BBPS_Service/DTH.svg';
+import Subscriptions from '../../assets/BBPS_Service/Subscriptions.svg';
+import FASTagRecharge from '../../assets/BBPS_Service/FASTagRecharge.svg';
+import Electricity from '../../assets/BBPS_Service/Electricity.svg';
+import water from '../../assets/BBPS_Service/Water.svg';
+import PipedGas from '../../assets/BBPS_Service/solid.svg';
+import LPGCylender from '../../assets/BBPS_Service/LPG.svg';
+import Landline from '../../assets/BBPS_Service/LandLine.svg';
+import Broadband from '../../assets/BBPS_Service/Broadband.svg';
+import MobilePostpaid from '../../assets/BBPS_Service/Recharge.svg';
+import Credit from '../../assets/BBPS_Service/Creadit.svg';
+import Loan from '../../assets/BBPS_Service/Loan_Emi.svg';
+import Insurance from '../../assets/BBPS_Service/Insurance.svg';
+import Tax from '../../assets/BBPS_Service/Tax.svg';
+import Housing from '../../assets/BBPS_Service/Housing_Socity.svg';
+import Municipal from '../../assets/BBPS_Service/Munsiple_taxes.svg';
+import Education from '../../assets/BBPS_Service/Education.svg';
+import Hospital from '../../assets/BBPS_Service/Hospital_bill.svg';
 import { BillCategory, fetchBillsCategories } from '../../api/BillsAPI';
 
-const ServiceItem = ({ icon, label, onPress }: { icon: any; label: string; onPress?: () => void }) => (
-  <TouchableOpacity style={styles.itemContainer} activeOpacity={0.75} onPress={onPress}>
-    <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={styles.iconCircle}
-    >
-      <Image source={icon} style={styles.iconImage} resizeMode="contain" />
-    </LinearGradient>
-    <Text style={styles.itemLabel}>{label}</Text>
-  </TouchableOpacity>
-);
+type RasterIcon = number;
+type SvgIconComponent = React.FC<SvgProps>;
+type VectorIconAsset = {
+  type: 'vector';
+  name: string;
+};
+type IconAsset = RasterIcon | SvgIconComponent | VectorIconAsset;
+const isImageIcon = (icon: IconAsset): icon is RasterIcon => typeof icon === 'number';
+const isVectorIcon = (icon: IconAsset): icon is VectorIconAsset =>
+  typeof icon === 'object' && icon !== null && 'type' in icon && icon.type === 'vector';
+const isSvgIcon = (icon: IconAsset): icon is SvgIconComponent =>
+  typeof icon === 'function' && !isVectorIcon(icon);
 
-const SectionHeader = ({ title }: { title: string }) => (
-  <Text style={styles.sectionHeader}>{title}</Text>
+type BbpsTheme = ReturnType<typeof useBbpsTheme>;
+
+const ServiceItem = ({
+  icon,
+  label,
+  onPress,
+  bbpsTheme,
+}: {
+  icon: IconAsset;
+  label: string;
+  onPress?: () => void;
+  bbpsTheme: BbpsTheme;
+}) => {
+  const SvgIcon = isSvgIcon(icon) ? icon : null;
+
+  return (
+    <TouchableOpacity style={styles.itemContainer} activeOpacity={0.75} onPress={onPress}>
+      <LinearGradient
+        colors={bbpsTheme.gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.iconCircle}
+      >
+        {SvgIcon ? (
+          <SvgIcon width={30} height={30} />
+        ) : isVectorIcon(icon) ? (
+          <MaterialCommunityIcons name={icon.name} size={28} color="#FFFFFF" />
+        ) : isImageIcon(icon) ? (
+          <Image source={icon} style={styles.iconImage} resizeMode="contain" />
+        ) : null}
+      </LinearGradient>
+      <Text style={[styles.itemLabel, { color: bbpsTheme.colors.text }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const SectionHeader = ({ title, bbpsTheme }: { title: string; bbpsTheme: BbpsTheme }) => (
+  <View style={styles.sectionHeaderRow}>
+    <View style={[styles.sectionHeaderAccent, { backgroundColor: bbpsTheme.colors.primary }]} />
+    <Text style={[styles.sectionHeader, { color: bbpsTheme.colors.text }]}>{title}</Text>
+  </View>
 );
 
 const SECTION_ORDER = [
@@ -89,14 +130,12 @@ const CATEGORY_GROUPS: Record<string, SectionName> = Object.entries(CATEGORY_DIS
   {} as Record<string, SectionName>,
 );
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, IconAsset> = {
   'Mobile Prepaid': Recharge,
   DTH,
   Subscription: Subscriptions,
   Subscriptions,
   FASTag: FASTagRecharge,
-  'Fleet Card Recharge': FASTagRecharge,
-  'EV Recharge': FASTagRecharge,
   'Cable TV': Subscriptions,
 
   Electricity,
@@ -119,12 +158,16 @@ const ICON_MAP: Record<string, any> = {
   'Municipal Taxes': Municipal,
   'Municipal Services': Municipal,
   'Rental Payment': Housing,
-  eChallan: Tax,
-  'Agent Collection': Balance,
+  eChallan: { type: 'vector', name: 'file-document-outline' },
+  'Agent Collection': { type: 'vector', name: 'account-cash-outline' },
+  'Fleet Card Recharge': { type: 'vector', name: 'card-account-details-outline' },
+  'EV Recharge': { type: 'vector', name: 'ev-station' },
   'Clubs and Associations': Subscriptions,
 };
 
-const FALLBACK_ICON = Recharge;
+const FALLBACK_ICON: IconAsset = Recharge;
+const BILL_CATEGORIES_QUERY_KEY = ['bbps', 'bill-categories'] as const;
+const BILL_CATEGORIES_STALE_TIME = 10 * 60 * 1000;
 
 const normalizeCategoryName = (name?: string) => String(name || '').trim();
 
@@ -186,7 +229,7 @@ const categoryRank = (section: SectionName, name: string) => {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 };
 
-const RechargeBillSkeleton = () => {
+const RechargeBillSkeleton = ({ bbpsTheme }: { bbpsTheme: BbpsTheme }) => {
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -213,18 +256,28 @@ const RechargeBillSkeleton = () => {
   }, [shimmerAnim]);
 
   return (
-    <View style={styles.card}>
-      <Animated.View style={[styles.skeletonTitle, { opacity: shimmerAnim }]} />
-      <Animated.View style={[styles.skeletonSearch, { opacity: shimmerAnim }]} />
+    <View style={styles.container}>
+      <Animated.View style={[styles.skeletonTitle, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
+      <Animated.View style={[styles.skeletonSearch, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
 
       {[0, 1].map((section) => (
-        <View key={section}>
-          <Animated.View style={[styles.skeletonSectionHeader, { opacity: shimmerAnim }]} />
+        <View
+          key={section}
+          style={[
+            styles.sectionContainer,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              borderColor: bbpsTheme.colors.border,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
+          <Animated.View style={[styles.skeletonSectionHeader, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
           <View style={styles.grid}>
             {[0, 1, 2, 3].map((item) => (
               <View style={styles.itemContainer} key={item}>
-                <Animated.View style={[styles.skeletonCircle, { opacity: shimmerAnim }]} />
-                <Animated.View style={[styles.skeletonLabel, { opacity: shimmerAnim }]} />
+                <Animated.View style={[styles.skeletonCircle, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
+                <Animated.View style={[styles.skeletonLabel, { backgroundColor: bbpsTheme.colors.skeleton, opacity: shimmerAnim }]} />
               </View>
             ))}
           </View>
@@ -236,23 +289,15 @@ const RechargeBillSkeleton = () => {
 
 function RechargeBill() {
   const navigation = useNavigation<any>();
-  const [categories, setCategories] = useState<BillCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchBillsCategories();
-        setCategories(data);
-      } catch (e) {
-        console.log(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  const bbpsTheme = useBbpsTheme();
+  const { data: categories = [], isLoading: loading } = useQuery({
+    queryKey: BILL_CATEGORIES_QUERY_KEY,
+    queryFn: fetchBillsCategories,
+    staleTime: BILL_CATEGORIES_STALE_TIME,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
   const groupedData = useMemo(() => {
     const baseGroups: Record<SectionName, BillCategory[]> = {
@@ -298,13 +343,33 @@ function RechargeBill() {
   }, [categories]);
 
   if (loading) {
-    return <RechargeBillSkeleton />;
+    return <RechargeBillSkeleton bbpsTheme={bbpsTheme} />;
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.mainTitle}>Recharge and Bills</Text>
-      
+    <View style={styles.container}>
+      <View
+        style={[
+          styles.titleContainer,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.border,
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={bbpsTheme.gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.titleIconWrap}
+        >
+          <Recharge width={24} height={24} />
+        </LinearGradient>
+        <View style={styles.titleTextBlock}>
+          <Text style={[styles.mainTitle, { color: bbpsTheme.colors.textStrong }]}>Recharge & Bills</Text>
+          <Text style={[styles.titleSubtitle, { color: bbpsTheme.colors.muted }]}>Pay utilities, recharge mobile, and manage services</Text>
+        </View>
+      </View>
 
       {SECTION_ORDER.map((section) => {
         if (groupedData[section].length === 0) {
@@ -312,14 +377,25 @@ function RechargeBill() {
         }
 
         return (
-          <View key={section}>
-            <SectionHeader title={section} />
+          <View
+            key={section}
+            style={[
+              styles.sectionContainer,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                borderColor: bbpsTheme.colors.border,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
+            <SectionHeader title={section} bbpsTheme={bbpsTheme} />
             <View style={styles.grid}>
               {groupedData[section].map((item) => (
                 <ServiceItem
                   key={item.operator_category_id}
                   icon={ICON_MAP[item.operator_category_name] || FALLBACK_ICON}
                   label={item.operator_category_name}
+                  bbpsTheme={bbpsTheme}
                   onPress={() =>
                     navigation.navigate('BillerSelectScreen', {
                       categoryId: item.operator_category_id,
@@ -334,32 +410,52 @@ function RechargeBill() {
       })}
 
       {!SECTION_ORDER.some((section) => groupedData[section].length > 0) && (
-        <Text style={styles.emptyText}>No categories found.</Text>
+        <Text style={[styles.emptyText, { color: bbpsTheme.colors.muted }]}>No categories found.</Text>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
+  container: {
     marginHorizontal: 14,
-    marginTop: 12,
+    marginTop: 14,
     marginBottom: 4,
-    borderRadius: 16,
-    padding: 18,
-    shadowColor: '#5B47A3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
-    elevation: 4,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#ECE7FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  titleIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  titleTextBlock: {
+    flex: 1,
+    minWidth: 0,
   },
   mainTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#1A1A2E',
-    marginBottom: 18,
-    letterSpacing: 0.2,
+  },
+  titleSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    lineHeight: 16,
+    marginTop: 2,
   },
   searchInput: {
     borderWidth: 1,
@@ -372,17 +468,43 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     backgroundColor: '#FAFAFC',
   },
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    marginTop: 16,
+  sectionContainer: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#ECE7FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
+    marginBottom: 12,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 14,
-    letterSpacing: 1.2,
+  },
+  sectionHeaderAccent: {
+    width: 4,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#8665FF',
+    marginRight: 8,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#32353A',
+    letterSpacing: 0.4,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginHorizontal: -2,
   },
   itemContainer: {
     width: '25%',
@@ -441,7 +563,6 @@ const styles = StyleSheet.create({
     width: 130,
     borderRadius: 6,
     backgroundColor: '#E5E7EB',
-    marginTop: 16,
     marginBottom: 14,
   },
   skeletonCircle: {

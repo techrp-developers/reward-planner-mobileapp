@@ -35,6 +35,7 @@ import {
   prefetchCheckoutScreenData,
 } from '../../navigation/navigationPerformance'
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA'
+import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>
 
@@ -44,7 +45,18 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>
 // ]
 
 const TEN_MINUTES = 10 * 60 * 1000
+const THIRTY_SECONDS = 30 * 1000
 const THIRTY_MINUTES = 30 * 60 * 1000
+
+const getCartItems = (cartData: any) => {
+  return (
+    (Array.isArray(cartData?.items) && cartData.items) ||
+    (Array.isArray(cartData?.data?.items) && cartData.data.items) ||
+    (Array.isArray(cartData?.cart_items) && cartData.cart_items) ||
+    (Array.isArray(cartData?.data?.cart_items) && cartData.data.cart_items) ||
+    []
+  )
+}
 
 type CartRowProps = {
   item: any
@@ -69,7 +81,6 @@ const CartRow = React.memo(function CartRow({
 
   return (
     <CartItemCard
-      checked
       title={item.product_name}
       image={getProductImageUrl(item.image)}
       deliveryText="Delivery in 3–5 days"
@@ -102,10 +113,11 @@ const CartRow = React.memo(function CartRow({
 
 export default function WithAddress() {
   const navigation = useNavigation<Nav>()
-  const stickyCTA = useStickyBottomCTA()
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current
+  const { theme } = useAppTheme()
   // const [showAllCoupons, setShowAllCoupons] = useState(false)
   const [useRewards, setUseRewards] = useState(true)
 
@@ -127,8 +139,8 @@ export default function WithAddress() {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     )
 
@@ -136,12 +148,17 @@ export default function WithAddress() {
     return () => animation.stop()
   }, [pulse])
 
-  const { data: cartData, isFetching: isCartFetching } = useQuery({
+  const {
+    data: cartData,
+    isLoading: isCartLoading,
+  } = useQuery({
     queryKey: cartItemsQueryKey,
     queryFn: fetchCartItems,
     enabled: isAuthenticated,
-    staleTime: TEN_MINUTES,
+    staleTime: THIRTY_SECONDS,
     gcTime: THIRTY_MINUTES,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
   const { data: addressData, isFetching: isAddressFetching } = useQuery({
@@ -153,17 +170,43 @@ export default function WithAddress() {
   })
 
   const items = useMemo(() => {
-    return Array.isArray(cartData?.items) ? cartData.items : []
-  }, [cartData?.items])
+    return getCartItems(cartData)
+  }, [cartData])
 
-  const { data: cartSummaryData, isFetching: isCartSummaryFetching } = useQuery({
-    queryKey: cartSummaryQueryKey(useRewards),
-    queryFn: () => fetchCartSummary(useRewards),
+  const rewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(true),
+    queryFn: () => fetchCartSummary(true),
     enabled: isAuthenticated && items.length > 0,
-    placeholderData: previousData => previousData,
-    staleTime: TEN_MINUTES,
+    staleTime: THIRTY_SECONDS,
     gcTime: THIRTY_MINUTES,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
+
+  const noRewardSummaryQuery = useQuery({
+    queryKey: cartSummaryQueryKey(false),
+    queryFn: () => fetchCartSummary(false),
+    enabled: isAuthenticated && items.length > 0 && !useRewards,
+    staleTime: THIRTY_SECONDS,
+    gcTime: THIRTY_MINUTES,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  })
+
+  const cartSummaryData = useMemo(() => {
+    if (useRewards) return rewardSummaryQuery.data
+    if (noRewardSummaryQuery.data) return noRewardSummaryQuery.data
+
+    // Keep the cart stable while the first no-reward summary loads. The
+    // product total is already known; only reward-derived fields need refresh.
+    const current = rewardSummaryQuery.data
+    if (!current) return undefined
+    return {
+      ...current,
+      finalPayable: Number(current.cartTotal || 0),
+      totalRedeemed: 0,
+    }
+  }, [noRewardSummaryQuery.data, rewardSummaryQuery.data, useRewards])
 
   const address = useMemo(() => {
     const list = Array.isArray(addressData?.data) ? addressData.data : []
@@ -179,12 +222,23 @@ export default function WithAddress() {
     }
   }, [cartSummaryData])
 
-  const checkoutTotal = useRewards ? cartSummary.finalPayable : cartSummary.cartTotal
+  const rewardCoinsAvailable = Math.max(
+    0,
+    Number(rewardSummaryQuery.data?.totalRedeemed || 0)
+  )
+  const rewardsEnabled = useRewards && rewardCoinsAvailable > 0
+  const checkoutTotal = rewardsEnabled ? cartSummary.finalPayable : cartSummary.cartTotal
+
+  useEffect(() => {
+    if (rewardSummaryQuery.data && rewardCoinsAvailable <= 0 && useRewards) {
+      setUseRewards(false)
+    }
+  }, [rewardCoinsAvailable, rewardSummaryQuery.data, useRewards])
 
   const loading =
     isAuthenticated &&
-    ((!cartData && !addressData && (isCartFetching || isAddressFetching)) ||
-      (items.length > 0 && !cartSummaryData && isCartSummaryFetching))
+    ((isCartLoading && !cartData) ||
+      (!addressData && isAddressFetching))
 
   const syncCartAfterMutation = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: cartItemsQueryKey }).catch(() => {
@@ -334,8 +388,10 @@ export default function WithAddress() {
           finalPayable={cartSummary.finalPayable}
           totalRewardEarn={cartSummary.totalRewardEarn}
           totalRedeemed={cartSummary.totalRedeemed}
-          useRewards={useRewards}
+          useRewards={rewardsEnabled}
           onUseRewardsChange={setUseRewards}
+          rewardCoinsAvailable={rewardCoinsAvailable}
+          showShippingCharges={false}
         />
 
         <RecommendedProducts />
@@ -350,12 +406,13 @@ export default function WithAddress() {
     cartSummary.totalRedeemed,
     cartSummary.totalRewardEarn,
     // showAllCoupons,
-    useRewards,
+    rewardCoinsAvailable,
+    rewardsEnabled,
   ])
 
   if (!loading && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart onBrowse={() => navigation.navigate('Home')} />
       </View>
@@ -364,9 +421,9 @@ export default function WithAddress() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
+        <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -378,7 +435,7 @@ export default function WithAddress() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
 
       <FlatList
@@ -386,7 +443,8 @@ export default function WithAddress() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListFooterComponent={footer}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}
         removeClippedSubviews={true}
         windowSize={7}
         initialNumToRender={4}
@@ -400,7 +458,7 @@ export default function WithAddress() {
         total={checkoutTotal}
         count={items.length}
         onProceedToBuy={() => goToCheckout()}
-        bottomOffset={stickyCTA.bottomOffset}
+        bottomOffset={0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

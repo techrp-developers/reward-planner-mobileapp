@@ -11,6 +11,7 @@ import {
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import LinearGradient from "react-native-linear-gradient";
 import GradientButton from "../../constant/GradientButton";
+import { useServicesTheme } from "../../utils/useServicesTheme";
 
 // Assuming these are your image imports
 import Husband from "../../assete/insurance/Gender (1).png"; 
@@ -40,6 +41,7 @@ const membersList = [
 ];
 
 export default function Step1({ data, setData, onNext }: Props) {
+  const servicesTheme = useServicesTheme();
   // Get appropriate icon based on member type and selected gender
   const getIconForMember = (memberKey: string): any => {
     if (memberKey === 'self') {
@@ -81,9 +83,9 @@ export default function Step1({ data, setData, onNext }: Props) {
   const isNextDisabled = data.members.length === 0 || !data.gender;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: servicesTheme.colors.background }]}>
       <LinearGradient
-        colors={["#F7F3FF", "#EFE7FF", "#EDE9FE"]}
+        colors={servicesTheme.isDark ? ["#09090B", "#111113", "#18181B"] : ["#F7F3FF", "#EFE7FF", "#EDE9FE"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
@@ -92,7 +94,7 @@ export default function Step1({ data, setData, onNext }: Props) {
         
         {/* Modern Gender Selection */}
         <View style={styles.section}>
-          <View style={styles.genderContainer}>
+          <View style={[styles.genderContainer, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
             {["Male", "Female"].map((g) => {
               const isActive = data.gender === g;
               return (
@@ -110,7 +112,7 @@ export default function Step1({ data, setData, onNext }: Props) {
                       end={{ x: 1, y: 0 }}
                     />
                   )}
-                  <Text style={[styles.genderText, isActive && styles.textWhite]}>{g}</Text>
+                  <Text style={[styles.genderText, { color: servicesTheme.colors.text }, isActive && styles.textWhite]}>{g}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -120,8 +122,8 @@ export default function Step1({ data, setData, onNext }: Props) {
         {/* Members Selection Grid */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Insure your family</Text>
-            <Text style={styles.sectionSubtitle}>Select everyone you want to protect</Text>
+            <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>Insure your family</Text>
+            <Text style={[styles.sectionSubtitle, { color: servicesTheme.colors.muted }]}>Select everyone you want to protect</Text>
           </View>
 
           <View style={styles.grid}>
@@ -134,13 +136,18 @@ export default function Step1({ data, setData, onNext }: Props) {
                   <TouchableOpacity
                     onPress={() => toggleMember(member.key)}
                     activeOpacity={0.9}
-                    style={[styles.card, isSelected && styles.cardActive]}
+                    style={[
+                      styles.card,
+                      { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow },
+                      isSelected && styles.cardActive,
+                      isSelected && { backgroundColor: servicesTheme.isDark ? "#18112A" : "#F9F8FF", borderColor: servicesTheme.colors.primary },
+                    ]}
                   >
-                    <View style={[styles.iconCircle, isSelected && styles.iconCircleActive]}>
+                    <View style={[styles.iconCircle, { backgroundColor: servicesTheme.colors.surfaceAlt }, isSelected && styles.iconCircleActive]}>
                       <Image source={getIconForMember(member.key)} style={styles.iconImage} />
                     </View>
                     
-                    <Text style={[styles.cardLabel, isSelected && styles.cardLabelActive]}>
+                    <Text style={[styles.cardLabel, { color: servicesTheme.colors.text }, isSelected && { color: servicesTheme.colors.textStrong }]}>
                       {member.label}
                     </Text>
 
@@ -152,11 +159,11 @@ export default function Step1({ data, setData, onNext }: Props) {
                   </TouchableOpacity>
 
                   {member.hasCount && isSelected && (
-                    <View style={styles.stepper}>
+                    <View style={[styles.stepper, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
                       <TouchableOpacity onPress={() => updateMemberCount(member.key, false)} style={styles.stepBtn}>
                         <MaterialIcons name="remove" size={14} color="#6C4AB6" />
                       </TouchableOpacity>
-                      <Text style={styles.stepValue}>{count}</Text>
+                      <Text style={[styles.stepValue, { color: servicesTheme.colors.textStrong }]}>{count}</Text>
                       <TouchableOpacity onPress={() => updateMemberCount(member.key, true)} style={styles.stepBtn}>
                         <MaterialIcons name="add" size={14} color="#6C4AB6" />
                       </TouchableOpacity>
@@ -171,13 +178,13 @@ export default function Step1({ data, setData, onNext }: Props) {
         {/* Modern Summary Box */}
         {data.members.length > 0 && (
           <LinearGradient
-            colors={["#F8F7FF", "#EFECFF"]}
-            style={styles.summaryCard}
+            colors={servicesTheme.isDark ? ["#18112A", "#111113"] : ["#F8F7FF", "#EFECFF"]}
+            style={[styles.summaryCard, { borderColor: servicesTheme.colors.border }]}
           >
             <MaterialIcons name="info" size={20} color="#8665FF" />
             <View style={styles.summaryInfo}>
-              <Text style={styles.summaryHeadline}>Review Coverage</Text>
-              <Text style={styles.summaryDesc} numberOfLines={2}>
+              <Text style={[styles.summaryHeadline, { color: servicesTheme.colors.textStrong }]}>Review Coverage</Text>
+              <Text style={[styles.summaryDesc, { color: servicesTheme.colors.muted }]} numberOfLines={2}>
                 Insuring {data.members.length} {data.members.length > 1 ? 'members' : 'member'}
               </Text>
             </View>
@@ -185,7 +192,7 @@ export default function Step1({ data, setData, onNext }: Props) {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: servicesTheme.isDark ? "rgba(17,17,19,0.96)" : "rgba(255,255,255,0.95)", borderTopColor: servicesTheme.colors.divider }]}>
         <GradientButton
           title="Continue"
           onPress={onNext}

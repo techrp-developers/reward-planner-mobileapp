@@ -9,10 +9,12 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import type { EnquiryField } from '../../types/ServiceTypes';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 interface Props {
   title: string;
@@ -46,6 +48,9 @@ const DynamicEnquiryForm: React.FC<Props> = ({
   isSubmitting = false,
 }) => {
   const [selectState, setSelectState] = useState<SelectState>({ open: false, field: null });
+  const servicesTheme = useServicesTheme();
+  const formSurface = servicesTheme.isDark ? '#000000' : '#FFFFFF';
+  const inputSurface = servicesTheme.isDark ? '#000000' : '#FAF9FF';
 
   const canSubmit =
     !isSubmitting &&
@@ -60,7 +65,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
 
     return (
       <View key={`${field.field_name || 'field'}-${index}`}>
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: servicesTheme.colors.text }]}>
           {field.label}
           {isRequired && <Text style={styles.star}> *</Text>}
         </Text>
@@ -68,34 +73,37 @@ const DynamicEnquiryForm: React.FC<Props> = ({
         {fieldType === 'select' ? (
           /* ── Dropdown ── */
           <Pressable
-            style={styles.inputWrap}
-            onPress={() => setSelectState({ open: true, field })}
+            style={[styles.inputWrap, { backgroundColor: inputSurface, borderColor: servicesTheme.colors.border }]}
+            onPress={() => {
+              Keyboard.dismiss();
+              setTimeout(() => setSelectState({ open: true, field }), 80);
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Select ${field.label}`}
           >
-            <Text style={[styles.inputText, !value && styles.placeholder]}>
+            <Text style={[styles.inputText, { color: servicesTheme.colors.text }, !value && { color: servicesTheme.colors.subtle }]}>
               {value || `Select ${field.label}`}
             </Text>
             <View style={styles.rightIcon}>
-              <MaterialIcons name="keyboard-arrow-down" size={22} color="#8A8A8A" />
+              <MaterialIcons name="keyboard-arrow-down" size={22} color={servicesTheme.colors.muted} />
             </View>
           </Pressable>
         ) : fieldType === 'textarea' ? (
           /* ── Textarea ── */
-          <View style={[styles.inputWrap, styles.textAreaWrap]}>
+          <View style={[styles.inputWrap, styles.textAreaWrap, { backgroundColor: inputSurface, borderColor: servicesTheme.colors.border }]}>
             <TextInput
               value={value}
               onChangeText={(t) => onChange(field.field_name, t)}
               placeholder={`Enter ${field.label.toLowerCase()}`}
-              placeholderTextColor="#A3A3A3"
-              style={[styles.inputText, styles.textArea]}
+              placeholderTextColor={servicesTheme.colors.subtle}
+              style={[styles.inputText, styles.textArea, { color: servicesTheme.colors.text }]}
               multiline
               textAlignVertical="top"
             />
           </View>
         ) : (
           /* ── Text / Number ── */
-          <View style={styles.inputWrap}>
+          <View style={[styles.inputWrap, { backgroundColor: inputSurface, borderColor: servicesTheme.colors.border }]}>
             <TextInput
               value={value}
               onChangeText={(t) => {
@@ -103,8 +111,8 @@ const DynamicEnquiryForm: React.FC<Props> = ({
                 onChange(field.field_name, sanitized);
               }}
               placeholder={`Enter ${field.label.toLowerCase()}`}
-              placeholderTextColor="#A3A3A3"
-              style={styles.inputTextWithPadding}
+              placeholderTextColor={servicesTheme.colors.subtle}
+              style={[styles.inputTextWithPadding, { color: servicesTheme.colors.text }]}
               keyboardType={getKeyboardType(fieldType)}
               autoCapitalize="none"
               autoCorrect={false}
@@ -116,9 +124,16 @@ const DynamicEnquiryForm: React.FC<Props> = ({
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.heading}>{title}</Text>
-      <Text style={styles.desc}>{description}</Text>
+    <View style={[styles.card, { backgroundColor: formSurface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
+      <View style={styles.headerRow}>
+        <View style={[styles.headerIcon, { backgroundColor: servicesTheme.colors.iconBg }]}>
+          <MaterialIcons name="chat-bubble-outline" size={18} color={servicesTheme.colors.primary} />
+        </View>
+        <View style={styles.headerTextCol}>
+          <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
+          <Text style={[styles.desc, { color: servicesTheme.colors.muted }]}>{description}</Text>
+        </View>
+      </View>
 
       {fields.map(renderField)}
 
@@ -126,9 +141,9 @@ const DynamicEnquiryForm: React.FC<Props> = ({
         activeOpacity={0.85}
         onPress={onSubmit}
         disabled={!canSubmit}
-        style={!canSubmit ? styles.submitBtnDisabled : undefined}
+        style={[styles.submitBtnShadow, !canSubmit && styles.submitBtnDisabled]}
       >
-        <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.submitBtn}>
+        <LinearGradient colors={servicesTheme.gradients.primary} style={styles.submitBtn}>
           {isSubmitting ? (
             <ActivityIndicator color="#FFF" size="small" />
           ) : (
@@ -141,6 +156,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
       <Modal
         visible={selectState.open}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setSelectState({ open: false, field: null })}
       >
@@ -148,9 +164,11 @@ const DynamicEnquiryForm: React.FC<Props> = ({
           style={styles.modalOverlay}
           onPress={() => setSelectState({ open: false, field: null })}
         >
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: servicesTheme.colors.elevated }]}>
             {!!selectState.field?.label && (
-              <Text style={styles.modalTitle}>{selectState.field.label}</Text>
+              <Text style={[styles.modalTitle, { color: servicesTheme.colors.text, borderBottomColor: servicesTheme.colors.divider }]}>
+                {selectState.field.label}
+              </Text>
             )}
             <FlatList
               data={selectState.field?.options ?? []}
@@ -159,7 +177,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
                 const isSelected = values[selectState.field?.field_name ?? ''] === item;
                 return (
                   <Pressable
-                    style={styles.optionRow}
+                    style={[styles.optionRow, { borderBottomColor: servicesTheme.colors.divider }]}
                     onPress={() => {
                       if (selectState.field) {
                         onChange(selectState.field.field_name, item);
@@ -167,11 +185,15 @@ const DynamicEnquiryForm: React.FC<Props> = ({
                       setSelectState({ open: false, field: null });
                     }}
                   >
-                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    <Text style={[
+                      styles.optionText,
+                      { color: servicesTheme.colors.text },
+                      isSelected && { color: servicesTheme.colors.primary, fontWeight: '600' },
+                    ]}>
                       {item}
                     </Text>
                     {isSelected && (
-                      <MaterialIcons name="check" size={16} color="#8665FF" />
+                      <MaterialIcons name="check" size={16} color={servicesTheme.colors.primary} />
                     )}
                   </Pressable>
                 );
@@ -188,30 +210,52 @@ export default DynamicEnquiryForm;
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 12,
+    marginTop: 16,
     marginHorizontal: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#EDEDED',
-    padding: 14,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  headerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3EFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  headerTextCol: {
+    flex: 1,
   },
   heading: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#202020',
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   desc: {
-    fontSize: 11.5,
-    color: '#6B6B6B',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
     lineHeight: 16,
-    marginBottom: 2,
   },
   label: {
     marginTop: 14,
     fontSize: 13,
     color: '#111111',
+    fontWeight: '500',
   },
   star: {
     color: '#E11D48',
@@ -219,11 +263,11 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    minHeight: 44,
+    borderWidth: 1.2,
+    borderColor: '#ECE7FF',
+    borderRadius: 10,
+    backgroundColor: '#FAF9FF',
+    minHeight: 46,
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
@@ -262,15 +306,25 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 72,
   },
-  submitBtn: {
+  submitBtnShadow: {
     marginTop: 16,
-    height: 46,
-    borderRadius: 8,
+    borderRadius: 10,
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  submitBtn: {
+    height: 48,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnDisabled: {
     opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitText: {
     fontSize: 14,

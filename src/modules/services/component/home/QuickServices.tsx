@@ -6,25 +6,27 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useServiceHome } from '../../hooks/useServiceHome';
 import type { ServiceItem } from '../../navigation/type';
 import Card from '../constant/Card';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const HORIZONTAL_PADDING = 16;
-
-// Professional sizing: Card occupies 78% of width, allowing next card to peek in
 
 // Fixed typo from 'assete' to 'assets'
 const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
 
 export default function QuickServices() {
+  const navigation = useNavigation<any>();
+  const servicesTheme = useServicesTheme();
   const { data: homeData, isLoading, error } = useServiceHome();
 
   // Extract the Quick Services section
   const quickServicesSection = useMemo(() => {
     if (!homeData?.data || !Array.isArray(homeData.data)) return null;
     return homeData.data.find(
-      (section) => section.section_key === 'quick_services'
+      section => section.section_key === 'quick_services',
     );
   }, [homeData]);
 
@@ -33,9 +35,9 @@ export default function QuickServices() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.heading}>Quick & Easy Services</Text>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Quick & Easy Services</Text>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4361EE" />
+          <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
         </View>
       </View>
     );
@@ -60,28 +62,31 @@ export default function QuickServices() {
 
   const renderItem = ({ item }: { item: ServiceItem; index: number }) => {
     const coinsText = item.coins ? `${item.coins}` : '0';
-    const orders = item.total_orders ? `${(item.total_orders / 1000).toFixed(1)}K` : '0';
-    const discount = item.discount_percent && item.discount_percent > 0 
-      ? `${item.discount_percent}%` 
-      : undefined;
-
+    const orders = item.total_orders
+      ? `${(item.total_orders / 1000).toFixed(1)}K`
+      : '0';
+    const discount =
+      item.discount_percent && item.discount_percent > 0
+        ? `${item.discount_percent}%`
+        : undefined;
 
     return (
-      <View style={[
-        styles.cardWrapper, 
-      
-      ]}>
+      <View style={[styles.cardWrapper]}>
         <Card
           title={item.title || item.name}
           image={getImageSource(item)}
-          price={`${item.price}`}
+          price={Number(item.price) > 0 ? `₹${item.price}` : 'Get Quote'}
           oldPrice={item.mrp ? `${item.mrp}` : `${item.price}`}
+          rating={item.rating}
           users={orders}
           coins={coinsText}
           discount={discount}
-          onPress={() => {
-            // Handled safely inside EasyServiceCard
-          }}
+          onPress={() =>
+            navigation.navigate('ServiceDescription', {
+              serviceId: item.service_id,
+              title: item.name,
+            })
+          }
         />
       </View>
     );
@@ -90,22 +95,23 @@ export default function QuickServices() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>
-          {quickServicesSection?.title || 'Quick & Easy Services'}
-        </Text>
+        <View>
+          <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>
+            {quickServicesSection?.title || 'Quick & Easy Services'}
+          </Text>
+          <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>Quick and easy</Text>
+        </View>
       </View>
 
       <FlatList<ServiceItem>
         data={items}
-        keyExtractor={(item) => `${item.service_id}-${item.variant_id}`}
+        keyExtractor={item => `${item.service_id}-${item.variant_id}`}
         renderItem={renderItem}
         horizontal
         showsHorizontalScrollIndicator={false}
-        
         // Manual sliding snapping configurations
         decelerationRate="fast"
         disableIntervalMomentum={true}
-        
         contentContainerStyle={styles.horizontalContent}
       />
     </View>
@@ -124,8 +130,14 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#1F2937', // Deeper contrast typography 
+    color: '#1F2937', // Deeper contrast typography
     letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: 12.5,
+    color: '#8B93A1',
+    marginTop: 3,
+    fontWeight: '500',
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -134,6 +146,7 @@ const styles = StyleSheet.create({
   },
   horizontalContent: {
     paddingLeft: HORIZONTAL_PADDING,
+    paddingRight: 4,
   },
   cardWrapper: {
     justifyContent: 'flex-start',

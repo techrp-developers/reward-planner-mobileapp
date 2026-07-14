@@ -6,20 +6,22 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import WalletSvg from '../../../../../assets/homepage/navwallet.svg';
 import ServiceTop from '../../../../../assets/homepage/service_top_nav.png';
 import type { HomeStackParamList } from '../../../navigation/type';
-import { useCart } from "../../../../ecommerce/context/CartContext";
+import { useServiceCartCount } from '../../../hooks/useServiceCartCount';
 import { fetchUserInfo } from "../../../../common/auth/api/AuthAPI";
 import { useAuth } from "../../../../common/auth/context/AuthContext";
+import { useServicesTheme } from "../../../utils/useServicesTheme";
 type CartHeadProps = {
   onBackPress?: () => void;
 };
 
 function CartHead({ onBackPress }: CartHeadProps) {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const servicesTheme = useServicesTheme();
   const { user, isAuthenticated } = useAuth();
   const authRewardPoints = (user as { rewardPoints?: number } | null)?.rewardPoints;
   const [rewardPoints, setRewardPoints] = useState(0);
   const placeholder = "Search “ITR Filing”";
-const { totalQuantity } = useCart();
+const totalQuantity = useServiceCartCount();
 const handleCartPress = () => {
   navigation.navigate("CartScreen");
 };
@@ -83,15 +85,15 @@ const handleWalletPress = () => {
 
       <View style={styles.searchRow}>
         {/* Search Input Container */}
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
           <TouchableOpacity activeOpacity={0.7} style={styles.backButton} onPress={handleBackPress}>
-            <MaterialCommunityIcons name="chevron-left" size={28} color="#6B7280" />
+            <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.muted} />
           </TouchableOpacity>
           
           <TextInput
             placeholder={placeholder}
-            placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
+            placeholderTextColor={servicesTheme.colors.subtle}
+            style={[styles.searchInput, { color: servicesTheme.colors.text }]}
             showSoftInputOnFocus={false}
             onFocus={() => navigation.navigate('ServiceSearch')}
           />
@@ -100,10 +102,10 @@ const handleWalletPress = () => {
         {/* Wallet Container */}
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.walletBox}
+          style={[styles.walletBox, { backgroundColor: servicesTheme.colors.surface }]}
           onPress={handleWalletPress}
         >
-          <WalletSvg width={26} height={26} />
+          <WalletSvg width={18} height={18} />
           <View style={styles.walletTag}>
             <Text style={styles.walletTagText}>{"\u20B9"}{rewardPoints}</Text>
           </View>
@@ -111,12 +113,12 @@ const handleWalletPress = () => {
 
         {/* Cart Icon */}
 <TouchableOpacity
-  style={styles.iconCircle}
+  style={[styles.iconCircle, { backgroundColor: servicesTheme.colors.surface }]}
   activeOpacity={0.8}
   onPress={handleCartPress}
 >
   <View>
-    <MaterialCommunityIcons name="cart-outline" size={24} color="#111827" />
+    <MaterialCommunityIcons name="cart-outline" size={18} color={servicesTheme.colors.text} />
 
     {totalQuantity > 0 && (
       <View style={styles.badge}>
@@ -134,7 +136,7 @@ const handleWalletPress = () => {
 
 const styles = StyleSheet.create({
   headerWrapper: {
-    paddingTop: Platform.OS === 'ios' ? 54 : 30,
+    paddingTop: Platform.OS === 'ios' ? 62 : 46,
     height: 110,
     zIndex: 10,
   },
@@ -180,10 +182,10 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   walletBox: {
-    width: 54,
-    height: 44,
+    width: 40,
+    height: 36,
     backgroundColor: '#fff',
-    borderRadius: 22,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
@@ -192,24 +194,24 @@ const styles = StyleSheet.create({
   },
   walletTag: {
     position: 'absolute',
-    bottom: -8,
+    bottom: -7,
     backgroundColor: '#5F341A', // Dark brown tag from image
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
     borderRadius: 6,
-    borderWidth: 1.5,
+    borderWidth: 1.25,
     borderColor: '#fff',
   },
   walletTagText: {
     color: '#fff',
     fontWeight: '800',
-    fontSize: 10,
+    fontSize: 9,
   },
   iconCircle: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     backgroundColor: '#fff',
-    borderRadius: 22,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
@@ -219,11 +221,11 @@ const styles = StyleSheet.create({
   badge: {
   position: 'absolute',
   top: -6,
-  right: -10,
+  right: -8,
   backgroundColor: '#EF4444',
-  borderRadius: 10,
-  minWidth: 18,
-  height: 18,
+  borderRadius: 9,
+  minWidth: 16,
+  height: 16,
   justifyContent: 'center',
   alignItems: 'center',
   borderWidth: 1.5,
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
 
 badgeText: {
   color: '#fff',
-  fontSize: 10,
+  fontSize: 9,
   fontWeight: 'bold',
 },
 });

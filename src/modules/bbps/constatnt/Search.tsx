@@ -1,214 +1,394 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { SvgProps } from 'react-native-svg';
 import LinearGradient from 'react-native-linear-gradient';
 
-// Asset Imports
-import DTH from '../assets/BBPS_Service/DTH.png';
-import FASTagRecharge from '../assets/BBPS_Service/FASTag Recharge.png';
-import Electricity from '../assets/BBPS_Service/Electricity.png';
-import water from '../assets/BBPS_Service/Water.png';
-import LPGCylender from '../assets/BBPS_Service/LPG.png';
-import Landline from '../assets/BBPS_Service/LandLine.png';
-import Broadband from '../assets/BBPS_Service/Broadband.png';
-import Insurance from '../assets/BBPS_Service/Insurance.png';
-import BBPSHead from './BBPSHead';
+import PaymentTop from '../../../navbar/assete/Payment_BG.png';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
+import { BillCategory, fetchBillsCategories } from '../api/BillsAPI';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
+import Recharge from '../assets/BBPS_Service/Recharge.svg';
+import DTH from '../assets/BBPS_Service/DTH.svg';
+import Subscriptions from '../assets/BBPS_Service/Subscriptions.svg';
+import FASTagRecharge from '../assets/BBPS_Service/FASTagRecharge.svg';
+import Electricity from '../assets/BBPS_Service/Electricity.svg';
+import Water from '../assets/BBPS_Service/Water.svg';
+import PipedGas from '../assets/BBPS_Service/solid.svg';
+import LPGCylender from '../assets/BBPS_Service/LPG.svg';
+import Landline from '../assets/BBPS_Service/LandLine.svg';
+import Broadband from '../assets/BBPS_Service/Broadband.svg';
+import Credit from '../assets/BBPS_Service/Creadit.svg';
+import Loan from '../assets/BBPS_Service/Loan_Emi.svg';
+import Insurance from '../assets/BBPS_Service/Insurance.svg';
+import Tax from '../assets/BBPS_Service/Tax.svg';
+import Housing from '../assets/BBPS_Service/Housing_Socity.svg';
+import Municipal from '../assets/BBPS_Service/Munsiple_taxes.svg';
+import Education from '../assets/BBPS_Service/Education.svg';
+import Hospital from '../assets/BBPS_Service/Hospital_bill.svg';
 
-const { width } = Dimensions.get('window');
+const MIN_SEARCH_LENGTH = 2;
 
-// Reusable Service Item Component
-const ServiceItem = ({ icon, label, onPress }: any) => (
-  <TouchableOpacity style={styles.itemContainer} activeOpacity={0.75} onPress={onPress}>
-    <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={styles.iconCircle}
-    >
-      <Image source={icon} style={styles.iconImage} resizeMode="contain" />
-    </LinearGradient>
-    <Text style={styles.itemLabel} numberOfLines={2}>{label}</Text>
-  </TouchableOpacity>
-);
+type SvgIconComponent = React.FC<SvgProps>;
+type VectorIconAsset = {
+  type: 'vector';
+  name: string;
+};
+type IconAsset = SvgIconComponent | VectorIconAsset;
+
+const isVectorIcon = (icon: IconAsset): icon is VectorIconAsset =>
+  typeof icon === 'object' && icon !== null && 'type' in icon && icon.type === 'vector';
+
+const ICON_MAP: Record<string, IconAsset> = {
+  'Mobile Prepaid': Recharge,
+  DTH,
+  Subscription: Subscriptions,
+  Subscriptions,
+  FASTag: FASTagRecharge,
+  'Cable TV': Subscriptions,
+  Electricity,
+  Water,
+  Gas: PipedGas,
+  'LPG Cylinder': LPGCylender,
+  'Broadband Postpaid': Broadband,
+  'Landline Postpaid': Landline,
+  'Mobile Postpaid': Recharge,
+  'Credit Card': Credit,
+  Loan,
+  Insurance,
+  Tax,
+  'Housing Society': Housing,
+  Education,
+  Hospital,
+  'Municipal Taxes': Municipal,
+  'Municipal Services': Municipal,
+  'Rental Payment': Housing,
+  eChallan: { type: 'vector', name: 'file-document-outline' },
+  'Agent Collection': { type: 'vector', name: 'account-cash-outline' },
+  'Fleet Card Recharge': { type: 'vector', name: 'card-account-details-outline' },
+  'EV Recharge': { type: 'vector', name: 'ev-station' },
+  'Clubs and Associations': Subscriptions,
+};
+
+const getCategoryInitial = (name?: string) =>
+  String(name || 'B').trim().charAt(0).toUpperCase();
+
+const SearchResultIcon = ({ categoryName }: { categoryName: string }) => {
+  const icon = ICON_MAP[categoryName];
+
+  if (!icon) {
+    return <Text style={styles.resultIconInitial}>{getCategoryInitial(categoryName)}</Text>;
+  }
+
+  if (isVectorIcon(icon)) {
+    return <MaterialCommunityIcons name={icon.name} size={25} color="#FFFFFF" />;
+  }
+
+  const SvgIcon = icon;
+  return <SvgIcon width={26} height={26} />;
+};
 
 function Search({ navigation }: any) {
+  const bbpsTheme = useBbpsTheme();
+  const { width } = useWindowDimensions();
+  const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState<BillCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const anim = Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
-      ])
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ]),
     );
-    anim.start();
-
-    const timer = setTimeout(() => setLoading(false), 900);
-
-    return () => {
-      clearTimeout(timer);
-      anim.stop();
-    };
+    animation.start();
+    return () => animation.stop();
   }, [pulse]);
 
+  useEffect(() => {
+    let active = true;
+
+    fetchBillsCategories()
+      .then((data) => {
+        if (!active) return;
+        setCategories(data.filter((item) => String(item.status) === '1'));
+        setFailed(false);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const query = search.trim().toLowerCase();
+  const isSearchActive = query.length >= MIN_SEARCH_LENGTH;
+  const results = useMemo(() => {
+    if (!isSearchActive) return [];
+
+    return categories.filter((item) =>
+      [item.operator_category_name, item.operator_category_group]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [categories, isSearchActive, query]);
+
+  const headerHeight = Math.round(width * 0.4);
+
   return (
-    <View style={styles.mainContainer}>
-      {/* Header */}
-      <BBPSHead
-        title="Search"
-        onBackPress={() => navigation.goBack()}
-      />
+    <SafeAreaView style={[styles.root, { backgroundColor: bbpsTheme.colors.background }]} edges={['left', 'right', 'bottom']}>
+      <View style={[styles.header, { height: headerHeight }]}>
+        <Image source={PaymentTop} style={styles.headerImage} resizeMode="cover" />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {loading ? (
-          <View>
-            <View style={styles.searchBarWrapper}>
-              <SkeletonBox pulse={pulse} width="100%" height={55} borderRadius={12} />
-            </View>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          style={styles.backButton}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
 
-            <View style={styles.bannerContainer}>
-              <SkeletonBox pulse={pulse} width="100%" height={170} borderRadius={15} />
-            </View>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              borderColor: bbpsTheme.colors.border,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons name="magnify" size={20} color={bbpsTheme.colors.primary} />
+          <TextInput
+            autoFocus
+            value={search}
+            onChangeText={setSearch}
+            placeholder='Search "Electricity, DTH, FASTag…"'
+            placeholderTextColor={bbpsTheme.colors.muted}
+            returnKeyType="search"
+            style={[styles.searchInput, { color: bbpsTheme.colors.text }]}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+              <MaterialCommunityIcons name="close-circle" size={18} color={bbpsTheme.colors.subtle} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
-            <View style={styles.popularHeader}>
-              <SkeletonBox pulse={pulse} width={90} height={18} borderRadius={8} />
-            </View>
+      <ScrollView
+        style={styles.list}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {!isSearchActive && (
+          <Text style={[styles.hint, { color: bbpsTheme.colors.subtle }]}>Type at least 2 characters to search bill payments</Text>
+        )}
 
-            <View style={styles.grid}>
-              {Array.from({ length: 8 }).map((_, index) => (
-                <View key={`search-skeleton-${index}`} style={styles.itemContainer}>
-                  <SkeletonBox pulse={pulse} width={55} height={55} borderRadius={27.5} />
-                  <SkeletonBox pulse={pulse} width={60} height={11} borderRadius={6} style={styles.skeletonLabelGap} />
+        {isSearchActive && loading && (
+          <View style={styles.skeletonWrap}>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <View key={index} style={styles.skeletonRow}>
+                <SkeletonBox pulse={pulse} width={50} height={50} borderRadius={10} />
+                <View style={styles.skeletonText}>
+                  <SkeletonBox pulse={pulse} width="72%" height={13} borderRadius={999} />
+                  <SkeletonBox
+                    pulse={pulse}
+                    width="44%"
+                    height={10}
+                    borderRadius={999}
+                    style={styles.skeletonGap}
+                  />
                 </View>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View>
-            {/* Search Bar */}
-            <View style={styles.searchBarWrapper}>
-              <View style={styles.searchBar}>
-                <MaterialIcons name="search" size={24} color="#9CA3AF" />
-                <TextInput
-                  placeholder="Search for 'Electricity'"
-                  style={styles.searchInput}
-                  placeholderTextColor="#9CA3AF"
-                />
               </View>
-            </View>
-
-            {/* Limited-Time Offer Banner */}
-            <View style={styles.bannerContainer}>
-              <LinearGradient
-                colors={['#5856D6', '#3D5AF7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.bannerGradient}
-              >
-                <View style={styles.bannerContent}>
-                  <View style={styles.bannerText}>
-                    <Text style={styles.bannerTitle}>Limited-Time Offer</Text>
-                    <Text style={styles.bannerSubtitle}>Pay your bills today and earn bonus rewards.</Text>
-                    <TouchableOpacity style={styles.activateBtn}>
-                      <Text style={styles.activateBtnText}>Activate now {'>'}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.bannerTerms}>*Terms & Conditions apply</Text>
-                  </View>
-                  <View style={styles.bannerImageArea}>
-                    <Text style={styles.bannerEmoji}>📄</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </View>
-
-            {/* Popular Section */}
-            <View style={styles.popularHeader}>
-              <Text style={styles.popularTitle}>Popular</Text>
-              <MaterialIcons name="trending-up" size={18} color="#8665FF" style={styles.trendingIcon} />
-            </View>
-            <View style={styles.grid}>
-              <ServiceItem icon={Electricity} label="Electricity" onPress={() => navigation.navigate('BillerSelectScreen')} />
-              <ServiceItem icon={water} label="Water" onPress={() => navigation.navigate('BillerSelectScreen')} />
-              <ServiceItem icon={LPGCylender} label="LPG Cylinder" onPress={() => navigation.navigate('BillerSelectScreen')} />
-              <ServiceItem icon={DTH} label="DTH" />
-              <ServiceItem icon={Landline} label="Landline Postpaid" onPress={() => navigation.navigate('BillerSelectScreen')} />
-              <ServiceItem icon={Broadband} label="Broadband Postpaid" onPress={() => navigation.navigate('BillerSelectScreen')} />
-              <ServiceItem icon={FASTagRecharge} label="FASTag Recharge" />
-              <ServiceItem icon={Insurance} label="Insurance Premiums" />
-            </View>
+            ))}
           </View>
         )}
 
+        {isSearchActive && !loading && failed && (
+          <Text style={[styles.message, { color: bbpsTheme.colors.muted }]}>Unable to load bill-payment services right now.</Text>
+        )}
+
+        {isSearchActive && !loading && !failed && results.length === 0 && (
+          <Text style={[styles.message, { color: bbpsTheme.colors.muted }]}>No bill-payment services found for “{search.trim()}”</Text>
+        )}
+
+        {isSearchActive && !loading && !failed && results.map((item) => (
+          <TouchableOpacity
+            key={item.operator_category_id}
+            activeOpacity={0.8}
+            style={[styles.resultRow, { borderBottomColor: bbpsTheme.colors.divider }]}
+            onPress={() =>
+              navigation.navigate('BillerSelectScreen', {
+                categoryId: item.operator_category_id,
+                categoryName: item.operator_category_name,
+              })
+            }
+          >
+            <LinearGradient
+              colors={bbpsTheme.gradients.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.resultIcon}
+            >
+              <SearchResultIcon categoryName={item.operator_category_name} />
+            </LinearGradient>
+            <View style={styles.resultText}>
+              <Text style={[styles.resultTitle, { color: bbpsTheme.colors.text }]} numberOfLines={1}>
+                {item.operator_category_name}
+              </Text>
+              <Text style={[styles.resultType, { color: bbpsTheme.colors.subtle }]} numberOfLines={1}>
+                {item.operator_category_group || 'Payments & bills'}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="arrow-top-left" size={20} color={bbpsTheme.colors.subtle} />
+          </TouchableOpacity>
+        ))}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { paddingBottom: 40 },
-  
-  searchBarWrapper: { paddingHorizontal: 20, marginTop: 15 },
-  searchBar: {
+  root: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  headerImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBox: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    left: 18,
+    height: 42,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 15,
-    height: 55,
-    elevation: 2,
-    shadowColor: '#000',
+    borderColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: '#000' },
-
-  // Banner Styles
-  bannerContainer: { marginHorizontal: 20, marginTop: 20, borderRadius: 15, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  bannerGradient: { paddingVertical: 20, paddingHorizontal: 16 },
-  bannerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bannerText: { flex: 1, marginRight: 12 },
-  bannerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
-  bannerSubtitle: { fontSize: 13, color: '#E8E8F5', marginBottom: 12 },
-  activateBtn: { backgroundColor: '#00BFFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 8 },
-  activateBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  bannerTerms: { fontSize: 11, color: '#CCCCDD', marginTop: 4 },
-  bannerImageArea: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' },
-  bannerEmoji: { fontSize: 40 },
-
-  // Popular Section
-  popularHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginTop: 25, marginBottom: 15 },
-  popularTitle: { fontSize: 16, fontWeight: '700', color: '#333' },
-  trendingIcon: { marginLeft: 6 },
-
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10 },
-  itemContainer: { width: width / 4 - 5, alignItems: 'center', marginBottom: 20 },
-  iconCircle: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    justifyContent: 'center',
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    paddingVertical: 0,
+    color: '#111827',
+    fontSize: 14,
+    textAlignVertical: 'center',
+  },
+  list: {
+    flex: 1,
+    marginTop: 4,
+  },
+  hint: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    color: '#999999',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  message: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    color: '#7A7A7A',
+    fontSize: 14,
+  },
+  resultRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#F0F0F0',
   },
-  iconImage: { width: 28, height: 28, tintColor: '#FFFFFF' },
-  itemLabel: { fontSize: 11, color: '#374151', textAlign: 'center', fontWeight: '500', paddingHorizontal: 4 },
-  skeletonLabelGap: { marginTop: 8 },
+  resultIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultIconInitial: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  resultText: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  resultTitle: {
+    color: '#1A1A1A',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  resultType: {
+    marginTop: 2,
+    color: '#999999',
+    fontSize: 11,
+    textTransform: 'capitalize',
+  },
+  skeletonWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  skeletonText: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  skeletonGap: {
+    marginTop: 8,
+  },
 });
 
 export default Search;

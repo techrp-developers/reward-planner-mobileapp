@@ -39,18 +39,23 @@ export type AppStackParamList = {
   MyOrder: undefined;
   WishList: undefined;
   PrivacyPolicy: undefined;
-  AddressSelect: { fromCart?: boolean } | undefined;
+  AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
+  AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   ChangePassword: undefined;
-  Profile: undefined;
+  Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   HealthStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
   GlobalSearchScreen: undefined;
+  TrackOrders: undefined;
+  Notification: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: undefined;
+  MyTickets: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
@@ -78,6 +83,7 @@ const defaultScreenOptions = {
   headerShown: false,
   animation: "slide_from_right" as const,
   gestureEnabled: true,
+  freezeOnBlur: true,
 };
 
 // ─── Auth Navigator ───────────────────────────────────────────────────────────
@@ -102,10 +108,19 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <StepTrackerProvider>
-    <AppStack.Navigator screenOptions={defaultScreenOptions}>
+    <AppStack.Navigator
+      screenOptions={{
+        ...defaultScreenOptions,
+        contentStyle: { backgroundColor: "transparent" },
+      }}
+    >
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
-      <AppStack.Screen name="Home" component={MainLayout} />
+      <AppStack.Screen
+        name="Home"
+        component={MainLayout}
+        options={{ animation: "none" }}
+      />
 
       <AppStack.Screen
         name="Checkout"
@@ -154,6 +169,11 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/components/home/Wallet_History").default
         }
+        options={{
+          animation: "fade",
+          presentation: "transparentModal",
+          contentStyle: { backgroundColor: "transparent" },
+        }}
       />
       <AppStack.Screen name="ServiceStack" component={ServiceHomeStack} />
       <AppStack.Screen name="HealthStack" component={HealthHomeStack} />
@@ -163,6 +183,12 @@ function AppNavigator() {
         name="HelpForm"
         getComponent={() =>
           require("../modules/ecommerce/constants/Support/HelpForm").default
+        }
+      />
+      <AppStack.Screen
+        name="MyTickets"
+        getComponent={() =>
+          require("../modules/ecommerce/constants/Support/MyTickets").default
         }
       />
       <AppStack.Screen
@@ -223,15 +249,39 @@ function AppNavigator() {
         }
       />
       <AppStack.Screen
+        name="AddAddressMap"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/AddAddressMapScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="AddressDetails"
+        getComponent={() =>
+          require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
+        }
+      />
+      <AppStack.Screen
         name="ChangePassword"
         getComponent={() =>
           require("../modules/common/auth/screens/ChangePasswordScreen").default
         }
       />
-       <AppStack.Screen
+      <AppStack.Screen
         name="GlobalSearchScreen"
         getComponent={() =>
           require("../modules/dashboard/dashboard/GlobalSearchScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="TrackOrders"
+        getComponent={() =>
+          require("../modules/dashboard/globalorder/TrackOrderScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="Notification"
+        getComponent={() =>
+          require("../modules/dashboard/notification/Notification").default
         }
       />
       

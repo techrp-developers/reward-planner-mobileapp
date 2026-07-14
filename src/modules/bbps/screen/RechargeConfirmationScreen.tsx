@@ -17,6 +17,7 @@ import { createBillPayOrder, verifyBillPayPayment } from '../api/BillsAPI';
 import { compareRechargePayloads } from '../utils/rechargeDebug';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAlert } from '../../ecommerce/components/alerts';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 // Last successful create-order payload, kept in memory for this session so
 // a failing payload (e.g. a different operator) can be diffed against it —
@@ -33,6 +34,7 @@ type OrderFailure = {
 
 const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
+const PAYMENT_MESSAGE_DURATION_MS = 10000;
 
 const getPlanId = (plan: any) =>
   String(plan?.planId || plan?.plan_id || plan?.id || plan?.recharge_plan_id || '');
@@ -46,6 +48,7 @@ const getPlanValidity = (plan: any) =>
 const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const { user } = useAuth();
   const alert = useAlert();
+  const bbpsTheme = useBbpsTheme();
   const [loading, setLoading] = useState(false);
   const [orderFailure, setOrderFailure] = useState<OrderFailure | null>(null);
   const params = useMemo(() => route?.params ?? {}, [route?.params]);
@@ -85,9 +88,9 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
     };
 
     try {
-      console.log('Create Recharge Order Payload:', payload);
+      __DEV__ && console.log('Create Recharge Order Payload:', payload);
       const response = await createBillPayOrder(payload);
-      console.log('Create Recharge Order Response:', response);
+      __DEV__ && console.log('Create Recharge Order Response:', response);
 
       if (response.success === false) {
         if (__DEV__ && lastSuccessfulOrderPayload) {
@@ -147,24 +150,38 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_signature: paymentResult.razorpay_signature,
       };
-      console.log('Verify Recharge Payment Payload:', verifyPayload);
+      __DEV__ && console.log('Verify Recharge Payment Payload:', verifyPayload);
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
-      console.log('Verify Recharge Payment Response:', verifyResponse);
+      __DEV__ && console.log('Verify Recharge Payment Response:', verifyResponse);
 
-      if (!verifyResponse?.success) {
+      // The backend can legitimately return success:false with a transaction_id
+      // when the payment was captured but bill processing is queued/retrying
+      // (HTTP 202) or already resolved by a webhook — the status screen still
+      // needs to open so the user can track that in-progress/refund state.
+      const transactionId = verifyResponse?.transaction_id ?? order.transaction_id;
+
+      if (verifyResponse?.success === false && !transactionId) {
         alert.warning(
           'Payment Verification Failed',
-          verifyResponse?.message || 'Unable to verify payment.'
+          verifyResponse?.message || 'Unable to verify payment.',
+          PAYMENT_MESSAGE_DURATION_MS
         );
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', {
-        transactionId: order.transaction_id,
-      });
+      navigation.navigate('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
+      // A rejected verify-payment call (e.g. HTTP 422 when the provider
+      // permanently rejected the transaction) still carries a transaction_id —
+      // route to the status screen instead of stranding the user on an alert.
+      const transactionId = error?.transaction_id;
+      if (transactionId) {
+        navigation.navigate('TransactionStatusScreen', { transactionId });
+        return;
+      }
+
       // Razorpay checkout cancellation/failure or verify-payment network error.
-      alert.error('Error', error?.message || 'Could not create recharge order.');
+      alert.error('Error', error?.message || 'Could not create recharge order.', PAYMENT_MESSAGE_DURATION_MS);
     } finally {
       setLoading(false);
     }
@@ -234,7 +251,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   }, [plan?.description, plan?.validity]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Confirm Recharge"
         onBackPress={() => navigation.goBack()}
@@ -245,9 +262,17 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.container}>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
             <LinearGradient
-              colors={[BRAND_START, BRAND_END]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.cardHeader}
@@ -264,24 +289,24 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             <View style={styles.cardBody}>
               <View style={styles.row}>
                 <View style={styles.labelWrap}>
-                  <MaterialIcons name="location-on" size={16} color="#8665FF" />
-                  <Text style={styles.label}>Circle</Text>
+                  <MaterialIcons name="location-on" size={16} color={bbpsTheme.colors.primary} />
+                  <Text style={[styles.label, { color: bbpsTheme.colors.muted }]}>Circle</Text>
                 </View>
-                <Text style={styles.value}>{params.circleName || params.circleId || '-'}</Text>
+                <Text style={[styles.value, { color: bbpsTheme.colors.text }]}>{params.circleName || params.circleId || '-'}</Text>
               </View>
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: bbpsTheme.colors.divider }]} />
               <View style={styles.row}>
                 <View style={styles.labelWrap}>
-                  <MaterialIcons name="event-available" size={16} color="#8665FF" />
-                  <Text style={styles.label}>Validity</Text>
+                  <MaterialIcons name="event-available" size={16} color={bbpsTheme.colors.primary} />
+                  <Text style={[styles.label, { color: bbpsTheme.colors.muted }]}>Validity</Text>
                 </View>
-                <Text style={styles.value}>{getPlanValidity(plan)}</Text>
+                <Text style={[styles.value, { color: bbpsTheme.colors.text }]}>{getPlanValidity(plan)}</Text>
               </View>
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: bbpsTheme.colors.divider }]} />
               <View style={styles.amountRow}>
-                <Text style={styles.amountLabel}>Total Amount</Text>
-                <View style={styles.amountPill}>
-                  <Text style={styles.amount}>Rs {amount || '-'}</Text>
+                <Text style={[styles.amountLabel, { color: bbpsTheme.colors.textStrong }]}>Total Amount</Text>
+                <View style={[styles.amountPill, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF', borderColor: bbpsTheme.colors.border }]}>
+                  <Text style={[styles.amount, { color: bbpsTheme.colors.primary }]}>Rs {amount || '-'}</Text>
                 </View>
               </View>
             </View>
@@ -324,10 +349,10 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             activeOpacity={0.85}
             disabled={loading}
             onPress={handleCreateOrder}
-            style={styles.buttonShadowWrap}
+            style={[styles.buttonShadowWrap, { backgroundColor: bbpsTheme.colors.primaryDark, shadowColor: bbpsTheme.colors.shadow }]}
           >
             <LinearGradient
-              colors={[BRAND_START, BRAND_END]}
+              colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={[styles.button, loading && styles.disabledButton]}
@@ -342,38 +367,46 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
               )}
             </LinearGradient>
           </TouchableOpacity>
-          <View style={styles.planBenefitsCard}>
+          <View
+            style={[
+              styles.planBenefitsCard,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                borderColor: bbpsTheme.colors.border,
+              },
+            ]}
+          >
             <View style={styles.sectionHeader}>
               <MaterialIcons
                 name="local-offer"
                 size={20}
-                color="#8665FF"
+                color={bbpsTheme.colors.primary}
               />
-              <Text style={styles.sectionTitle}>
+              <Text style={[styles.sectionTitle, { color: bbpsTheme.colors.textStrong }]}>
                 Plan Benefits
               </Text>
             </View>
 
             <View style={styles.benefitsWrap}>
               {benefits.map((item, index) => (
-                <View key={index} style={styles.benefitChip}>
+                <View key={index} style={[styles.benefitChip, { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF', borderColor: bbpsTheme.colors.border }]}>
                   <MaterialIcons
                     name={item.icon}
                     size={16}
-                    color="#8665FF"
+                    color={bbpsTheme.colors.primary}
                   />
-                  <Text style={styles.benefitText}>
+                  <Text style={[styles.benefitText, { color: bbpsTheme.colors.primary }]}>
                     {item.label}
                   </Text>
                 </View>
               ))}
             </View>
 
-            <Text style={styles.descriptionTitle}>
+            <Text style={[styles.descriptionTitle, { color: bbpsTheme.colors.textStrong }]}>
               Plan Description
             </Text>
 
-            <Text style={styles.descriptionText}>
+            <Text style={[styles.descriptionText, { color: bbpsTheme.colors.muted }]}>
               {plan?.description || 'No description available'}
             </Text>
           </View>

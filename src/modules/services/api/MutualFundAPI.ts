@@ -15,7 +15,7 @@ const api = axios.create({
 
 api.interceptors.response.use(
   response => {
-    console.log('[MF-API] <-- RESPONSE:', response.status, response.config.url);
+    __DEV__ && console.log('[MF-API] <-- RESPONSE:', response.status, response.config.url);
     return response;
   },
   error => {

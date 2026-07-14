@@ -15,9 +15,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
-import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview, getCheckoutPreview } from '../../api/CartAPI';
+import { getServiceCartItems, removeServiceCartItem, getBuyNowPreview } from '../../api/CartAPI';
 import BillDetailsCard from '../../../ecommerce/constants/itemcart/BillDetailsCard';
-import CouponsSection from '../../../ecommerce/constants/coupan/CouponsSection';
 import CheckoutSummary from '../../../ecommerce/components/ItemCardAddress/CheckoutSummary';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
 import { useAuth } from '../../../common/auth/context/AuthContext';
@@ -29,31 +28,11 @@ import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowBundlePreview } from '../../api/BundleAPI';
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const serviceCartItemsQueryKey = SERVICE_CART_QUERY_KEY;
-
-const SERVICE_COUPONS = [
-  {
-    id: 1,
-    code: 'SERV20',
-    title: 'Save 20% on your service order',
-    subtitle: 'Valid on all government document services',
-  },
-  {
-    id: 2,
-    code: 'FIRSTSERV',
-    title: 'Extra ₹100 off on first service booking',
-    subtitle: 'New users only. Limited time offer.',
-  },
-  {
-    id: 3,
-    code: 'BUNDLE50',
-    title: 'Save ₹50 when bundling 2+ services',
-    subtitle: 'Add more services to unlock this discount',
-  },
-];
 
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -66,11 +45,28 @@ type ServiceCartItem = {
   description: string;
   price: number;
   mrp: number;
+  imageUrl?: string;
   documents: string[];
   isBundle?: boolean;
   bundle_id?: number;
   bundle_items?: any[];
 
+};
+
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sumBundleItemPrices = (items: any[], fields: string[]): number => {
+  return items.reduce((total, item) => {
+    const field = fields.find((key) => item?.[key] !== undefined && item?.[key] !== null);
+    return total + parseMoney(field ? item?.[field] : 0);
+  }, 0);
 };
 
 // const parsePositiveId = (value: unknown): number | null => {
@@ -79,14 +75,26 @@ type ServiceCartItem = {
 // };
 
 const normalizeCartItems = (response: any): ServiceCartItem[] => {
-  const bundles = response?.data?.bundles || [];
-  const individualItems = response?.data?.individual_items || [];
+  // getServiceCartItems() returns a flat { bundles, individual_items } shape;
+  // getCheckoutPreview() nests the same shape under .data. Handle both.
+  const data = response?.data ?? response ?? {};
+  const bundles = data?.bundles || [];
+  const individualItems = data?.individual_items || [];
 
   const normalized: ServiceCartItem[] = [];
 
   // ✅ Handle Bundles as SINGLE ITEM
   bundles.forEach((bundle: any) => {
     const bundleItems = bundle.items || [];
+    const selectedItemsTotal = sumBundleItemPrices(bundleItems, ['price']);
+    const selectedItemsMrp = sumBundleItemPrices(bundleItems, [
+      'individual_price',
+      'mrp',
+      'original_price',
+      'price',
+    ]);
+    const displayPrice = selectedItemsTotal || parseMoney(bundle.bundle_total);
+    const displayMrp = selectedItemsMrp || displayPrice;
 
     // ✅ Collect all documents
 
@@ -107,16 +115,17 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       service_id: null,
       variant_id: null,
 
-      // ✅ Better title
-      service_name: `Bundle (${bundleItems.length} Services)`,
+      // ✅ Real bundle name from backend, falling back to a generic label
+      service_name: bundle.bundle_name || `Bundle (${bundleItems.length} Services)`,
 
       variant_name: "Bundle Pack",
 
-      // ✅ Cleaner description
-      description: `${bundleItems.length} services included`,
+      // ✅ Real bundle description, falling back to item count
+      description: bundle.bundle_description || `${bundleItems.length} services included`,
 
-      price: Number(bundle.bundle_total || 0),
-      mrp: Number(bundle.bundle_total || 0),
+      price: displayPrice,
+      mrp: Math.max(displayMrp, displayPrice),
+      imageUrl: bundle.bundle_image ? String(bundle.bundle_image) : undefined,
 
       // 🔥 FIXED (no duplicate docs)
       documents: uniqueDocs,
@@ -138,6 +147,9 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       description: item.title,
       price: Number(item.price),
       mrp: Number(item.price),
+      imageUrl: item.image_url || item.variant_image
+        ? String(item.image_url || item.variant_image)
+        : undefined,
       documents: (item.documents || []).map((d: any) => d.document_name),
 
       isBundle: false,
@@ -149,18 +161,27 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
 
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
-  const stickyCTA = useStickyBottomCTA();
+  const servicesTheme = useServicesTheme();
+  // MainLayout already reserves space for the services-module bottom bar via
+  // paddingBottom on the content wrapper, so the CTA must not also offset by
+  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
+  // the bottom bar with a visible gap instead of sitting right on top of it.
+  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
-  const [items, setItems] = useState<ServiceCartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedCartItems = useMemo(() => {
+    const cached = queryClient.getQueryData(serviceCartItemsQueryKey);
+    return cached ? normalizeCartItems(cached) : [];
+  }, [queryClient]);
+  const [items, setItems] = useState<ServiceCartItem[]>(cachedCartItems);
+  const [loading, setLoading] = useState(cachedCartItems.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | number | null>(null);
-  const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null); const [showAllCoupons, setShowAllCoupons] = useState(false);
+  const [buyNowLoadingId, setBuyNowLoadingId] = useState<string | number | null>(null);
   const [error, setError] = useState('');
 
-  const { data: addressData, isFetching: isAddressFetching } = useQuery({
+  const { data: addressData } = useQuery({
     queryKey: addressesQueryKey,
     queryFn: fetchAllAddress,
     enabled: isAuthenticated,
@@ -190,41 +211,18 @@ function CartScreen() {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(true);
+        setLoading(items.length === 0);
       }
 
-      // Prefer checkout-preview: it includes service_id & variant_id (needed for Buy Now).
-      // Fall back to cart-items endpoint if preview fails or returns empty.
-      let response: any;
-      try {
-        response = await getCheckoutPreview();
-      } catch {
-        response = await getServiceCartItems();
-      }
-
-      let normalized = normalizeCartItems(response);
-
-      // checkout-preview may report empty if the cart was consumed by an order.
-      // In that case, fall back to cart-items so the screen still shows products.
-      if (normalized.length === 0) {
-        try {
-          const cartResponse = await getServiceCartItems();
-          const fallback = normalizeCartItems(cartResponse);
-          if (fallback.length > 0) {
-            setItems(fallback);
-            queryClient.setQueryData(serviceCartItemsQueryKey, cartResponse);
-            setError('');
-            return;
-          }
-          normalized = fallback;
-          response = cartResponse;
-        } catch {
-          // ignore fallback errors; keep normalized as empty
-        }
-      }
+      const response = await getServiceCartItems();
+      const normalized = normalizeCartItems(response);
 
       setItems(normalized);
       queryClient.setQueryData(serviceCartItemsQueryKey, response);
+      // Prefix-invalidate so the count subkey ([...key, 'count']) used by
+      // useServiceCartCount also refetches — setQueryData only updates the
+      // exact key and does not propagate to sub-keys on its own.
+      queryClient.invalidateQueries({ queryKey: serviceCartItemsQueryKey });
       setError('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to fetch cart items.';
@@ -233,7 +231,7 @@ function CartScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [queryClient]);
+  }, [items.length, queryClient]);
 
   useEffect(() => {
     loadCart();
@@ -242,8 +240,8 @@ function CartScreen() {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
     animation.start();
@@ -263,12 +261,9 @@ function CartScreen() {
         return;
       }
 
-      const selected_items = item.bundle_items.map((i: any) => Number(i.id));
-
-      console.log("📦 Bundle Buy Now:", {
-        bundle_id: item.bundle_id,
-        selected_items,
-      });
+      const selected_items = item.bundle_items
+        .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
 
       const previewData = await getBuyNowBundlePreview({
         bundle_id: item.bundle_id,
@@ -279,6 +274,7 @@ function CartScreen() {
         mode: 'buy_now', // ✅ SAME MODE
         previewData,     // ✅ IMPORTANT
         bundle_id: item.bundle_id,
+        selected_items,
       });
 
       return;
@@ -304,8 +300,8 @@ function CartScreen() {
       previewData,
     });
 
-  } catch (error) {
-    console.error("❌ Buy Now Error:", error);
+  } catch (buyNowError) {
+    console.error("❌ Buy Now Error:", buyNowError);
 
     // fallback navigation
     navigation.navigate('ServiceCheckoutScreen', {
@@ -321,12 +317,12 @@ function CartScreen() {
     try {
       setBusyItemId(item.id as any);
 
-      if (item.isBundle && item.bundle_items) {
-        await Promise.all(
-          item.bundle_items.map((i: any) =>
-            removeServiceCartItem(i.id)
-          )
-        );
+      if (item.isBundle && item.bundle_items && item.bundle_items.length > 0) {
+        // Removing any one bundle item deletes the whole bundle server-side
+        // (see serviceCartModel.removeItem) — calling this per item in
+        // parallel just races duplicate deletes against an already-removed
+        // row, producing spurious 404s. One call is enough.
+        await removeServiceCartItem(item.bundle_items[0].id);
       } else {
         await removeServiceCartItem(item.id as number);
       }
@@ -361,9 +357,9 @@ function CartScreen() {
     });
   }, [navigation]);
 
-  const showInitialSkeleton =
-    loading ||
-    (isAuthenticated && items.length === 0 && !error && isAddressFetching && !addressData);
+  // Address loading must not block the service cart. Users can proceed to
+  // checkout without one and select an address before placing the order.
+  const showInitialSkeleton = loading;
 
   const renderItem = useCallback(({ item }: { item: ServiceCartItem }) => (
     <CartCard
@@ -373,6 +369,7 @@ function CartScreen() {
       description={item.description}
       price={item.price}
       mrp={item.mrp}
+      imageUrl={item.imageUrl}
       documents={item.documents}
       isBundle={item.isBundle} // ✅ ADD THIS
 
@@ -387,6 +384,7 @@ function CartScreen() {
 
   const footer = useMemo(() => (
     <>
+      {/* ── Coupons & Offers (temporarily disabled) ──────────────────────
       <View style={styles.wrapper}>
         <View style={styles.headerRow}>
           <Text style={styles.headerText}>Coupons and Offers</Text>
@@ -396,6 +394,7 @@ function CartScreen() {
         </View>
         <CouponsSection coupons={showAllCoupons ? SERVICE_COUPONS : SERVICE_COUPONS.slice(0, 1)} />
       </View>
+      ── end Coupons & Offers ───────────────────────────────────────── */}
       <BillDetailsCard
         subtotal={totals.subtotal}
         totalDiscount={totals.discount}
@@ -403,11 +402,11 @@ function CartScreen() {
       />
       <View style={styles.listBottomSpace} />
     </>
-  ), [showAllCoupons, totals]);
+  ), [totals]);
 
   if (!loading && !error && !refreshing && items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart
           onBrowse={() => navigation.goBack()}
@@ -419,7 +418,7 @@ function CartScreen() {
 
   if (showInitialSkeleton) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
@@ -434,11 +433,11 @@ function CartScreen() {
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <View style={styles.centeredWrap}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadCart()}>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: servicesTheme.colors.textStrong }]} onPress={() => loadCart()}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -447,7 +446,7 @@ function CartScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
       <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
 
       <FlatList
@@ -472,7 +471,8 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
-        bottomOffset={stickyCTA.bottomOffset}
+        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
+        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

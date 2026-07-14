@@ -1,18 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Share, View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SelectableServiceCard from '../government/SelectableServiceCard';
 import { getServiceImageUrl } from '../../utils/serviceImage';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type VariantItem = {
     id: string;
     title: string;
+    planTitle?: string;
     price: string;
     oldPrice: string;
     subtitle?: string;
     rawVariant?: any;
 };
+
+const DEFAULT_VARIANTS: VariantItem[] = [];
+const ImageHeader = require('../../assete/service/FolderService.png');
 
 
 
@@ -27,20 +32,23 @@ type ServiceCartProps = {
     primaryButtonText?: string;
     onPrimaryPress?: () => void;
     onAddToCart?: () => void;
+    showAddToCart?: boolean;
 };
 
 export default function ServiceCart({
     headerImageUrl,
     mainTitle,
     subText,
-    rating = 4.3,
+    rating = 0,
     variants,
     onVariantChange,
     showVariantSelector = true,
     primaryButtonText: primaryButtonTextProp,
     onPrimaryPress,
     onAddToCart,
+    showAddToCart = true,
 }: ServiceCartProps) {
+    const servicesTheme = useServicesTheme();
     const services = useMemo(() => {
         if (Array.isArray(variants)) {
             return variants;
@@ -75,7 +83,9 @@ export default function ServiceCart({
         : ImageHeader;
 
     const parsedRating = Number(rating);
-    const numericRating = Number.isFinite(parsedRating) && parsedRating > 0 ? parsedRating : 4.3;
+    const numericRating = Number.isFinite(parsedRating)
+        ? Math.min(5, Math.max(0, parsedRating))
+        : 0;
 
     const primaryButtonText = primaryButtonTextProp ?? (() => {
         const rawPrice = selectedService?.price;
@@ -88,8 +98,15 @@ export default function ServiceCart({
         return `${rawPrice} + Get Start`;
     })();
 
+    const handleShare = () => {
+        Share.share({
+            title: mainTitle || 'Service',
+            message: [mainTitle, subText].filter(Boolean).join('\n'),
+        }).catch(() => {});
+    };
+
     return (
-        <ScrollView style={styles.mainContainer}>
+        <ScrollView style={[styles.mainContainer, { backgroundColor: servicesTheme.colors.background }]}>
             {/* 1. Main Image Section with Discount Badge */}
             <View style={styles.imageContainer}>
                 <Image
@@ -98,20 +115,20 @@ export default function ServiceCart({
                     resizeMode="cover"
                 />
 
-                <LinearGradient
+                {/* <LinearGradient
                     colors={['#FDF4A3', '#FEDB7C']}
                     start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
                     style={styles.discountBadge}
                 >
                     <Text style={styles.discountText}>Upto 48% Off</Text>
-                </LinearGradient>
+                </LinearGradient> */}
 
-                <TouchableOpacity style={styles.shareButton}>
+                {/* <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
                     <MaterialCommunityIcons name="share-variant-outline" size={24} color="#374151" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
-            <View style={styles.contentPadding}>
+            <View style={[styles.contentPadding, { backgroundColor: servicesTheme.colors.background }]}>
                 {/* 2. Horizontal Service Selector */}
                 {showVariantSelector && services.length > 1 && (
                     <ScrollView
@@ -132,26 +149,37 @@ export default function ServiceCart({
 
                 {/* 3. Description Section */}
                 <View style={styles.descriptionHeader}>
-                    <Text style={styles.mainTitle}>
+                    <Text style={[styles.mainTitle, { color: servicesTheme.colors.textStrong }]}>
                         {mainTitle || selectedService?.title}
                     </Text>
 
                     <View style={styles.ratingRow}>
-                        <Text style={styles.ratingText}>{numericRating.toFixed(1)}</Text>
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star" size={16} color="#FBBF24" />
-                        <MaterialCommunityIcons name="star-half-full" size={16} color="#FBBF24" />
+                        <Text style={[styles.ratingText, { color: servicesTheme.colors.textStrong }]}>{numericRating.toFixed(1)}</Text>
+                        {[1, 2, 3, 4, 5].map((star) => {
+                            const iconName = numericRating >= star
+                                ? 'star'
+                                : numericRating >= star - 0.5
+                                    ? 'star-half-full'
+                                    : 'star-outline';
+
+                            return (
+                                <MaterialCommunityIcons
+                                    key={star}
+                                    name={iconName}
+                                    size={16}
+                                    color="#FBBF24"
+                                />
+                            );
+                        })}
                     </View>
                 </View>
 
-                <Text style={styles.subText}>
+                <Text style={[styles.subText, { color: servicesTheme.colors.muted }]}>
                     {selectedService?.subtitle || subText || 'Complete assistance from application to delivery for your document needs.'}
                 </Text>
 
                 {/* 4. Renewal Offer Banner */}
-                <LinearGradient
+                {/* <LinearGradient
                     colors={['#FEEEAC', '#FDD174']}
                     style={styles.offerBanner}
                     start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
@@ -159,25 +187,31 @@ export default function ServiceCart({
                     <MaterialCommunityIcons name="gift" size={24} color="#B45309" />
                     <View style={styles.offerTextCol}>
                         <Text style={styles.offerTitle}>Upto 48% Off on renewal</Text>
-                        <Text style={styles.offerSub}>Offer valid today</Text>
+                        <Text style={styles.offerSub}>Apply before the offer ends</Text>
                     </View>
                     <View style={styles.offerBadge}>
-                        <Text style={styles.offerBadgeText}>Offer valid today</Text>
+                        <Text style={styles.offerBadgeText}>Today Only</Text>
                     </View>
-                </LinearGradient>
+                </LinearGradient> */}
 
                 {/* 5. Action Buttons */}
-                <TouchableOpacity activeOpacity={0.9} onPress={onPrimaryPress}>
-                    <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.primaryButton}>
+                <TouchableOpacity activeOpacity={0.9} onPress={onPrimaryPress} style={styles.primaryButtonShadow}>
+                    <LinearGradient colors={servicesTheme.gradients.primary} style={styles.primaryButton}>
                         <Text style={styles.buttonText}>{primaryButtonText}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.outlineButtonBorder} onPress={onAddToCart} activeOpacity={0.9}>
-                    <View style={styles.outlineButtonInner}>
-                        <Text style={styles.outlineButtonText}>Add To Cart</Text>
-                    </View>
-                </TouchableOpacity>
+                {showAddToCart && (
+                    <TouchableOpacity
+                        style={[styles.outlineButtonBorder, { backgroundColor: servicesTheme.colors.primary }]}
+                        onPress={onAddToCart}
+                        activeOpacity={0.9}
+                    >
+                        <View style={[styles.outlineButtonInner, { backgroundColor: servicesTheme.colors.surface }]}>
+                            <Text style={[styles.outlineButtonText, { color: servicesTheme.colors.primary }]}>Add To Cart</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
             </View>
         </ScrollView>
     );
@@ -215,26 +249,31 @@ const styles = StyleSheet.create({
     priceRow: { flexDirection: 'row', alignItems: 'center' },
     currentPrice: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginRight: 6 },
     oldPrice: { fontSize: 12, color: '#9CA3AF', textDecorationLine: 'line-through' },
-    descriptionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, marginTop: 16 },
-    mainTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+    descriptionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, marginTop: 18 },
+    mainTitle: { fontSize: 19, fontWeight: '800', color: '#111827', flex: 1, marginRight: 10, letterSpacing: -0.2 },
     ratingRow: { flexDirection: 'row', alignItems: 'center' },
-    subText: { color: '#6B7280', lineHeight: 20, marginBottom: 24 },
+    subText: { color: '#6B7280', lineHeight: 20, marginBottom: 22, fontSize: 13.5 },
     offerBanner: {
-        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 24,
+        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 24,
+        shadowColor: '#B45309', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 2,
     },
     offerTextCol: { marginLeft: 12, flex: 1 },
-    offerTitle: { fontWeight: 'bold', color: '#92400E' },
-    offerSub: { fontSize: 12, color: '#B45309' },
-    primaryButton: {
-        height: 54, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+    offerTitle: { fontWeight: '700', color: '#92400E', fontSize: 14 },
+    offerSub: { fontSize: 12, color: '#B45309', marginTop: 2 },
+    primaryButtonShadow: {
+        borderRadius: 14, marginBottom: 12,
+        shadowColor: '#5B47A3', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 5,
     },
-    buttonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+    primaryButton: {
+        height: 54, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
+    },
+    buttonText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
     outlineButtonBorder: {
-        height: 54, borderRadius: 12, padding: 1.5,
+        height: 54, borderRadius: 14, padding: 1.5,
         backgroundColor: '#8665FF', // Fallback for the border gradient logic
     },
     outlineButtonInner: {
-        flex: 1, backgroundColor: '#FFF', borderRadius: 11, justifyContent: 'center', alignItems: 'center',
+        flex: 1, backgroundColor: '#FFF', borderRadius: 13, justifyContent: 'center', alignItems: 'center',
     },
     outlineButtonText: { color: '#8665FF', fontSize: 16, fontWeight: 'bold' },
     offerBadge: {

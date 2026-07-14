@@ -1,14 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Share, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient'; // Ensure this package is installed
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
-const RechargeSuccessCard = () => {
+type RechargeSuccessCardProps = {
+  onPayAnother?: () => void;
+};
+
+const RechargeSuccessCard = ({ onPayAnother }: RechargeSuccessCardProps) => {
+  const bbpsTheme = useBbpsTheme();
+
+  const handleShare = () => {
+    Share.share({
+      title: 'Recharge successful',
+      message: 'DTH recharge of customer 736263728 was successful.',
+    }).catch(() => {});
+  };
+
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* Main Card with specified top-to-bottom gradient */}
       <LinearGradient
-        colors={['#FBFFFC', '#E2FFE9']}
+        colors={bbpsTheme.isDark ? ['#111113', '#132016'] : ['#FBFFFC', '#E2FFE9']}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={styles.cardContainer}
@@ -17,8 +31,8 @@ const RechargeSuccessCard = () => {
           {/* Header Section */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.successTitle}>DTH Recharge Successful</Text>
-              <Text style={styles.dateTimeText}>19-01-2026, 9:01 AM</Text>
+              <Text style={[styles.successTitle, { color: bbpsTheme.colors.textStrong }]}>DTH Recharge Successful</Text>
+              <Text style={[styles.dateTimeText, { color: bbpsTheme.colors.muted }]}>19-01-2026, 9:01 AM</Text>
             </View>
             
             {/* Green Success Checkmark Badge */}
@@ -39,22 +53,22 @@ const RechargeSuccessCard = () => {
               <Text style={styles.logoText}>d2h</Text>
             </View>
             <View>
-              <Text style={styles.billerName}>D2H</Text>
-              <Text style={styles.customerID}>736263728</Text>
+              <Text style={[styles.billerName, { color: bbpsTheme.colors.textStrong }]}>D2H</Text>
+              <Text style={[styles.customerID, { color: bbpsTheme.colors.muted }]}>736263728</Text>
               <Text style={styles.paidStatus}>Paid</Text>
             </View>
           </View>
 
-          <View style={styles.separator} />
+          <View style={[styles.separator, { backgroundColor: bbpsTheme.colors.divider }]} />
 
           {/* Buttons Row */}
           <View style={styles.buttonRow}>
             {/* "Pay Another Bill" with specified gradient */}
-            <TouchableOpacity activeOpacity={0.8}>
+            <TouchableOpacity activeOpacity={0.8} onPress={onPayAnother}>
               <LinearGradient
                 start={{ x: 1, y: 0.5 }}
                 end={{ x: 0, y: 0.5 }}
-                colors={['#5B47A3', '#8665FF']}
+                colors={bbpsTheme.gradients.primary}
                 style={styles.payAnotherButton}
               >
                 <Text style={styles.payAnotherText}>Pay Another Bill</Text>
@@ -62,8 +76,17 @@ const RechargeSuccessCard = () => {
             </TouchableOpacity>
 
             {/* Share Button */}
-            <TouchableOpacity style={styles.shareButton}>
-              <Text style={styles.shareText}>Share</Text>
+            <TouchableOpacity
+              style={[
+                styles.shareButton,
+                {
+                  backgroundColor: bbpsTheme.colors.surface,
+                  borderColor: bbpsTheme.colors.primary,
+                },
+              ]}
+              onPress={handleShare}
+            >
+              <Text style={[styles.shareText, { color: bbpsTheme.colors.primary }]}>Share</Text>
             </TouchableOpacity>
           </View>
         </View>

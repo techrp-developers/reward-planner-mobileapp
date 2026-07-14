@@ -15,18 +15,20 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../../modules/ecommerce/navigation/types';
 import { fetchNewArrivals } from '../../ecommerce/api/PromotionalApi';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 const CARD_WIDTH = 160; // Increased width for aesthetic spacing
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+type BbpsTheme = ReturnType<typeof useBbpsTheme>;
 
 // Aesthetic Gradient Text Component
-const GradientText = ({ text }: { text: string }) => (
+const GradientText = ({ text, bbpsTheme }: { text: string; bbpsTheme: BbpsTheme }) => (
   <MaskedView
     maskElement={<Text style={styles.viewMoreText}>{text}</Text>}
   >
     <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
+      colors={bbpsTheme.gradients.primary}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
     >
@@ -37,6 +39,7 @@ const GradientText = ({ text }: { text: string }) => (
 
 function RewardProductCard() {
   const navigation = useNavigation<Nav>();
+  const bbpsTheme = useBbpsTheme();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,8 +48,8 @@ function RewardProductCard() {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();
@@ -124,11 +127,11 @@ function RewardProductCard() {
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Rewards</Text>
+        <Text style={[styles.heading, { color: bbpsTheme.colors.textStrong }]}>Rewards</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ProductScreen')}>
-          <GradientText text="View More" />
+          <GradientText text="View More" bbpsTheme={bbpsTheme} />
         </TouchableOpacity>
       </View>
 
@@ -139,8 +142,18 @@ function RewardProductCard() {
       >
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <View key={`skeleton-${i}`} style={styles.cardContainer}>
-                <View style={styles.imageSection}>
+              <View
+                key={`skeleton-${i}`}
+                style={[
+                  styles.cardContainer,
+                  {
+                    backgroundColor: bbpsTheme.colors.surface,
+                    borderColor: bbpsTheme.colors.border,
+                    shadowColor: bbpsTheme.colors.shadow,
+                  },
+                ]}
+              >
+                <View style={[styles.imageSection, { backgroundColor: bbpsTheme.colors.iconBg }]}>
                   <SkeletonBox pulse={pulse} width="100%" height={120} borderRadius={0} />
                 </View>
                 <View style={styles.detailsSection}>
@@ -150,19 +163,29 @@ function RewardProductCard() {
               </View>
             ))
           : products.map((item) => (
-          <View key={item.id} style={styles.cardContainer}>
+          <View
+            key={item.id}
+            style={[
+              styles.cardContainer,
+              {
+                backgroundColor: bbpsTheme.colors.surface,
+                borderColor: bbpsTheme.colors.border,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
             {/* Top Image Section */}
-            <View style={styles.imageSection}>
+            <View style={[styles.imageSection, { backgroundColor: bbpsTheme.colors.iconBg }]}>
                <Image source={{ uri: item.image }} style={styles.productImg} />
-               <View style={styles.brandBadge}>
-                  <Text style={styles.brandBadgeText}>{item.brandLogo}</Text>
+               <View style={[styles.brandBadge, { backgroundColor: bbpsTheme.isDark ? 'rgba(17,17,19,0.92)' : 'rgba(255,255,255,0.9)' }]}>
+                  <Text style={[styles.brandBadgeText, { color: bbpsTheme.colors.text }]}>{item.brandLogo}</Text>
                </View>
             </View>
             
             {/* Bottom Text Section */}
             <View style={styles.detailsSection}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardSubTitle} numberOfLines={2}>
+              <Text style={[styles.cardTitle, { color: bbpsTheme.colors.textStrong }]}>{item.title}</Text>
+              <Text style={[styles.cardSubTitle, { color: bbpsTheme.colors.muted }]} numberOfLines={2}>
                 {item.sub}
               </Text>
             </View>

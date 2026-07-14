@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
+  Modal,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -22,6 +24,7 @@ import {
   getAuthHeaders,
   isAuthenticated,
 } from "../../../common/auth/api/AuthAPI";
+import { useServicesTheme } from "../../utils/useServicesTheme";
 
 type FormData = {
   gender: string;
@@ -97,103 +100,7 @@ function formatDobInput(raw: string) {
   return `${p1}/${p2}/${p3}`;
 }
 
-// Professional City Input Dropdown Component
-const CityInputDropdown: React.FC<{
-  selectedCity: string | undefined;
-  searchTerm: string;
-  onSearchChange: (text: string) => void;
-  onCitySelect: (city: string) => void;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  filteredCities: string[];
-}> = ({
-  selectedCity,
-  searchTerm,
-  onSearchChange,
-  onCitySelect,
-  isOpen,
-  setIsOpen,
-  filteredCities,
-}) => {
-  return (
-    <View style={styles.cityInputWrapper}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsOpen(!isOpen)}
-        style={[styles.cityCard, isOpen && styles.cityCardFocused]}
-      >
-        <View style={styles.cityLeft}>
-          <View
-            style={[
-              styles.cityIconCircle,
-              selectedCity && styles.cityIconCircleActive,
-            ]}
-          >
-            <MaterialIcons name="location-city" size={24} color="#8665FF" />
-          </View>
-          <View style={styles.cityTextContainer}>
-            <Text style={styles.cityLabel}>City</Text>
-            <Text style={styles.citySubLabel}>Select your location</Text>
-          </View>
-        </View>
-
-        <View style={[styles.cityInputBox, isOpen && styles.cityInputActive]}>
-          <TextInput
-            style={styles.cityInput}
-            placeholder="Search"
-            value={searchTerm || (selectedCity ? selectedCity : "")}
-            onChangeText={onSearchChange}
-            onFocus={() => setIsOpen(true)}
-            placeholderTextColor="#B0B0B5"
-          />
-          <MaterialIcons
-            name={isOpen ? "expand-less" : "expand-more"}
-            size={18}
-            color="#8665FF"
-          />
-        </View>
-      </TouchableOpacity>
-
-      {isOpen && (
-        <View style={styles.cityDropdownContainer}>
-          <FlatList
-            data={filteredCities}
-            keyExtractor={(item) => item}
-            scrollEnabled={false}
-            maxToRenderPerBatch={15}
-            updateCellsBatchingPeriod={50}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.cityListItem,
-                  selectedCity === item && styles.cityListItemSelected,
-                ]}
-                onPress={() => {
-                  onCitySelect(item);
-                  setIsOpen(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.cityListItemText,
-                    selectedCity === item && styles.cityListItemTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-                {selectedCity === item && (
-                  <MaterialIcons name="check" size={18} color="#8665FF" />
-                )}
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-    </View>
-  );
-};
-
-export default function Step2PA({ data, setData, onNext, onBack }: Props) {  const insets = useSafeAreaInsets();  const [citySearchTerm, setCitySearchTerm] = useState("");
+export default function Step2PA({ data, setData, onNext, onBack }: Props) {  const insets = useSafeAreaInsets();  const servicesTheme = useServicesTheme();  const [citySearchTerm, setCitySearchTerm] = useState("");
   const [filteredCities, setFilteredCities] = useState<string[]>(CITIES);
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -223,7 +130,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         await getAuthHeaders();
 
         const userInfo = await fetchUserInfo();
-        console.log("📱 Step2PA - User Info Received:", userInfo);
+        __DEV__ && console.log("📱 Step2PA - User Info Received:", userInfo);
 
         if (userInfo?.user) {
           const user = userInfo.user;
@@ -329,30 +236,33 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
 
   if (checking) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: servicesTheme.colors.background }]}>
         <View style={styles.centerContainer}>
-          <MaterialIcons name="lock-outline" size={50} color="#8665FF" />
-          <Text style={styles.loadingText}>Verifying authentication...</Text>
+          <MaterialIcons name="lock-outline" size={50} color={servicesTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>Verifying authentication...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const FOOTER_HEIGHT = 88; // back button (56) + padding (20) + gap (12)
+  const FOOTER_HEIGHT = 84; // back button (52) + padding (20) + gap (12)
+  const SCREEN_HEIGHT = Dimensions.get("window").height;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: servicesTheme.colors.background }]}>
       <LinearGradient
-        colors={["#F7F3FF", "#EFE7FF", "#EDE9FE"]}
+        colors={servicesTheme.isDark ? ["#09090B", "#111113", "#18181B"] : ["#F7F3FF", "#EFE7FF", "#EDE9FE"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
       >
       <KeyboardAwareScrollView
+        style={styles.keyboardAvoidingView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
           {
+            minHeight: SCREEN_HEIGHT + FOOTER_HEIGHT + insets.bottom,
             paddingBottom: FOOTER_HEIGHT + insets.bottom + 24,
           },
         ]}
@@ -361,8 +271,8 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         extraScrollHeight={Platform.OS === "ios" ? 16 : 120}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Personal Details</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Personal Details</Text>
+          <Text style={[styles.headerSubtitle, { color: servicesTheme.colors.muted }]}>
             This information helps us personalize your insurance quotes.
           </Text>
         </View>
@@ -370,11 +280,12 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         <View style={styles.formContainer}>
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>First Name *</Text>
-                <View style={styles.inputBox}>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>First Name *</Text>
+                <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: servicesTheme.colors.text }]}
                     placeholder="Enter first name"
+                    placeholderTextColor={servicesTheme.colors.subtle}
                     value={data.details.firstName}
                     onChangeText={(v) => handleInputChange("firstName", v)}
                   />
@@ -384,11 +295,12 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
               <View style={styles.spacer} />
 
               <View style={styles.flex1}>
-                <Text style={styles.label}>Last Name *</Text>
-                <View style={styles.inputBox}>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Last Name *</Text>
+                <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: servicesTheme.colors.text }]}
                     placeholder="Enter last name"
+                    placeholderTextColor={servicesTheme.colors.subtle}
                     value={data.details.lastName}
                     onChangeText={(v) => handleInputChange("lastName", v)}
                   />
@@ -398,16 +310,18 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>Date of Birth *</Text>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Date of Birth *</Text>
                 <View
                   style={[
                     styles.inputBox,
+                    { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow },
                     !isDobValid && dobDisplay.length > 0 ? styles.inputErrorBox : null,
                   ]}
                 >
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: servicesTheme.colors.text }]}
                     placeholder="DD/MM/YYYY"
+                    placeholderTextColor={servicesTheme.colors.subtle}
                     keyboardType="number-pad"
                     value={dobDisplay}
                     onChangeText={handleDobChange}
@@ -416,7 +330,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
                   <MaterialIcons
                     name="calendar-today"
                     size={18}
-                    color="#8665FF"
+                    color={servicesTheme.colors.primary}
                   />
                 </View>
                 {!isDobValid && dobDisplay.length > 0 && (
@@ -427,11 +341,12 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
               <View style={styles.spacer} />
 
               <View style={styles.flex1}>
-                <Text style={styles.label}>Mobile Number *</Text>
-                <View style={styles.inputBox}>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Mobile Number *</Text>
+                <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                   <TextInput
-                    style={[styles.textInput, styles.mobileInput]}
+                    style={[styles.textInput, styles.mobileInput, { color: servicesTheme.colors.text }]}
                     placeholder="Enter mobile number"
+                    placeholderTextColor={servicesTheme.colors.subtle}
                     keyboardType="phone-pad"
                     maxLength={10}
                     value={data.details.mobileNumber}
@@ -439,18 +354,19 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
                       handleInputChange("mobileNumber", v.replace(/\D/g, ""))
                     }
                   />
-                  <MaterialIcons name="phone" size={18} color="#8665FF" />
+                  <MaterialIcons name="phone" size={18} color={servicesTheme.colors.primary} />
                 </View>
               </View>
             </View>
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>Pincode *</Text>
-                <View style={styles.inputBox}>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Pincode *</Text>
+                <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: servicesTheme.colors.text }]}
                     placeholder="Enter pincode"
+                    placeholderTextColor={servicesTheme.colors.subtle}
                     keyboardType="numeric"
                     maxLength={6}
                     value={data.details.pincode}
@@ -464,9 +380,9 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
               <View style={styles.spacer} />
 
               <View style={styles.flex1}>
-                <Text style={styles.label}>Zone</Text>
-                <View style={[styles.inputBox, styles.disabledBox]}>
-                  <Text style={[styles.textInput, styles.disabledText]}>
+                <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Zone</Text>
+                <View style={[styles.inputBox, styles.disabledBox, { backgroundColor: servicesTheme.colors.surfaceAlt, borderColor: servicesTheme.colors.border }]}>
+                  <Text style={[styles.textInput, styles.disabledText, { color: servicesTheme.colors.subtle }]}>
                     {data.details.zone || "Auto-filled"}
                   </Text>
                 </View>
@@ -474,34 +390,79 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
             </View>
 
             <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>City *</Text>
-              <CityInputDropdown
-                selectedCity={data.details.city}
-                searchTerm={citySearchTerm}
-                onSearchChange={handleCityChange}
-                onCitySelect={handleCitySelect}
-                isOpen={isCityDropdownOpen}
-                setIsOpen={setIsCityDropdownOpen}
-                filteredCities={filteredCities}
-              />
+              <Text style={[styles.label, { color: servicesTheme.colors.text }]}>City *</Text>
+              <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
+                <TextInput
+                  style={[styles.textInput, { color: servicesTheme.colors.text }]}
+                  placeholder="Search or select city"
+                  placeholderTextColor={servicesTheme.colors.subtle}
+                  value={data.details.city || citySearchTerm}
+                  onChangeText={handleCityChange}
+                  onFocus={() => setIsCityDropdownOpen(true)}
+                />
+                <TouchableOpacity onPress={() => setIsCityDropdownOpen(true)}>
+                  <MaterialIcons name="location-city" size={18} color={servicesTheme.colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
       </KeyboardAwareScrollView>
 
-      <View style={[styles.footer, { paddingBottom: 20 + insets.bottom }]}>
+      <View style={[
+        styles.footer,
+        {
+          paddingBottom: 20 + insets.bottom,
+          backgroundColor: servicesTheme.isDark ? "rgba(17,17,19,0.96)" : "rgba(255,255,255,0.95)",
+          borderTopColor: servicesTheme.colors.divider,
+        },
+      ]}>
         <View style={styles.footerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <MaterialIcons name="keyboard-backspace" size={24} color="#8665FF" />
+          <TouchableOpacity style={[styles.backButton, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]} onPress={onBack}>
+            <MaterialIcons name="keyboard-backspace" size={24} color={servicesTheme.colors.primary} />
           </TouchableOpacity>
           <View style={styles.footerButtonWrapper}>
             <GradientButton
               title="Continue"
               onPress={handleContinue}
               disabled={!isFormValid}
+              style={styles.continueButton}
             />
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={isCityDropdownOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsCityDropdownOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsCityDropdownOpen(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: servicesTheme.colors.surface }]}>
+            <View style={[styles.modalBar, { backgroundColor: servicesTheme.colors.divider }]} />
+            <FlatList
+              data={filteredCities}
+              keyExtractor={(item) => item}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, { borderBottomColor: servicesTheme.colors.divider }]}
+                  onPress={() => handleCitySelect(item)}
+                >
+                  <Text style={[styles.modalItemText, { color: servicesTheme.colors.text }]}>{item}</Text>
+                  {data.details.city === item && (
+                    <MaterialIcons name="check-circle" size={20} color={servicesTheme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -603,6 +564,7 @@ const styles = StyleSheet.create({
   spacer: { width: 12 },
   mobileInput: { flex: 1 },
   footerButtonWrapper: { flex: 1 },
+  continueButton: { marginTop: 0, height: 52, justifyContent: "center" },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
@@ -616,127 +578,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // ===== CITY INPUT DROPDOWN STYLES =====
-  cityInputWrapper: {
-    marginBottom: 4,
-  },
-
-  cityDropdownContainer: {
-    backgroundColor: "#FFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EBEBF5",
-    marginTop: 8,
-    maxHeight: 280,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    overflow: "hidden",
-  },
-
-  cityListItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#F0F0F5",
-  },
-
-  cityListItemSelected: {
-    backgroundColor: "#F9F8FF",
-  },
-
-  cityListItemText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#1A1A2E",
-    flex: 1,
-  },
-
-  cityListItemTextSelected: {
-    fontWeight: "700",
-    color: "#8665FF",
-  },
-
-  cityCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 14,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EBEBF5",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cityCardFocused: {
-    borderColor: "#8665FF",
-    backgroundColor: "#F9F8FF",
-    borderWidth: 1.5,
-    shadowOpacity: 0.06,
-    elevation: 4,
-  },
-  cityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  cityIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "#F8F9FE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-  cityIconCircleActive: {
-    backgroundColor: "#EBE5FF",
-  },
-  cityTextContainer: {
-    justifyContent: "center",
-  },
-  cityLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1A2E",
-    letterSpacing: -0.3,
-  },
-  citySubLabel: {
-    fontSize: 12,
-    color: "#8E8E93",
-    marginTop: 2,
-  },
-  cityInputBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#EBEBF5",
-    paddingHorizontal: 12,
-    minWidth: 140,
-    height: 44,
-    justifyContent: "center",
-    gap: 8,
-  },
-  cityInputActive: {
-    borderColor: "#8665FF",
-    backgroundColor: "#F9F8FF",
-  },
-  cityInput: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A1A2E",
-    flex: 1,
-    textAlign: "center",
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "#FFF", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "50%", padding: 20 },
+  modalBar: { width: 40, height: 4, backgroundColor: "#E5E5EA", borderRadius: 2, alignSelf: "center", marginBottom: 15 },
+  modalItem: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: "#F2F2F7" },
+  modalItemText: { fontSize: 16, fontWeight: "600", color: "#1A1A2E" },
 });

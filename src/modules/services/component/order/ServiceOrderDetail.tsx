@@ -5,33 +5,39 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Image,
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import Share from 'react-native-share';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
-import OrderStatusJourney, {
-  type OrderStatusItem,
-} from '../../../../modules/common/order/OrderStatusJourney';
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
 import PriceDetailsCard from '../../../../modules/common/order/PriceDetailsCard';
+import OrderItemCard from '../../../../modules/common/order/OrderItemCard';
 
 // ── Service-specific components ──────────────────────────────────────────────
 import ServiceOrderItemCard from './ServiceOrderItemCard';
 import ServiceBundleCard from './ServiceBundleCard';
+import YouMayNeedServicesCarousel from '../constant/YouMayNeedServicesCarousel';
+import RecommendedServicesCarousel from '../constant/RecommendedServicesCarousel';
 
 // ── API & types ──────────────────────────────────────────────────────────────
 import {
+  getServiceInvoiceDetails,
   getServiceOrderDetails,
   type ServiceOrderDetails,
   type ServiceItem,
 } from '../../api/OrderAPI';
 import type { HomeStackParamList } from '../../navigation/type';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceOrderDetail'>;
@@ -50,17 +56,12 @@ const ORDER_STATUS_COLOR: Record<string, string> = {
   completed:       '#16A34A',
   cancelled:       '#DC2626',
 };
+const PURPLE = '#7C3AED';
 
 // ── Data transforms ──────────────────────────────────────────────────────────
-function buildStatusJourney(order: ServiceOrderDetails): OrderStatusItem[] {
-  return order.timeline.map(step => ({
-    label: step.status,
-    completed: step.completed,
-  }));
-}
-
 function buildAddressLine(order: ServiceOrderDetails): string {
   const a = order.address;
+  if (!a) return '';
   return [a.address1, a.address2, a.city, a.state, a.zipcode]
     .filter(Boolean)
     .join(', ');
@@ -79,12 +80,14 @@ function formatDate(dateStr: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ServiceOrderDetail() {
   const navigation = useNavigation<Nav>();
+  const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
   const { parent_order_id } = route.params;
 
   const [order, setOrder] = useState<ServiceOrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [invoiceDownloading, setInvoiceDownloading] = useState(false);
   const [error, setError] = useState('');
 
   // ── API call ───────────────────────────────────────────────────────────────
@@ -115,36 +118,75 @@ export default function ServiceOrderDetail() {
 
   // ── Item action handlers (parent owns all side-effects) ───────────────────
   const handleCancelItem = (item: ServiceItem) => {
-    Alert.alert(
-      'Cancel Service',
-      `Are you sure you want to cancel "${item.service_name}"?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: call cancel API when endpoint is available
-            Alert.alert('Cancelled', `${item.service_name} has been cancelled.`);
-          },
-        },
-      ]
-    );
+    navigation.navigate('ServiceCancellationRequest', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      order_ref: item.order_ref,
+      service_name: item.service_name,
+      variant_name: item.variant_name,
+      image_url: item.image_url,
+    });
+  };
+
+  const handleCancellationDetailsItem = (item: ServiceItem) => {
+    navigation.navigate('ServiceCancellationDetails', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      service_id: item.service_id,
+    });
   };
 
   const handleFeedbackItem = (item: ServiceItem) => {
-    // TODO: navigate to feedback screen when available
-    Alert.alert('Feedback', `Rate your experience with "${item.service_name}".`);
+    navigation.navigate('ServiceFeedback', {
+      service_order_id: item.id,
+      parent_order_id: order?.parent_order_id || parent_order_id,
+      order_ref: item.order_ref,
+      service_name: item.service_name,
+      variant_name: item.variant_name,
+      image_url: item.image_url,
+    });
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setInvoiceDownloading(true);
+      const res = await getServiceInvoiceDetails(parent_order_id);
+
+      if (res.success === false) {
+        Alert.alert('Invoice unavailable', res.message || 'Unable to find invoice for this order.');
+        return;
+      }
+
+      await Share.open({
+        title: 'Download Invoice',
+        url: `data:application/pdf;base64,${res.base64}`,
+        type: 'application/pdf',
+        filename: res.fileName.replace(/\.pdf$/i, ''),
+        failOnCancel: false,
+        saveToFiles: Platform.OS === 'ios',
+        ...(Platform.OS === 'android' ? ({ useInternalStorage: true } as Record<string, unknown>) : {}),
+      });
+    } catch (err: any) {
+      Alert.alert(
+        'Download failed',
+        err?.message || 'Unable to download invoice. Please try again.'
+      );
+    } finally {
+      setInvoiceDownloading(false);
+    }
   };
 
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <Header onBack={() => navigation.goBack()} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+        <Header
+          onBack={() => navigation.goBack()}
+          onHelp={() => navigation.navigate('HelpForm')}
+        />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#7C3AED" />
-          <Text style={styles.loadingText}>Loading order details…</Text>
+          <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.muted }]}>Loading order details…</Text>
         </View>
       </SafeAreaView>
     );
@@ -152,8 +194,11 @@ export default function ServiceOrderDetail() {
 
   if (error || !order) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <Header onBack={() => navigation.goBack()} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+        <Header
+          onBack={() => navigation.goBack()}
+          onHelp={() => navigation.navigate('HelpForm')}
+        />
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle-outline" size={52} color="#DC2626" />
           <Text style={styles.errorText}>{error || 'Order not found.'}</Text>
@@ -168,14 +213,33 @@ export default function ServiceOrderDetail() {
   // ── Derived data (transforms live in parent, not in components) ───────────
   const statusLabel  = ORDER_STATUS_LABEL[order.status]  || order.status;
   const statusColor  = ORDER_STATUS_COLOR[order.status]  || '#6B7280';
-  const journeySteps = buildStatusJourney(order);
   const addressLine  = buildAddressLine(order);
   const hasStandaloneItems = order.items.length > 0;
   const hasBundles         = order.bundles.length > 0;
+  const allServiceItems = [
+    ...order.items,
+    ...order.bundles.flatMap(bundle => bundle.items),
+  ];
+  const allDocuments = allServiceItems.flatMap(item => item.documents);
+  const pendingDocumentCount = allDocuments.filter(document => !document.uploaded).length;
+  const uploadedDocumentCount = allDocuments.length - pendingDocumentCount;
+  const documentOrderId =
+    allServiceItems.find(item => item.documents.some(document => !document.uploaded))?.id ||
+    allServiceItems[0]?.id ||
+    0;
+  const primaryService = allServiceItems[0];
+  const primaryTitle = primaryService?.service_name || 'Service Order';
+  const primarySubtitle =
+    primaryService?.variant_name ||
+    `${allServiceItems.length} service${allServiceItems.length === 1 ? '' : 's'}`;
+  const primaryImage = primaryService?.image_url;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <Header onBack={() => navigation.goBack()} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+      <Header
+        onBack={() => navigation.goBack()}
+        onHelp={() => navigation.navigate('HelpForm')}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -189,19 +253,54 @@ export default function ServiceOrderDetail() {
           />
         }
       >
+        <OrderItemCard
+          image={
+            primaryImage ? (
+              <Image source={{ uri: primaryImage }} style={styles.productImage} />
+            ) : (
+              <MaterialCommunityIcons name="file-document-outline" size={34} color="#8665FF" />
+            )
+          }
+          title={primaryTitle}
+          weight={primarySubtitle}
+          orderId={parent_order_id.slice(0, 8).toUpperCase()}
+        />
+
+        <View style={[styles.statusSummaryCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+          <View style={styles.statusSummaryHeader}>
+            <Text style={[styles.statusSummaryTitle, { color: statusColor }]}>
+              {statusLabel}
+            </Text>
+            <Text style={[styles.statusSummaryDate, { color: servicesTheme.colors.muted }]}>{formatDate(order.created_at)}</Text>
+          </View>
+          <Text style={[styles.statusSummaryText, { color: servicesTheme.colors.muted }]}>
+            Track each service below for its individual document and completion timeline.
+          </Text>
+        </View>
         {/* ── Order summary card ─────────────────────────────────────── */}
-        <View style={styles.summaryCard}>
+        {false && (
+        <LinearGradient
+          colors={['#30205F', '#6344BD', '#7C3AED']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.summaryCard}
+        >
           <View style={styles.summaryRow}>
             <View>
+              <Text style={styles.orderEyebrow}>SERVICE ORDER</Text>
               <Text style={styles.orderId}>
                 #{parent_order_id.slice(0, 8).toUpperCase()}
               </Text>
               <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
             </View>
-            <View style={[styles.statusChip, { borderColor: statusColor }]}>
-              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+            <View style={styles.summaryIcon}>
+              <MaterialCommunityIcons name="clipboard-text-outline" size={25} color="#FFF" />
             </View>
+          </View>
+
+          <View style={styles.statusChip}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={styles.statusLabel}>{statusLabel}</Text>
           </View>
 
           {/* ── Quick stats ───────────────────────────────────────────── */}
@@ -225,7 +324,8 @@ export default function ServiceOrderDetail() {
               <Text style={styles.statLabel}>Bundles</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
+        )}
 
         {/* ── Standalone service items ───────────────────────────────── */}
         {hasStandaloneItems && (
@@ -238,6 +338,7 @@ export default function ServiceOrderDetail() {
                 <ServiceOrderItemCard
                   item={item}
                   onCancelPress={handleCancelItem}
+                  onCancellationDetailsPress={handleCancellationDetailsItem}
                   onFeedbackPress={handleFeedbackItem}
                 />
               </View>
@@ -254,6 +355,7 @@ export default function ServiceOrderDetail() {
                 bundle={bundle}
                 bundleIndex={i + 1}
                 onCancelItem={handleCancelItem}
+                onCancellationDetailsItem={handleCancellationDetailsItem}
                 onFeedbackItem={handleFeedbackItem}
               />
             ))}
@@ -261,22 +363,32 @@ export default function ServiceOrderDetail() {
         )}
 
         {/* ── Order-level journey (reused ecommerce component) ──────── */}
-        <SectionCard>
-          <OrderStatusJourney
-            arrivingBy={statusLabel}
-            statuses={journeySteps}
+        {allDocuments.length > 0 && (
+          <OrderDocumentsCard
+            total={allDocuments.length}
+            uploaded={uploadedDocumentCount}
+            pending={pendingDocumentCount}
+            onUpload={() =>
+              navigation.navigate('DocumentUpload', {
+                order_id: documentOrderId,
+                parent_order_id: order.parent_order_id,
+              })
+            }
           />
-        </SectionCard>
+        )}
+
 
         {/* ── Address (reused ecommerce component) ──────────────────── */}
-        <SectionCard >
-          <DeliveryDetailsCard
-            addressType={order.address.address_type?.toUpperCase() || 'HOME'}
-            address={addressLine}
-            name={order.address.contact_name}
-            phone={order.address.contact_phone}
-          />
-        </SectionCard>
+        {order.address ? (
+          <SectionCard>
+            <DeliveryDetailsCard
+              addressType={order.address.address_type?.toUpperCase() || 'HOME'}
+              address={addressLine}
+              name={order.address.contact_name}
+              phone={order.address.contact_phone}
+            />
+          </SectionCard>
+        ) : null}
 
         {/* ── Price summary (reused ecommerce component) ────────────── */}
         <SectionCard title="Payment Summary">
@@ -290,9 +402,17 @@ export default function ServiceOrderDetail() {
             rewardRedeemed={0}
             paymentMethod="Online"
           />
+          <InvoiceDownloadRow
+            downloading={invoiceDownloading}
+            onDownload={handleDownloadInvoice}
+          />
         </SectionCard>
 
-       
+        <YouMayNeedServicesCarousel />
+        <RecommendedServicesCarousel
+          title="Top Picks for You"
+          subtitle="Popular services customers choose next"
+        />
 
         <View style={styles.bottomPad} />
       </ScrollView>
@@ -301,17 +421,28 @@ export default function ServiceOrderDetail() {
 }
 
 // ── Local layout helpers (not exported — presentational only) ─────────────────
-function Header({ onBack }: { onBack: () => void }) {
+function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
       <TouchableOpacity
+        style={styles.backButton}
         onPress={onBack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#111" />
+        <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Order Details</Text>
-      <View style={styles.headerSpacer} />
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Order Details</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+        <MaterialCommunityIcons
+          name="chat-outline"
+          size={16}
+          color="#EC4899"
+          style={styles.helpIcon}
+        />
+        <Text style={styles.helpText}>Help</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -323,10 +454,58 @@ function SectionCard({
   title?: string;
   children: React.ReactNode;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
-    <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+    <View style={[styles.section, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      {title ? <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>{title}</Text> : null}
       {children}
+    </View>
+  );
+}
+
+function OrderDocumentsCard({
+  total,
+  uploaded,
+  pending,
+  onUpload,
+}: {
+  total: number;
+  uploaded: number;
+  pending: number;
+  onUpload: () => void;
+}) {
+  const servicesTheme = useServicesTheme();
+  const complete = pending === 0;
+
+  return (
+    <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <View style={[styles.documentsIcon, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#F0ECFF' }]}>
+        <MaterialCommunityIcons
+          name={complete ? 'file-check-outline' : 'file-upload-outline'}
+          size={24}
+          color={complete ? '#16A34A' : PURPLE}
+        />
+      </View>
+      <View style={styles.documentsCopy}>
+        <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Documents</Text>
+        <Text style={[styles.documentsText, { color: servicesTheme.colors.muted }]}>
+          {complete
+            ? `${uploaded} of ${total} documents uploaded`
+            : `${pending} document${pending > 1 ? 's' : ''} still needed`}
+        </Text>
+      </View>
+      {complete ? (
+        <View style={styles.documentsDone}>
+          <MaterialCommunityIcons name="check" size={14} color="#16A34A" />
+          <Text style={styles.documentsDoneText}>Complete</Text>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.uploadDocumentsButton} onPress={onUpload}>
+          <Text style={styles.uploadDocumentsText}>Upload</Text>
+          <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -334,82 +513,207 @@ function SectionCard({
 
 
 // ── Styles ────────────────────────────────────────────────────────────────────
+function InvoiceDownloadRow({
+  downloading,
+  onDownload,
+}: {
+  downloading: boolean;
+  onDownload: () => void;
+}) {
+  const servicesTheme = useServicesTheme();
+
+  return (
+    <View style={[styles.invoiceRow, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
+      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>Save a copy of your order</Text>
+
+      <TouchableOpacity
+        style={[styles.invoiceButton, downloading && styles.invoiceButtonDisabled]}
+        activeOpacity={0.82}
+        onPress={onDownload}
+        disabled={downloading}
+      >
+        {downloading ? (
+          <ActivityIndicator size="small" color={servicesTheme.colors.primary} />
+        ) : (
+          <Text style={[styles.invoiceButtonText, { color: servicesTheme.colors.primary }]}>Download Invoice</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
 
   header: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
-  headerSpacer: { width: 24 },
-
-  scroll: { padding: 16, gap: 12 },
-
-  summaryCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 16,
+  backButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerCopy: { flex: 1, marginLeft: 12 },
+  headerEyebrow: { color: 'rgba(255,255,255,0.64)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  headerTitle: { flex: 1, marginLeft: 8, fontSize: 16, fontWeight: '600', color: '#374151' },
+  helpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  helpIcon: { marginRight: 4 },
+  helpText: { fontSize: 14, fontWeight: '600', color: '#EC4899' },
+
+  scroll: { padding: 16, paddingBottom: 8 },
+  productImage: {
+    width: 48,
+    height: 48,
+    resizeMode: 'contain',
+  },
+  statusSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    marginBottom: 12,
+  },
+  statusSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statusSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  statusSummaryDate: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  statusSummaryText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+  },
+
+  summaryCard: {
+    borderRadius: 22,
+    padding: 18,
+    elevation: 5,
+    shadowColor: '#33205E',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  orderId: { fontSize: 15, fontWeight: '800', color: '#111' },
-  orderDate: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  orderEyebrow: { color: 'rgba(255,255,255,0.62)', fontSize: 10, fontWeight: '800', letterSpacing: 1.1, marginBottom: 4 },
+  orderId: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: 0.2 },
+  orderDate: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 3, fontWeight: '600' },
+  summaryIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    borderWidth: 1,
+    alignSelf: 'flex-start',
     borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginBottom: 16,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusLabel: { fontSize: 12, fontWeight: '600' },
+  statusLabel: { fontSize: 12, fontWeight: '800', color: '#FFF' },
 
   statsRow: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 12,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+    paddingTop: 14,
   },
   statBox: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '800', color: '#111' },
-  statLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 8 },
+  statValue: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  statLabel: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 3, fontWeight: '600' },
+  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 8 },
 
   section: {
     backgroundColor: '#FFF',
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111',
+    color: '#374151',
+    marginBottom: 10,
+  },
+  documentsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
   },
-
+  documentsIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#F0ECFF', alignItems: 'center', justifyContent: 'center' },
+  documentsCopy: { flex: 1, marginLeft: 12, marginRight: 8 },
+  documentsTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  documentsText: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 3 },
+  documentsDone: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF3', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 9 },
+  documentsDoneText: { fontSize: 10, color: '#16A34A', fontWeight: '800' },
+  uploadDocumentsButton: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PURPLE, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
+  uploadDocumentsText: { fontSize: 11, color: '#FFF', fontWeight: '800' },
+  invoiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  invoiceText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  invoiceButton: {
+    paddingLeft: 12,
+    minWidth: 118,
+    alignItems: 'flex-end',
+  },
+  invoiceButtonDisabled: {
+    opacity: 0.65,
+  },
+  invoiceButtonText: {
+    fontSize: 12,
+    color: '#6366F1',
+    fontWeight: '700',
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',

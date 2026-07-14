@@ -81,7 +81,8 @@ export default function ExclusiveOffers() {
                                         ? `₹${item.mrp}`
                                         : undefined
                                 }
-                                users="18.9K"
+                                rating={item.rating}
+                                users={String(item.total_orders ?? 0)}
                                 coins={coinsText}
                                 discount={discount}
                                 onPress={() =>

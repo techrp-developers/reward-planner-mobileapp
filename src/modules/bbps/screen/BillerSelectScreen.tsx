@@ -14,6 +14,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BBPSHead from '../constatnt/BBPSHead';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 import { Biller, StateBillerSection } from './type';
 import {
   bbpsOperatorDetailsQueryKey,
@@ -101,6 +102,7 @@ const BillerSelectScreenComponent = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
+  const bbpsTheme = useBbpsTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -138,8 +140,8 @@ const BillerSelectScreenComponent = () => {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();
@@ -186,43 +188,55 @@ const BillerSelectScreenComponent = () => {
         activeOpacity={0.7}
         style={[
           styles.billerItemRow,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            borderColor: bbpsTheme.colors.borderSoft,
+            borderBottomColor: bbpsTheme.colors.divider,
+            shadowColor: bbpsTheme.colors.shadow,
+          },
           index === section.data.length - 1 && styles.lastBillerItemRow,
+          index === section.data.length - 1 && { borderBottomColor: bbpsTheme.colors.borderSoft },
         ]}
         onPress={() => handleBillerPress(item)}
       >
-        <LinearGradient
-          colors={[BRAND_START, BRAND_END]}
+          <LinearGradient
+          colors={bbpsTheme.gradients.primary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.logoPlaceholder}
         >
           <Text style={styles.logoInitial}>{item.name.charAt(0).toUpperCase()}</Text>
         </LinearGradient>
-        <Text style={styles.billerNameText} numberOfLines={2}>
+        <Text style={[styles.billerNameText, { color: bbpsTheme.colors.text }]} numberOfLines={2}>
           {item.name}
         </Text>
-        <MaterialIcons name="chevron-right" size={22} color="#C7CBD9" />
+        <MaterialIcons name="chevron-right" size={22} color={bbpsTheme.colors.subtle} />
       </TouchableOpacity>
     ),
-    [handleBillerPress]
+    [handleBillerPress, bbpsTheme]
   );
 
   // Render State Header (Section)
   const renderSectionHeader = useCallback(
     ({ section: { title } }: { section: StateBillerSection }) => (
-      <View style={styles.stateHeaderContainer}>
-        <View style={styles.stateHeaderAccent} />
-        <Text style={styles.stateHeaderText}>{title}</Text>
+      <View
+        style={[
+          styles.stateHeaderContainer,
+          { backgroundColor: bbpsTheme.isDark ? '#18112A' : '#F3EFFF' },
+        ]}
+      >
+        <View style={[styles.stateHeaderAccent, { backgroundColor: bbpsTheme.colors.primary }]} />
+        <Text style={[styles.stateHeaderText, { color: bbpsTheme.colors.primary }]}>{title}</Text>
       </View>
     ),
-    []
+    [bbpsTheme]
   );
 
   const keyExtractor = useCallback((item: Biller) => item.id, []);
 
   if (error) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
         <BBPSHead
           title={`Pay ${categoryName}`}
           onBackPress={handleBackPress}
@@ -231,7 +245,7 @@ const BillerSelectScreenComponent = () => {
           <MaterialIcons name="error-outline" size={48} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={styles.retryButton}
+            style={[styles.retryButton, { backgroundColor: bbpsTheme.colors.primary, shadowColor: bbpsTheme.colors.shadow }]}
             onPress={handleRetry}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -242,23 +256,32 @@ const BillerSelectScreenComponent = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title={`Pay ${categoryName}`}
         onBackPress={handleBackPress}
       />
 
       {/* Search Input Area */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: bbpsTheme.colors.surface }]}>
         {loading ? (
           <SkeletonBox pulse={pulse} width="100%" height={52} borderRadius={12} />
         ) : (
-          <View style={styles.searchBar}>
-            <MaterialIcons name="search" size={24} color="#6B7280" style={styles.searchIcon} />
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: bbpsTheme.colors.elevated,
+                borderColor: bbpsTheme.colors.border,
+                shadowColor: bbpsTheme.colors.shadow,
+              },
+            ]}
+          >
+            <MaterialIcons name="search" size={24} color={bbpsTheme.colors.muted} style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: bbpsTheme.colors.text }]}
               placeholder="Search by biller name or State"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={bbpsTheme.colors.subtle}
               value={searchQuery}
               onChangeText={handleSearch}
               clearButtonMode="while-editing"
@@ -274,7 +297,16 @@ const BillerSelectScreenComponent = () => {
             <View key={`group-${group}`}>
               <SkeletonBox pulse={pulse} width="100%" height={42} borderRadius={10} style={styles.skeletonHeaderGap} />
               {SKELETON_ROWS.map((item) => (
-                <View key={`row-${group}-${item}`} style={styles.skeletonRow}>
+                <View
+                  key={`row-${group}-${item}`}
+                  style={[
+                    styles.skeletonRow,
+                    {
+                      backgroundColor: bbpsTheme.colors.surface,
+                      borderColor: bbpsTheme.colors.borderSoft,
+                    },
+                  ]}
+                >
                   <SkeletonBox pulse={pulse} width={44} height={44} borderRadius={22} />
                   <SkeletonBox pulse={pulse} width="72%" height={16} borderRadius={8} style={styles.skeletonTextOffset} />
                 </View>
@@ -284,10 +316,10 @@ const BillerSelectScreenComponent = () => {
         </View>
       ) : filteredData.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <MaterialIcons name="search-off" size={48} color="#D1D5DB" />
-          <Text style={styles.emptyText}>No billers found</Text>
+          <MaterialIcons name="search-off" size={48} color={bbpsTheme.colors.subtle} />
+          <Text style={[styles.emptyText, { color: bbpsTheme.colors.muted }]}>No billers found</Text>
           {searchQuery && (
-            <Text style={styles.emptySubtext}>Try searching with a different biller name or state</Text>
+            <Text style={[styles.emptySubtext, { color: bbpsTheme.colors.subtle }]}>Try searching with a different biller name or state</Text>
           )}
         </View>
       ) : (

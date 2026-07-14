@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type Props = {
   title: string;
+  planTitle?: string;
   price: string;
   oldPrice: string;
   selected?: boolean;
@@ -12,11 +14,14 @@ type Props = {
 
 export default function SelectableServiceCard({
   title,
+  planTitle,
   price,
   oldPrice,
   selected,
   onPress,
 }: Props) {
+  const servicesTheme = useServicesTheme();
+
   if (selected) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
@@ -27,8 +32,11 @@ export default function SelectableServiceCard({
           end={{ x: 1, y: 0.5 }}
           style={styles.gradientBorder}
         >
-          <View style={styles.selectedCard}>
-            <CardContent title={title} price={price} oldPrice={oldPrice} />
+          <View style={[
+            styles.selectedCard,
+            { backgroundColor: servicesTheme.isDark ? '#18112A' : '#FEF4FF' },
+          ]}>
+            <CardContent title={title} planTitle={planTitle} price={price} oldPrice={oldPrice} />
           </View>
         </LinearGradient>
       </TouchableOpacity>
@@ -40,26 +48,39 @@ export default function SelectableServiceCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      style={styles.unselectedCard}
+      style={[
+        styles.unselectedCard,
+        {
+          backgroundColor: servicesTheme.colors.surface,
+          borderColor: servicesTheme.colors.border,
+        },
+      ]}
     >
-      <CardContent title={title} price={price} oldPrice={oldPrice} />
+      <CardContent title={title} planTitle={planTitle} price={price} oldPrice={oldPrice} />
     </TouchableOpacity>
   );
 }
 function CardContent({
   title,
+  planTitle,
   price,
   oldPrice,
 }: {
   title: string;
+  planTitle?: string;
   price: string;
   oldPrice: string;
 }) {
+  const servicesTheme = useServicesTheme();
+
   return (
     <>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: servicesTheme.colors.textStrong }]}>{title}</Text>
+      {!!planTitle && (
+        <Text style={[styles.planTitle, { color: servicesTheme.colors.muted }]} numberOfLines={2}>{planTitle}</Text>
+      )}
       <View style={styles.priceRow}>
-        <Text style={styles.price}>{price}</Text>
+        <Text style={[styles.price, { color: servicesTheme.colors.textStrong }]}>{price}</Text>
         <Text style={styles.oldPrice}>{oldPrice}</Text>
       </View>
     </>
@@ -77,6 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     minWidth: 150,
+    maxWidth: 190,
   },
 
   unselectedCard: {
@@ -87,12 +109,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     minWidth: 150,
+    maxWidth: 190,
   },
 
   title: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#374151',
+  },
+
+  planTitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginTop: 2,
+    lineHeight: 15,
   },
 
   priceRow: {

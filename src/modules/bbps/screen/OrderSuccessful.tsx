@@ -3,22 +3,37 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import RecommendedServices from '../component/order/RecommendedServices';
 import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import { useBbpsTheme } from '../utils/useBbpsTheme';
 
 function OrderSuccessfulComponent() {
+  const navigation = useNavigation<any>();
+  const bbpsTheme = useBbpsTheme();
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
       <View style={styles.sectionMargin}>
-        <RechargeSuccessCard />
+        <RechargeSuccessCard onPayAnother={() => navigation.navigate('Home')} />
       </View>
 
       {/* 24/7 Help & Support Section */}
-      <TouchableOpacity style={styles.helpContainer} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={[
+          styles.helpContainer,
+          {
+            backgroundColor: bbpsTheme.colors.surface,
+            shadowColor: bbpsTheme.colors.shadow,
+          },
+        ]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('HelpForm')}
+      >
         <View style={styles.helpContent}>
-          <MaterialIcons name="headset-mic" size={20} color="#5B47A3" />
-          <Text style={styles.helpText}>24/7 Help & Support</Text>
+          <MaterialIcons name="headset-mic" size={20} color={bbpsTheme.colors.primary} />
+          <Text style={[styles.helpText, { color: bbpsTheme.colors.text }]}>24/7 Help & Support</Text>
         </View>
-        <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+        <MaterialIcons name="chevron-right" size={24} color={bbpsTheme.colors.subtle} />
       </TouchableOpacity>
 
       {/* Recommended Services Component */}

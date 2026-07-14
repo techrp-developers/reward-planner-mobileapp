@@ -27,6 +27,7 @@
         extractMiddleBlock,
         extractSafetyContent,
     } from '../../utils/normalizeServiceData';
+    import { useServicesTheme } from '../../utils/useServicesTheme';
     import type {
         NormalizedVariant,
         CartVariantItem,
@@ -47,20 +48,41 @@
         return '';
     }
 
-    function getVariantDisplayName(v: Partial<NormalizedVariant> | null | undefined): string {
+    function getVariantDisplayName(v: Partial<NormalizedVariant> | null | undefined): {
+        label: string;
+        planTitle?: string;
+    } {
         const name = String(v?.variant_name || '').trim();
         const title = String(v?.title || '').trim();
 
         if (!name || name.toLowerCase() === 'default') {
-            return title || 'Plan';
+            return { label: title || 'Plan' };
         }
 
-        return name;
+        return { label: name, planTitle: title || undefined };
+    }
+
+    function shouldHideAddToCartForService(
+        serviceId: number,
+        serviceName?: string | null,
+    ): boolean {
+        const normalizedName = String(serviceName || '').toLowerCase();
+
+        return (
+            serviceId === 12 ||
+            serviceId === 18 ||
+            serviceId === 19 ||
+            normalizedName.includes('health insurance') ||
+            normalizedName.includes('super top-up') ||
+            normalizedName.includes('super top up') ||
+            normalizedName.includes('personal accident')
+        );
     }
 
     function ServiceDescription() {
         const route = useRoute<CartRouteProps>();
         const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+        const servicesTheme = useServicesTheme();
         const queryClient = useQueryClient();
         const serviceId = Number(route?.params?.serviceId ?? 0);
         const seededServiceData = route?.params?.serviceData;
@@ -85,6 +107,10 @@
         }, [serviceData]);
 
         const activeVariant = selectedVariant ?? serviceData?.variants?.[0] ?? null;
+        const hideAddToCart = shouldHideAddToCartForService(
+            Number(serviceData?.service?.id || serviceId || 0),
+            serviceData?.service?.name,
+        );
 
         const handleFieldChange = useCallback((fieldName: string, value: string) => {
             setFormValues((prev) => ({ ...prev, [fieldName]: value }));
@@ -311,14 +337,18 @@
         // Variant cards for ServiceCart horizontal selector
         const serviceCartVariants = useMemo<CartVariantItem[]>(() => {
             if (!serviceData?.variants?.length) return [];
-            return serviceData.variants.map((v, idx) => ({
-                id: String(v.id || idx + 1),
-                title: getVariantDisplayName(v) || ('Plan ' + (idx + 1)),
-                price: '\u20B9' + Number(v.price || 0).toLocaleString('en-IN'),
-                oldPrice: v.mrp ? ('\u20B9' + Number(v.mrp).toLocaleString('en-IN')) : '\u20B90',
-                subtitle: v.short_description,
-                rawVariant: v,
-            }));
+            return serviceData.variants.map((v, idx) => {
+                const { label, planTitle } = getVariantDisplayName(v);
+                return {
+                    id: String(v.id || idx + 1),
+                    title: label || ('Plan ' + (idx + 1)),
+                    planTitle,
+                    price: '\u20B9' + Number(v.price || 0).toLocaleString('en-IN'),
+                    oldPrice: v.mrp ? ('\u20B9' + Number(v.mrp).toLocaleString('en-IN')) : '\u20B90',
+                    subtitle: v.short_description,
+                    rawVariant: v,
+                };
+            });
         }, [serviceData]);
 
         const hasMultipleVariants = serviceCartVariants.length > 1;
@@ -382,10 +412,10 @@
 
         if (error || !serviceData) {
             return (
-                <View style={styles.root}>
+                <View style={[styles.root, { backgroundColor: servicesTheme.colors.background }]}>
                     <CartHead />
                     <View style={styles.errorWrap}>
-                        <Text style={styles.errorText}>
+                        <Text style={[styles.errorText, { color: servicesTheme.colors.muted }]}>
                             {error ?? 'Unable to load service details.'}
                         </Text>
                     </View>
@@ -394,13 +424,14 @@
         }
 
         return (
-            <View style={styles.root}>
+            <View style={[styles.root, { backgroundColor: servicesTheme.colors.background }]}>
                 {/* Fixed navbar */}
                 <CartHead />
 
                 <ScrollView
                     ref={scrollRef}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                     contentContainerStyle={styles.scrollContent}
                 >
                     {/* 1. Hero image + variant selector */}
@@ -408,7 +439,7 @@
                         headerImageUrl={headerImageUrl}
                         mainTitle={serviceData?.service?.name}
                         subText={serviceData?.service?.description}
-                        rating={Number(serviceData?.service?.rating) || 4.3}
+                        rating={Number(serviceData?.service?.rating ?? 0)}
                         variants={serviceCartVariants}
                         showVariantSelector={hasMultipleVariants}
                         onVariantChange={(v) => {
@@ -417,14 +448,15 @@
                         primaryButtonText={ctaPrimaryText}
                         onPrimaryPress={handlePrimaryPress}
                         onAddToCart={handleAddToCart}
+                        showAddToCart={!hideAddToCart}
                     />
 
                     {/* 2. Title & description */}
                     {!!serviceData?.service?.name && (
-                        <Text style={styles.serviceTitle}>{serviceData.service.name}</Text>
+                        <Text style={[styles.serviceTitle, { color: servicesTheme.colors.textStrong }]}>{serviceData.service.name}</Text>
                     )}
                     {!!activeVariant?.short_description && (
-                        <Text style={styles.serviceDescription}>
+                        <Text style={[styles.serviceDescription, { color: servicesTheme.colors.muted }]}>
                             {activeVariant.short_description}
                         </Text>
                     )}
@@ -442,8 +474,8 @@
 
                     {/* 4. Required documents */}
                     {requiredDocuments.length > 0 && (
-                        <View style={styles.documentsCard}>
-                            <Text style={styles.documentsTitle}>Required Documents</Text>
+                        <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
+                            <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Required Documents</Text>
                             {requiredDocuments.map((doc) => (
                                 <View key={String(doc.id) + doc.name} style={styles.documentRow}>
                                     <View
@@ -455,7 +487,9 @@
                                     <Text
                                         style={[
                                             styles.documentItem,
+                                            { color: servicesTheme.colors.muted },
                                             doc.mandatory && styles.documentItemMandatory,
+                                            doc.mandatory && { color: servicesTheme.colors.textStrong },
                                         ]}
                                     >
                                         {doc.name}
@@ -526,26 +560,30 @@
             marginHorizontal: 16,
             marginTop: 8,
             fontSize: 18,
-            fontWeight: '700',
+            fontWeight: '800',
             color: '#111827',
+            letterSpacing: -0.2,
         },
         serviceDescription: {
             marginHorizontal: 16,
             marginTop: 4,
-            marginBottom: 8,
+            marginBottom: 16,
             fontSize: 14,
             color: '#6B7280',
             lineHeight: 20,
         },
         documentsCard: {
             marginHorizontal: 16,
-            marginTop: 8,
-            marginBottom: 8,
+            marginTop: 2,
+            marginBottom: 14,
             backgroundColor: '#FFFFFF',
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: '#ECECF4',
-            padding: 14,
+            borderRadius: 18,
+            padding: 16,
+            shadowColor: '#1F2937',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.06,
+            shadowRadius: 14,
+            elevation: 3,
         },
         documentsTitle: {
             fontSize: 16,

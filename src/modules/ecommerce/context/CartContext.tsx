@@ -8,9 +8,6 @@ import {
   checkoutPreviewQueryKey,
 } from "../navigation/navigationPerformance";
 
-import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from "../../../modules/services/constant/queryKeys";
-import { getServiceCartItems } from "../../../modules/services/api/CartAPI";
-
 const TEN_MINUTES = 10 * 60 * 1000;
 const THIRTY_MINUTES = 30 * 60 * 1000;
 
@@ -50,8 +47,18 @@ const CartContext = createContext<CartContextType>({
 const toCartItems = (rawItems: any[]): CartItem[] => {
   return rawItems.map((item: any) => ({
     id: String(item.id || item.cart_item_id || ""),
-    product_id: item.product_id,
-    variant_id: item.variant_id,
+    product_id:
+      item.product_id ??
+      item.productId ??
+      item.product?.product_id ??
+      item.product?.id,
+    variant_id:
+      item.variant_id ??
+      item.variantId ??
+      item.product_variant_id ??
+      item.productVariantId ??
+      item.variant?.variant_id ??
+      item.variant?.id,
     name: item.product_name || item.name,
     price: Number(item.sale_price || item.price || 0),
     quantity: Number(item.quantity || 1),
@@ -73,33 +80,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
 
   const items = useMemo(() => {
-    const rawItems = Array.isArray(cartData?.items) ? cartData.items : [];
+    const rawItems =
+      (Array.isArray(cartData?.items) && cartData.items) ||
+      (Array.isArray(cartData?.data?.items) && cartData.data.items) ||
+      (Array.isArray(cartData?.cart_items) && cartData.cart_items) ||
+      (Array.isArray(cartData?.data?.cart_items) && cartData.data.cart_items) ||
+      [];
     return toCartItems(rawItems);
-  }, [cartData?.items]);
+  }, [cartData]);
 
   const count = items.length;
 
-  const productQuantity = useMemo(() => {
+  const totalQuantity = useMemo(() => {
     return items.reduce((sum, item) => sum + (item.quantity || 1), 0);
   }, [items]);
-
-  // ✅ SERVICE CART (API)
-const { data: serviceCartData } = useQuery({
-  queryKey: SERVICE_CART_QUERY_KEY,
-  queryFn: getServiceCartItems,
-  staleTime: 0,
-  refetchOnMount: true,
-  refetchOnReconnect: true,
-});
-
-  const serviceQuantity = useMemo(() => {
-    const bundles = serviceCartData?.bundles || [];
-    const individual = serviceCartData?.individual_items || [];
-    return bundles.length + individual.length;
-  }, [serviceCartData]);
-
-  // ✅ FINAL TOTAL
-  const totalQuantity = productQuantity + serviceQuantity;
 
   const syncProductCartQueries = useCallback(async () => {
     await Promise.allSettled([
@@ -117,12 +111,7 @@ const { data: serviceCartData } = useQuery({
       queryClient.setQueryData(cartItemsQueryKey, { items: [] });
       return;
     }
-await Promise.all([
-  syncProductCartQueries(),
-  queryClient.invalidateQueries({ queryKey: SERVICE_CART_QUERY_KEY }),
-  queryClient.refetchQueries({ queryKey: SERVICE_CART_QUERY_KEY }), // 🔥 THIS IS KEY
-  queryClient.invalidateQueries({ queryKey: SERVICE_CHECKOUT_QUERY_KEY }),
-]);
+    await syncProductCartQueries();
   }, [isAuthenticated, queryClient, syncProductCartQueries]);
 
   // 🔄 BACKGROUND SYNC
@@ -202,10 +191,6 @@ await Promise.all([
     queryClient.setQueryData(cartSummaryQueryKey(false), emptySummary);
     queryClient.invalidateQueries({ queryKey: checkoutPreviewQueryKey({ mode: "cart", use_rewards: true }) });
     queryClient.invalidateQueries({ queryKey: checkoutPreviewQueryKey({ mode: "cart", use_rewards: false }) });
-    queryClient.setQueryData(SERVICE_CART_QUERY_KEY, {
-      bundles: [],
-      individual_items: [],
-    });
   }, [queryClient]);
 
   return (

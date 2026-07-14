@@ -60,7 +60,9 @@ export interface OrdersResponse {
 
 export interface GetOrdersParams {
   page?: number;
+  limit?: number;
   search?: string;
+  status?: string;
   fromDate?: string;
   toDate?: string;
   timeFilter?: string;
@@ -91,10 +93,120 @@ export interface ServiceFeedback {
 
 export interface ServiceCancellation {
   can_cancel: boolean;
+  status?: string;
+  reason?: string | null;
+  refund_status?: string | null;
+}
+
+export interface ServiceCancellationReason {
+  reason_id: number;
+  reason_text: string;
+}
+
+export interface ServiceCancellationDetails {
+  service_order_id: number;
+  order_ref: string;
+  status: string;
+  service: {
+    service_id?: number | null;
+    service_name: string;
+    variant_name?: string | null;
+    title?: string | null;
+    image_url?: string | null;
+  };
+  address: null | {
+    address_type?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    zipcode?: string | null;
+    landmark?: string | null;
+    contact_name?: string | null;
+    contact_phone?: string | null;
+  };
+  cancellation: null | {
+    status: string;
+    refund_status?: string | null;
+    refund_method?: string | null;
+    refund_amount: number;
+    created_at?: string | null;
+  };
+  timeline: Array<{
+    label: string;
+    event: string;
+    date?: string | null;
+  }>;
+  refund: {
+    total: number;
+    money_refund: number;
+    coin_refund: number;
+  };
+  rewards: {
+    used: number;
+    reversed: number;
+  };
+  summary: {
+    service_total: number;
+    order_total: number;
+  };
+}
+
+type ServiceInvoicePdfResult =
+  | { success: true; base64: string; fileName: string }
+  | { success: false; message?: string; status?: number };
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192;
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...Array.from(chunk));
+  }
+
+  const encoder = (globalThis as { btoa?: (value: string) => string }).btoa;
+  if (typeof encoder !== "function") {
+    throw new Error("Base64 encoder is not available");
+  }
+
+  return encoder(binary);
+};
+
+const extractFileName = (contentDisposition?: string, fallback?: string): string => {
+  if (!contentDisposition) {
+    return fallback || "service_invoice.pdf";
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const normalMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (normalMatch?.[1]) {
+    return normalMatch[1];
+  }
+
+  return fallback || "service_invoice.pdf";
+};
+
+export interface SubmitServiceFeedbackPayload {
+  service_order_id: number;
+  rating: number;
+  ease_rating?: number;
+  expert_rating?: number;
+  completion_time?: string;
+  confidence?: string;
+  reuse_intent?: string;
+  comment?: string;
 }
 
 export interface ServiceItem {
   id: number;
+  service_id?: number | null;
   order_ref: string;
   service_name: string;
   variant_name: string;
@@ -132,7 +244,7 @@ export interface ServiceOrderDetails {
   parent_order_id: string;
   created_at: string;
   status: string;
-  address: ServiceAddress;
+  address: ServiceAddress | null;
   total_amount: number;
   summary: {
     total_services: number;
@@ -156,7 +268,9 @@ export const getMyServiceOrders = async (
 
     const {
       page = 1,
+      limit = 10,
       search = "",
+      status = "",
       fromDate = "",
       toDate = "",
       timeFilter = "",
@@ -168,10 +282,12 @@ export const getMyServiceOrders = async (
         headers,
         params: {
           page,
+          limit,
           search,
-          fromDate,
-          toDate,
-          timeFilter,
+          status,
+          from_date: fromDate,
+          to_date: toDate,
+          time_filter: timeFilter,
         },
       }
     );
@@ -232,7 +348,7 @@ export const createServiceOrderPayment = async (parent_order_id: string) => {
       throw new Error("Invalid parent_order_id (must be UUID)");
     }
 
-    console.log("📤 Creating payment order:", parent_order_id);
+    __DEV__ && console.log("📤 Creating payment order:", parent_order_id);
 
     const res = await axios.post(
       `${BASE_API_URL}/service-orders/create-order`,
@@ -265,7 +381,7 @@ export const verifyServicePayment = async (payload: {
   try {
     const headers = await getAuthHeaders();
 
-    console.log("🔐 Verifying service payment:", {
+    __DEV__ && console.log("🔐 Verifying service payment:", {
       parent_order_id: payload.parent_order_id,
       razorpay_order_id: payload.razorpay_order_id,
     });
@@ -276,7 +392,7 @@ export const verifyServicePayment = async (payload: {
       { headers }
     );
 
-    console.log("✅ Payment verified:", res.data);
+    __DEV__ && console.log("✅ Payment verified:", res.data);
     return res.data;
 
   } catch (error: any) {
@@ -301,14 +417,14 @@ export const checkServicePaymentStatus = async (parent_order_id: string) => {
   try {
     const headers = await getAuthHeaders();
 
-    console.log("📊 Checking service payment status for:", parent_order_id);
+    __DEV__ && console.log("📊 Checking service payment status for:", parent_order_id);
 
     const res = await axios.get(
       `${BASE_API_URL}/service-orders/payment-status/${parent_order_id}`,
       { headers }
     );
 
-    console.log("📊 Payment status:", res.data);
+    __DEV__ && console.log("📊 Payment status:", res.data);
     return res.data;
 
   } catch (error: any) {
@@ -320,6 +436,189 @@ export const checkServicePaymentStatus = async (parent_order_id: string) => {
       status: error?.response?.status,
       message: error?.response?.data?.message,
     });
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 6. Get Service Cancellation Reasons
+// ==============================
+export const getServiceCancellationReasons = async (): Promise<{
+  success: boolean;
+  reasons: ServiceCancellationReason[];
+}> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/cancellation-reasons`,
+      { headers }
+    );
+
+    return {
+      success: Boolean(res.data?.success),
+      reasons: Array.isArray(res.data?.reasons) ? res.data.reasons : [],
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Cancellation Reasons Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 7. Request Service Order Cancellation
+// ==============================
+export const requestServiceOrderCancellation = async (payload: {
+  service_order_id: number;
+  reason_id: number;
+  comment?: string;
+}) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service-orders/cancel-order-request`,
+      {
+        service_order_id: payload.service_order_id,
+        reason_id: payload.reason_id,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Request Service Cancellation Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 8. Get Service Cancellation Details
+// ==============================
+export const getServiceCancellationDetails = async (
+  service_order_id: number
+): Promise<{ success: boolean; data?: ServiceCancellationDetails; message?: string }> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/cancellation-details/${service_order_id}`,
+      { headers }
+    );
+
+    return {
+      success: Boolean(res.data?.success),
+      data: res.data?.data,
+      message: res.data?.message,
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Cancellation Details Error:", error?.response || error);
+    throw error?.response?.data || error;
+  }
+};
+
+// ==============================
+// 9. Get Service Invoice Details
+// ==============================
+export const getServiceInvoiceDetails = async (
+  parent_order_id: string
+): Promise<ServiceInvoicePdfResult> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    if (!parent_order_id) {
+      throw new Error("parent_order_id is required");
+    }
+
+    const res = await axios.get(
+      `${BASE_API_URL}/service-orders/invoice-details/${parent_order_id}`,
+      {
+        headers,
+        responseType: "arraybuffer",
+      }
+    );
+
+    const base64 =
+      typeof res.data === "string"
+        ? res.data.replace(/^data:application\/pdf;base64,/, "")
+        : arrayBufferToBase64(res.data as ArrayBuffer);
+
+    const contentDisposition = res?.headers?.["content-disposition"] as
+      | string
+      | undefined;
+    const fileName = extractFileName(contentDisposition, `service_invoice_${parent_order_id}.pdf`);
+
+    if (!base64) {
+      return { success: false, message: "Invoice PDF is empty" };
+    }
+
+    return {
+      success: true,
+      base64,
+      fileName,
+    };
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Get Service Invoice Details Error:", error?.response || error);
+    const status = Number(error?.response?.status || 0);
+    const message =
+      status === 400
+        ? "Invoice is available after payment."
+        : status === 404
+          ? "Invoice is not available for this order yet."
+          : error?.message || "Could not fetch invoice PDF";
+
+    return { success: false, status, message };
+  }
+};
+
+// ==============================
+// 9. Submit Service Feedback
+// ==============================
+export const submitServiceFeedback = async (
+  payload: SubmitServiceFeedbackPayload
+) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.post(
+      `${BASE_API_URL}/service/feedback`,
+      {
+        service_order_id: payload.service_order_id,
+        rating: payload.rating,
+        ease_rating: payload.ease_rating,
+        expert_rating: payload.expert_rating,
+        completion_time: payload.completion_time,
+        confidence: payload.confidence,
+        reuse_intent: payload.reuse_intent,
+        comment: payload.comment?.trim() || "",
+      },
+      { headers }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    if (Number(error?.response?.status) === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Submit Service Feedback Error:", error?.response || error);
     throw error?.response?.data || error;
   }
 };

@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/types';
 import { handleNavigateWithPrefetch } from '../../navigation/navigationPerformance';
+import { useAppTheme } from '../../../../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,15 +25,19 @@ function ProductHeadColor({
   title = "",
   onBackPress,
   onSearchPress,
-  showNotificationDot = true,
+  showSearch = true,
+  isDark = false,
 }: {
   title?: string;
   onBackPress?: () => void;
   onSearchPress?: () => void;
-  onBellPress?: () => void;
-  showNotificationDot?: boolean;
+  showSearch?: boolean;
+  isDark?: boolean;
 }) {
   const navigation = useNavigation<Nav>();
+  const appTheme = useAppTheme();
+  const darkMode = isDark || appTheme.isDark;
+  const { theme } = appTheme;
 
   const handleBack = () => {
     handleNavigateWithPrefetch({
@@ -46,40 +51,43 @@ function ProductHeadColor({
     });
   };
 
-  const handleNotification = () => {
-    handleNavigateWithPrefetch({
-      navigate: () => navigation.navigate('Notification'),
-    });
-  };
-
   return (
-    <View style={styles.safe}>
-      <View style={styles.header}>
+    <View style={[styles.safe, { backgroundColor: theme.card }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <AppIconButton
           type="back"
-          variant="ghost"
-          onPress={handleBack} style={styles.backIcon}
+          variant={darkMode ? "solid" : "ghost"}
+          color={theme.text}
+          onPress={handleBack}
+          style={{
+            ...styles.backIcon,
+            ...(darkMode
+              ? {
+              backgroundColor: '#18181B',
+              borderColor: theme.border,
+                }
+              : {}),
+          }}
         />
 
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
           {title}
         </Text>
                
         <View style={styles.rightIcons}>
-          <AppIconButton
-            type="search"
-            variant="solid"
-            style={styles.circleIcon}
-            onPress={handleSearch}
-          />
-
-          <AppIconButton
-            type="notification"
-            variant="solid"
-            style={styles.circleIcon}
-            onPress={handleNotification}
-            showDotBadge={showNotificationDot}
-          />
+          {showSearch ? (
+            <AppIconButton
+              type="search"
+              variant="solid"
+              color={theme.text}
+              style={{
+                ...styles.circleIcon,
+                backgroundColor: darkMode ? '#18181B' : '#FFFFFF',
+                borderColor: theme.border,
+              }}
+              onPress={handleSearch}
+            />
+          ) : null}
         </View>
       </View>
     </View>
@@ -96,6 +104,7 @@ const styles = StyleSheet.create({
         : width * 0.12,
     backgroundColor: '#fff',
   },
+  safeDark: { backgroundColor: '#111113' },
 
   header: {
     height: HEADER_HEIGHT,
@@ -105,6 +114,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
+  headerDark: { borderBottomColor: 'rgba(255,255,255,0.08)' },
 
   title: {
     flex: 1,
@@ -113,6 +123,7 @@ const styles = StyleSheet.create({
     color: '#111',
     marginLeft: width * 0.02,
   },
+  titleDark: { color: '#FFFFFF' },
 
   rightIcons: {
     flexDirection: 'row',

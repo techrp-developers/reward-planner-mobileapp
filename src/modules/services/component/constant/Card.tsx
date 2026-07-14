@@ -1,9 +1,10 @@
 import React, { memo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import Reward from '../../../../assets/product/rewards.svg';
 import { HomeStackParamList } from '../../navigation/type';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 const fallbackImage = require('../../assete/gov_documet/aadhar card.png');
 
 type Props = {
@@ -11,7 +12,7 @@ type Props = {
   image: any;
   price: string;
   oldPrice?: string;
-  rating?: string;
+  rating?: number | string;
   users?: string;
   offerPrice?: string;
   coins?: string;
@@ -24,6 +25,7 @@ function Card({
   image,
   price,
   oldPrice,
+  rating,
   users,
   offerPrice,
   coins,
@@ -31,9 +33,11 @@ function Card({
   onPress,
 }: Props) {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
+  const servicesTheme = useServicesTheme();
   const [imgError, setImgError] = useState(false);
+  const parsedRating = Number(rating);
+  const hasRating = rating !== undefined && rating !== null && Number.isFinite(parsedRating);
 
-  // ✅ Hybrid press handler (BEST PRACTICE)
   const handlePress = () => {
     if (onPress) {
       onPress(); // parent navigation
@@ -48,61 +52,67 @@ function Card({
   };
 
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
-      <View style={styles.card}>
+    <TouchableOpacity activeOpacity={0.88} onPress={handlePress} style={styles.touchable}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: servicesTheme.colors.surface,
+            shadowColor: servicesTheme.colors.shadow,
+          },
+        ]}
+      >
         {/* IMAGE */}
-        <View style={styles.imageBox}>
+        <View style={[styles.imageBox, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
           {discount && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>{discount} OFF</Text>
             </View>
           )}
-<Image
-  source={imgError || !image ? fallbackImage : image}
-  style={styles.cardImage}
-  resizeMode="contain"
-  onError={() => setImgError(true)}
-/>        </View>
+          <Image
+            source={imgError || !image ? fallbackImage : image}
+            style={styles.cardImage}
+            resizeMode="contain"
+            onError={() => setImgError(true)}
+          />
+        </View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: servicesTheme.colors.textStrong }]} numberOfLines={1} ellipsizeMode="tail">
             {title}
           </Text>
 
           {/* PRICE */}
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{price}</Text>
+            <Text style={[styles.price, { color: servicesTheme.colors.success }]}>{price}</Text>
             {!!oldPrice && (
-              <Text style={styles.oldPrice}>{oldPrice}</Text>
+              <Text style={[styles.oldPrice, { color: servicesTheme.colors.subtle }]}>{oldPrice}</Text>
             )}
           </View>
 
-          {/* USERS */}
-          {!!users && (
+          {/* RATING & ORDERS */}
+          {(hasRating || !!users) && (
             <View style={styles.ratingRow}>
-              <Text style={styles.stars}>⭐⭐⭐⭐⭐</Text>
-              <Text style={styles.users}>({users})</Text>
+              {hasRating && (
+                <>
+                  <MaterialIcons name="star" size={14} color="#F59E0B" />
+                  <Text style={[styles.ratingText, { color: servicesTheme.isDark ? '#FBBF24' : '#92400E' }]}>{parsedRating.toFixed(1)}</Text>
+                </>
+              )}
+              {!!users && <Text style={[styles.users, { color: servicesTheme.colors.muted }]}>({users})</Text>}
             </View>
           )}
 
           {/* CTA */}
           <LinearGradient
-            colors={['#8665FF', '#5B47A3']}
+            colors={servicesTheme.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.cta}
           >
-            <Text style={styles.ctaText}>
-              {offerPrice || price}
-              {coins ? ' + ' : ''}
-            </Text>
-
-            {!!coins && (
-              <View style={styles.coinWrapper}>
-                <Reward width={14} height={14} />
-                <Text style={styles.ctaText}> {coins}</Text>
-              </View>
-            )}
+          <Text style={styles.ctaText}>
+            {offerPrice || price}
+          </Text>
           </LinearGradient>
         </View>
       </View>
@@ -114,17 +124,24 @@ function Card({
 export default memo(Card);
 
 const styles = StyleSheet.create({
+  touchable: {
+    marginRight: 14,
+  },
   card: {
-    width: 170,
+    width: 172,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 10,
-    marginRight: 12,
+    borderRadius: 22,
+    padding: 12,
+    shadowColor: '#1F2937',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 5,
   },
   imageBox: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 15,
-    height: 130,
+    backgroundColor: '#F4F5FA',
+    borderRadius: 16,
+    height: 118,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -139,6 +156,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     zIndex: 10,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   discountText: {
     color: '#FFFFFF',
@@ -146,21 +168,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cardImage: {
-    width: 150,
-    height: 200,
+    width: '82%',
+    height: '82%',
   },
   infoContainer: {
-    paddingTop: 8,
+    paddingTop: 10,
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#1A1C1E',
+    letterSpacing: -0.2,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 5,
   },
   price: {
     color: '#10B981',
@@ -179,9 +202,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 10,
   },
-  stars: {
-    fontSize: 10,
-    letterSpacing: -2,
+  ratingText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '700',
+    marginLeft: 2,
   },
   users: {
     fontSize: 12,
@@ -194,14 +219,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#5B47A3',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   ctaText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
-  },
-  coinWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

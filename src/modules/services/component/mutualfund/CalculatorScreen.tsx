@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 interface Props {
   title: string;
@@ -25,15 +27,19 @@ export const CalculatorScreen: React.FC<Props> = ({
   icon,
   navigation,
   children,
-}) => (
-  <SafeAreaView style={styles.safe} edges={['top']}>
-    <StatusBar barStyle="light-content" backgroundColor="#8665FF" />
+}) => {
+  const servicesTheme = useServicesTheme();
+
+  return (
+  <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]} edges={['top']}>
+    <StatusBar barStyle="light-content" backgroundColor="#080B26" />
     <LinearGradient
-      colors={['#8665FF', '#5B47A3']}
+      colors={['#080B26', '#171F59', '#3545A3']}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.header}
     >
+      <View style={styles.headerGlow} />
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={styles.backBtn}
@@ -42,7 +48,7 @@ export const CalculatorScreen: React.FC<Props> = ({
         <Text style={styles.backIcon}>‹</Text>
       </TouchableOpacity>
       <View style={styles.headerIcon}>
-        <Text style={styles.headerEmoji}>{icon}</Text>
+        <MaterialCommunityIcons name={icon} size={25} color="#FFFFFF" />
       </View>
       <View style={styles.headerText}>
         <Text style={styles.headerTitle}>{title}</Text>
@@ -50,7 +56,7 @@ export const CalculatorScreen: React.FC<Props> = ({
       </View>
     </LinearGradient>
     <ScrollView
-      style={styles.scroll}
+      style={[styles.scroll, { backgroundColor: servicesTheme.colors.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -58,22 +64,24 @@ export const CalculatorScreen: React.FC<Props> = ({
       {children}
     </ScrollView>
   </SafeAreaView>
-);
+  );
+};
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  safe: { flex: 1, backgroundColor: '#F7F4FF' },
   header: {
     paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 26,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#5B47A3',
+        shadowColor: '#080B26',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -81,11 +89,20 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
+  headerGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    right: -45,
+    top: -58,
+  },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -93,16 +110,17 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 48,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerEmoji: { fontSize: 24 },
   headerText: { flex: 1 },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#fff',
     letterSpacing: -0.3,
   },
@@ -115,6 +133,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 18,
     paddingBottom: 60,
-    gap: 14,
+    gap: 16,
   },
 });

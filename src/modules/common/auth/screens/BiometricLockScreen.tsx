@@ -295,7 +295,7 @@ function BiometricLockScreenComponent({
       transparent={false}
     >
       <LinearGradient
-        colors={['#050716', '#0B1027', '#17102F']}
+        colors={['#000000', '#080211', '#16051F']}
         start={{ x: 0.05, y: 0 }}
         end={{ x: 0.95, y: 1 }}
         style={styles.root}
@@ -316,7 +316,7 @@ function BiometricLockScreenComponent({
           >
             <Image source={Logo} style={styles.logoImage} resizeMode="contain" />
           </LinearGradient>
-          <Text style={styles.appName}>Reward Planner</Text>
+          <Text style={styles.appName}>Reward Planners</Text>
           <Text style={styles.lockLabel}>Secure access</Text>
         </Animated.View>
 
@@ -332,7 +332,7 @@ function BiometricLockScreenComponent({
           >
             <Animated.View style={{ transform: [{ scale: iconBounce }] }}>
               <LinearGradient
-                colors={isScanning ? ['#701A75', '#6D28D9'] : ['#130B2A', '#21103E']}
+                colors={isScanning ? ['#EC4899', '#8B5CF6'] : ['#16051F', '#251033']}
                 style={styles.iconCircle}
               >
                 <Icon
@@ -423,36 +423,36 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     overflow: 'hidden',
   },
 
   // Background
   ambientPanel: {
     position: 'absolute',
-    width: 270,
-    height: 150,
-    borderRadius: 28,
-    opacity: 0.18,
+    width: 310,
+    height: 142,
+    borderRadius: 24,
+    opacity: 0.14,
     transform: [{ rotate: '-18deg' }],
   },
   panelTop: {
-    top: 64,
-    right: -88,
+    top: 58,
+    right: -112,
     backgroundColor: '#EC4899',
   },
   panelBottom: {
-    left: -96,
-    bottom: 118,
-    backgroundColor: '#7C3AED',
+    left: -118,
+    bottom: 104,
+    backgroundColor: '#8B5CF6',
   },
   gridOverlay: {
     position: 'absolute',
-    top: 86,
-    left: 26,
-    right: 26,
+    top: 88,
+    left: 34,
+    right: 34,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(244, 114, 182, 0.16)',
   },
   glowOrb: {
     position: 'absolute',
@@ -461,72 +461,80 @@ const styles = StyleSheet.create({
   // Logo
   logoArea: {
     alignItems: 'center',
-    marginBottom: 38,
+    marginBottom: 28,
   },
   logoBadge: {
-    width: 118,
-    height: 118,
-    borderRadius: 30,
+    width: 94,
+    height: 94,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(244, 114, 182, 0.42)',
+    borderColor: 'rgba(244, 114, 182, 0.55)',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 18 },
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.34,
-    shadowRadius: 28,
+    shadowRadius: 24,
     elevation: 12,
   },
   logoImage: {
-    width: 84,
-    height: 84,
+    width: 66,
+    height: 66,
   },
   appName: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 0,
   },
   lockLabel: {
-    marginTop: 6,
-    fontSize: 13,
+    marginTop: 10,
+    minHeight: 30,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 15,
+    overflow: 'hidden',
+    fontSize: 12,
     fontWeight: '700',
-    color: 'rgba(226, 232, 240, 0.66)',
+    color: 'rgba(255, 255, 255, 0.72)',
     letterSpacing: 0,
     textTransform: 'uppercase',
+    backgroundColor: 'rgba(236, 72, 153, 0.11)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 114, 182, 0.18)',
   },
 
   // Icon
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 34,
+    marginBottom: 28,
   },
   iconTouchable: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircle: {
-    width: 124,
-    height: 124,
-    borderRadius: 62,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.34,
-    shadowRadius: 24,
+    borderColor: 'rgba(244, 114, 182, 0.28)',
+    shadowColor: '#EC4899',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
     elevation: 10,
   },
   pulseRing: {
     position: 'absolute',
-    width: 124,
-    height: 124,
-    borderRadius: 62,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
     borderWidth: 2,
     borderColor: '#F472B6',
     backgroundColor: 'transparent',
@@ -535,29 +543,31 @@ const styles = StyleSheet.create({
   // Text
   textBlock: {
     alignItems: 'center',
-    marginBottom: 34,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 27,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 0,
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(226, 232, 240, 0.72)',
+    color: 'rgba(255, 255, 255, 0.72)',
     marginBottom: 12,
+    textAlign: 'center',
   },
   statusPill: {
     minHeight: 34,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(236, 72, 153, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(244, 114, 182, 0.18)',
   },
   statusMsg: {
     fontSize: 13,
@@ -574,15 +584,15 @@ const styles = StyleSheet.create({
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 36,
-    borderRadius: 16,
-    minWidth: 240,
+    paddingVertical: 16,
+    paddingHorizontal: 34,
+    borderRadius: 18,
+    minWidth: 254,
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: '#EC4899',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.24,
-    shadowRadius: 20,
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
     elevation: 7,
   },
   retryIcon: {
@@ -595,33 +605,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   fallbackBtn: {
-    paddingVertical: 11,
+    minWidth: 188,
+    alignItems: 'center',
+    paddingVertical: 12,
     paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   fallbackText: {
-    color: 'rgba(226, 232, 240, 0.72)',
+    color: 'rgba(255, 255, 255, 0.76)',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 
   // Footer
   footer: {
     position: 'absolute',
-    bottom: 36,
+    bottom: 30,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: 'rgba(236, 72, 153, 0.09)',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: 'rgba(236, 72, 153, 0.11)',
     borderWidth: 1,
-    borderColor: 'rgba(244, 114, 182, 0.16)',
+    borderColor: 'rgba(244, 114, 182, 0.20)',
   },
   footerText: {
     fontSize: 12,
-    color: 'rgba(226, 232, 240, 0.68)',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

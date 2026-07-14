@@ -2,13 +2,14 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import FASTagRecharge from '../../assets/BBPS_Service/FASTag Recharge.png';
-import Electricity from '../../assets/BBPS_Service/Electricity.png';
-import Water from '../../assets/BBPS_Service/Water.png';
-import Landline from '../../assets/BBPS_Service/LandLine.png';
-import Broadband from '../../assets/BBPS_Service/Broadband.png';
-import DTH from '../../assets/BBPS_Service/DTH.png';
-import Credit from '../../assets/BBPS_Service/Creadit.png';
+import FASTagRecharge from '../../assets/BBPS_Service/FASTagRecharge.svg';
+import Electricity from '../../assets/BBPS_Service/Electricity.svg';
+import Water from '../../assets/BBPS_Service/Water.svg';
+import Landline from '../../assets/BBPS_Service/LandLine.svg';
+import Broadband from '../../assets/BBPS_Service/Broadband.svg';
+import DTH from '../../assets/BBPS_Service/DTH.svg';
+import Credit from '../../assets/BBPS_Service/Creadit.svg';
+import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 type Service = {
   id: string;
@@ -23,6 +24,7 @@ type ServiceItemProps = {
   iconName?: string;
   label: string;
   onPress?: () => void;
+  bbpsTheme: ReturnType<typeof useBbpsTheme>;
 };
 
 const SERVICES: Service[] = [
@@ -36,10 +38,10 @@ const SERVICES: Service[] = [
   { id: 'view-more', label: 'View More', iconName: 'add' },
 ];
 
-const ServiceItem = ({ icon, iconName, label, onPress }: ServiceItemProps) => (
+const ServiceItem = ({ icon, iconName, label, onPress, bbpsTheme }: ServiceItemProps) => (
   <TouchableOpacity style={styles.itemContainer} activeOpacity={0.75} onPress={onPress}>
     <LinearGradient
-      colors={['#A785F5', '#5B47A3']}
+      colors={bbpsTheme.gradients.primary}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
       style={styles.iconCircle}
@@ -50,14 +52,24 @@ const ServiceItem = ({ icon, iconName, label, onPress }: ServiceItemProps) => (
         <MaterialIcons name={iconName || 'add'} size={30} color="#FFFFFF" />
       )}
     </LinearGradient>
-    <Text style={styles.itemLabel}>{label}</Text>
+    <Text style={[styles.itemLabel, { color: bbpsTheme.colors.text }]}>{label}</Text>
   </TouchableOpacity>
 );
 
 function RecommendedServices() {
+  const bbpsTheme = useBbpsTheme();
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.mainTitle}>Recommended Services</Text>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: bbpsTheme.colors.surface,
+          borderColor: bbpsTheme.colors.border,
+        },
+      ]}
+    >
+      <Text style={[styles.mainTitle, { color: bbpsTheme.colors.textStrong }]}>Recommended Services</Text>
       <View style={styles.grid}>
         {SERVICES.map((service) => (
           <ServiceItem
@@ -66,6 +78,7 @@ function RecommendedServices() {
             iconName={service.iconName}
             label={service.label}
             onPress={service.onPress}
+            bbpsTheme={bbpsTheme}
           />
         ))}
       </View>

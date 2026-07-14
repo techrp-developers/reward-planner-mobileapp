@@ -19,6 +19,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../navigation/type';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getSectionContent, type MFArticleDetails } from '../../api/MutualFundAPI';
+import { useServicesTheme } from '../../utils/useServicesTheme';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -50,10 +51,10 @@ function SkeletonArticleCard({ pulse }: { pulse: Animated.Value }) {
 // ─── Article Card ─────────────────────────────────────────────────
 
 const GRADIENTS: [string, string][] = [
-  ['#8665FF', '#7253EE'],
-  ['#9B7BFF', '#5B47A3'],
-  ['#7C5FEE', '#6B4FDD'],
-  ['#6B4FDD', '#5B47A3'],
+  ['#3545A3', '#202B72'],
+  ['#2D3B91', '#171F59'],
+  ['#3545A3', '#202B72'],
+  ['#171F59', '#080B26'],
 ];
 
 const ArticleCard: React.FC<{
@@ -61,10 +62,11 @@ const ArticleCard: React.FC<{
   index: number;
   onPress: () => void;
 }> = ({ item, index, onPress }) => {
+  const servicesTheme = useServicesTheme();
   const grad = GRADIENTS[index % GRADIENTS.length];
 
   return (
-    <TouchableOpacity style={styles.articleCard} activeOpacity={0.82} onPress={onPress}>
+    <TouchableOpacity style={[styles.articleCard, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]} activeOpacity={0.82} onPress={onPress}>
       {/* Thumbnail */}
       <View style={styles.thumbContainer}>
         <LinearGradient
@@ -76,14 +78,14 @@ const ArticleCard: React.FC<{
         <Image
           source={{ uri: item.thumbnail }}
           style={styles.thumbImage}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
 
       {/* Content */}
       <View style={styles.articleContent}>
-        <Text style={styles.articleTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.articleSnippet} numberOfLines={2}>
+        <Text style={[styles.articleTitle, { color: servicesTheme.colors.primary }]} numberOfLines={2}>{item.title}</Text>
+        <Text style={[styles.articleSnippet, { color: servicesTheme.colors.muted }]} numberOfLines={2}>
           {item.short_description}
         </Text>
 
@@ -101,6 +103,7 @@ const ArticleCard: React.FC<{
 // ─── Screen ───────────────────────────────────────────────────────
 
 const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
+  const servicesTheme = useServicesTheme();
   const { categoryId, categoryTitle } = route.params;
   const sectionId = parseInt(categoryId, 10);
 
@@ -114,18 +117,18 @@ const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
     pulse.setValue(0);
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
       ]),
     ).start();
   }, [pulse]);
 
   const fetchArticles = useCallback(async () => {
     try {
-      console.log('[FAQListingScreen] fetching sectionId:', sectionId, '| categoryId param:', categoryId);
+      __DEV__ && console.log('[FAQListingScreen] fetching sectionId:', sectionId, '| categoryId param:', categoryId);
       const content = await getSectionContent(sectionId);
-      console.log('[FAQListingScreen] section title:', content.section.title);
-      console.log('[FAQListingScreen] articles count:', content.articles.length);
+      __DEV__ && console.log('[FAQListingScreen] section title:', content.section.title);
+      __DEV__ && console.log('[FAQListingScreen] articles count:', content.articles.length);
       setSectionTitle(content.section.title ?? categoryTitle);
       setArticles(content.articles);
     } catch (err) {
@@ -170,12 +173,12 @@ const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#8665FF" />
+    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor="#080B26" />
 
       {/* ── Header ─────────────────────────────────────────── */}
       <LinearGradient
-        colors={['#8665FF', '#5B47A3']}
+        colors={['#3545A3', '#080B26']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.header}
@@ -216,14 +219,14 @@ const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#8665FF']}
-              tintColor="#8665FF"
+              colors={[servicesTheme.colors.primary]}
+              tintColor={servicesTheme.colors.primary}
             />
           }
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.listHeaderTitle}>{sectionTitle}</Text>
-              <Text style={styles.listHeaderSub}>
+              <Text style={[styles.listHeaderTitle, { color: servicesTheme.colors.textStrong }]}>{sectionTitle}</Text>
+              <Text style={[styles.listHeaderSub, { color: servicesTheme.colors.muted }]}>
                 {articles.length > 0
                   ? `${articles.length} articles · Tap any to read`
                   : 'No articles available'}
@@ -256,7 +259,7 @@ const styles = StyleSheet.create({
     gap: 12,
     ...Platform.select({
       ios: {
-        shadowColor: '#5B47A3',
+        shadowColor: '#080B26',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.28,
         shadowRadius: 12,
@@ -307,11 +310,10 @@ const styles = StyleSheet.create({
   articleCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    flexDirection: 'row',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#5B47A3',
+        shadowColor: '#080B26',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.09,
         shadowRadius: 10,
@@ -320,24 +322,25 @@ const styles = StyleSheet.create({
     }),
   },
   thumbContainer: {
-    width: 90,
-    alignSelf: 'stretch',
+    width: '100%',
+    height: 150,
     position: 'relative',
     overflow: 'hidden',
     borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
+    borderTopRightRadius: 18,
+    backgroundColor: '#F1EEFF',
+    padding: 6,
   },
   thumbGradient: { ...StyleSheet.absoluteFillObject, opacity: 0.5 },
   thumbImage: {
-    width: 90,
+    width: '100%',
     height: '100%',
-    position: 'absolute',
   },
-  articleContent: { flex: 1, padding: 14, justifyContent: 'space-between' },
+  articleContent: { padding: 14 },
   articleTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#8665FF',
+    color: '#3545A3',
     lineHeight: 20,
   },
   articleSnippet: {
@@ -357,10 +360,10 @@ const styles = StyleSheet.create({
   readBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5B47A3',
+    color: '#171F59',
     textDecorationLine: 'underline',
   },
-  readBtnArrow: { fontSize: 15, color: '#5B47A3', fontWeight: '700', marginTop: -1 },
+  readBtnArrow: { fontSize: 15, color: '#171F59', fontWeight: '700', marginTop: -1 },
 
   pad: { padding: 16, paddingTop: 20 },
   skeletonCard: {
