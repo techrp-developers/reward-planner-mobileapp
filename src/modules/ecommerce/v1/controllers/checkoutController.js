@@ -277,11 +277,12 @@ class CheckoutController {
         });
       }
 
-      const { use_rewards = "true" } = req.query;
+      const { use_rewards = "true", address_id } = req.query;
 
       const checkoutData = await CheckoutModel.getCheckoutCart(
         userId,
         use_rewards === "true",
+        address_id ? Number(address_id) : null,
       );
 
       return res.json({
@@ -331,6 +332,7 @@ class CheckoutController {
         variant_id,
         qty = 1,
         use_rewards = "true",
+        address_id,
       } = req.query;
 
       if (!product_id || !variant_id || Number(qty) < 1) {
@@ -346,6 +348,7 @@ class CheckoutController {
         quantity: Number(qty),
         useRewards: use_rewards === "true",
         userId,
+        addressId: address_id ? Number(address_id) : null,
       });
 
       return res.json({

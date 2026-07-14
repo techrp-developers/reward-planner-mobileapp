@@ -629,17 +629,23 @@ export default function OrderStepUI() {
 
       __DEV__ && console.log("📦 Creating order...", `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
-      // Fetch latest checkout summary — uses React Query cache if data is < 30s old,
-      // otherwise re-fetches to ensure expected_total matches server price.
+      // Re-fetch with the selected address so the anti-tamper totals use the
+      // latest server-side price, rewards, and shipping quote.
       const latestCheckoutData = await queryClient.fetchQuery({
         queryKey: checkoutQueryKey,
         queryFn: async () => {
           if (mode === "buy_now") {
-            return fetchBuyNowCheckout(product_id, variant_id, buyNowQty, useRewards);
+            return fetchBuyNowCheckout(
+              product_id,
+              variant_id,
+              buyNowQty,
+              useRewards,
+              safeToNumber(selectedAddressId)
+            );
           }
-          return fetchCheckoutCart(useRewards);
+          return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
         },
-        staleTime: 30_000,
+        staleTime: 0,
       });
       const latestSummary = parseCheckoutResponse(latestCheckoutData).summary;
       const expectedPrice = getCheckoutPayableAmount(latestSummary);
