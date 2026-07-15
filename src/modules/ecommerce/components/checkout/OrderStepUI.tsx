@@ -637,7 +637,25 @@ export default function OrderStepUI() {
         await cancelPendingPaymentOrder(orderId);
         await restoreCartAfterPaymentFailure();
         return true;
-      } catch (cancelError) {
+      } catch (cancelError: any) {
+        const responseStatus = Number(cancelError?.response?.status ?? 0);
+        const orderStatus = String(
+          cancelError?.response?.data?.status ?? ""
+        ).toLowerCase();
+
+        // Cancellation is intentionally idempotent from the checkout UI's
+        // perspective. A 404 means the unpaid order has already been removed
+        // or expired, while these terminal states can no longer capture a
+        // payment. In either case it is safe to restore the cart and keep the
+        // customer on checkout instead of opening a now-missing order.
+        if (
+          responseStatus === 404 ||
+          ["cancelled", "canceled", "expired", "failed"].includes(orderStatus)
+        ) {
+          await restoreCartAfterPaymentFailure();
+          return true;
+        }
+
         // The order may already have been paid by the webhook. Restoring the
         // cart in that state could create a duplicate purchase.
         console.error("Failed to release pending order:", cancelError);
@@ -753,7 +771,7 @@ export default function OrderStepUI() {
       __DEV__ && console.log("✅ Order created:", orderId, "Amount:", paymentAmount, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       // ✅ Step 2: Create Payment Order with Razorpay
-      const paymentData = await createPaymentOrder(orderId);
+      const paymentData = await createPaymentOrder(orderId, expectedPrice);
       __DEV__ && console.log("💳 Payment order created:", paymentData, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       const options = {
