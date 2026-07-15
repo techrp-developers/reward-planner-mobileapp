@@ -25,7 +25,7 @@ import CheckoutItemCart from "./CheckoutItemCart";
 import { addToCart, deleteAllCartItems, fetchCartItems, updateCartQty } from "../../api/CartApi";
 import { fetchCheckoutCart, fetchBuyNowCheckout, addBuyNowOrder, addCartOrder } from "../../api/CheckoutApi";
 import { fetchAllAddress } from "../../api/AddressApi";
-import { createPaymentOrder, verifyPayment, checkPaymentStatus } from "../../api/Payment";
+import { createPaymentOrder, verifyPayment, checkPaymentStatus, cancelPendingPaymentOrder } from "../../api/Payment";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StackActions, CommonActions } from "@react-navigation/native";
@@ -126,6 +126,30 @@ const isPaymentVerified = (res: any) => {
   );
 };
 
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+const pollForFinalPaymentStatus = async (orderId: number) => {
+  let lastResponse: any = null;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (attempt > 0) await wait(2000);
+    lastResponse = await checkPaymentStatus(orderId);
+    if (isPaymentVerified(lastResponse)) {
+      return { outcome: "paid" as const, response: lastResponse };
+    }
+
+    const status = String(
+      lastResponse?.status ?? lastResponse?.paymentStatus ?? "",
+    ).toLowerCase();
+    if (["cancelled", "failed", "expired", "refunded"].includes(status)) {
+      return { outcome: "failed" as const, response: lastResponse };
+    }
+  }
+
+  return { outcome: "pending" as const, response: lastResponse };
+};
+
 export default function OrderStepUI() {
   const { isAuthenticated, logout, user } = useAuth();
   const { isDark, theme } = useAppTheme();
@@ -136,9 +160,7 @@ export default function OrderStepUI() {
   alertRef.current = alert;
   const [items, setItems] = useState<any[]>([]);
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
-  // Temporary frontend-only compatibility mode. The current backend quotes
-  // shipping differently between reward previews and order creation.
-  const [useRewards, setUseRewards] = useState(false);
+  const [useRewards, setUseRewards] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const isCreatingOrder = useRef(false);
@@ -566,7 +588,7 @@ export default function OrderStepUI() {
       __DEV__ && console.log("⏸️ Order creation already in progress (ref guard)");
       return;
     }
-    let createdCartOrder = false;
+    let createdOrderId: number | null = null;
     const cartSnapshot =
       mode !== "buy_now"
         ? items
@@ -610,6 +632,19 @@ export default function OrderStepUI() {
       }
     };
 
+    const cancelOrderAndRestoreCart = async (orderId: number) => {
+      try {
+        await cancelPendingPaymentOrder(orderId);
+        await restoreCartAfterPaymentFailure();
+        return true;
+      } catch (cancelError) {
+        // The order may already have been paid by the webhook. Restoring the
+        // cart in that state could create a duplicate purchase.
+        console.error("Failed to release pending order:", cancelError);
+        return false;
+      }
+    };
+
     try {
       if (placing) {
         __DEV__ && console.log("⏸️ Order placement already in progress");
@@ -637,9 +672,15 @@ export default function OrderStepUI() {
         queryKey: checkoutQueryKey,
         queryFn: async () => {
           if (mode === "buy_now") {
-            return fetchBuyNowCheckout(product_id, variant_id, buyNowQty, useRewards);
+            return fetchBuyNowCheckout(
+              product_id,
+              variant_id,
+              buyNowQty,
+              useRewards,
+              safeToNumber(selectedAddressId)
+            );
           }
-          return fetchCheckoutCart(useRewards);
+          return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
         },
         staleTime: 0,
       });
@@ -676,7 +717,6 @@ export default function OrderStepUI() {
         };
         __DEV__ && console.log("📤 Cart order payload:", cartOrderPayload);
         orderRes = await addCartOrder(cartOrderPayload);
-        createdCartOrder = true;
       }
 
       if (orderRes?.success === false) {
@@ -698,6 +738,7 @@ export default function OrderStepUI() {
         orderRes?.data?.order_id ??
         orderRes?.data?.orderId
       );
+      createdOrderId = Number.isFinite(orderId) && orderId > 0 ? orderId : null;
 
       if (!Number.isFinite(orderId) || orderId <= 0) {
         isCreatingOrder.current = false;
@@ -712,7 +753,7 @@ export default function OrderStepUI() {
       __DEV__ && console.log("✅ Order created:", orderId, "Amount:", paymentAmount, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       // ✅ Step 2: Create Payment Order with Razorpay
-      const paymentData = await createPaymentOrder(orderId, paymentAmount);
+      const paymentData = await createPaymentOrder(orderId);
       __DEV__ && console.log("💳 Payment order created:", paymentData, `[t=${(performance.now() - t0).toFixed(0)}ms]`);
 
       const options = {
@@ -765,12 +806,13 @@ export default function OrderStepUI() {
               return;
             }
 
-            // ❌ Verification failed, check status with retries
+            // Verification is webhook-backed, so allow Razorpay's
+            // asynchronous webhook time to finalise the order.
             __DEV__ && console.log("⚠️ Verification failed, checking payment status...");
-            let statusRes = await checkPaymentStatus(orderId);
-            __DEV__ && console.log("📊 Payment status check:", statusRes);
+            const statusResult = await pollForFinalPaymentStatus(orderId);
+            __DEV__ && console.log("📊 Payment status check:", statusResult.response);
 
-            if (isPaymentVerified(statusRes)) {
+            if (statusResult.outcome === "paid") {
               // ✅ Status check passed
               if (mode !== "buy_now") {
                 try {
@@ -788,19 +830,51 @@ export default function OrderStepUI() {
               return;
             }
 
-            // ❌ Final failure
-            console.error("❌ Payment verification failed after retries");
-            await restoreCartAfterPaymentFailure();
             isCreatingOrder.current = false;
             setPlacing(false);
-            alert.error("Payment Verification Failed", "Your payment could not be verified. Please contact support if amount was debited.");
+
+            if (statusResult.outcome === "pending") {
+              alert.info("Payment Processing", "Do not pay again; check this order shortly.");
+              navigateToOrderConfirm(orderId);
+              return;
+            }
+
+            const released = await cancelOrderAndRestoreCart(orderId);
+            if (released) {
+              alert.error("Payment Failed", "The payment was not completed. Your cart has been restored.");
+            } else {
+              alert.info("Payment Status Pending", "Check your order before trying another payment.");
+              navigateToOrderConfirm(orderId);
+            }
 
           } catch (verifyError) {
             console.error("❌ Payment verification error:", verifyError);
-            await restoreCartAfterPaymentFailure();
-            isCreatingOrder.current = false;
-            setPlacing(false);
-            alert.error("Payment Error", "Unable to verify payment. Please check your order status.");
+            try {
+              const statusResult = await pollForFinalPaymentStatus(orderId);
+              isCreatingOrder.current = false;
+              setPlacing(false);
+              if (statusResult.outcome === "paid") {
+                if (mode !== "buy_now") markCartAsCleared();
+                navigateToOrderConfirm(orderId);
+              } else if (statusResult.outcome === "pending") {
+                alert.info("Payment Processing", "Do not pay again; check this order shortly.");
+                navigateToOrderConfirm(orderId);
+              } else {
+                const released = await cancelOrderAndRestoreCart(orderId);
+                if (released) {
+                  alert.error("Payment Failed", "The payment was not completed. Your cart has been restored.");
+                } else {
+                  alert.info("Payment Status Pending", "Check your order before trying another payment.");
+                  navigateToOrderConfirm(orderId);
+                }
+              }
+            } catch (statusError) {
+              isCreatingOrder.current = false;
+              setPlacing(false);
+              console.error("Payment status unavailable:", statusError);
+              alert.info("Payment Status Unavailable", "Do not pay again yet. Please check your order after a few minutes.");
+              navigateToOrderConfirm(orderId);
+            }
           }
         })
         .catch(async (error: any) => {
@@ -831,14 +905,24 @@ export default function OrderStepUI() {
 
           if (isUserCancelled) {
             __DEV__ && console.log("👤 User cancelled payment");
-            await restoreCartAfterPaymentFailure();
-            alert.warning("Payment Cancelled", "You cancelled the payment. Your cart has been restored.");
+            const released = await cancelOrderAndRestoreCart(orderId);
+            if (released) {
+              alert.warning("Payment Cancelled", "You cancelled the payment. Your cart has been restored.");
+            } else {
+              alert.info("Payment Status Pending", "Check your order before paying again.");
+              navigateToOrderConfirm(orderId);
+            }
             return;
           }
 
           // Payment failed
-          await restoreCartAfterPaymentFailure();
-          alert.error("Payment Failed", String(errorText));
+          const released = await cancelOrderAndRestoreCart(orderId);
+          if (released) {
+            alert.error("Payment Failed", String(errorText));
+          } else {
+            alert.info("Payment Status Pending", "Check your order before trying another payment.");
+            navigateToOrderConfirm(orderId);
+          }
         });
     } catch (e: any) {
       isCreatingOrder.current = false;
@@ -851,8 +935,8 @@ export default function OrderStepUI() {
 
       console.error("❌ Order/Payment failed:", e?.response?.data || e?.message || e);
 
-      if (createdCartOrder) {
-        await restoreCartAfterPaymentFailure();
+      if (createdOrderId) {
+        await cancelOrderAndRestoreCart(createdOrderId);
       }
 
       const serverMessage =
