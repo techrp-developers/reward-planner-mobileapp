@@ -582,7 +582,7 @@ export default function OrderStepUI() {
         // ✅ Use CommonActions.reset to completely reset navigation stack
         navigation.dispatch(
           CommonActions.reset({
-            index: 0,
+            index: 1,
             routes: [
               { name: 'Home' },
               {
