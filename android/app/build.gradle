@@ -107,8 +107,8 @@ android {
         applicationId "com.rewardsplanners"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 23
-                versionName "1.0"
+        versionCode 28
+        versionName "1.0"
     }
     signingConfigs {
         debug {
@@ -131,9 +131,9 @@ android {
         release {
             debuggable false
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
 }
