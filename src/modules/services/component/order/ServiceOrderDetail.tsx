@@ -233,6 +233,34 @@ export default function ServiceOrderDetail() {
     primaryService?.variant_name ||
     `${allServiceItems.length} service${allServiceItems.length === 1 ? '' : 's'}`;
   const primaryImage = primaryService?.image_url;
+  const itemSubtotal = Number(
+    order.subtotal ??
+    order.summary?.subtotal ??
+    allServiceItems.reduce((sum, item) => sum + Number(item.price || 0), 0),
+  );
+  const rewardCoinsUsed = Number(
+    order.reward_coins_used ??
+    order.rewards?.used ??
+    order.reward_discount ??
+    order.summary?.reward_coins_used ??
+    0,
+  );
+  const rewardDiscount = Number(
+    order.reward_discount ??
+    order.summary?.reward_discount ??
+    rewardCoinsUsed,
+  );
+  const rewardCoinsEarned = Number(
+    order.reward_coins_earned ??
+    order.rewards?.earned ??
+    order.summary?.reward_coins_earned ??
+    0,
+  );
+  const orderTotal = Number(
+    order.total_amount ??
+    order.summary?.total ??
+    Math.max(0, itemSubtotal - rewardDiscount),
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
@@ -393,13 +421,13 @@ export default function ServiceOrderDetail() {
         {/* ── Price summary (reused ecommerce component) ────────────── */}
         <SectionCard title="Payment Summary">
           <PriceDetailsCard
-            itemTotal={order.total_amount}
+            itemTotal={itemSubtotal}
             deliveryFee={0}
             bagDiscount={0}
-            rewardDiscount={0}
-            orderTotal={order.total_amount}
-            rewardEarned={0}
-            rewardRedeemed={0}
+            rewardDiscount={rewardDiscount}
+            orderTotal={orderTotal}
+            rewardEarned={rewardCoinsEarned}
+            rewardRedeemed={rewardCoinsUsed}
             paymentMethod="Online"
           />
           <InvoiceDownloadRow

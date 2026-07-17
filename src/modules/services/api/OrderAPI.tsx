@@ -213,6 +213,9 @@ export interface ServiceItem {
   title: string;
   image_url: string;
   price: number;
+  total_amount?: number;
+  reward_coins_used?: number;
+  reward_coins_earned?: number;
   status: string;
   documents: ServiceDocument[];
   timeline: ServiceTimeline[];
@@ -246,10 +249,23 @@ export interface ServiceOrderDetails {
   status: string;
   address: ServiceAddress | null;
   total_amount: number;
+  subtotal: number;
+  reward_discount: number;
+  reward_coins_used: number;
+  reward_coins_earned: number;
+  rewards: {
+    used: number;
+    earned: number;
+  };
   summary: {
     total_services: number;
     completed_services: number;
     total_bundles: number;
+    subtotal: number;
+    reward_discount: number;
+    total: number;
+    reward_coins_used: number;
+    reward_coins_earned: number;
   };
   timeline: ServiceTimeline[];
   items: ServiceItem[];
