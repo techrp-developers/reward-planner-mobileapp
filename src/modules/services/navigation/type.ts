@@ -129,6 +129,7 @@ export type HomeStackParamList = {
     bundle_id?: number; 
     selected_items?: number[];
     previewData?: any; 
+    redeem_coins?: number;
   };
 };
 

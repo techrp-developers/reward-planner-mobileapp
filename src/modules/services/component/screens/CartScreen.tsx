@@ -159,6 +159,14 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
   return normalized;
 };
 
+const normalizeCartRewards = (response: any) => {
+  const rewards = (response?.data ?? response ?? {})?.rewards ?? {};
+  return {
+    earnCoins: parseMoney(rewards.earn_coins),
+    maxRedeemCoins: parseMoney(rewards.max_redeem_coins),
+  };
+};
+
 function CartScreen() {
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
@@ -175,6 +183,11 @@ function CartScreen() {
     return cached ? normalizeCartItems(cached) : [];
   }, [queryClient]);
   const [items, setItems] = useState<ServiceCartItem[]>(cachedCartItems);
+  const [cartRewards, setCartRewards] = useState(() => {
+    const cached = queryClient.getQueryData(serviceCartItemsQueryKey);
+    return normalizeCartRewards(cached);
+  });
+  const [useRewardCoins, setUseRewardCoins] = useState(false);
   const [loading, setLoading] = useState(cachedCartItems.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | number | null>(null);
@@ -218,6 +231,7 @@ function CartScreen() {
       const normalized = normalizeCartItems(response);
 
       setItems(normalized);
+      setCartRewards(normalizeCartRewards(response));
       queryClient.setQueryData(serviceCartItemsQueryKey, response);
       // Prefix-invalidate so the count subkey ([...key, 'count']) used by
       // useServiceCartCount also refetches — setQueryData only updates the
@@ -236,6 +250,12 @@ function CartScreen() {
   useEffect(() => {
     loadCart();
   }, [loadCart]);
+
+  useEffect(() => {
+    if (cartRewards.maxRedeemCoins <= 0 && useRewardCoins) {
+      setUseRewardCoins(false);
+    }
+  }, [cartRewards.maxRedeemCoins, useRewardCoins]);
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -343,19 +363,25 @@ function CartScreen() {
     const mrpTotal = items.reduce((acc, item) => acc + (item.mrp > 0 ? item.mrp : item.price), 0);
     const discount = Math.max(mrpTotal - subtotal, 0);
 
+    const redeemCoins = useRewardCoins
+      ? Math.min(cartRewards.maxRedeemCoins, subtotal)
+      : 0;
+
     return {
       subtotal,
       discount,
-      grandTotal: subtotal,
+      redeemCoins,
+      grandTotal: Math.max(0, subtotal - redeemCoins),
     };
-  }, [items]);
+  }, [cartRewards.maxRedeemCoins, items, useRewardCoins]);
 
   const onProceedToCheckout = useCallback(() => {
     navigation.navigate('ServiceCheckoutScreen', {
       mode: 'cart',
+      redeem_coins: totals.redeemCoins,
       // Don't pass previewData - let checkout fetch fresh data from backend
     });
-  }, [navigation]);
+  }, [navigation, totals.redeemCoins]);
 
   // Address loading must not block the service cart. Users can proceed to
   // checkout without one and select an address before placing the order.
@@ -399,10 +425,18 @@ function CartScreen() {
         subtotal={totals.subtotal}
         totalDiscount={totals.discount}
         finalTotal={totals.grandTotal}
+        totalRewardEarn={cartRewards.earnCoins}
+        totalRedeemed={totals.redeemCoins}
+        rewardCoinsAvailable={cartRewards.maxRedeemCoins}
+        useRewards={useRewardCoins}
+        onUseRewardsChange={(enabled) => {
+          setUseRewardCoins(enabled && cartRewards.maxRedeemCoins > 0);
+        }}
+        showRedeemableCoins
       />
       <View style={styles.listBottomSpace} />
     </>
-  ), [totals]);
+  ), [cartRewards, totals, useRewardCoins]);
 
   if (!loading && !error && !refreshing && items.length === 0) {
     return (

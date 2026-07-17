@@ -22,7 +22,7 @@ import OrderProcedbutton from '../../../ecommerce/components/checkout/OrderProce
 import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowPreview, getCheckoutPreview, placeBuyNowOrder, placeCartOrder, removeServiceCartItem, addServiceToCart, clearServiceCart } from '../../api/CartAPI';
-import { buyNowBundle } from '../../api/BundleAPI';
+import { buyNowBundle, getBuyNowBundlePreview } from '../../api/BundleAPI';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
 import { useAuth } from '../../../common/auth/context/AuthContext';
 import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
@@ -80,6 +80,10 @@ type PreviewSummary = {
   subtotal: number;
   discount: number;
   grandTotal: number;
+  earnCoins: number;
+  redeemCoins: number;
+  maxRedeemCoins: number;
+  walletBalance: number;
 };
 
 const waitForServicePayment = (milliseconds: number) =>
@@ -292,13 +296,13 @@ if (raw?.bundle?.bundle_total) {
 
 // ✅ discount
 const discount =
-  parseMoney(summaryRaw.discount) +
-  parseMoney(summaryRaw.reward_discount);
+  parseMoney(summaryRaw.discount);
+const redeemCoins = parseMoney(summaryRaw.redeem_coins ?? summaryRaw.reward_discount);
 
 // ✅ total
 const grandTotal =
   mode === 'cart'
-    ? Math.max(subtotal - discount, 0)
+    ? parseMoney(summaryRaw.total ?? Math.max(subtotal - discount - redeemCoins, 0))
     : parseMoney(summaryRaw.total ?? subtotal);
 
 return {
@@ -307,6 +311,10 @@ return {
     subtotal,
     discount,
     grandTotal,
+    earnCoins: parseMoney(summaryRaw.earn_coins),
+    redeemCoins,
+    maxRedeemCoins: parseMoney(summaryRaw.max_redeem_coins),
+    walletBalance: parseMoney(summaryRaw.wallet_balance),
   },
 };
 }
@@ -317,11 +325,12 @@ const serviceCheckoutQueryKey = (
   mode: 'buy_now' | 'cart',
   service_id?: number,
   variant_id?: number,
+  redeemCoins = 0,
 ) => {
   if (mode === 'buy_now') {
-    return [...SERVICE_CHECKOUT_QUERY_KEY, 'buy-now', String(service_id ?? ''), String(variant_id ?? '')] as const;
+    return [...SERVICE_CHECKOUT_QUERY_KEY, 'buy-now', String(service_id ?? ''), String(variant_id ?? ''), redeemCoins] as const;
   }
-  return SERVICE_CHECKOUT_QUERY_KEY;
+  return [...SERVICE_CHECKOUT_QUERY_KEY, 'cart', redeemCoins] as const;
 };
 
 export default function ServiceCheckoutScreen() {
@@ -341,6 +350,7 @@ export default function ServiceCheckoutScreen() {
     bundle_id,
     selected_items: routeSelectedItems,
     previewData: passedPreview,
+    redeem_coins: initialRedeemCoins = 0,
   } = route.params ?? {};
   const mode = routeMode === 'buy_now' ? 'buy_now' : 'cart';
 
@@ -350,6 +360,9 @@ export default function ServiceCheckoutScreen() {
   const pulse = useRef(new Animated.Value(0)).current;
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [useRewardCoins, setUseRewardCoins] = useState(initialRedeemCoins > 0);
+  const [requestedRedeemCoins, setRequestedRedeemCoins] = useState(initialRedeemCoins);
+  const redeemCoinsForRequest = useRewardCoins ? requestedRedeemCoins : 0;
   const paymentFlowInProgress = useRef(false);
   const [removingId, setRemovingId] = useState<string | number | null>(null);
   const [hasStarted, setHasStarted] = useState(mode === 'buy_now' ? !!passedPreview : false);
@@ -391,8 +404,8 @@ export default function ServiceCheckoutScreen() {
 
   // ── checkout/buy-now preview query ─────────────────────────────────────────
   const checkoutQueryKey = useMemo(
-    () => serviceCheckoutQueryKey(mode, service_id, variant_id),
-    [mode, service_id, variant_id],
+    () => serviceCheckoutQueryKey(mode, service_id, variant_id, redeemCoinsForRequest),
+    [mode, redeemCoinsForRequest, service_id, variant_id],
   );
 
   const {
@@ -404,13 +417,20 @@ export default function ServiceCheckoutScreen() {
     queryKey: checkoutQueryKey,
     queryFn: () => {
       if (mode === 'buy_now') {
-        if (passedPreview) return Promise.resolve(passedPreview);
+        if (bundle_id) {
+          return getBuyNowBundlePreview({
+            bundle_id: Number(bundle_id),
+            selected_items: routeSelectedItems ?? [],
+            redeem_coins: redeemCoinsForRequest,
+          });
+        }
+        if (passedPreview && redeemCoinsForRequest === 0) return Promise.resolve(passedPreview);
         if (service_id && variant_id) {
-          return getBuyNowPreview({ service_id, variant_id });
+          return getBuyNowPreview({ service_id, variant_id, redeem_coins: redeemCoinsForRequest });
         }
         return Promise.resolve({ data: { items: [], summary: {} } });
       }
-      return getCheckoutPreview();
+      return getCheckoutPreview(redeemCoinsForRequest);
     },
     enabled: isAuthenticated,
     staleTime: 30 * 1000,
@@ -438,7 +458,7 @@ export default function ServiceCheckoutScreen() {
   );
 
   const summary = useMemo(
-    () => checkoutData?.summary ?? { subtotal: 0, discount: 0, grandTotal: 0 },
+    () => checkoutData?.summary ?? { subtotal: 0, discount: 0, grandTotal: 0, earnCoins: 0, redeemCoins: 0, maxRedeemCoins: 0, walletBalance: 0 },
     [checkoutData?.summary]
   );
 
@@ -527,15 +547,16 @@ export default function ServiceCheckoutScreen() {
           .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id)))
           .filter((id) => Number.isFinite(id) && id > 0);
 
-        orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
+        orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id, redeem_coins: redeemCoinsForRequest });
       } else if (mode === "buy_now" && service_id && variant_id) {
         orderRes = await placeBuyNowOrder({
           service_id: Number(service_id),
           variant_id: Number(variant_id),
           address_id,
+          redeem_coins: redeemCoinsForRequest,
         });
       } else {
-        orderRes = await placeCartOrder({ address_id });
+        orderRes = await placeCartOrder({ address_id, redeem_coins: redeemCoinsForRequest });
       }
 
       // Check for explicit API failure
@@ -767,7 +788,7 @@ export default function ServiceCheckoutScreen() {
         });
       }
     }
-  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
+  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout, redeemCoinsForRequest]);
   const handleRemoveFromCheckout = useCallback(async (item: ServicePreviewItem) => {
     if (mode !== 'cart' || !item.id) return;
     if (removingId === item.id) return;
@@ -958,8 +979,21 @@ export default function ServiceCheckoutScreen() {
         {/* Bill details */}
         <BillDetailsCard
           subtotal={summary.subtotal}
-          totalDiscount={summary.discount}
+          bagDiscount={summary.discount}
           finalTotal={summary.grandTotal}
+          totalRewardEarn={summary.earnCoins}
+          totalRedeemed={summary.redeemCoins}
+          rewardCoinsAvailable={Math.min(summary.walletBalance, summary.maxRedeemCoins)}
+          showRedeemableCoins
+          useRewards={useRewardCoins}
+          onUseRewardsChange={(enabled) => {
+            const redeemableCoins = Math.min(summary.walletBalance, summary.maxRedeemCoins);
+            setUseRewardCoins(enabled && redeemableCoins > 0);
+            setRequestedRedeemCoins(
+              enabled && redeemableCoins > 0 ? redeemableCoins : 0,
+            );
+          }}
+          showShippingCharges={false}
         />
 
         <View style={styles.bottomSpacer} />
