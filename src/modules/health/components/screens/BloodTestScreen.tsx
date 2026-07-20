@@ -93,6 +93,45 @@ const essentialMarkers = [
   },
 ];
 
+const markerSubtitleHighlights: Record<number, string[]> = {
+  1: ['oxygen levels', 'anemia markers'],
+  2: ['metabolism', 'TSH'],
+  3: ['blood type', 'Rh'],
+  4: ['pre-diabetes', 'fasting glucose'],
+  5: ['LDL', 'HDL'],
+  6: ['D3', 'B12'],
+  7: ['Complete Blood Count', 'immunity'],
+  8: ['enzymes', 'hepatic health'],
+  9: ['filtration efficiency', 'Creatinine'],
+  10: ['biomarkers', 'systemic inflammation'],
+};
+
+function renderMarkerSubtitle(
+  subtitle: string,
+  markerId: number,
+  strongStyle: object,
+): React.ReactNode {
+  const highlights = markerSubtitleHighlights[markerId] ?? [];
+  if (highlights.length === 0) {
+    return subtitle;
+  }
+
+  const orderedHighlights = [...highlights].sort((a, b) => b.length - a.length);
+  const escaped = orderedHighlights.map(item => item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const parts = subtitle.split(new RegExp(`(${escaped.join('|')})`, 'g'));
+
+  return parts.map((part, index) => {
+    const isHighlighted = orderedHighlights.some(item => item === part);
+    return isHighlighted ? (
+      <Text key={`${markerId}-${index}`} style={strongStyle}>
+        {part}
+      </Text>
+    ) : (
+      <React.Fragment key={`${markerId}-${index}`}>{part}</React.Fragment>
+    );
+  });
+}
+
 const howItWorksSteps = [
   {
     id: 1,
@@ -118,9 +157,7 @@ const BOOK_NOW_BUTTON_HEIGHT = 52;
 
 
 export default function BloodTestScreen({ navigation }: Props) {
-  const [selectedMarkerIds, setSelectedMarkerIds] = useState<number[]>(
-    essentialMarkers.map(item => item.id),
-  );
+  const [selectedMarkerIds, setSelectedMarkerIds] = useState<number[]>([]);
 
   const selectedTestsCount = selectedMarkerIds.length;
   const isAllSelected = selectedTestsCount === essentialMarkers.length;
@@ -260,12 +297,18 @@ export default function BloodTestScreen({ navigation }: Props) {
                   onPress={() => toggleMarker(item.id)}
                 >
                   <View style={styles.markerIconOnly}>
-                    <MarkerIcon width={44} height={44} />
+                    <MarkerIcon width={44} height={32} />
                   </View>
 
                   <View style={styles.markerContent}>
                     <Text style={styles.markerTitle}>{item.title}</Text>
-                    <Text style={styles.markerSubtitle}>{item.subtitle}</Text>
+                    <Text style={styles.markerSubtitle}>
+                      {renderMarkerSubtitle(
+                        item.subtitle,
+                        item.id,
+                        styles.markerSubtitleStrong,
+                      )}
+                    </Text>
                   </View>
 
                   <View
@@ -653,10 +696,10 @@ const styles = StyleSheet.create({
     borderColor: '#006EDC',
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
 
   markerCardUnselected: {
@@ -666,7 +709,7 @@ const styles = StyleSheet.create({
 
   markerIconOnly: {
     width: 44,
-    height: 44,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -679,24 +722,32 @@ const styles = StyleSheet.create({
 
   markerTitle: {
     color: 'black',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: '700',
     fontFamily: 'Manrope',
-    marginBottom: 3,
+    marginBottom: 2,
   },
 
   markerSubtitle: {
     color: '#5E6A7E',
-    fontSize: 14,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'Manrope',
+  },
+
+  markerSubtitleStrong: {
+    color: '#5E6A7E',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '800',
     fontFamily: 'Manrope',
   },
 
   markerCheckedBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 5,
     backgroundColor: '#0E61C9',
     alignItems: 'center',
     justifyContent: 'center',

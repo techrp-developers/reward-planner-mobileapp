@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -27,11 +28,16 @@ const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
 const Categories3 = require('../../../assets/sampleImages/Categories(3).png');
 const Categories4 = require('../../../assets/sampleImages/Categories(4).png');
 // const Categories5 = require('../../../assets/sampleImages/Categories(5).png');
-// const Categories6 = require('../../../assets/sampleImages/Categories(6).png');
 // const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
 
+type SvgCard = React.ComponentType<{
+  width?: number;
+  height?: number;
+}>;
+
 type CategoryItem = {
-  image: ReturnType<typeof require>;
+  image?: ReturnType<typeof require>;
+  Icon?: SvgCard;
   tab?: TopTab;
   stack?: 'HealthStack';
 };
@@ -41,8 +47,8 @@ const categoriesData: CategoryItem[] = [
   { image: Categories2, tab: 'Services' },
   { image: Categories3, tab: 'Payments' },
   { image: Categories4, stack: 'HealthStack' },
+  { Icon: BusBookingCard as unknown as SvgCard, tab: 'DineOut' },
   // { image: Categories5, tab: 'Product' },
-  // { image: Categories6, tab: 'Product' },
   // { image: Categories7, tab: 'DineOut' },
 ];
 
@@ -142,14 +148,25 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
             accessibilityRole="button"
             onPress={() => handleCategoryPress(item)}
           >
-            <Image
-              source={item.image}
-              style={[
-                styles.cardImage,
-                { width: CARD_WIDTH, height: CARD_HEIGHT },
-              ]}
-              resizeMode="cover"
-            />
+            {item.Icon ? (
+              <View
+                style={[
+                  styles.svgCardWrap,
+                  { width: CARD_WIDTH, height: CARD_HEIGHT },
+                ]}
+              >
+                <item.Icon width={CARD_WIDTH} height={CARD_HEIGHT} />
+              </View>
+            ) : (
+              <Image
+                source={item.image}
+                style={[
+                  styles.cardImage,
+                  { width: CARD_WIDTH, height: CARD_HEIGHT },
+                ]}
+                resizeMode="cover"
+              />
+            )}
           </TouchableOpacity>
         ))}
 
@@ -205,6 +222,10 @@ const styles = StyleSheet.create({
     borderRadius: rs(16),
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.16)',
+  },
+  svgCardWrap: {
+    borderRadius: rs(16),
+    overflow: 'hidden',
   },
   standaloneArrowButton: {
     alignItems: 'flex-start',

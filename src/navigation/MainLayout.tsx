@@ -16,6 +16,142 @@ export type ModuleStackParamList = {
   ServicesModule: { moduleName?: string } | undefined;
   PaymentsModule: { moduleName?: string } | undefined;
   DineOutModule: { moduleName?: string } | undefined;
+  BusListingScreen: undefined;
+  AllFilterScreen: undefined;
+  AboutBusScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      about: string;
+      topRated?: boolean;
+    };
+  };
+  SeatSelectionScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      topRated?: boolean;
+    };
+  };
+  PassengerDetailsScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      topRated?: boolean;
+    };
+    selectedSeats: string[];
+  };
+  BoardingDroppingSelectionScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      topRated?: boolean;
+    };
+    selectedSeats: string[];
+    passengers: Array<{
+      seat: string;
+      fullName: string;
+      age: string;
+      gender: "M" | "F" | "O";
+      email: string;
+      phone: string;
+    }>;
+  };
+  BusSummaryScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      topRated?: boolean;
+    };
+    selectedSeats: string[];
+    passengers: Array<{
+      seat: string;
+      fullName: string;
+      age: string;
+      gender: "M" | "F" | "O";
+      email: string;
+      phone: string;
+    }>;
+    boardingPoint: string;
+    droppingPoint: string;
+  };
+  PaymentScreen: {
+    bus: {
+      id: string;
+      operator: string;
+      subtitle: string;
+      departure: string;
+      arrival: string;
+      from: string;
+      to: string;
+      duration: string;
+      price: string;
+      seatsLeft: string;
+      rating: string;
+      features: string[];
+      topRated?: boolean;
+    };
+    selectedSeats: string[];
+    passengers: Array<{
+      seat: string;
+      fullName: string;
+      age: string;
+      gender: "M" | "F" | "O";
+      email: string;
+      phone: string;
+    }>;
+    totalAmount: number;
+  };
 };
 
 const ModuleStack = createNativeStackNavigator<ModuleStackParamList>();
@@ -46,6 +182,14 @@ const MODULE_MODE_BY_ROUTE: Record<keyof ModuleStackParamList, AppMode> = {
   ServicesModule: "Services",
   PaymentsModule: "Payments",
   DineOutModule: "DineOut",
+  BusListingScreen: "DineOut",
+  AllFilterScreen: "DineOut",
+  AboutBusScreen: "DineOut",
+  SeatSelectionScreen: "DineOut",
+  PassengerDetailsScreen: "DineOut",
+  BoardingDroppingSelectionScreen: "DineOut",
+  BusSummaryScreen: "DineOut",
+  PaymentScreen: "DineOut",
 };
 
 const getRequestedMode = (params?: {
@@ -76,6 +220,19 @@ const getActiveRouteChain = (state?: RouteStateLike): string[] => {
 const shouldShowNavbar = (routeChain: string[]): boolean => {
   if (routeChain.length === 0) return true;
 
+  if (
+    routeChain.includes("BusListingScreen")
+    || routeChain.includes("AllFilterScreen")
+    || routeChain.includes("AboutBusScreen")
+    || routeChain.includes("SeatSelectionScreen")
+    || routeChain.includes("PassengerDetailsScreen")
+    || routeChain.includes("BoardingDroppingSelectionScreen")
+    || routeChain.includes("BusSummaryScreen")
+    || routeChain.includes("PaymentScreen")
+  ) {
+    return false;
+  }
+
   const moduleRoute = routeChain.find((routeName) =>
     ["ProductModule", "ServicesModule", "PaymentsModule", "DineOutModule"].includes(routeName)
   );
@@ -99,7 +256,15 @@ const shouldShowNavbar = (routeChain: string[]): boolean => {
   }
 
   if (moduleRoute === "DineOutModule") {
-    return ["DineOutModule"].includes(leafRoute);
+    return ["DineOutModule"].includes(leafRoute)
+      && leafRoute !== "BusListingScreen"
+      && leafRoute !== "AllFilterScreen"
+      && leafRoute !== "AboutBusScreen"
+      && leafRoute !== "SeatSelectionScreen"
+      && leafRoute !== "PassengerDetailsScreen"
+      && leafRoute !== "BoardingDroppingSelectionScreen"
+      && leafRoute !== "BusSummaryScreen"
+      && leafRoute !== "PaymentScreen";
   }
 
   return false;
@@ -324,8 +489,54 @@ function MainLayout() {
           />
           <ModuleStack.Screen
             name="DineOutModule"
-            getComponent={() => require("../modules/ecommerce/constants/ComingSoon").default}
+            getComponent={() => require("../modules/busbooking/components/screens/BookingHomeScreen").default}
             initialParams={{ moduleName: "DineOut" }}
+          />
+          <ModuleStack.Screen
+            name="BusListingScreen"
+            getComponent={() => require("../modules/busbooking/components/screens/BusListingScreen").default}
+          />
+          <ModuleStack.Screen
+            name="AllFilterScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/AllFilterScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="AboutBusScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/AboutBusScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="SeatSelectionScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/SeatSelectionScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="PassengerDetailsScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/PassengerDetailsScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="BoardingDroppingSelectionScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/BoardingDroppingSelectionScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="BusSummaryScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/BusSummaryScreen").default
+            }
+          />
+          <ModuleStack.Screen
+            name="PaymentScreen"
+            getComponent={() =>
+              require("../modules/busbooking/components/screens/PaymentScreen").default
+            }
           />
         </ModuleStack.Navigator>
       </ThemedSurface>

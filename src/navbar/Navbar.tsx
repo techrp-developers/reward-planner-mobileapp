@@ -53,7 +53,7 @@ export type TopTab = "Product" | "Services" | "Payments" | "DineOut";
 type NavbarProps = {
   activeModule?: TopTab;
   onModuleChange?: (tab: TopTab) => void;
-  topTabsVariant?: "default" | "health";
+  topTabsVariant?: "default" | "health" | "busBooking";
 };
 
 type ApiAddress = {
@@ -140,7 +140,7 @@ const TAB_THEME: Record<TopTab, { bgColor: string; activeTint?: string }> = {
 };
 
 const TOP_TABS: TopTab[] = ["Product", "Services", "Payments", "DineOut"];
-const HEALTH_HEADER_GRADIENT = ["#0157BB", "#013674"];
+const HEALTH_HEADER_GRADIENT = ["#2e72be", "#013674"];
 
 const HEALTH_EXPERIENCE_TABS: HealthEntry[] = [
   { id: "health", label: "Health", Icon: HealthTopIcon as unknown as SvgIcon, variant: "filled" },
@@ -668,6 +668,104 @@ export default function Navbar({
             </View>
           </View>
         </>
+      ) : topTabsVariant === "busBooking" ? (
+        <>
+          <View style={styles.topIconsRow}>
+            <TopIconWithLabel
+              active={activeTab === "Product"}
+              onPress={() => handleTab("Product")}
+              Icon={Home_Nav as unknown as SvgIcon}
+              label="Product"
+              activeColor={TAB_THEME.Product.bgColor}
+              activeTint={TAB_THEME.Product.activeTint}
+              inactiveTint={navbarIconColor}
+              inactiveBackground={navbarSurface}
+              inactiveBorder={navbarBorder}
+            />
+
+            <TopIconWithLabel
+              active={activeTab === "Services"}
+              onPress={() => handleTab("Services")}
+              Icon={Services as unknown as SvgIcon}
+              label="Services"
+              activeColor={TAB_THEME.Services.bgColor}
+              activeTint={TAB_THEME.Services.activeTint}
+              inactiveTint={navbarIconColor}
+              inactiveBackground={navbarSurface}
+              inactiveBorder={navbarBorder}
+            />
+
+            <TopIconWithLabel
+              active={activeTab === "Payments"}
+              onPress={() => handleTab("Payments")}
+              Icon={Payments as unknown as SvgIcon}
+              ActiveIcon={Payments2 as unknown as SvgIcon}
+              label="Payments"
+              activeColor={TAB_THEME.Payments.bgColor}
+              activeTint={TAB_THEME.Payments.activeTint}
+              inactiveTint={navbarIconColor}
+              inactiveBackground={navbarSurface}
+              inactiveBorder={navbarBorder}
+            />
+
+            <TopIconWithLabel
+              active={activeTab === "DineOut"}
+              onPress={() => handleTab("DineOut")}
+              Icon={Bus_Booking as unknown as SvgIcon}
+              ActiveIcon={Bus as unknown as SvgIcon}
+              label="Bus Booking"
+              activeColor={TAB_THEME.DineOut.bgColor}
+              activeTint={TAB_THEME.DineOut.activeTint}
+              inactiveTint={navbarIconColor}
+              inactiveBackground={navbarSurface}
+              inactiveBorder={navbarBorder}
+            />
+          </View>
+
+          <View style={styles.busBookingProfileRow}>
+            <View style={styles.busBookingIdentityWrap}>
+              <View style={styles.busBookingAvatar}>
+                <MaterialCommunityIcons name="account" size={20} color="#FFFFFF" />
+              </View>
+
+              <View style={styles.busBookingTextWrap}>
+                <Text style={styles.busBookingGreeting} numberOfLines={1}>
+                  Hello, {displayName}
+                </Text>
+                <View style={styles.busBookingLocationRow}>
+                  <MaterialCommunityIcons name="map-marker-outline" size={13} color="#FBBF24" />
+                  <Text style={styles.busBookingLocationText} numberOfLines={1}>
+                    {hasAddress ? displayAddress : "Pune, India"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.busBookingActions}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.busBookingWalletPill}
+                onPress={() => navigateToScreen("WalletHistory")}
+              >
+                <WalletSvg width={19} height={19} />
+                <Text style={styles.busBookingWalletText} numberOfLines={1}>
+                  ₹6,549
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.busBookingBellButton}
+                onPress={() => navigateToScreen("Notification")}
+              >
+                <MaterialCommunityIcons name="bell-outline" size={21} color="#374151" />
+                <View style={styles.busBookingBellBadge}>
+                  <Text style={styles.busBookingBellBadgeText}>1</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
       ) : (
         <>
           <View style={styles.topIconsRow}>
@@ -942,6 +1040,116 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+
+  busBookingProfileRow: {
+    marginTop: 14,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  busBookingIdentityWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+
+  busBookingAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  busBookingTextWrap: {
+    flex: 1,
+  },
+
+  busBookingGreeting: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
+  busBookingLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+
+  busBookingLocationText: {
+    marginLeft: 3,
+    color: "rgba(255,255,255,0.94)",
+    fontSize: 13,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
+
+  busBookingActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  busBookingWalletPill: {
+    minWidth: 70,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+
+  busBookingWalletText: {
+    color: "#7C2D12",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  busBookingBellButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  busBookingBellBadge: {
+    position: "absolute",
+    top: -2,
+    right: -1,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 999,
+    backgroundColor: "#F43F5E",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+
+  busBookingBellBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "900",
+    lineHeight: 9,
   },
 
   healthProfileLeft: {

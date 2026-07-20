@@ -39,10 +39,10 @@ const activeServices: CategoryItem[] = [
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
   { image: Explore5, stack: 'HealthStack' },
+  { image: Explore4, tab: 'DineOut' },
 ];
 
 const upcomingServices: CategoryItem[] = [
-  { image: Explore4, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];
 
