@@ -19,21 +19,15 @@ import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
 
-type ServicesModuleProps = {
-  onModulePress?: (tab: ExploreServiceTab) => void;
-};
+type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 
 const Categories1 = require('../../../assets/sampleImages/Categories(1).png');
 const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
 const Categories3 = require('../../../assets/sampleImages/Categories(3).png');
 const Categories4 = require('../../../assets/sampleImages/Categories(4).png');
-// const Categories5 = require('../../../assets/sampleImages/Categories(5).png');
-// const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
-
-type SvgCard = React.ComponentType<{
-  width?: number;
-  height?: number;
-}>;
+const Categories5 = require('../../../assets/sampleImages/Categories(5).png');
+const Categories6 = require('../../../assets/sampleImages/Categories(6).png');
+const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
 
 type CategoryItem = {
   image?: ReturnType<typeof require>;
@@ -46,10 +40,10 @@ const categoriesData: CategoryItem[] = [
   { image: Categories1, tab: 'Product' },
   { image: Categories2, tab: 'Services' },
   { image: Categories3, tab: 'Payments' },
-  { image: Categories4, stack: 'HealthStack' },
-  { Icon: BusBookingCard as unknown as SvgCard, tab: 'DineOut' },
-  // { image: Categories5, tab: 'Product' },
-  // { image: Categories7, tab: 'DineOut' },
+  { image: Categories4, tab: 'Product' },
+  { image: Categories5, tab: 'Product' },
+  { image: Categories6, tab: 'Product' },
+  { image: Categories7, tab: 'DineOut' },
 ];
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
@@ -81,29 +75,18 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
   );
 
   const handleCategoryPress = useCallback(
-    (item: CategoryItem) => {
-      if (isNavigatingRef.current) return;
-      isNavigatingRef.current = true;
-
-      if (item.stack) {
-        navigation.navigate(item.stack);
-      } else {
-        const target = TAB_TO_MODULE[item.tab as TopTab];
-        if (onModulePress) {
-          onModulePress(item.tab as TopTab);
-        } else {
-          navigation.navigate('Home', {
+    (tab: TopTab) => {
+      const target = TAB_TO_MODULE[tab];
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Home',
+          params: {
             screen: target.screen,
             params: { moduleName: target.moduleName },
             moduleName: target.moduleName,
-          });
-        }
-      }
-
-      navigationUnlockTimerRef.current = setTimeout(() => {
-        isNavigatingRef.current = false;
-        navigationUnlockTimerRef.current = null;
-      }, 1000);
+          },
+        })
+      );
     },
     [navigation, onModulePress],
   );
@@ -145,28 +128,13 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
           <TouchableOpacity
             key={i}
             activeOpacity={0.88}
-            accessibilityRole="button"
-            onPress={() => handleCategoryPress(item)}
+            onPress={() => handleCategoryPress(item.tab)}
           >
-            {item.Icon ? (
-              <View
-                style={[
-                  styles.svgCardWrap,
-                  { width: CARD_WIDTH, height: CARD_HEIGHT },
-                ]}
-              >
-                <item.Icon width={CARD_WIDTH} height={CARD_HEIGHT} />
-              </View>
-            ) : (
-              <Image
-                source={item.image}
-                style={[
-                  styles.cardImage,
-                  { width: CARD_WIDTH, height: CARD_HEIGHT },
-                ]}
-                resizeMode="cover"
-              />
-            )}
+            <Image
+              source={item.image}
+              style={[styles.cardImage, { width: CARD_WIDTH, height: CARD_HEIGHT }]}
+              resizeMode="cover"
+            />
           </TouchableOpacity>
         ))}
 
@@ -222,15 +190,5 @@ const styles = StyleSheet.create({
     borderRadius: rs(16),
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.16)',
-  },
-  svgCardWrap: {
-    borderRadius: rs(16),
-    overflow: 'hidden',
-  },
-  standaloneArrowButton: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    paddingTop: rs(39),
-    marginLeft: -rs(5),
   },
 });

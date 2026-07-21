@@ -16,16 +16,11 @@ import {
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
-import LinearGradient from "react-native-linear-gradient";
 
 import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
-import {
-  addressesQueryKey,
-  handleNavigateWithPrefetch,
-} from "../modules/ecommerce/navigation/navigationPerformance";
+import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import ServiceTop from "./assete/Service_BG.png";
 import PaymentTop from "./assete/Payment_BG.png";
@@ -36,25 +31,13 @@ import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
 import Services from "../assets/menu/Services.svg";
 import Payments from "../assets/menu/Payments.svg";
-import Payments2 from "../assets/menu/Payments2.svg";
-import Bus_Booking from "../assets/menu/Bus_Booking.svg";
-import Bus from "../assets/menu/Bus.svg";
+import Dine_Out from "../assets/menu/Dine_Out.svg";
 import Reward from "../assets/product/rewards.svg";
-import HealthTopIcon from "../modules/health/assets/icons/health_icon.svg";
-import GamesTopIcon from "../modules/health/assets/icons/games_icon.svg";
-import CommunityTopIcon from "../modules/health/assets/icons/community_icon.svg";
-import DineoutTopIcon from "../modules/health/assets/icons/dineout_icon.svg";
-import { useAppTheme } from "../theme/ThemeContext";
 
 import type { RootStackParamList } from "@/navigation/types";
 
-export type TopTab = "Product" | "Services" | "Payments" | "DineOut";
-
-type NavbarProps = {
-  activeModule?: TopTab;
-  onModuleChange?: (tab: TopTab) => void;
-  topTabsVariant?: "default" | "health" | "busBooking";
-};
+// --- Types & Constants ---
+type TopTab = "Product" | "Services" | "Payments" | "DineOut";
 
 type ApiAddress = {
   address_type?: string;
@@ -252,31 +235,36 @@ const TopIconWithLabel = React.memo(
           active && { backgroundColor: activeColor },
         ]}
       >
-        <RenderIcon width={28} height={28} fill={tint} stroke={tint} color={tint} />
+        {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
+            We pass all 3 so it works in most cases. */}
+        <Icon width={28} height={28} fill={tint} stroke={tint} color={tint} />
+
         <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
       </TouchableOpacity>
     );
   }
 );
 
-export default function Navbar({
-  activeModule,
-  onModuleChange,
-  topTabsVariant = "default",
-}: NavbarProps) {
+export default function Navbar() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
   const { isDark, theme } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const [rewardPoints, setRewardPoints] = React.useState(0);
-  const [displayName, setDisplayName] = React.useState("User");
-  const [displayAddress, setDisplayAddress] =
-    React.useState(EMPTY_ADDRESS_LABEL);
-  const hasAddress = String(displayAddress || "").trim() !== EMPTY_ADDRESS_LABEL;
-  const isNavigatingRef = React.useRef(false);
-
+  // Seed from the module-level cache so a remounted Navbar (e.g. after a stack
+  // reset) shows the last known value instead of flashing back to 0.
+  const lastKnownPoints = React.useRef(navbarUserCache?.rewardPoints ?? 0);
+  const [rewardPoints, setRewardPoints] = React.useState(
+    () => navbarUserCache?.rewardPoints ?? 0
+  );
+  const updatePoints = React.useCallback((value: number) => {
+    lastKnownPoints.current = value;
+    setRewardPoints(value);
+    if (navbarUserCache) {
+      navbarUserCache.rewardPoints = value;
+    }
+  }, []);
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
     if (points >= 100000) return `${Math.floor(points / 1000)}k`;
@@ -301,79 +289,37 @@ export default function Navbar({
       getActiveTab(deepestRoute.routeName || route.name, moduleName, activeModuleTab),
     [deepestRoute.routeName, route.name, moduleName, activeModuleTab]
   );
-
-  const activeTab = activeModule ?? detectedActiveTab;
   const showLocation = activeTab === "Product";
 
   const activeThemeColor = React.useMemo(
     () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
     [activeTab]
   );
-  const walletBadgeColor = React.useMemo(
-    () => TAB_THEME[activeTab]?.activeTint ?? activeThemeColor,
-    [activeTab, activeThemeColor]
-  );
-  const navbarSurface = isDark ? theme.card : "#FFFFFF";
-  const navbarBorder = isDark ? theme.border : "rgba(0,0,0,0.10)";
-  const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
-  const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
-  const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
-    Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
-    Services: new Animated.Value(activeTab === "Services" ? 1 : 0),
-    Payments: new Animated.Value(activeTab === "Payments" ? 1 : 0),
-    DineOut: new Animated.Value(activeTab === "DineOut" ? 1 : 0),
-  }).current;
+  const isNavigatingRef = React.useRef(false);
+
+  // Cross-fade the background instead of remounting the Image on every tab
+  // switch — remounting could briefly leave the previous module's background
+  // visible underneath while the content below had already switched, and
+  // felt like a hard cut rather than a smooth transition.
+  const [prevBgSource, setPrevBgSource] = React.useState(bgSource);
+  const bgFade = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
-    const animations = TOP_TABS.map((tab) => {
-      backgroundOpacities[tab].stopAnimation();
-      return Animated.timing(backgroundOpacities[tab], {
-        toValue: tab === activeTab ? 1 : 0,
-        duration: 150,
-        useNativeDriver: true,
-      });
+    if (bgSource === prevBgSource) return;
+    bgFade.setValue(0);
+    Animated.timing(bgFade, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setPrevBgSource(bgSource);
     });
+  }, [bgSource, prevBgSource, bgFade]);
 
-    Animated.parallel(animations).start();
-    return () => animations.forEach((animation) => animation.stop());
-  }, [activeTab, backgroundOpacities]);
-
-  const { data: liveAddressData } = useQuery({
-    queryKey: addressesQueryKey,
-    queryFn: fetchAllAddress,
-    enabled: isAuthenticated,
-    staleTime: 10 * 60 * 1000,
-  });
-
-  React.useEffect(() => {
-    if (!isAuthenticated || !liveAddressData) return;
-
-    const list: ApiAddress[] = Array.isArray(liveAddressData?.data)
-      ? liveAddressData.data
-      : [];
-    const selectedAddress =
-      list.find((item) => Number(item?.is_default) === 1) || list[0];
-
-    const addressText = [
-      selectedAddress?.address1,
-      selectedAddress?.address2,
-      selectedAddress?.city,
-      selectedAddress?.state,
-      selectedAddress?.zipcode,
-    ]
-      .map((part) => String(part || "").trim())
-      .filter(Boolean)
-      .join(", ");
-
-    const nextDisplayAddress = addressText || EMPTY_ADDRESS_LABEL;
-    setDisplayAddress(nextDisplayAddress);
-    if (navbarUserCache) {
-      navbarUserCache = {
-        ...navbarUserCache,
-        displayAddress: nextDisplayAddress,
-      };
-    }
-  }, [isAuthenticated, liveAddressData]);
+  const [displayName, setDisplayName] = React.useState("User");
+  const [displayAddress, setDisplayAddress] =
+    React.useState("Address not set");
+  const hasAddress = String(displayAddress || "").trim() !== "Address not set";
 
   const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
     setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
@@ -428,42 +374,20 @@ export default function Navbar({
         DineOut: "DineOutModule",
       };
 
-      if (onModuleChange) {
-        onModuleChange(tab);
-      } else {
-        (navigation as any).navigate("Home", {
-          screen: screenMap[tab],
-          params: { moduleName: tab },
-        });
-      }
+      // navigate('Home', { screen }) works from both Dashboard (AppStack – mounts MainLayout
+      // then navigates inside ModuleStack) and from within MainLayout (already on Home –
+      // React Navigation detects the screen is focused and updates the nested state directly).
+      // No handleNavigateWithPrefetch wrapper so the switch is instant (<1 frame).
+      (navigation as any).navigate("Home", {
+        screen: SCREEN[tab],
+        params: { moduleName: tab },
+      });
 
       requestAnimationFrame(() => {
         isNavigatingRef.current = false;
       });
     },
-    [activeTab, navigation, onModuleChange]
-  );
-
-  const handleHealthExperienceTab = React.useCallback(
-    (tabId: HealthEntry["id"]) => {
-      if (tabId === "health") {
-        navigateToScreen("HealthStack");
-        return;
-      }
-
-      if (tabId === "games") {
-        handleTab("Product");
-        return;
-      }
-
-      if (tabId === "community") {
-        handleTab("Services");
-        return;
-      }
-
-      handleTab("DineOut");
-    },
-    [handleTab, navigateToScreen]
+    [activeTab, navigation]
   );
 
   const navigateToAddAddress = React.useCallback(() => {
@@ -518,6 +442,26 @@ export default function Navbar({
           storedName ||
           "User";
 
+        const addressRes = await fetchAllAddress();
+        const addresses: ApiAddress[] = Array.isArray(addressRes?.data)
+          ? addressRes.data
+          : [];
+
+        const selectedAddress =
+          addresses.find((item) => Number(item?.is_default) === 1) ||
+          addresses[0];
+
+        const addressText = [
+          selectedAddress?.address1,
+          selectedAddress?.address2,
+          selectedAddress?.city,
+          selectedAddress?.state,
+          selectedAddress?.zipcode,
+        ]
+          .map((part) => String(part || "").trim())
+          .filter(Boolean)
+          .join(", ");
+
         const snapshot: NavbarUserSnapshot = {
           displayName: String(userName),
           displayAddress: navbarUserCache?.displayAddress || EMPTY_ADDRESS_LABEL,
@@ -556,359 +500,125 @@ export default function Navbar({
         backgroundColor="transparent"
       />
 
-      {topTabsVariant === "health" ? (
-        <LinearGradient
-          colors={HEALTH_HEADER_GRADIENT}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.bgWrapper, styles.healthBgWrapper]}
-          pointerEvents="none"
+      {/* ✅ Background cross-fades smoothly between modules */}
+      <View style={styles.bgWrapper} pointerEvents="none">
+        <Image
+          source={prevBgSource}
+          style={[styles.absoluteFill, { top: -insets.top }]}
+          resizeMode="cover"
         />
-      ) : (
+        {bgSource !== prevBgSource && (
+          <Animated.Image
+            source={bgSource}
+            style={[styles.absoluteFill, { top: -insets.top, opacity: bgFade }]}
+            resizeMode="cover"
+          />
+        )}
+      </View>
+
+      {/* TOP 4 ICON TABS */}
+      <View style={styles.topIconsRow}>
+        <TopIconWithLabel
+          active={activeTab === "Product"}
+          onPress={() => handleTab("Product")}
+          Icon={Home_Nav as unknown as SvgIcon}
+          label="Product"
+          activeColor={TAB_THEME.Product.bgColor}
+        />
+
+        <TopIconWithLabel
+          active={activeTab === "Services"}
+          onPress={() => handleTab("Services")}
+          Icon={Services as unknown as SvgIcon}
+          label="Services"
+          activeColor={TAB_THEME.Services.bgColor}
+        />
+
+        <TopIconWithLabel
+          active={activeTab === "Payments"}
+          onPress={() => handleTab("Payments")}
+          Icon={Payments as unknown as SvgIcon}
+          label="Payments"
+          activeColor={TAB_THEME.Payments.bgColor}
+        />
+
+        <TopIconWithLabel
+          active={activeTab === "DineOut"}
+          onPress={() => handleTab("DineOut")}
+          Icon={Dine_Out as unknown as SvgIcon}
+          label="Dine Out"
+          activeColor={TAB_THEME.DineOut.bgColor}
+        />
+      </View>
+
+      {/* LOCATION */}
+      <View style={styles.topRow}>
         <View
-          style={[styles.bgWrapper, { backgroundColor: activeThemeColor }]}
-          pointerEvents="none"
+          style={[styles.locationRow, !showLocation && styles.locationRowHidden]}
+          pointerEvents={showLocation ? "auto" : "none"}
         >
-          {TOP_TABS.map((tab) => (
-            <Animated.Image
-              key={tab}
-              source={BG_MAP[tab]}
-              style={[
-                styles.absoluteFill,
-                { top: -insets.top, opacity: backgroundOpacities[tab] },
-              ]}
-              resizeMode="cover"
-            />
-          ))}
+          <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
+          <Text style={styles.locationText} numberOfLines={1}>
+            <Text style={styles.homeBold}>HOME- </Text>
+            {displayName}
+            {hasAddress ? `, ${displayAddress}` : ", "}
+            {!hasAddress ? (
+              <Text style={styles.addAddressLink} onPress={navigateToAddAddress}>
+                Add Address
+              </Text>
+            ) : null}
+          </Text>
         </View>
-      )}
+      </View>
 
-      {topTabsVariant === "health" ? (
-        <>
-          <View style={styles.healthTopTabsRow}>
-            {HEALTH_EXPERIENCE_TABS.map((tab) => {
-              const isActive = tab.id === "health";
+      {/* SEARCH + WALLET + NOTIFICATION */}
+      <View style={styles.searchRow}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.searchContainer}
+          onPress={() => {
+            if (activeTab === "Services") {
+              navigateToScreen("ServiceSearch");
+            } else {
+              navigateToScreen("SearchScreen");
+            }
+          }}
+        >
+          <MaterialCommunityIcons name="magnify" size={20} color="#111827" />
+          <Text style={styles.fakePlaceholder}>Search “Reward Planners”</Text>
+        </TouchableOpacity>
 
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  activeOpacity={0.9}
-                  onPress={() => handleHealthExperienceTab(tab.id)}
-                  style={[
-                    styles.healthTopTabCard,
-                    isActive ? styles.healthTopTabCardActive : styles.healthTopTabCardInactive,
-                  ]}
-                >
-                  <tab.Icon
-                    width={30}
-                    height={30}
-                    color={isActive ? "#22C55E" : "#6B7280"}
-                    fill={tab.variant === "filled" ? (isActive ? "#22C55E" : "#6B7280") : "none"}
-                    stroke={isActive ? "#22C55E" : "#6B7280"}
-                  />
-                  <Text
-                    style={[
-                      styles.healthTopTabLabel,
-                      isActive ? styles.healthTopTabLabelActive : null,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={styles.healthProfileRow}>
-            <View style={styles.healthProfileLeft}>
-              <View style={styles.healthAvatarOuter}>
-                <View style={styles.healthAvatarInner}>
-                  <MaterialCommunityIcons name="account" size={20} color="#7C2D12" />
-                </View>
-              </View>
-
-              <View style={styles.healthIdentityBlock}>
-                <Text style={styles.healthGreeting} numberOfLines={1}>
-                  Hello, {displayName}
-                </Text>
-                <View style={styles.healthLocationRow}>
-                  <MaterialCommunityIcons name="map-marker" size={14} color="#FACC15" />
-                  <Text style={styles.healthLocationText} numberOfLines={1}>
-                    {hasAddress ? displayAddress : "Add Address"}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.healthActionsRight}>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.healthWalletShell}
-                onPress={() => navigateToScreen("WalletHistory")}
-                hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
-              >
-                <WalletSvg width={26} height={26} />
-                <View style={styles.healthWalletMiniTag}>
-                  <Reward width={10} height={10} />
-                  <Text style={styles.healthWalletMiniText} numberOfLines={1}>
-                    {rewardPointsLabel}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.healthBellCircle}
-                activeOpacity={0.85}
-                onPress={() => navigateToScreen("Notification")}
-              >
-                <MaterialCommunityIcons name="bell-outline" size={22} color="#4B5563" />
-                <View style={styles.healthBadgeDot} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
-      ) : topTabsVariant === "busBooking" ? (
-        <>
-          <View style={styles.topIconsRow}>
-            <TopIconWithLabel
-              active={activeTab === "Product"}
-              onPress={() => handleTab("Product")}
-              Icon={Home_Nav as unknown as SvgIcon}
-              label="Product"
-              activeColor={TAB_THEME.Product.bgColor}
-              activeTint={TAB_THEME.Product.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "Services"}
-              onPress={() => handleTab("Services")}
-              Icon={Services as unknown as SvgIcon}
-              label="Services"
-              activeColor={TAB_THEME.Services.bgColor}
-              activeTint={TAB_THEME.Services.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "Payments"}
-              onPress={() => handleTab("Payments")}
-              Icon={Payments as unknown as SvgIcon}
-              ActiveIcon={Payments2 as unknown as SvgIcon}
-              label="Payments"
-              activeColor={TAB_THEME.Payments.bgColor}
-              activeTint={TAB_THEME.Payments.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "DineOut"}
-              onPress={() => handleTab("DineOut")}
-              Icon={Bus_Booking as unknown as SvgIcon}
-              ActiveIcon={Bus as unknown as SvgIcon}
-              label="Bus Booking"
-              activeColor={TAB_THEME.DineOut.bgColor}
-              activeTint={TAB_THEME.DineOut.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-          </View>
-
-          <View style={styles.busBookingProfileRow}>
-            <View style={styles.busBookingIdentityWrap}>
-              <View style={styles.busBookingAvatar}>
-                <MaterialCommunityIcons name="account" size={20} color="#FFFFFF" />
-              </View>
-
-              <View style={styles.busBookingTextWrap}>
-                <Text style={styles.busBookingGreeting} numberOfLines={1}>
-                  Hello, {displayName}
-                </Text>
-                <View style={styles.busBookingLocationRow}>
-                  <MaterialCommunityIcons name="map-marker-outline" size={13} color="#FBBF24" />
-                  <Text style={styles.busBookingLocationText} numberOfLines={1}>
-                    {hasAddress ? displayAddress : "Pune, India"}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.busBookingActions}>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.busBookingWalletPill}
-                onPress={() => navigateToScreen("WalletHistory")}
-              >
-                <WalletSvg width={19} height={19} />
-                <Text style={styles.busBookingWalletText} numberOfLines={1}>
-                  ₹6,549
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.busBookingBellButton}
-                onPress={() => navigateToScreen("Notification")}
-              >
-                <MaterialCommunityIcons name="bell-outline" size={21} color="#374151" />
-                <View style={styles.busBookingBellBadge}>
-                  <Text style={styles.busBookingBellBadgeText}>1</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
-      ) : (
-        <>
-          <View style={styles.topIconsRow}>
-            <TopIconWithLabel
-              active={activeTab === "Product"}
-              onPress={() => handleTab("Product")}
-              Icon={Home_Nav as unknown as SvgIcon}
-              label="Product"
-              activeColor={TAB_THEME.Product.bgColor}
-              activeTint={TAB_THEME.Product.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "Services"}
-              onPress={() => handleTab("Services")}
-              Icon={Services as unknown as SvgIcon}
-              label="Services"
-              activeColor={TAB_THEME.Services.bgColor}
-              activeTint={TAB_THEME.Services.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "Payments"}
-              onPress={() => handleTab("Payments")}
-              Icon={Payments as unknown as SvgIcon}
-              ActiveIcon={Payments2 as unknown as SvgIcon}
-              label="Payments"
-              activeColor={TAB_THEME.Payments.bgColor}
-              activeTint={TAB_THEME.Payments.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-
-            <TopIconWithLabel
-              active={activeTab === "DineOut"}
-              onPress={() => handleTab("DineOut")}
-              Icon={Bus_Booking as unknown as SvgIcon}
-              ActiveIcon={Bus as unknown as SvgIcon}
-              label="Bus Booking"
-              activeColor={TAB_THEME.DineOut.bgColor}
-              activeTint={TAB_THEME.DineOut.activeTint}
-              inactiveTint={navbarIconColor}
-              inactiveBackground={navbarSurface}
-              inactiveBorder={navbarBorder}
-            />
-          </View>
-
-          <View style={styles.topRow}>
-            <View
-              style={[styles.locationRow, !showLocation && styles.locationRowHidden]}
-              pointerEvents={showLocation ? "auto" : "none"}
-            >
-              <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-              <Text
-                style={[styles.locationText, { color: "#111827" }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                <Text style={[styles.homeBold, { color: "#111827" }]}>HOME- </Text>
-                {displayName}
-                {hasAddress ? `, ${displayAddress}` : ""}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.walletBox}
+          onPress={() => navigateToScreen("WalletHistory")}
+          hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
+        >
+          <WalletSvg width={26} height={26} />
+          <View
+            style={[
+              styles.walletTag,
+              { backgroundColor: activeThemeColor },
+            ]}
+          >
+            <View style={styles.walletTagInner}>
+              <Reward width={11} height={11} />
+              <Text style={styles.walletTagText} numberOfLines={1}>
+                {rewardPointsLabel}
               </Text>
-              {hasAddress ? (
-                <Text
-                  style={styles.addAddressLink}
-                  numberOfLines={1}
-                  onPress={navigateToChangeAddress}
-                >
-                  {" "}Change Address
-                </Text>
-              ) : (
-                <Text
-                  style={styles.addAddressLink}
-                  numberOfLines={1}
-                  onPress={navigateToAddAddress}
-                >
-                  {" "}Add Address
-                </Text>
-              )}
             </View>
           </View>
+        </TouchableOpacity>
 
-          <View style={styles.searchRow}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={[
-                styles.searchContainer,
-                {
-                  backgroundColor: navbarSurface,
-                  borderColor: navbarBorder,
-                  shadowColor: isDark ? "#000000" : "#000000",
-                },
-              ]}
-              onPress={() => {
-                if (activeTab === "Services") {
-                  navigateToScreen("ServiceSearch");
-                } else if (activeTab === "Payments") {
-                  (navigation as any).navigate("Home", {
-                    screen: "PaymentsModule",
-                    params: { screen: "Search" },
-                  });
-                } else {
-                  navigateToScreen("SearchScreen");
-                }
-              }}
-            >
-              <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
-              <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]}>
-                Search “Reward Planners”
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={styles.walletBox}
-              onPress={() => navigateToScreen("WalletHistory")}
-              hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
-            >
-              <WalletSvg width={26} height={26} />
-              <View
-                style={[
-                  styles.walletTag,
-                  { backgroundColor: walletBadgeColor },
-                ]}
-              >
-                <View style={styles.walletTagInner}>
-                  <Reward width={11} height={11} />
-                  <Text style={styles.walletTagText} numberOfLines={1}>
-                    {rewardPointsLabel}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+        <TouchableOpacity
+          style={styles.iconCircle}
+          activeOpacity={0.85}
+          onPress={() => navigateToScreen("Notification")}
+        >
+          <MaterialCommunityIcons name="bell-outline" size={22} color="#111827" />
+          <View style={styles.badgeDot} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -1055,163 +765,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginRight: 12,
-  },
-
-  busBookingAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-
-  busBookingTextWrap: {
-    flex: 1,
-  },
-
-  busBookingGreeting: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-
-  busBookingLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
-
-  busBookingLocationText: {
-    marginLeft: 3,
-    color: "rgba(255,255,255,0.94)",
-    fontSize: 13,
-    fontWeight: "600",
-    flexShrink: 1,
-  },
-
-  busBookingActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  busBookingWalletPill: {
-    minWidth: 70,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#F59E0B",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-    gap: 4,
-  },
-
-  busBookingWalletText: {
-    color: "#7C2D12",
-    fontSize: 11,
-    fontWeight: "900",
-  },
-
-  busBookingBellButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-
-  busBookingBellBadge: {
-    position: "absolute",
-    top: -2,
-    right: -1,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 999,
-    backgroundColor: "#F43F5E",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 2,
-  },
-
-  busBookingBellBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "900",
-    lineHeight: 9,
-  },
-
-  healthProfileLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 10,
-  },
-
-  healthAvatarOuter: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  healthAvatarInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FDE68A",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  healthIdentityBlock: {
-    flex: 1,
-  },
-
-  healthGreeting: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 3,
-  },
-
-  healthLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  healthLocationText: {
-    color: "rgba(255,255,255,0.92)",
-    fontSize: 12.5,
-    fontWeight: "500",
-    marginLeft: 2,
-    flexShrink: 1,
-  },
-
-  healthActionsRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    maxWidth: "72%",
     marginRight: 10,
   },
 

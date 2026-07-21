@@ -245,16 +245,7 @@ export default function StepsTrackerScreen() {
     } catch {}
   };
 
-  const handleContinue = useCallback(async () => {
-    // Returning user: setup was already complete (from AsyncStorage or backend
-    // check) and HC is ready. The auto-redirect effect either already fired or
-    // is about to — navigating via Continue would race it and crash. Go to
-    // Dashboard directly so only one navigation is ever in flight.
-    if (isSetupComplete && isHCReady) {
-      navigation.replace('Dashboard');
-      return;
-    }
-
+  const handleContinue = useCallback(() => {
     if (!isHCReady) {
       alert.warning(
         !isHCInstalled ? 'Health Connect Required' : 'Permission Missing',
@@ -273,18 +264,12 @@ export default function StepsTrackerScreen() {
       refreshStatus();
       return;
     }
-    // Block the auto-redirect effect while this async flow is in progress.
-    // requestStepsPermission() sets isSetupComplete = true internally, which
-    // would otherwise fire the redirect at the same time as navigate('StepForm').
-    continueInProgressRef.current = true;
-    try {
-      const setupReady = await requestStepsPermission();
-      if (!setupReady) return;
-      navigation.navigate('StepForm');
-    } finally {
-      continueInProgressRef.current = false;
+    if (!selectedOptional) {
+      alert.info('Select a Fitness App', 'Choose Samsung Health or Google Fit to continue.');
+      return;
     }
-  }, [isHCReady, isHCInstalled, totalSteps, requestStepsPermission, navigation, alert, refreshStatus]);
+    navigation.navigate('StepForm');
+  }, [isHCReady, isHCInstalled, totalSteps, selectedOptional, navigation, alert, refreshStatus]);
 
   return (
     <SafeAreaView style={ss.safe} edges={['top', 'bottom']}>

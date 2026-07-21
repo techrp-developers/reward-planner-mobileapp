@@ -17,10 +17,8 @@ import {
   initialize,
   openHealthConnectDataManagement,
   readRecords,
-  requestPermission,
   SdkAvailabilityStatus,
 } from 'react-native-health-connect';
-import type { Permission } from 'react-native-health-connect';
 
 import { syncStepsToServer, type GoalSyncData } from '../api/Stepsapi';
 import { fetchProfileStepStatus } from '../api/ProfileAPI';
@@ -419,10 +417,6 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   const requestStepsPermission = useCallback(async (): Promise<boolean> => {
     try {
-      // Ensure SDK is initialized before calling requestPermission.
-      // On first launch the mount-effect's initAndCheck() may not have completed yet.
-      await initAndCheck();
-
       const perms: Permission[] = [{ accessType: 'read', recordType: 'Steps' }];
       await requestPermission(perms);
       await new Promise<void>(r => setTimeout(r, 1000));

@@ -195,34 +195,7 @@ function Dashbord() {
     };
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    setOpeningModule(null);
-    loadHeaderInfo();
-  }, [loadHeaderInfo]));
-
-  const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
-    if (tab === 'DineOut') {
-      navigation.navigate('Home', {
-        screen: MODULE_ROUTE[tab],
-        params: { moduleName: tab },
-        moduleName: tab,
-      });
-      return;
-    }
-
-    setOpeningModule(tab);
-
-    // Let the lightweight module shell paint before mounting the destination.
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        navigation.navigate('Home', {
-          screen: MODULE_ROUTE[tab],
-          params: { moduleName: tab },
-          moduleName: tab,
-        });
-      }, 0);
-    });
-  }, [navigation]);
+  useFocusEffect(useCallback(() => { loadHeaderInfo(); }, [loadHeaderInfo]));
 
   const handleTabPress = useCallback(
     (tab: TabKey) => {

@@ -32,7 +32,7 @@ export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`);
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error("Fetch Categories Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Fetch Categories Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -42,10 +42,7 @@ export const fetchBillLocations = async (): Promise<BillLocation[]> => {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/locations`);
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error(
-      "Fetch Locations Error:",
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error("Fetch Locations Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -68,10 +65,7 @@ export const fetchOperators = async (
 
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
-    console.error(
-      "Fetch Operators Error:",
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error("Fetch Operators Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -109,7 +103,7 @@ export const fetchOperatorDetails = async (
       data: Array.isArray(res.data?.data) ? res.data.data : [],
     };
   } catch (error: any) {
-    console.error("Operator Details Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Operator Details Error:", error?.response?.data || error); }
     throw error;
   }
 };
@@ -215,10 +209,7 @@ export const fetchRechargePlans = async (
       } as RechargePlansResponse,
     };
   } catch (error: any) {
-    console.error(
-      'Recharge Plans Error:',
-      error?.response?.data || error
-    );
+    if (__DEV__) { console.error('Recharge Plans Error:', error?.response?.data || error); }
 
     throw error?.response?.data || error;
   }
@@ -315,7 +306,7 @@ export const createBillPayOrder = async (
       return error as NormalizedApiError;
     }
 
-    console.error("Create Bill Pay Order Error:", error);
+    if (__DEV__) { console.error("Create Bill Pay Order Error:", error); }
     return {
       success: false,
       status: null,
@@ -352,7 +343,7 @@ export const verifyBillPayPayment = async (
       await clearAuthToken();
     }
 
-    console.error("Verify Bill Pay Payment Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Verify Bill Pay Payment Error:", error?.response?.data || error); }
     throw error?.response?.data || error;
   }
 };
@@ -377,7 +368,84 @@ export const checkBillTransactionStatus = async (
       await clearAuthToken();
     }
 
-    console.error("Check Bill Status Error:", error?.response?.data || error);
+    if (__DEV__) { console.error("Check Bill Status Error:", error?.response?.data || error); }
+    throw error?.response?.data || error;
+  }
+};
+
+export interface OrderHistoryItem {
+  id: number;
+  operator_id: number;
+  operator_name: string | null;
+  utility_acc_no: string | null;
+  confirmation_mobile_no: string | null;
+  sender_name: string | null;
+  amount: string;
+  bbps_status: string;
+  payment_status: string | null;
+  provider_client_ref_id: string;
+  recharge_circle_id: string | null;
+  razorpay_order_id: string | null;
+  created_at: string;
+  final_status: TransactionStatus;
+}
+
+export interface OrderHistoryResponse {
+  success: boolean;
+  orders: OrderHistoryItem[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export interface OrderHistoryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  fromDate?: string;
+  toDate?: string;
+  timeFilter?: string;
+}
+
+export const bbpsOrderHistoryQueryKey = (params: OrderHistoryParams) =>
+  ['bbps-order-history', params] as const;
+
+export const fetchOrderHistory = async (
+  params: OrderHistoryParams = {},
+  token?: string,
+): Promise<OrderHistoryResponse> => {
+  try {
+    const authHeaders = token
+      ? { Authorization: `Bearer ${token}` }
+      : await getAuthHeaders();
+
+    const res = await axios.get(`${API_BASE_URL}/v1/bills/order-history`, {
+      headers: authHeaders,
+      params: {
+        page: params.page,
+        limit: params.limit,
+        status: params.status || undefined,
+        search: params.search || undefined,
+        from_date: params.fromDate || undefined,
+        to_date: params.toDate || undefined,
+        time_filter: params.timeFilter || undefined,
+      },
+    });
+
+    return {
+      success: res.data?.success ?? false,
+      orders: Array.isArray(res.data?.orders) ? res.data.orders : [],
+      total: res.data?.total ?? 0,
+      totalPages: res.data?.totalPages ?? 1,
+      currentPage: res.data?.currentPage ?? 1,
+    };
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      await clearAuthToken();
+    }
+
+    console.error("Fetch Order History Error:", error?.response?.data || error);
     throw error?.response?.data || error;
   }
 };
