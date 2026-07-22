@@ -285,6 +285,17 @@ export default function ServiceCancellationDetails() {
         <View style={[styles.cancellationCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
           <Text style={styles.cancelledTitle}>Order Cancelled</Text>
 
+          {cancellation?.reason ? (
+            <Text style={[styles.cancelReasonText, { color: servicesTheme.colors.text }]}>
+              Reason: {cancellation.reason}
+            </Text>
+          ) : null}
+          {cancellation?.comment ? (
+            <Text style={[styles.cancelCommentText, { color: servicesTheme.colors.muted }]}>
+              "{cancellation.comment}"
+            </Text>
+          ) : null}
+
           {timeline.map((step, index) => (
             <View key={`${step.event}-${index}`} style={styles.timelineRow}>
               <View style={styles.timelineRail}>
@@ -563,6 +574,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#EF4444',
+    marginBottom: 12,
+  },
+  cancelReasonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cancelCommentText: {
+    fontSize: 12,
+    fontStyle: 'italic',
     marginBottom: 12,
   },
   timelineRow: {

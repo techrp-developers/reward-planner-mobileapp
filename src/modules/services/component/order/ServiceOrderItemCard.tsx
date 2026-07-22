@@ -26,9 +26,9 @@ const STATUS_META: Record<string, { color: string; bg: string; label: string }> 
   cancelled:            { color: '#DC2626', bg: '#FEF2F2', label: 'Cancelled' },
 };
 
+// Mirrors the backend's cancellation eligibility rules in serviceOrderController.js
+// (paid orders only — pending_payment/payment_done can no longer be cancelled this way).
 const CANCELLABLE_STATUSES = new Set([
-  'pending_payment',
-  'payment_done',
   'documents_pending',
   'documents_uploaded',
   'in_progress',
