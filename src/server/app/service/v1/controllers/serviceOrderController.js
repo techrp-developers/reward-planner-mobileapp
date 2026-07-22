@@ -12,7 +12,7 @@ const sharp = require("sharp");
 const InvoiceService = require("../../../../services/Invoice/service-invoice");
 const {
   finalizePaidServiceOrder,
-  generateInvoiceOnce,
+  generateAndEmailInvoice,
 } = require("../utils/paymentFinalizer");
 const {
   deriveServicePaymentStatus,
@@ -20,6 +20,7 @@ const {
 const { notifyUser } = require("../../../common/utils/notification");
 const { creditCompletedServiceReward } = require("../utils/serviceRewards");
 const { releaseServiceCoins } = require("../../../../services/rewards/serviceWalletService");
+const { runNonBlocking } = require("../../../../utils/nonBlocking");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path) {
@@ -353,7 +354,12 @@ class ServiceOrderController {
       // COMMIT
       await connection.commit();
 
-      // await InvoiceService.generateInvoice(parent_order_id);
+      if (!alreadyPaid) {
+        runNonBlocking(
+          () => generateAndEmailInvoice(parent_order_id),
+          "service payment invoice email",
+        );
+      }
 
       res.json({
         success: true,
@@ -381,12 +387,6 @@ class ServiceOrderController {
         );
       }
 
-      generateInvoiceOnce(parent_order_id).catch((err) => {
-        console.error(
-          `[verifyPayment] Invoice generation failed for parent_order_id=${parent_order_id}:`,
-          err.message,
-        );
-      });
     } catch (err) {
       // ROLLBACK
       if (connection) {
@@ -601,7 +601,7 @@ class ServiceOrderController {
           timeline = [
             {
               status: "Order Confirmed",
-              completed: true,
+              completed: item.payment_status === "paid",
             },
             {
               status: "Documents Submitted",
@@ -705,7 +705,9 @@ class ServiceOrderController {
       const parentTimeline = [
         {
           status: "Order Confirmed",
-          completed: true,
+          completed:
+            allItems.length > 0 &&
+            allItems.every((item) => item.payment_status === "paid"),
         },
         {
           status: "Services In Progress",
@@ -784,10 +786,10 @@ class ServiceOrderController {
       const { parentId } = req.params;
 
       const [[ownedOrder]] = await db.execute(
-        `SELECT id, payment_status
-         FROM service_orders
-         WHERE parent_order_id = ?
-           AND user_id = ?
+        `SELECT so.id, so.payment_status
+         FROM service_orders so
+         WHERE so.parent_order_id = ?
+           AND so.user_id = ?
          LIMIT 1`,
         [parentId, userId],
       );

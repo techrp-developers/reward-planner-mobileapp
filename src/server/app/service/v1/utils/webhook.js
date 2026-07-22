@@ -1,7 +1,7 @@
 const db = require("../../../../config/database");
 const {
   finalizePaidServiceOrder,
-  generateInvoiceOnce,
+  generateAndEmailInvoice,
 } = require("./paymentFinalizer");
 const { notifyUser } = require("../../../common/utils/notification");
 const { releaseServiceCoins } = require("../../../../services/rewards/serviceWalletService");
@@ -88,9 +88,9 @@ async function processEvent(req) {
         "service webhook paid notification",
       );
 
-      generateInvoiceOnce(parentOrderId).catch((err) => {
+      generateAndEmailInvoice(parentOrderId).catch((err) => {
         console.error(
-          `[webhook] Invoice generation failed for parent_order_id=${parentOrderId}:`,
+          `[webhook] Invoice email failed for parent_order_id=${parentOrderId}:`,
           err.message,
         );
       });
@@ -127,7 +127,7 @@ async function processEvent(req) {
        SET payment_status = 'failed',
            reward_coins_used = CASE WHEN ? THEN 0 ELSE reward_coins_used END
        WHERE parent_order_id = ?
-       AND payment_status NOT IN ('paid', 'failed')`,
+       AND COALESCE(payment_status, 'pending') NOT IN ('paid', 'failed')`,
       [released ? 1 : 0, parentOrderId],
       );
       await failureConn.commit();
