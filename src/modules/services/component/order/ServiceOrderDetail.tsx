@@ -42,23 +42,37 @@ import { useServicesTheme } from '../../utils/useServicesTheme';
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceOrderDetail'>;
 
-// ── Status label map ─────────────────────────────────────────────────────────
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending_payment:  'Payment Pending',
-  in_progress:      'In Progress',
-  completed:        'Completed',
-  cancelled:        'Cancelled',
-};
-
-const ORDER_STATUS_COLOR: Record<string, string> = {
-  pending_payment: '#D97706',
-  in_progress:     '#2563EB',
-  completed:       '#16A34A',
-  cancelled:       '#DC2626',
-};
 const PURPLE = '#7C3AED';
 
 // ── Data transforms ──────────────────────────────────────────────────────────
+// Derives the header status from the individual service items rather than the
+// single aggregated `order.status`, which can read "Payment Pending" for the
+// whole order even when only one of several items hasn't been paid for.
+function getOrderStatusSummary(items: ServiceItem[]): { label: string; color: string } {
+  const total = items.length;
+
+  if (total === 0) {
+    return { label: 'Order Placed', color: '#6B7280' };
+  }
+
+  const cancelled = items.filter(item => item.status === 'cancelled').length;
+  if (cancelled === total) {
+    return { label: 'Order Cancelled', color: '#DC2626' };
+  }
+
+  const completed = items.filter(item => item.status === 'completed').length;
+  if (completed === total) {
+    return { label: 'Order Completed', color: '#16A34A' };
+  }
+
+  const confirmed = items.filter(item => item.status !== 'pending_payment').length;
+  if (confirmed < total) {
+    return { label: `${confirmed} of ${total} Services Confirmed`, color: '#D97706' };
+  }
+
+  return { label: `${completed} of ${total} Services Completed`, color: '#2563EB' };
+}
+
 function buildAddressLine(order: ServiceOrderDetails): string {
   const a = order.address;
   if (!a) return '';
@@ -211,8 +225,6 @@ export default function ServiceOrderDetail() {
   }
 
   // ── Derived data (transforms live in parent, not in components) ───────────
-  const statusLabel  = ORDER_STATUS_LABEL[order.status]  || order.status;
-  const statusColor  = ORDER_STATUS_COLOR[order.status]  || '#6B7280';
   const addressLine  = buildAddressLine(order);
   const hasStandaloneItems = order.items.length > 0;
   const hasBundles         = order.bundles.length > 0;
@@ -220,6 +232,7 @@ export default function ServiceOrderDetail() {
     ...order.items,
     ...order.bundles.flatMap(bundle => bundle.items),
   ];
+  const { label: statusLabel, color: statusColor } = getOrderStatusSummary(allServiceItems);
   const allDocuments = allServiceItems.flatMap(item => item.documents);
   const pendingDocumentCount = allDocuments.filter(document => !document.uploaded).length;
   const uploadedDocumentCount = allDocuments.length - pendingDocumentCount;
