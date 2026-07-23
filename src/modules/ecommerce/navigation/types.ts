@@ -84,6 +84,16 @@ OrderConfirmedScreen: {
     productTitle?: string;
     productWeight?: string;
   };
+  SelectItemCancellationReason: {
+    orderItemId: number;
+    orderId: number;
+    orderRef?: string;
+    productTitle?: string;
+    productWeight?: string;
+  };
+  ItemCancellationDetails: {
+    orderItemId: number;
+  };
   EditProfile: undefined;
   Settings: undefined;
   Privacy: undefined;
