@@ -1,6 +1,14 @@
 const db = require("../../../../config/database");
 const fs = require("fs");
 const path = require("path");
+const {
+  TRACKING_STEPS,
+  deriveOrderProgress,
+  mapShipmentStatusToStep,
+} = require("../utils/orderProgress");
+const {
+  canRequestItemCancellation,
+} = require("../utils/itemCancellationPolicy");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 
@@ -13,22 +21,8 @@ function getPublicUrl(path) {
   return `${CDN_BASE_URL}/${path}`;
 }
 
-const TRACKING_STEPS = [
-  { key: "processing", label: "Processing" },
-  { key: "shipped", label: "Shipped" },
-  { key: "out_for_delivery", label: "Out for Delivery" },
-  { key: "delivered", label: "Delivered" },
-];
-
 function mapStatusToStep(status) {
-  if (["pending", "booking_in_progress", "booked"].includes(status)) return 0;
-  if (["picked_up", "in_transit"].includes(status)) return 1;
-  if (status === "out_for_delivery") return 2;
-  if (status === "delivered") return 3;
-
-  if (["ndr", "rto", "cancelled"].includes(status)) return 1;
-
-  return 0;
+  return mapShipmentStatusToStep(status);
 }
 
 function mapCancelEvent(event) {
@@ -269,6 +263,7 @@ class orderModel {
       o.reward_coins_earned,
       o.shipping_total,
       o.status,
+      o.cancellation_status,
       o.created_at,
 
       ca.address_type,
@@ -310,17 +305,25 @@ class orderModel {
       `
     SELECT
       oi.order_item_id,
+      oi.vendor_order_id,
       oi.product_id,
       oi.variant_id,
       oi.quantity,
       oi.price,
       oi.final_price,
       oi.reward_discount,
+      oi.fulfillment_status,
 
       p.product_name,
       p.brand_name,
 
       v.variant_attributes,
+      os.id AS shipment_id,
+      os.shipping_status,
+      pr.review_id,
+      ic.status AS item_cancellation_status,
+      ic.refund_status AS item_refund_status,
+      ic.refund_amount AS item_refund_amount,
 
       (
         SELECT pi.image_url
@@ -335,10 +338,19 @@ class orderModel {
       ON oi.product_id = p.product_id
     JOIN product_variants v
       ON oi.variant_id = v.variant_id
+    LEFT JOIN order_shipments os
+      ON os.vendor_order_id = oi.vendor_order_id
+    LEFT JOIN product_reviews pr
+      ON pr.order_id = oi.order_id
+      AND pr.product_id = oi.product_id
+      AND pr.variant_id = oi.variant_id
+      AND pr.user_id = ?
+    LEFT JOIN ecommerce_item_cancellations ic
+      ON ic.order_item_id = oi.order_item_id
 
     WHERE oi.order_id = ?
     `,
-      [orderId],
+      [userId, orderId],
     );
 
     const processedItems = items.map((i) => {
@@ -354,6 +366,8 @@ class orderModel {
 
       return {
         order_item_id: i.order_item_id,
+        vendor_order_id: i.vendor_order_id,
+        shipment_id: i.shipment_id,
         product_id: i.product_id,
         variant_id: i.variant_id,
         product_name: i.product_name,
@@ -364,6 +378,32 @@ class orderModel {
         price: Number(i.price),
         item_total: Number(i.final_price),
         reward_discount: Number(i.reward_discount || 0),
+        fulfillment_status: i.fulfillment_status,
+        shipping_status: i.shipping_status,
+        cancellation: {
+          can_request: canRequestItemCancellation({
+            fulfillmentStatus: i.fulfillment_status,
+            shipmentStatus: i.shipping_status,
+            paymentStatus: order.status,
+          }),
+          status: i.item_cancellation_status || null,
+          refund_status: i.item_refund_status || null,
+          refund_amount:
+            i.item_refund_amount === null
+              ? null
+              : Number(i.item_refund_amount),
+          terminal:
+            i.fulfillment_status === "cancelled" ||
+            ["cancelled", "delivered", "rto"].includes(i.shipping_status),
+        },
+        feedback: {
+          can_submit:
+            i.fulfillment_status !== "cancelled" &&
+            i.shipping_status === "delivered" &&
+            !i.review_id,
+          submitted: Boolean(i.review_id),
+          review_id: i.review_id || null,
+        },
       };
     });
 
@@ -392,20 +432,10 @@ class orderModel {
       [orderId],
     );
 
-    let overallStep = 0;
-
-    if (shipments.length) {
-      overallStep = Math.max(
-        ...shipments.map((s) => mapStatusToStep(s.shipping_status)),
-      );
-    }
-
-    const hasNdr = shipments.some((s) => s.shipping_status === "ndr");
-    const hasRto = shipments.some((s) => s.shipping_status === "rto");
-
-    if (hasNdr || hasRto) {
-      overallStep = 1;
-    }
+    const aggregateProgress = deriveOrderProgress(
+      shipments.map((shipment) => shipment.shipping_status),
+    );
+    const overallStep = aggregateProgress.currentStep;
 
     const orderSteps = TRACKING_STEPS.map((step, index) => ({
       ...step,
@@ -416,6 +446,10 @@ class orderModel {
     // Final object
     const orderProgress = {
       current_step: overallStep,
+      status: aggregateProgress.status,
+      is_partial: aggregateProgress.isPartial,
+      delivered_shipments: aggregateProgress.deliveredShipments,
+      total_shipments: aggregateProgress.totalShipments,
       steps: orderSteps,
     };
 
