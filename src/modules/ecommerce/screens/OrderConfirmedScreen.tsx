@@ -31,6 +31,11 @@ type OrderDetailsResponse = {
         total_amount: string | number;
         created_at: string;
         is_reward_credited?: boolean;
+        cancellation_grace?: {
+            active: boolean;
+            minutes: number;
+            courier_booking_eligible_at: string | null;
+        };
     };
     address?: {
         type?: string;
@@ -129,6 +134,18 @@ const formatDisplayDate = (value?: string) => {
         day: "numeric",
         month: "short",
         year: "numeric",
+    }).format(date);
+};
+
+const formatDisplayTime = (value?: string | null) => {
+    if (!value) return null;
+    const normalized = value.replace(" ", "T");
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("en-IN", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
     }).format(date);
 };
 
@@ -369,6 +386,11 @@ export default function OrderConfirmedScreen() {
     const bagDiscount = Number(orderData?.summary?.bag_discount ?? 0);
     const orderTotal = Number(orderData?.summary?.order_total ?? orderData?.order?.total_amount ?? 0);
 
+    const cancellationGrace = orderData?.order?.cancellation_grace;
+    const cancellationWindowText = cancellationGrace?.active
+        ? formatDisplayTime(cancellationGrace.courier_booking_eligible_at)
+        : null;
+
     const openReviewScreen = (item: NonNullable<OrderDetailsResponse["items"]>[number]) => {
         navigation.navigate("ReviewScreen", {
             product_id: Number(item.product_id),
@@ -469,6 +491,15 @@ export default function OrderConfirmedScreen() {
                 {orderData.items?.length ? (
                     <View style={[styles.reviewSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
                         <Text style={[styles.reviewSectionTitle, { color: theme.text }]}>Order items</Text>
+
+                        {cancellationWindowText ? (
+                            <View style={[styles.cancelWindowBanner, { backgroundColor: isDark ? "#2A2410" : "#FFF7E0", borderColor: isDark ? "#5C4A16" : "#FDE68A" }]}>
+                                <Text style={[styles.cancelWindowText, { color: isDark ? "#FCD34D" : "#92400E" }]}>
+                                    Free cancellation available until {cancellationWindowText}
+                                </Text>
+                            </View>
+                        ) : null}
+
                         {orderData.items.map((item) => {
                             const title = [item.brand_name, item.product_name].filter(Boolean).join(" ");
                             const meta = item.attributes?.weight || item.attributes?.size || `Qty: ${item.quantity}`;
@@ -609,6 +640,18 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         color: "#111827",
         marginBottom: 10,
+    },
+    cancelWindowBanner: {
+        borderRadius: 8,
+        borderWidth: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        marginBottom: 10,
+    },
+    cancelWindowText: {
+        fontSize: 12,
+        fontWeight: "600",
+        textAlign: "center",
     },
     reviewItemRow: {
         minHeight: 52,
