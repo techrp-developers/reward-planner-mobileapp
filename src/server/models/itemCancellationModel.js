@@ -4,6 +4,7 @@ const {
 } = require("../services/rewards/ecommerceWalletService");
 const {
   PRE_BOOKING_SHIPMENT_STATUSES,
+  SINGLE_ITEM_COURIER_CANCELLABLE_STATUSES,
   calculateItemRefund,
 } = require("../app/ecommerce/v1/utils/itemCancellationPolicy");
 
@@ -71,7 +72,48 @@ class ItemCancellationModel {
     return { request, timeline, refunds };
   }
 
-  async approve(orderItemId, conn) {
+  async getCourierCancellationCandidate(orderItemId) {
+    const [[row]] = await db.execute(
+      `SELECT ic.status AS cancellation_status,
+              oi.vendor_order_id,
+              os.id AS shipment_id, os.shipping_status, os.awb_number,
+              (
+                SELECT COUNT(*) FROM eorder_items sibling
+                WHERE sibling.vendor_order_id = oi.vendor_order_id
+                  AND sibling.fulfillment_status <> 'cancelled'
+              ) AS active_item_count
+       FROM ecommerce_item_cancellations ic
+       JOIN eorder_items oi ON oi.order_item_id = ic.order_item_id
+       JOIN order_shipments os ON os.vendor_order_id = oi.vendor_order_id
+       WHERE ic.order_item_id = ? LIMIT 1`,
+      [orderItemId],
+    );
+    if (!row) throw new Error("CANCELLATION_REQUEST_NOT_FOUND");
+    if (row.cancellation_status !== "requested") {
+      throw new Error("INVALID_CANCELLATION_STATE");
+    }
+
+    const requiresCourierCancellation =
+      SINGLE_ITEM_COURIER_CANCELLABLE_STATUSES.includes(
+        row.shipping_status,
+      );
+    if (
+      requiresCourierCancellation &&
+      (Number(row.active_item_count) !== 1 || !row.awb_number)
+    ) {
+      throw new Error("BOOKED_SHARED_SHIPMENT");
+    }
+    return {
+      ...row,
+      requiresCourierCancellation,
+    };
+  }
+
+  async approve(
+    orderItemId,
+    conn,
+    { courierCancellationConfirmed = false } = {},
+  ) {
     const [[row]] = await conn.execute(
       `SELECT ic.id AS cancellation_id, ic.status AS cancellation_status,
               oi.order_item_id, oi.order_id, oi.vendor_order_id,
@@ -93,7 +135,14 @@ class ItemCancellationModel {
     ) {
       throw new Error("INVALID_CANCELLATION_STATE");
     }
-    if (!PRE_BOOKING_SHIPMENT_STATUSES.includes(row.shipping_status)) {
+    const isBookedCancellable =
+      SINGLE_ITEM_COURIER_CANCELLABLE_STATUSES.includes(
+        row.shipping_status,
+      );
+    if (
+      !PRE_BOOKING_SHIPMENT_STATUSES.includes(row.shipping_status) &&
+      !isBookedCancellable
+    ) {
       throw new Error("SHIPMENT_ALREADY_BOOKED");
     }
 
@@ -103,6 +152,12 @@ class ItemCancellationModel {
       [row.vendor_order_id],
     );
     const isLastActiveShipmentItem = Number(activeCount) === 1;
+    if (
+      isBookedCancellable &&
+      (!isLastActiveShipmentItem || !courierCancellationConfirmed)
+    ) {
+      throw new Error("COURIER_CANCELLATION_REQUIRED");
+    }
     const refund = calculateItemRefund({
       finalPrice: row.final_price,
       rewardCoinsUsed: row.reward_coins_used,
@@ -175,9 +230,12 @@ class ItemCancellationModel {
       await conn.execute(
         `UPDATE order_shipments
          SET shipping_status = 'cancelled', cancelled_at = NOW(),
-             cancel_sync_status = 'not_needed'
+             cancel_sync_status = ?
          WHERE id = ?`,
-        [row.shipment_id],
+        [
+          courierCancellationConfirmed ? "completed" : "not_needed",
+          row.shipment_id,
+        ],
       );
       await conn.execute(
         `UPDATE vendor_orders SET shipping_status = 'cancelled'
