@@ -65,7 +65,12 @@ class ItemCancellationModel {
       );
 
       await conn.commit();
-      return { orderId: item.order_id, orderItemId };
+      return {
+        orderId: item.order_id,
+        orderItemId,
+        status: "requested",
+        requires_admin_approval: true,
+      };
     } catch (error) {
       await conn.rollback();
       throw error;
