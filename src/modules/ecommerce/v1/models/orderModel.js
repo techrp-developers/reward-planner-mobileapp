@@ -9,6 +9,11 @@ const {
 const {
   canRequestItemCancellation,
 } = require("../utils/itemCancellationPolicy");
+const {
+  getCancellationGraceMinutes,
+  getCourierBookingEligibleAt,
+  isCourierBookingGraceActive,
+} = require("../utils/bookingGracePolicy");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 
@@ -454,6 +459,7 @@ class orderModel {
       o.shipping_total,
       o.status,
       o.cancellation_status,
+      o.paid_at,
       o.created_at,
 
       ca.address_type,
@@ -742,6 +748,12 @@ class orderModel {
             0,
           );
 
+    const graceMinutes = getCancellationGraceMinutes();
+    const courierBookingEligibleAt = getCourierBookingEligibleAt(
+      order.paid_at,
+      graceMinutes,
+    );
+
     return {
       order: {
         order_id: order.order_id,
@@ -750,6 +762,14 @@ class orderModel {
         total_amount: order.total_amount,
         created_at: order.created_at,
         is_reward_credited: earnedCoins > 0,
+        cancellation_grace: {
+          active: isCourierBookingGraceActive({
+            paidAt: order.paid_at,
+            graceMinutes,
+          }),
+          minutes: graceMinutes,
+          courier_booking_eligible_at: courierBookingEligibleAt,
+        },
       },
 
       address: {
