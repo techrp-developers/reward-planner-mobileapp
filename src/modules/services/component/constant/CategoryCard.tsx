@@ -21,6 +21,8 @@ type VerticalServiceCardProps = {
   image: string | React.ComponentType<{ width?: number; height?: number }>;
   priceText?: string;
   days?: string;
+  rating?: number;
+  reviewCount?: number;
 };
 
 function CategoryCard({
@@ -30,6 +32,8 @@ function CategoryCard({
   image,
   priceText,
   days,
+  rating,
+  reviewCount,
 }: VerticalServiceCardProps) {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
   const servicesTheme = useServicesTheme();
@@ -63,6 +67,9 @@ function CategoryCard({
   const primaryButtonText = hasPositivePrice
     ? `${priceText} + Get Start`
     : 'Get Started';
+
+  const parsedRating = Number(rating);
+  const hasRating = rating !== undefined && rating !== null && Number.isFinite(parsedRating);
 
   return (
     <TouchableOpacity
@@ -109,10 +116,19 @@ function CategoryCard({
 
         <View style={styles.bottomSection}>
           <View style={styles.metaRow}>
-            <View style={styles.ratingChip}>
-              <MaterialIcons name="star" size={13} color="#F59E0B" />
-              <Text style={[styles.ratingChipText, { color: servicesTheme.isDark ? '#FBBF24' : '#92400E' }]}>0.0</Text>
-            </View>
+            {(hasRating || !!reviewCount) && (
+              <View style={styles.ratingChip}>
+                {hasRating && (
+                  <>
+                    <MaterialIcons name="star" size={13} color="#F59E0B" />
+                    <Text style={[styles.ratingChipText, { color: servicesTheme.isDark ? '#FBBF24' : '#92400E' }]}>{parsedRating.toFixed(1)}</Text>
+                  </>
+                )}
+                {!!reviewCount && (
+                  <Text style={[styles.ratingChipText, { color: servicesTheme.isDark ? '#FBBF24' : '#92400E' }]}>({reviewCount})</Text>
+                )}
+              </View>
+            )}
             {!!days && (
               <View style={[styles.daysChip, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
                 <MaterialIcons name="schedule" size={12} color={servicesTheme.colors.muted} />
