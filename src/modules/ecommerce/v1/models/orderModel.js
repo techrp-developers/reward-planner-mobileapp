@@ -17,6 +17,10 @@ const {
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 
+// Temporary QA override: user 24 can test reviews against any order status.
+// Mirrors REVIEW_STATUS_BYPASS_USER_ID in reviewController.js.
+const REVIEW_STATUS_BYPASS_USER_ID = 24;
+
 // Orders are created before Razorpay payment so stock can be reserved. Hide
 // only active payment attempts; cancelled orders remain visible in history.
 const CUSTOMER_VISIBLE_ORDER_CONDITION = "o.status <> 'pending_payment'";
@@ -337,7 +341,8 @@ class orderModel {
               : 0,
           feedback: {
             can_submit:
-              item.shipping_status === "delivered" &&
+              (item.shipping_status === "delivered" ||
+                userId === REVIEW_STATUS_BYPASS_USER_ID) &&
               item.fulfillment_status !== "cancelled" &&
               !item.review_id,
             submitted: Boolean(item.review_id),
@@ -608,7 +613,8 @@ class orderModel {
         feedback: {
           can_submit:
             i.fulfillment_status !== "cancelled" &&
-            i.shipping_status === "delivered" &&
+            (i.shipping_status === "delivered" ||
+              userId === REVIEW_STATUS_BYPASS_USER_ID) &&
             !i.review_id,
           submitted: Boolean(i.review_id),
           review_id: i.review_id || null,
