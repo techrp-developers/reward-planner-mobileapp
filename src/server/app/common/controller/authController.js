@@ -20,6 +20,7 @@
 const { notifyUser } = require("../utils/notification");
 const { uploadToR2 } = require("../../../utils/r2upload");
 const { deleteFromR2 } = require("../../../utils/r2delete");
+const { getPublicUrl } = require("../../../utils/publicUrl");
 const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
   const ACCESS_EXPIRES = "1h";
@@ -39,15 +40,34 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
       : "";
   }
 
+  function getActivationIdentity(body = {}) {
+    const email = normalizeEmail(body.email);
+    const phone = normalizePhone(body.phone ?? body.mobile ?? body.contact);
+
+    return {
+      email,
+      phone,
+      otpKey: email || phone,
+    };
+  }
+
+  async function findEmployeeForActivation({ email, phone }) {
+    if (email) return AuthModel.findEmployeeByEmail(email);
+    if (phone) return AuthModel.findEmployeeByPhone(phone);
+    return null;
+  }
+
   function sendActivationOtpNotifications({ email, employee, otp }) {
     setImmediate(() => {
-      sendOtpMail({
-        email,
-        name: employee.name,
-        otp,
-      }).catch((error) => {
-        console.error("Activation OTP email failed:", error);
-      });
+      if (email) {
+        sendOtpMail({
+          email,
+          name: employee.name,
+          otp,
+        }).catch((error) => {
+          console.error("Activation OTP email failed:", error);
+        });
+      }
 
       if (!employee.phone) return;
 
@@ -71,11 +91,41 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     });
   }
 
-  // helper function
-  const CDN_BASE_URL = "https://cdn.rewardplanners.com";
-  function getPublicUrl(path) {
-    if (!path) return null;
-    return `${CDN_BASE_URL}/${path}`;
+  function sendForgotPasswordOtpNotifications({ email, user, otp }) {
+    setImmediate(() => {
+      if (email) {
+        sendOtpMail({
+          email,
+          name: user.name,
+          otp,
+        }).catch((error) => {
+          console.error("Forgot password OTP email failed:", error);
+        });
+      }
+
+      if (!user.phone) return;
+
+      enqueueWhatsApp({
+        eventName: "onbord_forgot_pass",
+        ctx: {
+          phone: user.phone,
+          company_id: user.company_id ?? null,
+          customer_name: user.name || "User",
+          otp,
+        },
+      })
+        .then((result) => {
+          if (!result.ok) {
+            console.warn("Forgot password OTP WhatsApp not queued:", result);
+          }
+        })
+        .catch((error) => {
+          console.error(
+            "Forgot password OTP WhatsApp enqueue failed:",
+            error,
+          );
+        });
+    });
   }
 
   const thoughts = [
@@ -137,17 +187,15 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     ====================================================== */
     async activateAccount(req, res) {
       try {
-        const { email } = req.body;
-
-        const normalizedEmail = normalizeEmail(email);
-        if (!normalizedEmail) {
+        const identity = getActivationIdentity(req.body);
+        if (!identity.otpKey) {
           return res.status(400).json({
             success: false,
-            message: "Email is required",
+            message: "Email or phone is required",
           });
         }
 
-        const employee = await AuthModel.findEmployeeByEmail(normalizedEmail);
+        const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
           return res.status(404).json({
@@ -165,21 +213,21 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        await AuthModel.deleteOTPByEmail(normalizedEmail);
+        await AuthModel.deleteOTPByEmail(identity.otpKey);
 
         const otp = generateOTP();
 
-        await AuthModel.storeActivationOTP(normalizedEmail, otp);
+        await AuthModel.storeActivationOTP(identity.otpKey, otp);
 
         sendActivationOtpNotifications({
-          email: normalizedEmail,
+          email: identity.email,
           employee,
           otp,
         });
 
         return res.json({
           success: true,
-          message: "OTP sent to email",
+          message: identity.email ? "OTP sent to email" : "OTP sent to phone",
         });
       } catch (error) {
         console.error("Activate account error:", error);
@@ -192,17 +240,15 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     ====================================================== */
     async resendActivationOTP(req, res) {
       try {
-        const { email } = req.body;
-
-        const normalizedEmail = normalizeEmail(email);
-        if (!normalizedEmail) {
+        const identity = getActivationIdentity(req.body);
+        if (!identity.otpKey) {
           return res.status(400).json({
             success: false,
-            message: "Email is required",
+            message: "Email or phone is required",
           });
         }
 
-        const employee = await AuthModel.findEmployeeByEmail(normalizedEmail);
+        const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
           return res.status(404).json({
@@ -220,14 +266,14 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        await AuthModel.deleteOTPByEmail(normalizedEmail);
+        await AuthModel.deleteOTPByEmail(identity.otpKey);
 
         const otp = generateOTP();
 
-        await AuthModel.storeActivationOTP(normalizedEmail, otp);
+        await AuthModel.storeActivationOTP(identity.otpKey, otp);
 
         sendActivationOtpNotifications({
-          email: normalizedEmail,
+          email: identity.email,
           employee,
           otp,
         });
@@ -248,18 +294,17 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
   ====================================================== */
     async verifyActivationOTP(req, res) {
       try {
-        const { email, otp } = req.body;
+        const { otp } = req.body;
+        const identity = getActivationIdentity(req.body);
 
-        if (!email || !otp) {
+        if (!identity.otpKey || !otp) {
           return res.status(400).json({
             success: false,
-            message: "Email and OTP are required",
+            message: "Email or phone, and OTP are required",
           });
         }
 
-        const normalizedEmail = normalizeEmail(email);
-
-        const attempt = await AuthModel.getOtpAttempts(normalizedEmail);
+        const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
 
         if (attempt && attempt.attempt_count >= 5) {
           return res.status(429).json({
@@ -268,10 +313,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const otpRecord = await AuthModel.verifyOTP(normalizedEmail, otp);
+        const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
 
         if (!otpRecord) {
-          await AuthModel.incrementOtpAttempts(normalizedEmail);
+          await AuthModel.incrementOtpAttempts(identity.otpKey);
 
           return res.status(400).json({
             success: false,
@@ -279,7 +324,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        await AuthModel.markOTPVerified(normalizedEmail);
+        await AuthModel.markOTPVerified(identity.otpKey);
 
         return res.json({
           success: true,
@@ -301,16 +346,15 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     async setPassword(req, res) {
       const conn = await db.getConnection();
       try {
-        const { email, password } = req.body;
+        const { password } = req.body;
+        const identity = getActivationIdentity(req.body);
 
-        if (!email || !password) {
+        if (!identity.otpKey || !password) {
           return res.status(400).json({
             success: false,
-            message: "Email and password are required",
+            message: "Email or phone, and password are required",
           });
         }
-
-        const normalizedEmail = normalizeEmail(email);
 
         if (password.length < 8) {
           return res.status(400).json({
@@ -319,7 +363,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const existing = await AuthModel.findByEmail(normalizedEmail);
+        const existing = await AuthModel.findByEmailOrPhone(identity);
 
         if (existing) {
           return res.status(400).json({
@@ -328,7 +372,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const otpVerified = await AuthModel.checkOTPVerified(normalizedEmail);
+        const otpVerified = await AuthModel.checkOTPVerified(identity.otpKey);
 
         if (!otpVerified) {
           return res.status(403).json({
@@ -337,7 +381,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const employee = await AuthModel.findEmployeeByEmail(normalizedEmail);
+        const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
           return res.status(404).json({
@@ -362,11 +406,14 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           conn,
         );
 
-        await AuthModel.deleteOTP(normalizedEmail, conn);
+        await AuthModel.deleteOTP(identity.otpKey, conn);
 
         await conn.commit();
 
-        const createdUser = await AuthModel.findByEmail(normalizedEmail);
+        const createdUser = await AuthModel.findByEmailOrPhone({
+          email: normalizeEmail(employee.email),
+          phone: normalizePhone(employee.phone),
+        });
 
         notifyUser(
           {
@@ -383,14 +430,16 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           "account activation notification",
         );
 
-        setImmediate(() => {
-          accountCreationSuccessMail({
-            name: employee.name,
-            email: employee.email,
-          }).catch((err) => {
-            console.error("Email send failed:", err);
+        if (employee.email) {
+          setImmediate(() => {
+            accountCreationSuccessMail({
+              name: employee.name,
+              email: employee.email,
+            }).catch((err) => {
+              console.error("Email send failed:", err);
+            });
           });
-        });
+        }
 
         //  NON-BLOCKING WHATSAPP
         if (employee.phone) {
@@ -768,9 +817,9 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
         await AuthModel.storeActivationOTP(user.email, otp);
 
-        await sendOtpMail({
+        sendForgotPasswordOtpNotifications({
           email: user.email,
-          name: user.name,
+          user,
           otp,
         });
 
@@ -824,9 +873,9 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
         await AuthModel.storeActivationOTP(normalizedEmail, otp);
 
-        await sendOtpMail({
+        sendForgotPasswordOtpNotifications({
           email: normalizedEmail,
-          name: employee.name,
+          user: employee,
           otp,
         });
 
@@ -1364,6 +1413,8 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     // Get user Info
     async getUserInfo(req, res) {
       try {
+        res.set("Cache-Control", "no-store");
+
         const userId = req.user?.user_id;
 
         if (!userId) {
@@ -1502,9 +1553,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           message: "Profile updated successfully",
           data: {
             phone: updatedData.phone,
-            user_image: updatedData.user_image
-              ? getPublicUrl(updatedData.user_image)
-              : null,
+            user_image: getPublicUrl(updatedData.user_image, new Date()),
           },
         });
       } catch (error) {
