@@ -28,6 +28,7 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
+import SwipeContainer from '../dailyChallenge/SwipeContainer';
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
@@ -263,154 +264,154 @@ function Dashbord() {
   }), [isDark]);
 
   return (
-    <LinearGradient
-      colors={rootGradient}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.root}
-    >
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!isSearchOpen}
-        onScrollBeginDrag={dismissSearch}
-        keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={Platform.OS === 'android'}
-        bounces
+    <SwipeContainer loggedInUserName={user?.name}>
+      <LinearGradient
+        colors={rootGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.root}
       >
-        <LinearGradient
-          colors={topSectionGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.topSection}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!isSearchOpen}
+          onScrollBeginDrag={dismissSearch}
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={Platform.OS === 'android'}
+          bounces
         >
-          <HeaderComponent
-            userName={headerUserName}
-            userImageUri={headerUserImage ?? undefined}
-            companyLogoUri={headerCompanyLogo ?? undefined}
-            surface="transparent"
-            dismissSignal={searchDismissSignal}
-            onSearchActiveChange={setIsSearchOpen}
-            onSearchOverlayChange={setSearchOverlay}
-            onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-            onNotificationPress={() => navigation.navigate('Notification')}
-          />
+          <LinearGradient
+            colors={topSectionGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.topSection}
+          >
+            <HeaderComponent
+              userName={headerUserName}
+              userImageUri={headerUserImage ?? undefined}
+              companyLogoUri={headerCompanyLogo ?? undefined}
+              surface="transparent"
+              dismissSignal={searchDismissSignal}
+              onSearchActiveChange={setIsSearchOpen}
+              onSearchOverlayChange={setSearchOverlay}
+              onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+              onNotificationPress={() => navigation.navigate('Notification')}
+            />
 
-          {/* Motivational Quote Banner */}
-          <Pressable onPress={dismissSearch}>
-            <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
-              <LinearGradient
-                colors={quoteBannerGradient}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.card, t.card]}
-              >
+            <Pressable onPress={dismissSearch}>
+              <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
                 <LinearGradient
-                  colors={[
-                    'rgba(255,255,255,0)',
-                    'rgba(255,255,255,0.035)',
-                    'rgba(255,255,255,0.10)',
-                  ]}
-                  locations={[0, 0.58, 1]}
+                  colors={quoteBannerGradient}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
-                  style={styles.quoteHighlight}
-                  pointerEvents="none"
-                />
-
-                <View style={[styles.iconContainer, t.iconContainer]}>
-                  <MaterialCommunityIcons
-                    name="lightbulb-on-outline"
-                    size={iconSize}
-                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                  style={[styles.card, t.card]}
+                >
+                  <LinearGradient
+                    colors={[
+                      'rgba(255,255,255,0)',
+                      'rgba(255,255,255,0.035)',
+                      'rgba(255,255,255,0.10)',
+                    ]}
+                    locations={[0, 0.58, 1]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.quoteHighlight}
+                    pointerEvents="none"
                   />
-                </View>
 
-                <Text style={styles.quote}>
-                  {thought
-                    ? `"${thought}"`
-                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                </Text>
-              </LinearGradient>
-            </View>
-          </Pressable>
-        </LinearGradient>
-        {hasBirthdays && (
+                  <View style={[styles.iconContainer, t.iconContainer]}>
+                    <MaterialCommunityIcons
+                      name="lightbulb-on-outline"
+                      size={iconSize}
+                      color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                    />
+                  </View>
+
+                  <Text style={styles.quote}>
+                    {thought
+                      ? `"${thought}"`
+                      : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                  </Text>
+                </LinearGradient>
+              </View>
+            </Pressable>
+          </LinearGradient>
+          {hasBirthdays && (
+            <Pressable onPress={dismissSearch}>
+            <MemoBirthdayCarousel birthdays={birthdays} />
+            </Pressable>
+          )}
           <Pressable onPress={dismissSearch}>
-          <MemoBirthdayCarousel birthdays={birthdays} />
+            <MemoHomeChart goalSteps={stepGoal} />
+            <MemoServicesModule onModulePress={handleExploreModulePress} />
+            <MemoModuleBanner />
+            <MemoRewardsOverview />
           </Pressable>
-        )}
-        <Pressable onPress={dismissSearch}>
-          <MemoHomeChart goalSteps={stepGoal} />
-          <MemoServicesModule onModulePress={handleExploreModulePress} />
-          <MemoModuleBanner />
-          <MemoRewardsOverview />
-        </Pressable>
-      </ScrollView>
+        </ScrollView>
 
-      {searchOverlay?.visible && (
-        <View style={styles.searchOverlay} pointerEvents="box-none">
-          <Pressable
-            style={[styles.searchDismissLayer, { top: searchOverlay.top }]}
-            onPress={searchOverlay.onClose}
-          />
-          <View style={[styles.searchDropdownOverlay, { top: searchOverlay.top }]}>
-            <SearchDropdown
-              query={searchOverlay.query}
-              results={searchOverlay.results}
-              loading={searchOverlay.loading}
-              isEmpty={searchOverlay.isEmpty}
-              onClose={searchOverlay.onClose}
+        {searchOverlay?.visible && (
+          <View style={styles.searchOverlay} pointerEvents="box-none">
+            <Pressable
+              style={[styles.searchDismissLayer, { top: searchOverlay.top }]}
+              onPress={searchOverlay.onClose}
             />
+            <View style={[styles.searchDropdownOverlay, { top: searchOverlay.top }]}>
+              <SearchDropdown
+                query={searchOverlay.query}
+                results={searchOverlay.results}
+                loading={searchOverlay.loading}
+                isEmpty={searchOverlay.isEmpty}
+                onClose={searchOverlay.onClose}
+              />
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      <BottomTabs
-        isDashboard
-        activeTabKey="Home"
-        cartCount={totalQuantity}
-        onTabPress={handleTabPress}
-        onCenterPress={handleCenterPress}
-      />
-      {openingModule && (
-        <View
-          style={[
-            styles.moduleLaunchOverlay,
-            { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
-          ]}
-        >
-          <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
+        <BottomTabs
+          isDashboard
+          activeTabKey="Home"
+          cartCount={totalQuantity}
+          onTabPress={handleTabPress}
+          onCenterPress={handleCenterPress}
+        />
+        {openingModule && (
           <View
             style={[
-              styles.moduleLaunchContent,
-              { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
+              styles.moduleLaunchOverlay,
+              { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
             ]}
           >
+            <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
             <View
               style={[
-                styles.moduleLaunchLineWide,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+                styles.moduleLaunchContent,
+                { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
               ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchLine,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchCard,
-                { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
-              ]}
-            />
+            >
+              <View
+                style={[
+                  styles.moduleLaunchLineWide,
+                  { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+                ]}
+              />
+              <View
+                style={[
+                  styles.moduleLaunchLine,
+                  { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+                ]}
+              />
+              <View
+                style={[
+                  styles.moduleLaunchCard,
+                  { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
+                ]}
+              />
+            </View>
           </View>
-        </View>
-      )}
-      {/* <FloatingBottomBar/> */}
-    </LinearGradient>
+        )}
+      </LinearGradient>
+    </SwipeContainer>
   );
 }
 
