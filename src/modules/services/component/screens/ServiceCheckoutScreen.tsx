@@ -22,13 +22,13 @@ import OrderProcedbutton from '../../../ecommerce/components/checkout/OrderProce
 import EmptyCart from '../../../ecommerce/components/cart/EmptyCart';
 import SkeletonBox from '../constant/SkeletonBox';
 import { getBuyNowPreview, getCheckoutPreview, placeBuyNowOrder, placeCartOrder, removeServiceCartItem, addServiceToCart, clearServiceCart } from '../../api/CartAPI';
-import { buyNowBundle } from '../../api/BundleAPI';
+import { buyNowBundle, getBuyNowBundlePreview } from '../../api/BundleAPI';
 import { fetchAllAddress } from '../../../ecommerce/api/AddressApi';
 import { useAuth } from '../../../common/auth/context/AuthContext';
 import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
 import { addressesQueryKey } from '../../../ecommerce/navigation/navigationPerformance';
 import { HomeStackParamList } from '../../navigation/type';
-import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentStatus } from '../../api/ServicepaymentAPI';
+import { createServicePaymentOrder, verifyServicePayment, checkServicePaymentStatus, isServicePaymentVerified } from '../../api/ServicepaymentAPI';
 import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
 import RazorpayCheckout from "react-native-razorpay";
 import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
@@ -80,6 +80,32 @@ type PreviewSummary = {
   subtotal: number;
   discount: number;
   grandTotal: number;
+  earnCoins: number;
+  redeemCoins: number;
+  maxRedeemCoins: number;
+  walletBalance: number;
+};
+
+const waitForServicePayment = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+const pollServicePaymentStatus = async (parentOrderId: string) => {
+  let response: any = null;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (attempt > 0) await waitForServicePayment(2000);
+    response = await checkServicePaymentStatus(parentOrderId);
+    if (isServicePaymentVerified(response)) {
+      return { outcome: 'paid' as const, response };
+    }
+
+    const status = String(response?.payment_status ?? response?.status ?? '').toLowerCase();
+    if (['failed', 'cancelled', 'expired', 'refunded'].includes(status)) {
+      return { outcome: 'failed' as const, response };
+    }
+  }
+
+  return { outcome: 'pending' as const, response };
 };
 
 const parseMoney = (value: unknown): number => {
@@ -270,13 +296,13 @@ if (raw?.bundle?.bundle_total) {
 
 // ✅ discount
 const discount =
-  parseMoney(summaryRaw.discount) +
-  parseMoney(summaryRaw.reward_discount);
+  parseMoney(summaryRaw.discount);
+const redeemCoins = parseMoney(summaryRaw.redeem_coins ?? summaryRaw.reward_discount);
 
 // ✅ total
 const grandTotal =
   mode === 'cart'
-    ? Math.max(subtotal - discount, 0)
+    ? parseMoney(summaryRaw.total ?? Math.max(subtotal - discount - redeemCoins, 0))
     : parseMoney(summaryRaw.total ?? subtotal);
 
 return {
@@ -285,6 +311,10 @@ return {
     subtotal,
     discount,
     grandTotal,
+    earnCoins: parseMoney(summaryRaw.earn_coins),
+    redeemCoins,
+    maxRedeemCoins: parseMoney(summaryRaw.max_redeem_coins),
+    walletBalance: parseMoney(summaryRaw.wallet_balance),
   },
 };
 }
@@ -295,11 +325,12 @@ const serviceCheckoutQueryKey = (
   mode: 'buy_now' | 'cart',
   service_id?: number,
   variant_id?: number,
+  redeemCoins = 0,
 ) => {
   if (mode === 'buy_now') {
-    return [...SERVICE_CHECKOUT_QUERY_KEY, 'buy-now', String(service_id ?? ''), String(variant_id ?? '')] as const;
+    return [...SERVICE_CHECKOUT_QUERY_KEY, 'buy-now', String(service_id ?? ''), String(variant_id ?? ''), redeemCoins] as const;
   }
-  return SERVICE_CHECKOUT_QUERY_KEY;
+  return [...SERVICE_CHECKOUT_QUERY_KEY, 'cart', redeemCoins] as const;
 };
 
 export default function ServiceCheckoutScreen() {
@@ -319,6 +350,7 @@ export default function ServiceCheckoutScreen() {
     bundle_id,
     selected_items: routeSelectedItems,
     previewData: passedPreview,
+    redeem_coins: initialRedeemCoins = 0,
   } = route.params ?? {};
   const mode = routeMode === 'buy_now' ? 'buy_now' : 'cart';
 
@@ -328,6 +360,10 @@ export default function ServiceCheckoutScreen() {
   const pulse = useRef(new Animated.Value(0)).current;
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [useRewardCoins, setUseRewardCoins] = useState(initialRedeemCoins > 0);
+  const [requestedRedeemCoins, setRequestedRedeemCoins] = useState(initialRedeemCoins);
+  const redeemCoinsForRequest = useRewardCoins ? requestedRedeemCoins : 0;
+  const paymentFlowInProgress = useRef(false);
   const [removingId, setRemovingId] = useState<string | number | null>(null);
   const [hasStarted, setHasStarted] = useState(mode === 'buy_now' ? !!passedPreview : false);
   const isBuyNow = mode === 'buy_now';
@@ -368,8 +404,8 @@ export default function ServiceCheckoutScreen() {
 
   // ── checkout/buy-now preview query ─────────────────────────────────────────
   const checkoutQueryKey = useMemo(
-    () => serviceCheckoutQueryKey(mode, service_id, variant_id),
-    [mode, service_id, variant_id],
+    () => serviceCheckoutQueryKey(mode, service_id, variant_id, redeemCoinsForRequest),
+    [mode, redeemCoinsForRequest, service_id, variant_id],
   );
 
   const {
@@ -381,13 +417,20 @@ export default function ServiceCheckoutScreen() {
     queryKey: checkoutQueryKey,
     queryFn: () => {
       if (mode === 'buy_now') {
-        if (passedPreview) return Promise.resolve(passedPreview);
+        if (bundle_id) {
+          return getBuyNowBundlePreview({
+            bundle_id: Number(bundle_id),
+            selected_items: routeSelectedItems ?? [],
+            redeem_coins: redeemCoinsForRequest,
+          });
+        }
+        if (passedPreview && redeemCoinsForRequest === 0) return Promise.resolve(passedPreview);
         if (service_id && variant_id) {
-          return getBuyNowPreview({ service_id, variant_id });
+          return getBuyNowPreview({ service_id, variant_id, redeem_coins: redeemCoinsForRequest });
         }
         return Promise.resolve({ data: { items: [], summary: {} } });
       }
-      return getCheckoutPreview();
+      return getCheckoutPreview(redeemCoinsForRequest);
     },
     enabled: isAuthenticated,
     staleTime: 30 * 1000,
@@ -415,7 +458,7 @@ export default function ServiceCheckoutScreen() {
   );
 
   const summary = useMemo(
-    () => checkoutData?.summary ?? { subtotal: 0, discount: 0, grandTotal: 0 },
+    () => checkoutData?.summary ?? { subtotal: 0, discount: 0, grandTotal: 0, earnCoins: 0, redeemCoins: 0, maxRedeemCoins: 0, walletBalance: 0 },
     [checkoutData?.summary]
   );
 
@@ -427,7 +470,9 @@ export default function ServiceCheckoutScreen() {
     : '';
 
   const handlePlaceOrder = useCallback(async () => {
-    let createdCartOrder = false;
+    if (paymentFlowInProgress.current) return;
+    paymentFlowInProgress.current = true;
+    let createdParentOrderId: string | null = null;
     const cartSnapshot =
       mode !== "buy_now"
         ? items
@@ -471,6 +516,7 @@ export default function ServiceCheckoutScreen() {
     try {
       if (placing) {
         __DEV__ && console.log("⏸️ Order placement already in progress");
+        paymentFlowInProgress.current = false;
         return;
       }
       setPlacing(true);
@@ -481,6 +527,7 @@ export default function ServiceCheckoutScreen() {
       const address_id = Number(address?.id ?? (address as any)?.address_id ?? 0);
       if (!address_id) {
         setPlacing(false);
+        paymentFlowInProgress.current = false;
         Alert.alert(
           "Select Address",
           "Please select an address.",
@@ -500,21 +547,22 @@ export default function ServiceCheckoutScreen() {
           .map((i: any) => Number(i.bundle_item_id ?? i.item_id ?? i.id)))
           .filter((id) => Number.isFinite(id) && id > 0);
 
-        orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id });
+        orderRes = await buyNowBundle({ bundle_id: Number(bundle_id), selected_items, address_id, redeem_coins: redeemCoinsForRequest });
       } else if (mode === "buy_now" && service_id && variant_id) {
         orderRes = await placeBuyNowOrder({
           service_id: Number(service_id),
           variant_id: Number(variant_id),
           address_id,
+          redeem_coins: redeemCoinsForRequest,
         });
       } else {
-        orderRes = await placeCartOrder({ address_id });
-        createdCartOrder = true;
+        orderRes = await placeCartOrder({ address_id, redeem_coins: redeemCoinsForRequest });
       }
 
       // Check for explicit API failure
       if (orderRes?.success === false) {
         setPlacing(false);
+        paymentFlowInProgress.current = false;
         const serverMessage =
           orderRes.message ||
           orderRes.error ||
@@ -548,6 +596,7 @@ export default function ServiceCheckoutScreen() {
       const parent_order_id: string = raw_uuid
         ? String(raw_uuid).trim()
         : String(numeric_order_id);
+      createdParentOrderId = parent_order_id;
 
       __DEV__ && console.log("🔍 Order Extraction Debug:", {
         mode,
@@ -559,6 +608,7 @@ export default function ServiceCheckoutScreen() {
 
       if (!Number.isFinite(numeric_order_id) || numeric_order_id <= 0) {
         setPlacing(false);
+        paymentFlowInProgress.current = false;
         console.error("❌ Order ID extraction failed:", orderRes);
         Alert.alert("Order Error", "Failed to create order. Please try again.");
         return;
@@ -573,8 +623,12 @@ export default function ServiceCheckoutScreen() {
 
       __DEV__ && console.log("💳 Payment Order Response:", paymentData);
 
+      if (!paymentData?.key || !paymentData?.orderId || !Number(paymentData?.amount)) {
+        throw new Error("Invalid payment order response");
+      }
+
       const options = {
-        key: paymentData.key || "rzp_test_xxx",
+        key: paymentData.key,
         amount: paymentData.amount,
         currency: paymentData.currency || "INR",
         order_id: paymentData.orderId,
@@ -593,20 +647,8 @@ export default function ServiceCheckoutScreen() {
           __DEV__ && console.log("💰 Payment successful:", response);
           try {
             setPlacing(true);
+            let paymentOutcome: 'paid' | 'failed' | 'pending' = 'pending';
 
-            // ✅ Clear cart for cart mode
-            if (mode !== "buy_now") {
-              try {
-                await clearServiceCart();
-                __DEV__ && console.log("🧹 Cart cleared successfully");
-                await queryClient.invalidateQueries({ queryKey: SERVICE_CART_QUERY_KEY });
-                await queryClient.invalidateQueries({ queryKey: SERVICE_CHECKOUT_QUERY_KEY });
-              } catch (clearErr) {
-                console.error("❌ Cart clear failed:", clearErr);
-              }
-            }
-
-            // ✅ Step 4: Verify payment
             try {
               const verifyRes = await verifyServicePayment({
                 razorpay_order_id: response.razorpay_order_id,
@@ -615,42 +657,56 @@ export default function ServiceCheckoutScreen() {
               });
 
               __DEV__ && console.log("🔐 Payment verified:", verifyRes);
-
-              if (!verifyRes?.success) {
-                // Poll as fallback if verify response doesn't confirm success
-                await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
-                const statusRes = await checkServicePaymentStatus(parent_order_id);
-                __DEV__ && console.log("📊 Payment status poll:", statusRes);
-              }
+              paymentOutcome = isServicePaymentVerified(verifyRes) ? 'paid' : 'pending';
             } catch (verifyError) {
-              console.error("⚠️ Verification failed, proceeding to upload:", verifyError);
+              console.error("⚠️ Direct verification failed; polling status:", verifyError);
+            }
+
+            if (paymentOutcome !== 'paid') {
+              const statusResult = await pollServicePaymentStatus(parent_order_id);
+              paymentOutcome = statusResult.outcome;
+              __DEV__ && console.log("📊 Payment status result:", statusResult.response);
             }
 
             setPlacing(false);
+            paymentFlowInProgress.current = false;
 
-            // ✅ Step 5: Navigate to DocumentUpload
-            navigation.navigate("DocumentUpload", {
-              order_id: numeric_order_id,
-              parent_order_id: parent_order_id,
-            });
+            if (paymentOutcome === 'paid') {
+              await queryClient.invalidateQueries({ queryKey: SERVICE_CART_QUERY_KEY });
+              await queryClient.invalidateQueries({ queryKey: SERVICE_CHECKOUT_QUERY_KEY });
+              navigation.navigate("DocumentUpload", {
+                order_id: numeric_order_id,
+                parent_order_id,
+              });
+              return;
+            }
+
+            if (paymentOutcome === 'failed') {
+              await restoreCartAfterPaymentFailure();
+              await refetchCheckout();
+              alert.error?.("Payment Failed", "The payment failed. Your cart has been restored.");
+              return;
+            }
+
+            alert.info?.(
+              "Payment Processing",
+              "Do not pay again. Your payment is still being confirmed.",
+            );
+            navigation.navigate("ServiceOrderDetail", { parent_order_id });
           } catch (error) {
             console.error("❌ Post-payment flow failed:", error);
             setPlacing(false);
-            navigation.navigate("DocumentUpload", {
-              order_id: numeric_order_id,
-              parent_order_id: parent_order_id,
-            });
+            paymentFlowInProgress.current = false;
+            alert.info?.(
+              "Payment Status Unavailable",
+              "Do not pay again yet. Check this order after a few minutes.",
+            );
+            navigation.navigate("ServiceOrderDetail", { parent_order_id });
           }
         })
         .catch(async (error: any) => {
           setPlacing(false);
           console.error("❌ Payment cancelled/failed:", error);
-
-          // ✅ Restore cart after payment failure
-          await restoreCartAfterPaymentFailure();
-
-          // ✅ Refresh checkout data to sync UI
-          await refetchCheckout();
 
           const errorCode = String(error?.code ?? "");
           const errorText =
@@ -661,20 +717,50 @@ export default function ServiceCheckoutScreen() {
 
           const isUserCancelled =
             errorCode === "0" ||
+            errorCode === "1" ||
             /cancel|cancelled|dismiss|closed|back/i.test(String(errorText));
 
-          if (isUserCancelled) {
-            alert.info?.("Payment Cancelled", "Your cart has been restored. You can retry payment.");
+          try {
+            const statusResult = await pollServicePaymentStatus(parent_order_id);
+            paymentFlowInProgress.current = false;
+
+            if (statusResult.outcome === 'paid') {
+              navigation.navigate("DocumentUpload", {
+                order_id: numeric_order_id,
+                parent_order_id,
+              });
+              return;
+            }
+
+            if (statusResult.outcome === 'failed') {
+              await restoreCartAfterPaymentFailure();
+              await refetchCheckout();
+              alert.error?.(
+                isUserCancelled ? "Payment Cancelled" : "Payment Failed",
+                "The payment was not completed. Your cart has been restored.",
+              );
+              return;
+            }
+
+            alert.info?.(
+              isUserCancelled ? "Cancellation Processing" : "Payment Processing",
+              "Do not pay again. Check the order status shortly.",
+            );
+            navigation.navigate("ServiceOrderDetail", { parent_order_id });
+          } catch (statusError) {
+            paymentFlowInProgress.current = false;
+            console.error("❌ Payment status unavailable:", statusError);
+            alert.info?.(
+              "Payment Status Unavailable",
+              "Do not pay again yet. Check this order after a few minutes.",
+            );
+            navigation.navigate("ServiceOrderDetail", { parent_order_id });
             return;
           }
-
-          alert.error?.(
-            "Payment Failed",
-            String(errorText || "Payment was cancelled or failed")
-          );
         });
     } catch (e: any) {
       setPlacing(false);
+      paymentFlowInProgress.current = false;
 
       if (Number(e?.response?.status) === 401) {
         alert.info?.("Session Expired", "Please login again");
@@ -689,10 +775,6 @@ export default function ServiceCheckoutScreen() {
         error: e?.error
       });
 
-      if (createdCartOrder) {
-        await restoreCartAfterPaymentFailure();
-      }
-
       const serverMessage =
         e?.response?.data?.message ||
         e?.response?.data?.error ||
@@ -700,8 +782,13 @@ export default function ServiceCheckoutScreen() {
         e?.message ||
         "Failed to place order";
       alert.error?.("Error", serverMessage);
+      if (createdParentOrderId) {
+        navigation.navigate("ServiceOrderDetail", {
+          parent_order_id: createdParentOrderId,
+        });
+      }
     }
-  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout]);
+  }, [mode, service_id, variant_id, bundle_id, routeSelectedItems, address, navigation, placing, alert, items, queryClient, refetchCheckout, redeemCoinsForRequest]);
   const handleRemoveFromCheckout = useCallback(async (item: ServicePreviewItem) => {
     if (mode !== 'cart' || !item.id) return;
     if (removingId === item.id) return;
@@ -842,7 +929,7 @@ export default function ServiceCheckoutScreen() {
                 )}
                 <Text style={[styles.serviceName, { color: servicesTheme.colors.textStrong }]} numberOfLines={2}>{item.service_name
                 }</Text>
-                <View style={[styles.variantTag, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#EDE9FE' }]}>
+                <View style={[styles.variantTag, { backgroundColor: servicesTheme.colors.iconBg }]}>
                   <Text style={[styles.variantText, { color: servicesTheme.colors.primary }]}>{item.variant_name}</Text>
                 </View>
                 {!!item.description && (
@@ -892,8 +979,21 @@ export default function ServiceCheckoutScreen() {
         {/* Bill details */}
         <BillDetailsCard
           subtotal={summary.subtotal}
-          totalDiscount={summary.discount}
+          bagDiscount={summary.discount}
           finalTotal={summary.grandTotal}
+          totalRewardEarn={summary.earnCoins}
+          totalRedeemed={summary.redeemCoins}
+          rewardCoinsAvailable={Math.min(summary.walletBalance, summary.maxRedeemCoins)}
+          showRedeemableCoins
+          useRewards={useRewardCoins}
+          onUseRewardsChange={(enabled) => {
+            const redeemableCoins = Math.min(summary.walletBalance, summary.maxRedeemCoins);
+            setUseRewardCoins(enabled && redeemableCoins > 0);
+            setRequestedRedeemCoins(
+              enabled && redeemableCoins > 0 ? redeemableCoins : 0,
+            );
+          }}
+          showShippingCharges={false}
         />
 
         <View style={styles.bottomSpacer} />

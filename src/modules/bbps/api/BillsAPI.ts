@@ -326,16 +326,9 @@ export const verifyBillPayPayment = async (
       ? { Authorization: `Bearer ${token}` }
       : await getAuthHeaders();
 
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/bill-pay/verify-payment`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
-      }
-    );
+    const res = await apiClient.post("/v1/bill-pay/verify-payment", payload, {
+      headers: { "Content-Type": "application/json", ...authHeaders },
+    });
 
     return res.data;
   } catch (error: any) {
@@ -357,10 +350,9 @@ export const checkBillTransactionStatus = async (
       ? { Authorization: `Bearer ${token}` }
       : await getAuthHeaders();
 
-    const res = await axios.get(
-      `${API_BASE_URL}/v1/bills/check-status/${transactionId}`,
-      { headers: authHeaders }
-    );
+    const res = await apiClient.get(`/v1/bills/check-status/${transactionId}`, {
+      headers: authHeaders,
+    });
 
     return res.data;
   } catch (error: any) {
@@ -371,6 +363,15 @@ export const checkBillTransactionStatus = async (
     if (__DEV__) { console.error("Check Bill Status Error:", error?.response?.data || error); }
     throw error?.response?.data || error;
   }
+};
+
+export const cancelUnpaidBillPayOrder = async (
+  transactionId: string | number,
+) => {
+  const res = await apiClient.post("/v1/bill-pay/cancel-order", {
+    transaction_id: transactionId,
+  });
+  return res.data;
 };
 
 export interface OrderHistoryItem {
@@ -533,9 +534,13 @@ export const pollTransactionStatus = (
       }
 
       onUpdate({
-        status: "FAILED",
-        message: error?.message || "Could not check transaction status.",
+        status: "PENDING",
+        message:
+          error?.message ||
+          "Transaction status is temporarily unavailable. Please try again shortly.",
       });
+      consecutiveErrors = 0;
+      timer = setTimeout(tick, Math.max(intervalMs, 15000));
     }
   };
 

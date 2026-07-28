@@ -228,6 +228,20 @@ export default function ServiceCancellationDetails() {
         },
       ];
 
+  // The cancellation request can still be pending review or rejected by
+  // the admin, in which case the service was never actually cancelled —
+  // the header and refund section must reflect that instead of assuming
+  // approval.
+  const cancellationStatus = cancellation?.status || 'requested';
+  const isApproved = cancellationStatus === 'approved';
+  const isRejected = cancellationStatus === 'rejected';
+  const cardTitle = isRejected
+    ? 'Cancellation Rejected'
+    : isApproved
+      ? 'Order Cancelled'
+      : 'Cancellation Requested';
+  const cardTitleColor = isRejected ? '#D97706' : isApproved ? '#EF4444' : '#2563EB';
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header
@@ -283,34 +297,62 @@ export default function ServiceCancellationDetails() {
         </TouchableOpacity>
 
         <View style={[styles.cancellationCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
-          <Text style={styles.cancelledTitle}>Order Cancelled</Text>
+          <Text style={[styles.cancelledTitle, { color: cardTitleColor }]}>{cardTitle}</Text>
 
-          {timeline.map((step, index) => (
-            <View key={`${step.event}-${index}`} style={styles.timelineRow}>
-              <View style={styles.timelineRail}>
-                <MaterialCommunityIcons name="check-circle" size={16} color="#22C55E" />
+          {isRejected ? (
+            <Text style={[styles.cancelReasonText, { color: servicesTheme.colors.text }]}>
+              Your cancellation request was rejected. This service will continue as scheduled.
+            </Text>
+          ) : null}
+
+          {cancellation?.reason ? (
+            <Text style={[styles.cancelReasonText, { color: servicesTheme.colors.text }]}>
+              Reason: {cancellation.reason}
+            </Text>
+          ) : null}
+          {cancellation?.comment ? (
+            <Text style={[styles.cancelCommentText, { color: servicesTheme.colors.muted }]}>
+              "{cancellation.comment}"
+            </Text>
+          ) : null}
+
+          {timeline.map((step, index) => {
+            const isNegativeEvent = step.event === 'cancellation_rejected' || step.event === 'refund_failed';
+            return (
+              <View key={`${step.event}-${index}`} style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <MaterialCommunityIcons
+                    name={isNegativeEvent ? 'close-circle' : 'check-circle'}
+                    size={16}
+                    color={isNegativeEvent ? '#DC2626' : '#22C55E'}
+                  />
+                </View>
+                <Text style={[styles.timelineLabel, { color: servicesTheme.colors.text }]}>{step.label}</Text>
+                <Text style={[styles.timelineDate, { color: servicesTheme.colors.muted }]}>{formatDate(step.date) || 'Update pending'}</Text>
               </View>
-              <Text style={[styles.timelineLabel, { color: servicesTheme.colors.text }]}>{step.label}</Text>
-              <Text style={[styles.timelineDate, { color: servicesTheme.colors.muted }]}>{formatDate(step.date) || 'Update pending'}</Text>
-            </View>
-          ))}
+            );
+          })}
 
-          <Text style={[styles.totalRefund, { color: servicesTheme.colors.textStrong }]}>
-            Total Refund- {formatCurrency(details.refund.total || cancellation?.refund_amount)}
-          </Text>
+          {isApproved ? (
+            <>
+              <Text style={[styles.totalRefund, { color: servicesTheme.colors.textStrong }]}>
+                Total Refund- {formatCurrency(details.refund.total || cancellation?.refund_amount)}
+              </Text>
 
-          <RefundStatusRow
-            icon="bank-outline"
-            amount={formatCurrency(details.refund.money_refund)}
-            label="Refund to Card"
-            status={formatStatus(cancellation?.refund_status || 'pending')}
-          />
-          <RefundStatusRow
-            icon="star-four-points-outline"
-            amount={details.refund.coin_refund.toLocaleString('en-IN')}
-            label="Reward Coins Reversed"
-            status={details.refund.coin_refund > 0 ? 'Completed' : 'Pending'}
-          />
+              <RefundStatusRow
+                icon="bank-outline"
+                amount={formatCurrency(details.refund.money_refund)}
+                label="Refund to Card"
+                status={formatStatus(cancellation?.refund_status || 'pending')}
+              />
+              <RefundStatusRow
+                icon="star-four-points-outline"
+                amount={details.refund.coin_refund.toLocaleString('en-IN')}
+                label="Reward Coins Reversed"
+                status={details.refund.coin_refund > 0 ? 'Completed' : 'Pending'}
+              />
+            </>
+          ) : null}
         </View>
 
         {details.address ? (
@@ -563,6 +605,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#EF4444',
+    marginBottom: 12,
+  },
+  cancelReasonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cancelCommentText: {
+    fontSize: 12,
+    fontStyle: 'italic',
     marginBottom: 12,
   },
   timelineRow: {

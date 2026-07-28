@@ -77,12 +77,15 @@ export type HomeStackParamList = {
 OrderConfirmedScreen: {
     order_id: number;
   };
-    SelectCancellationReason: {
+  SelectItemCancellationReason: {
+    orderItemId: number;
     orderId: number;
     orderRef?: string;
-    savings?: number;
     productTitle?: string;
     productWeight?: string;
+  };
+  ItemCancellationDetails: {
+    orderItemId: number;
   };
   EditProfile: undefined;
   Settings: undefined;
