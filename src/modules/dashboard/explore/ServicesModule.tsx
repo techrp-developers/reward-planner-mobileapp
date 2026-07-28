@@ -19,8 +19,6 @@ import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
 
-type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
-
 const Categories1 = require('../../../assets/sampleImages/Categories(1).png');
 const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
 const Categories3 = require('../../../assets/sampleImages/Categories(3).png');
