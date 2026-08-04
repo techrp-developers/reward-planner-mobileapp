@@ -22,6 +22,9 @@
     <!-- Required for Health Connect permission usage screen -->
     <uses-permission android:name="android.permission.START_VIEW_PERMISSION_USAGE" />
 
+      <!-- push notification  -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Health Connect package visibility -->
     <queries>
         <package android:name="com.google.android.healthconnect.controller" />

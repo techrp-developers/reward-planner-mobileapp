@@ -251,3 +251,18 @@ export const updateProfile = async (formData: FormData) => {
 
   return response.data;
 };
+
+export const updateFcmTokenApi = async (fcmToken: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await axios.post(
+      `${API_BASE_URL}/auth/update-fcm-token`,
+      { fcm_token: fcmToken },
+      { headers }
+    );
+    return res.data;
+  } catch (error: any) {
+    __DEV__ && console.log("Update FCM Token Error:", error?.response?.data || error?.message);
+    throw error;
+  }
+};

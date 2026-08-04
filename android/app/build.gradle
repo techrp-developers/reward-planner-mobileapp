@@ -107,7 +107,7 @@ android {
         applicationId "com.rewardsplanners"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 31
+        versionCode 32
                 versionName "1.0"
     }
     signingConfigs {
@@ -156,3 +156,4 @@ dependencies {
 
 }
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+apply plugin: "com.google.gms.google-services"

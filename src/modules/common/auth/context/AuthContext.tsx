@@ -15,6 +15,8 @@ import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 import { parseLoginIdentifier } from "../utils/loginIdentifier";
+import { requestUserPermission, getFCMToken } from "../../../../services/NotificationService";
+import { updateFcmTokenApi } from "../../../ecommerce/api/ProfileApi";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -370,6 +372,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     bootstrapSession();
   }, [bootstrapSession]);
+
+  useEffect(() => {
+    if (accessToken) {
+      const syncFCMToken = async () => {
+        try {
+          const hasPermission = await requestUserPermission();
+          if (hasPermission) {
+            const token = await getFCMToken();
+            if (token) {
+              await updateFcmTokenApi(token);
+              console.log("✅ [AuthContext] FCM Token synced to server successfully");
+            }
+          }
+        } catch (err) {
+          console.error("❌ [AuthContext] FCM Token sync to server failed:", err);
+        }
+      };
+      syncFCMToken();
+    }
+  }, [accessToken]);
 
   const logout = useCallback(async () => {
     if (isLoggingOutRef.current) return;

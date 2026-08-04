@@ -96,7 +96,7 @@ const buildTimeOptions = () => {
   const options: string[] = [];
 
   for (let hour = 6; hour <= 23; hour++) {
-    ["00", "30"].forEach(min => {
+    ["00", "10", "20", "30", "40", "50"].forEach(min => {
       const date = new Date();
       date.setHours(hour);
       date.setMinutes(Number(min));
