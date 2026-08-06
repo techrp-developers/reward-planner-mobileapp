@@ -176,7 +176,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           return false;
         }
       } catch {
-        console.warn('Invalid operator field regex:', field.regex);
+        if (__DEV__) { console.warn('Invalid operator field regex:', field.regex); }
       }
     }
 

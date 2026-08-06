@@ -138,11 +138,7 @@
   };
 
   export const register = async (payload: RegisterPayload) => {
-    console.log("📦 Sending Register payload:", payload);
-
     const res = await axios.post(`${API_BASE_URL}/v1/auth/register`, payload);
-
-    console.log("✅ Register response:", res.data);
 
     const token = extractToken(res.data);
     if (token) {
@@ -165,9 +161,7 @@
   };
 
   export const login = async (payload: LoginPayload) => {
-    console.log("📦 Sending Login payload:", payload);
     const res = await axios.post(`${API_BASE_URL}/v1/auth/login`, payload);
-    console.log("✅ Login response:", res.data);
 
     const token = extractToken(res.data);
 
@@ -277,12 +271,10 @@
   };
 
   export const activateAccount = async (payload: ActivateAccountPayload) => {
-    console.log("📦 Sending Activate Account payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/activate-account`,
       payload
     );
-    console.log("✅ Activate Account response:", res.data);
     return res.data;
   };
 
@@ -294,12 +286,10 @@
   export const verifyActivationOtp = async (
     payload: VerifyActivationOtpPayload
   ) => {
-    console.log("📦 Sending Verify Activation OTP payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/verify-activation-otp`,
       payload
     );
-    console.log("✅ Verify Activation OTP response:", res.data);
 
     const token = extractToken(res.data);
     if (token) {
@@ -320,15 +310,10 @@
   };
 
   export const setPassword = async (payload: SetPasswordPayload) => {
-    console.log("📦 Sending Set Password payload:", {
-      ...payload,
-      password: "***",
-    });
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/set-password`,
       payload
     );
-    console.log("✅ Set Password response:", res.data);
 
     const token = extractToken(res.data);
     if (token) {
@@ -350,12 +335,10 @@
   };
 
   export const forgotPassword = async (payload: ForgotPasswordPayload) => {
-    console.log("📦 Sending Forgot Password payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/forgot-password`,
       payload
     );
-    console.log("✅ Forgot Password response:", res.data);
     return res.data;
   };
 
@@ -366,12 +349,10 @@
   };
 
   export const resendOtp = async (payload: ResendOtpPayload) => {
-    console.log("📦 Sending Resend OTP payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/resend-otp`,
       payload
     );
-    console.log("✅ Resend OTP response:", res.data);
     return res.data;
   };
 
@@ -385,12 +366,10 @@
   export const verifyForgotPasswordOtp = async (
     payload: VerifyForgotPasswordOtpPayload
   ) => {
-    console.log("📦 Sending Verify Forgot Password OTP payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/verify-forgot-password-otp`,
       payload
     );
-    console.log("✅ Verify Forgot Password OTP response:", res.data);
     return res.data;
   };
 
@@ -402,15 +381,10 @@
   };
 
   export const resetPassword = async (payload: ResetPasswordPayload) => {
-    console.log("📦 Sending Reset Password payload:", {
-      ...payload,
-      newPassword: "***",
-    });
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/reset-password`,
       payload
     );
-    console.log("✅ Reset Password response:", res.data);
     return res.data;
   };
 
@@ -423,12 +397,10 @@
   export const resendActivationOtp = async (
     payload: ResendActivationOtpPayload
   ) => {
-    console.log("📦 Sending Resend Activation OTP payload:", payload);
     const res = await axios.post(
       `${API_BASE_URL}/v1/auth/resend-activation-otp`,
       payload
     );
-    console.log("✅ Resend Activation OTP response:", res.data);
     return res.data;
   };
 
@@ -442,14 +414,6 @@ export type ChangePasswordPayload = {
 export const changePassword = async (
   payload: ChangePasswordPayload
 ) => {
-  console.log("📦 Sending Change Password payload:", {
-    currentPassword: "***",
-    newPassword: "***",
-  });
-
   const res = await api.put("/v1/auth/change-password", payload);
-
-  console.log("✅ Change Password response:", res.data);
-
   return res.data;
 };

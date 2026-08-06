@@ -12,7 +12,11 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@notifee/react-native": "^9.1.8",
+=======
+    "@d11/react-native-fast-image": "^8.13.0",
+>>>>>>> a0b47766aa67703ddb864ba704381aa33182e627
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/geolocation": "^3.4.0",
     "@react-native-community/netinfo": "^12.0.1",

@@ -166,47 +166,6 @@ type RouteStateLike = {
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-const ThemedSurface = React.memo(function ThemedSurface({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: any;
-}) {
-  const { theme } = useAppTheme();
-  return <View style={[style, { backgroundColor: theme.background }]}>{children}</View>;
-});
-
-const MODULE_MODE_BY_ROUTE: Record<keyof ModuleStackParamList, AppMode> = {
-  ProductModule: "Product",
-  ServicesModule: "Services",
-  PaymentsModule: "Payments",
-  DineOutModule: "DineOut",
-  BusListingScreen: "DineOut",
-  AllFilterScreen: "DineOut",
-  AboutBusScreen: "DineOut",
-  SeatSelectionScreen: "DineOut",
-  PassengerDetailsScreen: "DineOut",
-  BoardingDroppingSelectionScreen: "DineOut",
-  BusSummaryScreen: "DineOut",
-  PaymentScreen: "DineOut",
-};
-
-const getRequestedMode = (params?: {
-  screen?: string;
-  moduleName?: string;
-}): AppMode | null => {
-  if (params?.screen && params.screen in MODULE_MODE_BY_ROUTE) {
-    return MODULE_MODE_BY_ROUTE[params.screen as keyof ModuleStackParamList];
-  }
-
-  if (["Product", "Services", "Payments", "DineOut"].includes(params?.moduleName ?? "")) {
-    return params?.moduleName as AppMode;
-  }
-
-  return null;
-};
-
 const getActiveRouteChain = (state?: RouteStateLike): string[] => {
   if (!state?.routes?.length) return [];
 

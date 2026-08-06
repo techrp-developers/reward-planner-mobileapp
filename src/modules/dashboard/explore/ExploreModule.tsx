@@ -29,20 +29,15 @@ const Explore8 = require('../../../assets/sampleImages/ExploreSevice(8).png');
 
 type CategoryItem = {
   image: ReturnType<typeof require>;
-  tab?: TopTab;
-  stack?: 'HealthStack';
-  title?: string;
+  tab: TopTab;
 };
 
 const activeServices: CategoryItem[] = [
   { image: Explore1, tab: 'Product' },
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
-  { image: Explore5, stack: 'HealthStack' },
-  { image: Explore4, tab: 'DineOut' },
-];
-
-const upcomingServices: CategoryItem[] = [
+  { image: Explore4, tab: 'Product' },
+  { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];
 
@@ -87,25 +82,18 @@ function ExploreModule() {
   );
 
   const handleCategoryPress = useCallback(
-    (item: CategoryItem) => {
-      if (isNavigatingRef.current) return;
-      isNavigatingRef.current = true;
-
-      if (item.stack) {
-        navigation.navigate(item.stack);
-      } else {
-        const target = TAB_TO_MODULE[item.tab as TopTab];
-        navigation.navigate('Home', {
-          screen: target.screen,
-          params: { moduleName: target.moduleName },
-          moduleName: target.moduleName,
-        });
-      }
-
-      navigationUnlockTimerRef.current = setTimeout(() => {
-        isNavigatingRef.current = false;
-        navigationUnlockTimerRef.current = null;
-      }, 1000);
+    (tab: TopTab) => {
+      const target = TAB_TO_MODULE[tab];
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Home',
+          params: {
+            screen: target.screen,
+            params: { moduleName: target.moduleName },
+            moduleName: target.moduleName,
+          },
+        })
+      );
     },
     [navigation],
   );
