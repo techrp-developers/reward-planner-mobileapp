@@ -9,7 +9,6 @@ import BottomTabs from "../bottombar/BottomTabs";
 import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
-import { useAppTheme } from "../theme/ThemeContext";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -165,6 +164,25 @@ type RouteStateLike = {
 };
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
+
+const MODULE_MODE_BY_ROUTE: Record<
+  "ProductModule" | "ServicesModule" | "PaymentsModule" | "DineOutModule",
+  AppMode
+> = {
+  ProductModule: "Product",
+  ServicesModule: "Services",
+  PaymentsModule: "Payments",
+  DineOutModule: "DineOut",
+};
+
+const getRequestedMode = (params?: { moduleName?: string }): AppMode | null => {
+  const moduleName = params?.moduleName;
+  if (moduleName === "Product") return "Product";
+  if (moduleName === "Services") return "Services";
+  if (moduleName === "Payments") return "Payments";
+  if (moduleName === "DineOut") return "DineOut";
+  return null;
+};
 
 const getActiveRouteChain = (state?: RouteStateLike): string[] => {
   if (!state?.routes?.length) return [];
@@ -415,11 +433,11 @@ function MainLayout() {
 
 
   return (
-    <ThemedSurface style={styles.container}>
+    <View style={styles.container}>
       <View style={showNavbar ? styles.navbarSlot : styles.navbarSlotHidden}>
         <Navbar activeModule={activeMode} onModuleChange={handleModuleChange} />
       </View>
-      <ThemedSurface style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
+      <View style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
         <ModuleStack.Navigator
           initialRouteName="ProductModule"
           screenListeners={moduleScreenListeners}
@@ -498,7 +516,7 @@ function MainLayout() {
             }
           />
         </ModuleStack.Navigator>
-      </ThemedSurface>
+      </View>
       {showBottomTabs ? (
         <BottomTabs
           activeMode={activeMode}
@@ -507,7 +525,7 @@ function MainLayout() {
           onTabPress={handleBottomTabPress}
           onCenterPress={handleCenterPress}
         />) : null}
-    </ThemedSurface>
+    </View>
   );
 }
 

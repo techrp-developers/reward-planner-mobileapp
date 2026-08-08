@@ -227,6 +227,25 @@ function Dashbord() {
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
+  const handleExploreModulePress = useCallback(
+    (tab: ExploreServiceTab) => {
+      const target = MODULE_ROUTE[tab];
+      if (!target) return;
+
+      setOpeningModule(tab);
+      navigation.navigate('Home', {
+        screen: target,
+        params: { moduleName: tab },
+        moduleName: tab,
+      });
+
+      setTimeout(() => {
+        setOpeningModule((current) => (current === tab ? null : current));
+      }, 450);
+    },
+    [navigation],
+  );
+
   const quoteBannerGradient: string[] = isDark
     ? ['#18181B', '#27233A', '#4338CA']
     : ['#111827', '#312E81', '#4F46E5'];

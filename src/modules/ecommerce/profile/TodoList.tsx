@@ -15,7 +15,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
 import { useAppTheme } from "../../../theme/ThemeContext";
@@ -30,6 +30,11 @@ import {
   deleteTodoApi,
   deleteMultipleTodosApi,
 } from "../api/ProfileApi";
+import {
+  cancelTodoReminder,
+  ensureExactAlarmPermission,
+  scheduleTodoReminder,
+} from "../../../services/NotificationService";
 
 type Todo = {
   id: string;
@@ -45,7 +50,7 @@ type Todo = {
   status?: string;
 };
 
-type TimeTarget = "start" | "end";
+type TimeTarget = "start" | "end" | "reminder";
 type FilterType = "ALL" | "TODAY" | "PENDING" | "COMPLETED";
 type DateItem = {
   dateKey: string;
@@ -95,7 +100,7 @@ const getDayName = (date: Date) => {
 const buildTimeOptions = () => {
   const options: string[] = [];
 
-  for (let hour = 6; hour <= 23; hour++) {
+  for (let hour = 0; hour <= 23; hour++) {
     ["00", "10", "20", "30", "40", "50"].forEach(min => {
       const date = new Date();
       date.setHours(hour);
@@ -116,6 +121,7 @@ const buildTimeOptions = () => {
 
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { isDark, theme } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const dateListRef = useRef<FlatList<DateItem>>(null);
@@ -216,7 +222,9 @@ const TodoListScreen = () => {
 
       const res = await fetchTodosByDate(createdBy, dateForApi, apiFilter);
 
-      setTodos(normalizeTodos(res?.data || []));
+      const normalizedTodos = normalizeTodos(res?.data || []);
+      setTodos(normalizedTodos);
+      return normalizedTodos;
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -224,6 +232,7 @@ const TodoListScreen = () => {
           error?.message ||
           "Failed to load todos"
       );
+      return [];
     } finally {
       setLoading(false);
     }
@@ -232,6 +241,19 @@ const TodoListScreen = () => {
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
+
+  useEffect(() => {
+    const referenceId = String(
+      route.params?.referenceId || route.params?.reference_id || ""
+    ).trim();
+
+    if (!referenceId) return;
+
+    const matchedTodo = todos.find(todo => todo.id === referenceId);
+    if (matchedTodo) {
+      setSelectedTodoId(matchedTodo.id);
+    }
+  }, [route.params, todos]);
 
   const pastDates = useMemo(() => {
     const arr = [];
@@ -328,6 +350,82 @@ const TodoListScreen = () => {
     setShowCheckbox(false);
   };
 
+  const showAlarmPermissionPrompt = useCallback(() => {
+    Alert.alert(
+      "Allow exact alarms",
+      "Task save ho gaya, lekin exact-time alarm ke liye Android Alarms & reminders permission allow karna hoga.",
+      [
+        { text: "Later" },
+        {
+          text: "Open Settings",
+          onPress: () => {
+            ensureExactAlarmPermission();
+          },
+        },
+      ]
+    );
+  }, []);
+
+  const syncLocalTodoAlarm = useCallback(
+    async (todo: Todo | undefined, reminderOverride?: string | null) => {
+      if (!todo) return;
+
+      const reminderValue = (reminderOverride ?? todo.reminder ?? "").trim();
+
+      if (!reminderValue) {
+        await cancelTodoReminder(todo.id);
+        return;
+      }
+
+      const result = await scheduleTodoReminder({
+        todoId: todo.id,
+        title: todo.title,
+        subtitle: todo.subtitle,
+        taskDate: todo.date,
+        reminderTime: reminderValue,
+        referenceId: todo.id,
+      });
+
+      if (!result.scheduled && "reason" in result) {
+        const reason = result.reason;
+
+        if (reason === "missing_alarm_permission") {
+          showAlarmPermissionPrompt();
+        } else if (reason === "past_datetime") {
+          Alert.alert(
+            "Reminder not scheduled",
+            "Reminder time past mein hai, isliye local exact alarm schedule nahin hua."
+          );
+        } else if (reason === "invalid_datetime") {
+          Alert.alert(
+            "Invalid reminder time",
+            "Reminder time `10:30 AM` format mein save karein."
+          );
+        }
+      }
+    },
+    [showAlarmPermissionPrompt]
+  );
+
+  const findSavedTodo = useCallback(
+    (items: Todo[], payload: {
+      task_date: string;
+      start_time: string;
+      end_time: string;
+      title: string;
+      subtitle: string;
+    }) => {
+      return items.find(todo =>
+        todo.date === payload.task_date &&
+        todo.startTime === payload.start_time &&
+        todo.endTime === payload.end_time &&
+        todo.title === payload.title &&
+        (todo.subtitle || "") === (payload.subtitle || "")
+      );
+    },
+    []
+  );
+
   const applyFilter = (type: FilterType) => {
     setFilterType(type);
 
@@ -399,7 +497,12 @@ const TodoListScreen = () => {
 
       setModalVisible(false);
       resetSelection();
-      await fetchTodos();
+      const refreshedTodos = await fetchTodos();
+      const savedTodo = editingId
+        ? refreshedTodos.find(todo => todo.id === editingId)
+        : findSavedTodo(refreshedTodos, payload);
+
+      await syncLocalTodoAlarm(savedTodo, payload.reminder_time);
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -422,6 +525,7 @@ const TodoListScreen = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            await cancelTodoReminder(selectedTodo.id);
             await deleteTodoApi(selectedTodo.id, createdBy);
             resetSelection();
             await fetchTodos();
@@ -448,6 +552,7 @@ const TodoListScreen = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            await Promise.all(selectedTodoIds.map(id => cancelTodoReminder(id)));
             await deleteMultipleTodosApi(selectedTodoIds, createdBy);
             resetSelection();
             await fetchTodos();
@@ -486,6 +591,7 @@ const TodoListScreen = () => {
     if (!selectedTodo) return;
 
     try {
+      await cancelTodoReminder(selectedTodo.id);
       await completeTodoApi(selectedTodo.id, createdBy);
       resetSelection();
       await fetchTodos();
@@ -503,6 +609,7 @@ const TodoListScreen = () => {
     if (selectedTodoIds.length === 0) return;
 
     try {
+      await Promise.all(selectedTodoIds.map(id => cancelTodoReminder(id)));
       await completeMultipleTodosApi(selectedTodoIds, createdBy);
       resetSelection();
       await fetchTodos();
@@ -552,11 +659,14 @@ const TodoListScreen = () => {
       await updateTodoReminder(
         selectedTodo.id,
         createdBy,
-        reminderTime || "No reminder time"
+        reminderTime.trim()
       );
 
       setAlarmModalVisible(false);
-      await fetchTodos();
+      const refreshedTodos = await fetchTodos();
+      const updatedTodo = refreshedTodos.find(todo => todo.id === selectedTodo.id);
+
+      await syncLocalTodoAlarm(updatedTodo, reminderTime);
     } catch (error: any) {
       Alert.alert(
         "Reminder",
@@ -575,8 +685,10 @@ const TodoListScreen = () => {
   const selectTime = (value: string) => {
     if (timeTarget === "start") {
       setStartTime(value);
-    } else {
+    } else if (timeTarget === "end") {
       setEndTime(value);
+    } else {
+      setReminderTime(value);
     }
 
     setTimePickerVisible(false);
@@ -1136,13 +1248,24 @@ const TodoListScreen = () => {
           <View style={[styles.modalCard, themed.surface]}>
             <Text style={[styles.modalTitle, themed.text]}>Set Alarm Reminder</Text>
 
-            <TextInput
-              placeholder="Reminder time e.g. 10:30 AM"
-              placeholderTextColor={placeholderColor}
-              value={reminderTime}
-              onChangeText={setReminderTime}
-              style={[styles.input, themed.surface, themed.text]}
-            />
+            <TouchableOpacity
+              style={[styles.input, themed.surface, styles.timePickerTrigger]}
+              onPress={() => openTimePicker("reminder")}
+            >
+              <Text
+                style={[
+                  styles.timePickerTriggerText,
+                  { color: reminderTime ? theme.text : placeholderColor },
+                ]}
+              >
+                {reminderTime || "Select reminder time"}
+              </Text>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={20}
+                color={theme.text}
+              />
+            </TouchableOpacity>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -1803,6 +1926,18 @@ const styles = StyleSheet.create({
     color: TEXT_DARK,
     borderWidth: 1,
     borderColor: PINK_BORDER,
+  },
+
+  timePickerTrigger: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  timePickerTriggerText: {
+    fontSize: 15,
+    flex: 1,
   },
 
   modalActions: {

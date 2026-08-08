@@ -10,11 +10,10 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -29,9 +28,12 @@ const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
 
 type CategoryItem = {
   image?: ReturnType<typeof require>;
-  Icon?: SvgCard;
   tab?: TopTab;
   stack?: 'HealthStack';
+};
+
+type ServicesModuleProps = {
+  onModulePress?: (tab: ExploreServiceTab) => void;
 };
 
 const categoriesData: CategoryItem[] = [
@@ -55,7 +57,6 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isNavigatingRef = useRef(false);
   const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -73,7 +74,10 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
   );
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
+    (tab?: TopTab) => {
+      if (!tab) return;
+      onModulePress?.(tab);
+
       const target = TAB_TO_MODULE[tab];
       navigation.dispatch(
         CommonActions.navigate({
@@ -139,7 +143,10 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
         <TouchableOpacity
           activeOpacity={0.88}
           onPress={handleViewAll}
-          style={[styles.standaloneArrowButton, { height: CARD_HEIGHT }]}
+          style={[
+            styles.arrowButton,
+            { height: CARD_HEIGHT, backgroundColor: isDark ? '#1F2937' : '#F8FAFC' },
+          ]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <MaterialCommunityIcons
@@ -188,5 +195,13 @@ const styles = StyleSheet.create({
     borderRadius: rs(16),
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.16)',
+  },
+  arrowButton: {
+    width: rs(48),
+    borderRadius: rs(16),
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

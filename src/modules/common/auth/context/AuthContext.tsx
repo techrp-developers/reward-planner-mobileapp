@@ -15,7 +15,11 @@ import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 import { parseLoginIdentifier } from "../utils/loginIdentifier";
-import { requestUserPermission, getFCMToken } from "../../../../services/NotificationService";
+import {
+  requestUserPermission,
+  getFCMToken,
+  registerTokenRefreshHandler,
+} from "../../../../services/NotificationService";
 import { updateFcmTokenApi } from "../../../ecommerce/api/ProfileApi";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
@@ -391,6 +395,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
       syncFCMToken();
     }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    return registerTokenRefreshHandler(async token => {
+      await updateFcmTokenApi(token);
+    });
   }, [accessToken]);
 
   const logout = useCallback(async () => {
