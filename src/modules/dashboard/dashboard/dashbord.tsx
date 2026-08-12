@@ -30,6 +30,12 @@ import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
+import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
+import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
+
+const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
+  'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+];
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
@@ -70,6 +76,7 @@ function Dashbord() {
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
+  const dashboardLayout = useDashboardLayout('main', MAIN_DASHBOARD_SECTION_KEYS);
 
   const [headerUserName, setHeaderUserName] = useState<string>(
     () => dashboardHeaderCache?.userName ?? user?.name ?? 'User',
@@ -289,71 +296,60 @@ function Dashbord() {
         removeClippedSubviews={Platform.OS === 'android'}
         bounces
       >
-        <LinearGradient
-          colors={topSectionGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.topSection}
-        >
-          <HeaderComponent
-            userName={headerUserName}
-            userImageUri={headerUserImage ?? undefined}
-            companyLogoUri={headerCompanyLogo ?? undefined}
-            surface="transparent"
-            dismissSignal={searchDismissSignal}
-            onSearchActiveChange={setIsSearchOpen}
-            onSearchOverlayChange={setSearchOverlay}
-            onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-            onNotificationPress={() => navigation.navigate('Notification')}
-            showRewardPoints
-            rewardPoints={rewardPoints}
-          />
-
-          <Pressable onPress={dismissSearch}>
-            <View style={styles.bannerOuter}>
-              <LinearGradient
-                colors={quoteBannerGradient}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.card, t.card]}
-              >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
-                  locations={[0, 0.58, 1]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.quoteHighlight}
-                  pointerEvents="none"
-                />
-                <View style={[styles.iconContainer, t.iconContainer]}>
-                  <MaterialCommunityIcons
-                    name="lightbulb-on-outline"
-                    size={iconSize}
-                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+        {dashboardLayout.sections.map(({ key }) => {
+          switch (key as MainDashboardSectionKey) {
+            case 'header':
+              return (
+                <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
+                  <HeaderComponent
+                    userName={headerUserName}
+                    userImageUri={headerUserImage ?? undefined}
+                    companyLogoUri={headerCompanyLogo ?? undefined}
+                    surface="transparent"
+                    dismissSignal={searchDismissSignal}
+                    onSearchActiveChange={setIsSearchOpen}
+                    onSearchOverlayChange={setSearchOverlay}
+                    onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+                    onNotificationPress={() => navigation.navigate('Notification')}
+                    showRewardPoints
+                    rewardPoints={rewardPoints}
                   />
-                </View>
-                <Text style={styles.quote}>
-                  {thought
-                    ? `"${thought}"`
-                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                </Text>
-              </LinearGradient>
-            </View>
-          </Pressable>
-        </LinearGradient>
-        {hasBirthdays && (
-          <Pressable onPress={dismissSearch}>
-            <MemoBirthdayCarousel birthdays={birthdays} />
-          </Pressable>
-        )}
-        <Pressable onPress={dismissSearch}>
-          <MemoHomeChart goalSteps={stepGoal} />
-          <MemoServicesModule onModulePress={handleExploreModulePress} />
-        </Pressable>
-        <MemoModuleBanner />
-        <Pressable onPress={dismissSearch}>
-          <MemoRewardsOverview />
-        </Pressable>
+                  <Pressable onPress={dismissSearch}>
+                    <View style={styles.bannerOuter}>
+                      <LinearGradient colors={quoteBannerGradient} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={[styles.card, t.card]}>
+                        <LinearGradient
+                          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
+                          locations={[0, 0.58, 1]}
+                          start={{ x: 0, y: 0.5 }}
+                          end={{ x: 1, y: 0.5 }}
+                          style={styles.quoteHighlight}
+                          pointerEvents="none"
+                        />
+                        <View style={[styles.iconContainer, t.iconContainer]}>
+                          <MaterialCommunityIcons name="lightbulb-on-outline" size={iconSize} color={isDark ? '#FFFFFF' : '#9B3DD8'} />
+                        </View>
+                        <Text style={styles.quote}>
+                          {thought ? `"${thought}"` : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </Pressable>
+                </LinearGradient>
+              );
+            case 'birthdays':
+              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
+            case 'stepProgress':
+              return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
+            case 'exploreModules':
+              return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
+            case 'moduleBanner':
+              return <MemoModuleBanner key={key} />;
+            case 'rewardsOverview':
+              return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
+            default:
+              return null;
+          }
+        })}
       </ScrollView>
 
       {searchOverlay?.visible && (
