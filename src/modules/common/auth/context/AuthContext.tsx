@@ -14,7 +14,6 @@ import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
-import { parseLoginIdentifier } from "../utils/loginIdentifier";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -36,13 +35,6 @@ type RegisterPayload = {
   cpassword: string;
 };
 
-type LoginPayload = {
-  identifier: string;
-  email?: string;
-  phone?: string;
-  password: string;
-};
-
 type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
@@ -58,7 +50,8 @@ type AuthContextValue = {
   register: (payload: RegisterPayload) => Promise<any>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendVerification: (email: string) => Promise<any>;
-  login: (payload: LoginPayload) => Promise<any>;
+  requestLoginOtp: (identifier: string) => Promise<any>;
+  verifyLoginOtp: (identifier: string, otp: string) => Promise<any>;
   bootstrapSession: () => Promise<void>;
   restoreSession: () => Promise<void>;
   logout: () => Promise<void>;
@@ -224,27 +217,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response.data;
   }, []);
 
-  const login = useCallback(
-    async (payload: LoginPayload) => {
+  const requestLoginOtp = useCallback(async (identifier: string) => {
+    setLoading(true);
+    try {
+      const response = await api.post("/v1/auth/request-otp", { login: identifier });
+      return response.data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyLoginOtp = useCallback(
+    async (identifier: string, otp: string) => {
       setLoading(true);
       try {
         const deviceId   = await getOrCreateDeviceId();
         const deviceName = getDeviceName();
-        const parsedIdentifier = parseLoginIdentifier(payload.identifier);
-        const identifier = String(payload.identifier || "").trim();
-        const email =
-          payload.email?.trim().toLowerCase() ||
-          (parsedIdentifier.kind === "email" ? parsedIdentifier.normalized : undefined);
-        const phone =
-          payload.phone?.trim() ||
-          (parsedIdentifier.kind === "phone" ? parsedIdentifier.normalized : undefined);
-
-        const response = await api.post("/v1/auth/login", {
-          identifier,
-          login:       identifier,
-          email,
-          phone,
-          password:    payload.password,
+        const response = await api.post("/v1/auth/verify-otp", {
+          login: identifier,
+          otp,
           device_id:   deviceId,
           device_name: deviceName,
         });
@@ -253,7 +244,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const nextRefreshToken = response.data?.refreshToken || null;
 
         if (!nextAccessToken || !nextRefreshToken) {
-          throw new Error("Invalid login response");
+          throw new Error("Invalid OTP login response");
         }
 
         updateAccessToken(nextAccessToken);
@@ -406,7 +397,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register,
       verifyEmail,
       resendVerification,
-      login,
+      requestLoginOtp,
+      verifyLoginOtp,
       bootstrapSession,
       restoreSession,
       logout,
@@ -422,7 +414,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register,
       verifyEmail,
       resendVerification,
-      login,
+      requestLoginOtp,
+      verifyLoginOtp,
       bootstrapSession,
       restoreSession,
       logout,

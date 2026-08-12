@@ -11,11 +11,7 @@ import { AppThemeProvider } from "./src/theme/ThemeContext";
 import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
 type AuthModalStackParamList = {
   Login: undefined;
-  AccountActivate: undefined;
-  OTPScreen: { email: string };
-  SetNewPassword: { email: string };
-  AccountActivationSuccess: undefined;
-  VerifyEmail: { email: string };
+  LoginOTP: { identifier: string };
 };
 
 type RootStackParamList = {
@@ -31,11 +27,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       AuthStack: {
         screens: {
           Login: 'login',
-          AccountActivate: 'activate',
-          OTPScreen: 'otp',
-          SetNewPassword: 'set-password',
-          AccountActivationSuccess: 'activation-success',
-          VerifyEmail: 'verify-email',
+          LoginOTP: 'login/otp',
         },
       },
     },
