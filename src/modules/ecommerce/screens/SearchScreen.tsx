@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LoginHead from "../constants/heading/LoginHead";
 import { fetchSearchSuggestions, getProductImageUrl, saveSearchHistory, getSearchHistory, clearSearchHistory } from "../api/ProductApi";
@@ -50,7 +50,6 @@ function SearchScreen() {
                 Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
             ])
         );
-
         animation.start();
         return () => animation.stop();
     }, [pulse]);
@@ -70,19 +69,18 @@ function SearchScreen() {
                     .filter(Boolean);
                 setHistory(Array.from(new Set(normalized)));
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
+            // swallow
         } finally {
             setLoadingHistory(false);
         }
     }, [normalizeHistoryItem]);
 
-    // Load History on Mount
     useEffect(() => {
         loadHistory();
     }, [loadHistory]);
 
-    const handleSelectSuggestion = async (item: SearchSuggestion) => {
+    const handleSelectSuggestion = useCallback(async (item: SearchSuggestion) => {
         setShowSuggest(false);
         setSearch(item.title);
         const destination = item?.navigation?.destination;
@@ -108,17 +106,17 @@ function SearchScreen() {
         try {
             await saveSearchHistory(item.title.trim());
             loadHistory();
-        } catch (error) {
-            console.error("Failed to save search history", error);
+        } catch {
+            // swallow — history save is best-effort
         }
-    };
+    }, [navigation, loadHistory]);
 
-    const handleHistoryPress = (value: string) => {
+    const handleHistoryPress = useCallback((value: string) => {
         setSearch(value);
         if (value.trim().length >= 2) {
             setShowSuggest(true);
         }
-    };
+    }, []);
 
     useEffect(() => {
         const delay = setTimeout(async () => {
@@ -145,8 +143,7 @@ function SearchScreen() {
                     setSuggestions([]);
                     setShowSuggest(true);
                 }
-            } catch (e) {
-                console.error(e);
+            } catch {
                 setSuggestions([]);
                 setShowSuggest(true);
             } finally {
@@ -247,8 +244,7 @@ function SearchScreen() {
                                 } else {
                                   throw new Error("Failed to clear history");
                                 }
-                              } catch (error) {
-                                console.error("clearSearchHistory", error);
+                              } catch {
                                 Alert.alert("Error", "Unable to clear search history. Please try again.");
                               }
                             }}
@@ -341,11 +337,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
+        overflow: "hidden",
     },
     img: {
         width: 30,
         height: 30,
-        resizeMode: "contain",
     },
     textContainer: {
         flex: 1,
@@ -445,13 +441,6 @@ const styles = StyleSheet.create({
     loaderContainer: {
         padding: 24,
         alignItems: 'stretch',
-    },
-    msg: {
-        marginTop: 10,
-        color: "#888",
-    },
-    historyLoader: {
-        marginTop: 20,
     },
     searchSkeletonItem: {
         flexDirection: "row",
