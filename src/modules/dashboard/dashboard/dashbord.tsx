@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
+import { useQuery } from '@tanstack/react-query';
+import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
@@ -88,6 +90,14 @@ function Dashbord() {
   );
   const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
+  const { data: walletBalanceResponse } = useQuery({
+    queryKey: ['dashboard', 'header-wallet-balance'],
+    queryFn: fetchWalletBalance,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -279,11 +289,13 @@ function Dashbord() {
             onSearchOverlayChange={setSearchOverlay}
             onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
             onNotificationPress={() => navigation.navigate('Notification')}
+            showRewardPoints
+            rewardPoints={rewardPoints}
           />
         </LinearGradient>
         {hasBirthdays && (
           <Pressable onPress={dismissSearch}>
-          <MemoBirthdayCarousel birthdays={birthdays} />
+            <MemoBirthdayCarousel birthdays={birthdays} />
           </Pressable>
         )}
         <Pressable onPress={dismissSearch}>
