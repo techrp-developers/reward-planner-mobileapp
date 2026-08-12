@@ -128,6 +128,7 @@ export type HomeStackParamList = {
     bundle_id?: number; 
     selected_items?: number[];
     previewData?: any; 
+    redeem_coins?: number;
   };
 };
 
@@ -162,6 +163,7 @@ export type ServiceItem = {
   description?: string;
   enquiry?: boolean | number;
   rating?: number;
+  review_count?: number;
   total_orders?: number;
   price: number;
   mrp?: number;

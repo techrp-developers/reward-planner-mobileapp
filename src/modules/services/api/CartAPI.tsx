@@ -91,6 +91,7 @@ const EMPTY_SERVICE_CART = {
   bundles: [],
   individual_items: [],
   total: 0,
+  rewards: { earn_coins: 0, max_redeem_coins: 0 },
 };
 export const getServiceCartItems = async () => {
   const headers = await getAuthHeaders();
@@ -119,6 +120,7 @@ export const getServiceCartItems = async () => {
         bundles: data.bundles || [],
         individual_items: data.individual_items || [],
         total: data.total || 0,
+        rewards: data.rewards || EMPTY_SERVICE_CART.rewards,
       };
     } catch (error: any) {
       const status = Number(error?.response?.status || 0);
@@ -153,6 +155,7 @@ export const getServiceCartItems = async () => {
       bundles: data.bundles || [],
       individual_items: data.individual_items || [],
       total: data.total || 0,
+      rewards: data.rewards || EMPTY_SERVICE_CART.rewards,
     };
   } catch (error: any) {
     const status = Number(error?.response?.status || 0);
@@ -234,7 +237,7 @@ export const clearServiceCart = async () => {
 // Checkout
 
 // get Buy now (Single buy now)
-export const getBuyNowPreview = async ({ service_id, variant_id }) => {
+export const getBuyNowPreview = async ({ service_id, variant_id, redeem_coins = 0 }) => {
   if (!service_id || !variant_id) {
     throw new Error("Invalid service_id or variant_id");
   }
@@ -254,7 +257,7 @@ export const getBuyNowPreview = async ({ service_id, variant_id }) => {
       url,
       {
         headers,
-        params: { service_id, variant_id },
+        params: { service_id, variant_id, redeem_coins },
       }
     );
 
@@ -267,7 +270,7 @@ export const getBuyNowPreview = async ({ service_id, variant_id }) => {
 
 
 // get checkout cart items (Cart Buy now Checkout)
-export const getCheckoutPreview = async () => {
+export const getCheckoutPreview = async (redeem_coins = 0) => {
   try {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/checkout-preview`;
@@ -279,7 +282,7 @@ export const getCheckoutPreview = async () => {
 
     const res = await getWithRetry(
       url,
-      { headers }
+      { headers, params: { redeem_coins } }
     );
 
     return res.data;
@@ -316,7 +319,7 @@ export const getCheckoutPreview = async () => {
 };
 
 // place Order
-export const placeCartOrder = async ({ address_id }: { address_id: number }) => {
+export const placeCartOrder = async ({ address_id, redeem_coins = 0 }: { address_id: number; redeem_coins?: number }) => {
   try {
     const headers = await getAuthHeaders();
     const url = `${SERVICE_API_BASE}/service-checkout/cart`;
@@ -329,7 +332,7 @@ export const placeCartOrder = async ({ address_id }: { address_id: number }) => 
 
     const res = await axios.post(
       url,
-      { address_id },
+      { address_id, redeem_coins },
       { headers }
     );
 
@@ -349,10 +352,12 @@ export const placeBuyNowOrder = async ({
   service_id,
   variant_id,
   address_id,
+  redeem_coins = 0,
 }: {
   service_id: number;
   variant_id: number;
   address_id: number;
+  redeem_coins?: number;
 }) => {
   try {
     const headers = await getAuthHeaders();
@@ -372,6 +377,7 @@ export const placeBuyNowOrder = async ({
         service_id,
         variant_id,
         address_id,
+        redeem_coins,
       },
       { headers }
     );

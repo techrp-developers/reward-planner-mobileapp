@@ -42,23 +42,37 @@ import { useServicesTheme } from '../../utils/useServicesTheme';
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceOrderDetail'>;
 
-// ── Status label map ─────────────────────────────────────────────────────────
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending_payment:  'Payment Pending',
-  in_progress:      'In Progress',
-  completed:        'Completed',
-  cancelled:        'Cancelled',
-};
-
-const ORDER_STATUS_COLOR: Record<string, string> = {
-  pending_payment: '#D97706',
-  in_progress:     '#2563EB',
-  completed:       '#16A34A',
-  cancelled:       '#DC2626',
-};
 const PURPLE = '#7C3AED';
 
 // ── Data transforms ──────────────────────────────────────────────────────────
+// Derives the header status from the individual service items rather than the
+// single aggregated `order.status`, which can read "Payment Pending" for the
+// whole order even when only one of several items hasn't been paid for.
+function getOrderStatusSummary(items: ServiceItem[]): { label: string; color: string } {
+  const total = items.length;
+
+  if (total === 0) {
+    return { label: 'Order Placed', color: '#6B7280' };
+  }
+
+  const cancelled = items.filter(item => item.status === 'cancelled').length;
+  if (cancelled === total) {
+    return { label: 'Order Cancelled', color: '#DC2626' };
+  }
+
+  const completed = items.filter(item => item.status === 'completed').length;
+  if (completed === total) {
+    return { label: 'Order Completed', color: '#16A34A' };
+  }
+
+  const confirmed = items.filter(item => item.status !== 'pending_payment').length;
+  if (confirmed < total) {
+    return { label: `${confirmed} of ${total} Services Confirmed`, color: '#D97706' };
+  }
+
+  return { label: `${completed} of ${total} Services Completed`, color: '#2563EB' };
+}
+
 function buildAddressLine(order: ServiceOrderDetails): string {
   const a = order.address;
   if (!a) return '';
@@ -211,8 +225,6 @@ export default function ServiceOrderDetail() {
   }
 
   // ── Derived data (transforms live in parent, not in components) ───────────
-  const statusLabel  = ORDER_STATUS_LABEL[order.status]  || order.status;
-  const statusColor  = ORDER_STATUS_COLOR[order.status]  || '#6B7280';
   const addressLine  = buildAddressLine(order);
   const hasStandaloneItems = order.items.length > 0;
   const hasBundles         = order.bundles.length > 0;
@@ -220,6 +232,7 @@ export default function ServiceOrderDetail() {
     ...order.items,
     ...order.bundles.flatMap(bundle => bundle.items),
   ];
+  const { label: statusLabel, color: statusColor } = getOrderStatusSummary(allServiceItems);
   const allDocuments = allServiceItems.flatMap(item => item.documents);
   const pendingDocumentCount = allDocuments.filter(document => !document.uploaded).length;
   const uploadedDocumentCount = allDocuments.length - pendingDocumentCount;
@@ -233,6 +246,34 @@ export default function ServiceOrderDetail() {
     primaryService?.variant_name ||
     `${allServiceItems.length} service${allServiceItems.length === 1 ? '' : 's'}`;
   const primaryImage = primaryService?.image_url;
+  const itemSubtotal = Number(
+    order.subtotal ??
+    order.summary?.subtotal ??
+    allServiceItems.reduce((sum, item) => sum + Number(item.price || 0), 0),
+  );
+  const rewardCoinsUsed = Number(
+    order.reward_coins_used ??
+    order.rewards?.used ??
+    order.reward_discount ??
+    order.summary?.reward_coins_used ??
+    0,
+  );
+  const rewardDiscount = Number(
+    order.reward_discount ??
+    order.summary?.reward_discount ??
+    rewardCoinsUsed,
+  );
+  const rewardCoinsEarned = Number(
+    order.reward_coins_earned ??
+    order.rewards?.earned ??
+    order.summary?.reward_coins_earned ??
+    0,
+  );
+  const orderTotal = Number(
+    order.total_amount ??
+    order.summary?.total ??
+    Math.max(0, itemSubtotal - rewardDiscount),
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
@@ -393,13 +434,13 @@ export default function ServiceOrderDetail() {
         {/* ── Price summary (reused ecommerce component) ────────────── */}
         <SectionCard title="Payment Summary">
           <PriceDetailsCard
-            itemTotal={order.total_amount}
+            itemTotal={itemSubtotal}
             deliveryFee={0}
             bagDiscount={0}
-            rewardDiscount={0}
-            orderTotal={order.total_amount}
-            rewardEarned={0}
-            rewardRedeemed={0}
+            rewardDiscount={rewardDiscount}
+            orderTotal={orderTotal}
+            rewardEarned={rewardCoinsEarned}
+            rewardRedeemed={rewardCoinsUsed}
             paymentMethod="Online"
           />
           <InvoiceDownloadRow

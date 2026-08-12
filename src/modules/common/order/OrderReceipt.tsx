@@ -19,14 +19,21 @@ import { useAppTheme } from "../../../theme/ThemeContext";
 
 interface OrderReceiptProps {
   orderId: number;
+  receiptData?: any;
 }
 
-export default function OrderReceipt({ orderId }: OrderReceiptProps) {
-  const [receipt, setReceipt] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps) {
+  const [receipt, setReceipt] = useState<any>(receiptData ?? null);
+  const [loading, setLoading] = useState(!receiptData);
   const { isDark, theme } = useAppTheme();
 
   const loadReceipt = useCallback(async () => {
+    if (receiptData) {
+      setReceipt(receiptData);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetchOrderReceipt(orderId);
       if (res?.success) {
@@ -37,7 +44,7 @@ export default function OrderReceipt({ orderId }: OrderReceiptProps) {
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, receiptData]);
 
   useEffect(() => {
     loadReceipt();
@@ -142,7 +149,9 @@ export default function OrderReceipt({ orderId }: OrderReceiptProps) {
 
                 <Row label="Item Total" value={`₹${Number(bill.item_total || 0)}`} />
                 <Row label="Delivery Fee" value={`₹${Number(bill.delivery_fee || 0)}`} />
-                <Row label="Bag Discount" value={`-₹${Number(bill.bag_discount || 0)}`} color="#22C55E" />
+                {Number(bill.bag_discount || 0) > 0 && (
+                  <Row label="Bag Discount" value={`-₹${Number(bill.bag_discount)}`} color="#22C55E" />
+                )}
                 <Row label="Reward Discount" value={`-₹${Number(bill.reward_discount || 0)}`} color="#22C55E" />
                 {rewardsUsed > 0 && (
                   <Row label="Rewards Used" value={`${rewardsUsed} coins`} color="#7A63FF" />

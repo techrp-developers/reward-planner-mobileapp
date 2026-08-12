@@ -20,6 +20,7 @@ type Props = {
   handlingFees?: number
   showHandlingFees?: boolean
   rewardCoinsAvailable?: number
+  showRedeemableCoins?: boolean
   onPayableChange?: (amount: number) => void
 }
 
@@ -41,6 +42,7 @@ export default function BillDetailsCard({
   handlingFees = 0,
   showHandlingFees = false,
   rewardCoinsAvailable,
+  showRedeemableCoins = false,
   onPayableChange,
 }: Props) {
   const { isDark, theme } = useAppTheme()
@@ -72,6 +74,11 @@ export default function BillDetailsCard({
         <View>
           <Text style={[styles.label, { color: theme.secondaryText }]}>Use Reward Coins</Text>
           <Text style={[styles.helperText, { color: theme.secondaryText }]}>Available savings on this order</Text>
+          {showRedeemableCoins && (
+            <Text style={[styles.redeemableText, { color: theme.primary }]}>
+              {safeAvailableRewards.toLocaleString('en-IN')} coins redeemable
+            </Text>
+          )}
         </View>
 
         <View style={styles.switchRow}>
@@ -188,6 +195,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
+  },
+  redeemableText: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
   value: {
     fontSize: 13,

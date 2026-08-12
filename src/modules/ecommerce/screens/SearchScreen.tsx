@@ -23,7 +23,17 @@ type SearchSuggestion = {
     id: number;
     title: string;
     image?: string;
-    type?: "product" | "category" | string;
+    type?: "product" | "category" | "subcategory" | string;
+    category_id?: number;
+    category_name?: string;
+    subcategory_id?: number;
+    subcategory_name?: string;
+    navigation?: {
+        destination: "category_products" | "subcategory_products" | "product_details";
+        category_id?: number;
+        subcategory_id?: number;
+        product_id?: number;
+    };
 };
 
 type SearchHistoryItem = string | { keyword?: string; title?: string; q?: string };
@@ -82,15 +92,24 @@ function SearchScreen() {
     const handleSelectSuggestion = useCallback(async (item: SearchSuggestion) => {
         setShowSuggest(false);
         setSearch(item.title);
-        const normalizedType = String(item?.type || "product").trim().toLowerCase();
+        const destination = item?.navigation?.destination;
 
-        if (normalizedType === "category") {
+        if (destination === "category_products") {
             navigation.navigate("Category", {
-                categoryId: Number(item.id),
+                categoryId: Number(item.navigation?.category_id ?? item.id),
                 title: item.title,
             });
+        } else if (destination === "subcategory_products") {
+            navigation.navigate("Category", {
+                categoryId: Number(item.navigation?.category_id),
+                title: item.category_name || item.title,
+                subcategoryId: Number(item.navigation?.subcategory_id ?? item.id),
+                subcategoryTitle: item.title,
+            });
         } else {
-            navigation.navigate("ProductDescription", { productId: item.id });
+            navigation.navigate("ProductDescription", {
+                productId: item.navigation?.product_id ?? item.id,
+            });
         }
 
         try {
@@ -119,7 +138,15 @@ function SearchScreen() {
                 setLoadingSuggest(true);
                 const res = await fetchSearchSuggestions(search);
                 if (res?.success) {
-                    setSuggestions(res.suggestions || []);
+                    const grouped = res.suggestions || {};
+                    const flattened: SearchSuggestion[] = Array.isArray(grouped)
+                        ? grouped
+                        : [
+                              ...(grouped.categories || []),
+                              ...(grouped.subcategories || []),
+                              ...(grouped.products || []),
+                          ];
+                    setSuggestions(flattened);
                     setShowSuggest(true);
                 } else {
                     setSuggestions([]);
@@ -173,10 +200,14 @@ function SearchScreen() {
                             </View>
                         ) : (
                             suggestions.map((item) => {
-                                const isCategory = String(item?.type || "product").trim().toLowerCase() === "category";
+                                const normalizedType = String(item?.type || "product").trim().toLowerCase();
+                                const isCategory = normalizedType === "category";
+                                const isSubcategory = normalizedType === "subcategory";
+                                const isCategoryLike = isCategory || isSubcategory;
+                                const tagLabel = isCategory ? "Category" : isSubcategory ? "Subcategory" : "Product";
                                 return (
                                     <TouchableOpacity
-                                        key={item.id}
+                                        key={`${normalizedType}-${item.id}`}
                                         activeOpacity={0.75}
                                         style={[styles.item, { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : "#5B1E7A" }]}
                                         onPress={() => handleSelectSuggestion(item)}
@@ -189,9 +220,9 @@ function SearchScreen() {
                                         </View>
                                         <View style={styles.textContainer}>
                                             <Text numberOfLines={1} style={[styles.title, { color: theme.text }]}>{item.title}</Text>
-                                            <View style={[styles.tagPill, isCategory ? styles.tagPillCategory : styles.tagPillProduct]}>
-                                                <Text style={[styles.categoryTag, isCategory && styles.categoryTagCategory]}>
-                                                    {isCategory ? "Category" : "Product"}
+                                            <View style={[styles.tagPill, isCategoryLike ? styles.tagPillCategory : styles.tagPillProduct]}>
+                                                <Text style={[styles.categoryTag, isCategoryLike && styles.categoryTagCategory]}>
+                                                    {tagLabel}
                                                 </Text>
                                             </View>
                                         </View>

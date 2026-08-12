@@ -108,7 +108,10 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         versionCode 32
+<<<<<<< HEAD
         
+=======
+>>>>>>> d6e2e369a6da4ef3cc4d0ae87c7eeae67138aa56
         versionName "1.0"
     }
     signingConfigs {

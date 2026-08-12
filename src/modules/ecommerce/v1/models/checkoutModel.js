@@ -859,7 +859,7 @@ class CheckoutModel {
   }
 
   // Get checkout details
-  async getCheckoutCart(userId, useRewards = true) {
+  async getCheckoutCart(userId, useRewards = true, addressId = null) {
     // ===============================
     // 1. WALLET
     // ===============================
@@ -1020,11 +1020,17 @@ class CheckoutModel {
     // ===============================
     // 5. FETCH DEFAULT ADDRESS
     // ===============================
-    const [addressRows] = await db.execute(
-      `SELECT zipcode FROM customer_addresses
-     WHERE user_id = ? AND is_default = 1 LIMIT 1`,
-      [userId],
-    );
+    const [addressRows] = addressId
+      ? await db.execute(
+          `SELECT zipcode FROM customer_addresses
+           WHERE user_id = ? AND address_id = ? LIMIT 1`,
+          [userId, addressId],
+        )
+      : await db.execute(
+          `SELECT zipcode FROM customer_addresses
+           WHERE user_id = ? AND is_default = 1 LIMIT 1`,
+          [userId],
+        );
 
     // if (!addressRows.length) throw new Error("INVALID_ADDRESS");
 
@@ -1051,7 +1057,8 @@ class CheckoutModel {
 
       const group = vendorGroups[vendorId];
       group.totalWeightKg += item.quantity * item.weight;
-      group.totalAmount += item.itemTotal;
+      // Match order creation: courier pricing uses the post-redemption amount.
+      group.totalAmount += item.itemTotal - item.redeemable;
       group.length = Math.max(group.length, item.length);
       group.breadth = Math.max(group.breadth, item.breadth);
       group.height += item.height * item.quantity;
@@ -1180,6 +1187,7 @@ class CheckoutModel {
     quantity,
     useRewards = true,
     userId,
+    addressId = null,
   }) {
     // ===============================
     // 1. WALLET
@@ -1282,11 +1290,17 @@ class CheckoutModel {
     // ===============================
     // 6. SHIPPING (UNCHANGED)
     // ===============================
-    const [addressRows] = await db.execute(
-      `SELECT zipcode FROM customer_addresses
-     WHERE user_id = ? AND is_default = 1 LIMIT 1`,
-      [userId],
-    );
+    const [addressRows] = addressId
+      ? await db.execute(
+          `SELECT zipcode FROM customer_addresses
+           WHERE user_id = ? AND address_id = ? LIMIT 1`,
+          [userId, addressId],
+        )
+      : await db.execute(
+          `SELECT zipcode FROM customer_addresses
+           WHERE user_id = ? AND is_default = 1 LIMIT 1`,
+          [userId],
+        );
 
     const destinationPincode = addressRows[0]?.zipcode || null;
     const addressRequired = !destinationPincode;
@@ -1308,7 +1322,8 @@ class CheckoutModel {
         origin: vendorAddress.pincode,
         destination: destinationPincode,
         payment_type: "prepaid",
-        order_amount: itemTotal.toString(),
+        // Match buyNow(): courier pricing uses the post-redemption amount.
+        order_amount: finalItemTotal.toString(),
         weight: Math.round(quantity * Number(row.weight) * 1000).toString(),
         length: Math.round(row.length).toString(),
         breadth: Math.round(row.breadth).toString(),
@@ -1523,9 +1538,6 @@ class CheckoutModel {
       expectedDeliveryDate = fallback;
     }
 
-    // static for Now
-    const bagDiscount = 1032;
-
     return {
       orderId: order.order_id,
       orderRef: order.order_ref,
@@ -1558,7 +1570,13 @@ class CheckoutModel {
       bill: {
         item_total: Number(order.product_total),
         delivery_fee: Number(order.shipping_total),
-        bag_discount: 0, // add later if coupons implemented
+        bag_discount: Math.max(
+          0,
+          Number(order.product_total) +
+            Number(order.shipping_total) -
+            Number(order.reward_discount) -
+            Number(order.total_amount),
+        ),
         reward_discount: Number(order.reward_discount),
         order_total: Number(order.total_amount),
       },
