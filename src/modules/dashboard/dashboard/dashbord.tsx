@@ -344,7 +344,9 @@ function Dashbord() {
         <Pressable onPress={dismissSearch}>
           <MemoHomeChart goalSteps={stepGoal} />
           <MemoServicesModule onModulePress={handleExploreModulePress} />
-          <MemoModuleBanner />
+        </Pressable>
+        <MemoModuleBanner />
+        <Pressable onPress={dismissSearch}>
           <MemoRewardsOverview />
         </Pressable>
       </ScrollView>
