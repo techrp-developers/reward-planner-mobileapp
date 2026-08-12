@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import HeaderComponent, { type SearchOverlayState } from '../header/HeaderComponent';
@@ -48,6 +49,7 @@ type DashboardHeaderCache = {
   userName: string;
   userImage: string | null;
   companyLogo: string | null;
+  thought: string;
   stepGoal: number;
   birthdays: BirthdayEmployee[];
   fetchedAt: number;
@@ -64,6 +66,7 @@ const MemoBirthdayCarousel = memo(BirthdayCarousel);
 
 function Dashbord() {
   const { isDark } = useAppTheme();
+  const iconSize = rs(26);
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
@@ -77,6 +80,7 @@ function Dashbord() {
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(
     () => dashboardHeaderCache?.companyLogo ?? null,
   );
+  const [thought, setThought] = useState<string>(() => dashboardHeaderCache?.thought ?? '');
   const [stepGoal, setStepGoal] = useState<number>(() => {
     if (dashboardHeaderCache?.stepGoal) return dashboardHeaderCache.stepGoal;
     const initialGoal = Number((user as any)?.steps?.goal_steps);
@@ -109,6 +113,7 @@ function Dashbord() {
       setHeaderUserName(dashboardHeaderCache.userName);
       setHeaderUserImage(dashboardHeaderCache.userImage);
       setHeaderCompanyLogo(dashboardHeaderCache.companyLogo);
+      setThought(dashboardHeaderCache.thought);
       setStepGoal(dashboardHeaderCache.stepGoal);
       setBirthdays(dashboardHeaderCache.birthdays);
       return;
@@ -128,6 +133,7 @@ function Dashbord() {
         if (d.name)          setHeaderUserName((prev) => (prev === d.name ? prev : d.name));
         if (d.userImage)     setHeaderUserImage((prev) => (prev === d.userImage ? prev : d.userImage));
         if (d.company?.logo) setHeaderCompanyLogo((prev) => (prev === d.company.logo ? prev : d.company.logo));
+        if (d.thought)       setThought((prev) => (prev === d.thought ? prev : d.thought));
 
         const apiStepGoal = Number(d.steps?.goal_steps);
         if (Number.isFinite(apiStepGoal) && apiStepGoal > 0) {
@@ -150,6 +156,7 @@ function Dashbord() {
           userName: d.name || headerUserName,
           userImage: d.userImage ?? headerUserImage,
           companyLogo: d.company?.logo ?? headerCompanyLogo,
+          thought: d.thought ?? thought,
           stepGoal:
             Number.isFinite(Number(d.steps?.goal_steps)) && Number(d.steps?.goal_steps) > 0
               ? Number(d.steps.goal_steps)
@@ -159,7 +166,7 @@ function Dashbord() {
         };
       }
     } catch { }
-  }, [headerCompanyLogo, headerUserImage, headerUserName, isAuthenticated, stepGoal]);
+  }, [headerCompanyLogo, headerUserImage, headerUserName, isAuthenticated, stepGoal, thought]);
 
   // Warm the ecommerce route shortly after the first dashboard paint. A timer
   // is intentional here: InteractionManager may never become idle while the
@@ -256,6 +263,15 @@ function Dashbord() {
     ? ['#09090B', '#111827', '#151526']
     : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
 
+  const quoteBannerGradient: string[] = isDark
+    ? ['#18181B', '#27233A', '#4338CA']
+    : ['#111827', '#312E81', '#4F46E5'];
+
+  const t = useMemo(() => StyleSheet.create({
+    iconContainer: { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.16)' },
+    card: { shadowColor: isDark ? '#000000' : '#312E81' },
+  }), [isDark]);
+
   return (
     <LinearGradient
       colors={rootGradient}
@@ -292,6 +308,38 @@ function Dashbord() {
             showRewardPoints
             rewardPoints={rewardPoints}
           />
+
+          <Pressable onPress={dismissSearch}>
+            <View style={styles.bannerOuter}>
+              <LinearGradient
+                colors={quoteBannerGradient}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.card, t.card]}
+              >
+                <LinearGradient
+                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
+                  locations={[0, 0.58, 1]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.quoteHighlight}
+                  pointerEvents="none"
+                />
+                <View style={[styles.iconContainer, t.iconContainer]}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on-outline"
+                    size={iconSize}
+                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+                  />
+                </View>
+                <Text style={styles.quote}>
+                  {thought
+                    ? `"${thought}"`
+                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                </Text>
+              </LinearGradient>
+            </View>
+          </Pressable>
         </LinearGradient>
         {hasBirthdays && (
           <Pressable onPress={dismissSearch}>
@@ -392,7 +440,61 @@ const styles = StyleSheet.create({
 
   topSection: {
     paddingBottom: rs(16),
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
     zIndex: 20,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: rs(12) },
+    shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
+    shadowRadius: rs(18),
+    elevation: 8,
+  },
+
+  bannerOuter: {
+    paddingHorizontal: rs(16),
+    paddingTop: rs(2),
+  },
+  card: {
+    borderRadius: rs(20),
+    paddingVertical: rs(13),
+    paddingHorizontal: rs(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: rs(10) },
+    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
+    shadowRadius: rs(18),
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  quoteHighlight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '62%',
+  },
+  iconContainer: {
+    width: rs(48),
+    height: rs(48),
+    borderRadius: rs(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: rs(13),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  quote: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: fs(13.5),
+    lineHeight: rs(20),
+    fontStyle: 'italic',
+    fontWeight: '600',
   },
 
   searchOverlay: {
