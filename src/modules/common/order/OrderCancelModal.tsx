@@ -1,7 +1,6 @@
 import React from "react";
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import CoinIcon from "../../../assets/product/rewards.svg";
-import ProductImg from "../../../assets/product/product(2).svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HomeStackParamList } from "../../ecommerce/navigation/types";
@@ -71,7 +70,10 @@ export default function OrderCancelModal({
 
                         <View style={[styles.productImageContainer, { backgroundColor: isDark ? "#111827" : "#FFFFFF", borderColor: theme.border }]}>
                             {/* Render Product SVG or Image */}
-                            <ProductImg width={60} height={60} />
+                            <Image
+                                source={require("../../../assets/product/coming_soon.png")}
+                                style={styles.productImage}
+                            />
                         </View>
                     </View>
 
@@ -176,6 +178,12 @@ const styles = StyleSheet.create({
     boldText: {
         fontWeight: "700",
         color: "#111827",
+    },
+
+    productImage: {
+        width: 60,
+        height: 60,
+        resizeMode: "contain",
     },
 
     productImageContainer: {

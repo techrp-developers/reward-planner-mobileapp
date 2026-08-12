@@ -495,7 +495,6 @@ const ProfileScreen: React.FC = () => {
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />
             <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('HelpForm' as any)} />
-            <AccountRow icon="lock-reset"             label="Change Password"    isDark={isDark} theme={theme} last onPress={() => navigation.navigate('ChangePassword')} />
           </View>
 
           <View style={[styles.dangerCard, cardColor(isDark, theme)]}>

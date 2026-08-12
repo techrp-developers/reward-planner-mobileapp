@@ -7,7 +7,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import OrderHeading from "../constants/heading/OrderHeading";
 import OrderItemCard from "../../common/order/OrderItemCard";
 
-import Product from "../../../assets/product/product(1).svg";
 import { HomeStackParamList } from "../navigation/types";
 import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderStatusJourney";
 import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
@@ -422,7 +421,10 @@ export default function OrderConfirmedScreen() {
                                 defaultSource={require("../../../assets/product/coming_soon.png")}
                             />
                         ) : (
-                            <Product width={48} height={48} />
+                            <Image
+                                source={require("../../../assets/product/coming_soon.png")}
+                                style={styles.productImage}
+                            />
                         )
                     }
                     title={productTitle}

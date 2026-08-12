@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Scoped cleartext (plain HTTP) allowance for local dev backends only.
+  Everything else falls back to the platform default (cleartext blocked on
+  API 28+, which this app's minSdk 26 / targetSdk 36 build is subject to).
+
+  Hosts listed here must match env.ts's resolveDevBaseUrl():
+    - PHYSICAL_DEVICE_LAN_IP, currently 192.168.1.133 — real device over Wi-Fi.
+      This value drifts with DHCP; update it here (and in env.ts) together.
+    - 10.0.2.2 — Android emulator's alias for the host machine's localhost.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.1.133</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

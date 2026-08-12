@@ -1,12 +1,9 @@
 
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
-
-import Product from "../../../../assets/product/product(1).svg";
 
 import { Text } from "react-native";
 import OrderItemCard from "./OrderItemCard";
@@ -44,7 +41,12 @@ export default function CancellationConfirmed() {
 
                 {/* Product Card */}
                 <OrderItemCard
-                    image={<Product width={48} height={48} />}
+                    image={
+                        <Image
+                            source={require("../../../assets/product/coming_soon.png")}
+                            style={styles.productImage}
+                        />
+                    }
                     title="The Tribe Concept Face Brightening Daily Face Pack"
                     weight="300g"
                     orderId="65327VH"
@@ -124,6 +126,11 @@ const styles = StyleSheet.create({
 
     scrollContent: {
         padding: 16,
+    },
+    productImage: {
+        width: 48,
+        height: 48,
+        resizeMode: "contain",
     },
     gradientBorder: {
         borderRadius: 10,

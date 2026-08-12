@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Image } from "react-native";
 import { ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -7,7 +7,6 @@ import LinearGradient from "react-native-linear-gradient";
 
 import OrderHeading from "../../constants/heading/OrderHeading";
 import OrderItemCard from "../../../common/order/OrderItemCard";
-import Product from "../../../../assets/product/product(1).svg";
 import { HomeStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -101,7 +100,12 @@ export default function SelectCancellationReason() {
             >
                 {/* Product Card */}
                 <OrderItemCard
-                    image={<Product width={48} height={48} />}
+                    image={
+                        <Image
+                            source={require("../../../../assets/product/coming_soon.png")}
+                            style={styles.productImage}
+                        />
+                    }
                     title={productTitle || "Product"}
                     weight={productWeight || "-"}
                     orderId={String(orderRef || orderId)}
@@ -197,6 +201,12 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 16,
         paddingBottom: 32,
+    },
+
+    productImage: {
+        width: 48,
+        height: 48,
+        resizeMode: "contain",
     },
 
     reasonCard: {
