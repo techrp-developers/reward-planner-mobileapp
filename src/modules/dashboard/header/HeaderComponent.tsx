@@ -101,7 +101,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     nameColor:        '#FFFFFF',
     logoPillBg:       'rgba(255,255,255,0.92)',
     avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
-    dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
+    dateColor:        isDark ? '#C7D2FE' : '#E0E7FF',
     iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
     iconTint:         '#FFFFFF',
     searchBg:         '#09090B',

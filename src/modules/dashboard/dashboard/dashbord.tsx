@@ -389,16 +389,10 @@ const styles = StyleSheet.create({
     // paddingBottom set inline so it scales with rs() and TAB_BAR_HEIGHT
   },
 
+
   topSection: {
     paddingBottom: rs(16),
-    borderBottomLeftRadius: rs(30),
-    borderBottomRightRadius: rs(30),
     zIndex: 20,
-    shadowColor: '#111827',
-    shadowOffset: { width: 0, height: rs(12) },
-    shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
-    shadowRadius: rs(18),
-    elevation: 8,
   },
 
   searchOverlay: {
