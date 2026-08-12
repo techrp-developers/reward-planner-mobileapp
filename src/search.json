@@ -1,0 +1,282 @@
+{
+  "Error": {
+    "ErrorCode": 0,
+    "ErrorMessage": ""
+  },
+  "TraceId": 113528,
+  "Result": [
+    {
+      "SrdvIndex": 39,
+      "ResultIndex": "8000001857010021028",
+      "DepartureTime": "2026-08-12T11:00:00",
+      "ArrivalTime": "2026-08-12T18:00:00",
+      "Duration": 420,
+      "IsArrivingNextDay": "true",
+      "AvailableSeats": "16",
+      "MaxSeatsPerTicket": "6",
+      "RouteId": "2000001800000021028",
+      "BusRoute": "Bangalore-Mysore-Mangalore-Chennai-Hyderabad-Pune-Mumbai",
+      "BusType": "Volvo A/C Seater (1+1)",
+      "OperatorId": "10419079",
+      "TravelsName": "TESTING ACCOUNT",
+      "Seater": "true",
+      "Sleeper": "false",
+      "MTicketEnabled": "true",
+      "IdProofRequired": "false",
+      "IsDropPointMandatory": "false",
+      "IsAC": "true",
+      "LiveTracking": "false",
+      "OTGEnabled": "false",
+      "Amenities": [],
+      "VaccinatedBus": "false",
+      "VaccinatedStaff": "false",
+      "BoardingPoints": [
+        {
+          "Id": "77279",
+          "Name": "Bhosari",
+          "Address": "test",
+          "Location": "Bhosari",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "11:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DroppingPoints": [
+        {
+          "Id": "63903",
+          "Name": "Bandra East_3",
+          "Address": "test",
+          "Location": "Bandra East",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "18:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DisplayFare": "10.50",
+      "Price": [
+        {
+          "CurrencyCode": "INR",
+          "BaseFare": "10.00",
+          "Tax": "0.50",
+          "OtherCharges": "0.00",
+          "Discount": "0",
+          "PublishedFare": "10.50",
+          "OfferedFare": 10.08,
+          "AgentCommission": 0.42,
+          "MarkUp": "0",
+          "GstTaxableAmount": "10.00",
+          "GstRate": "5",
+          "GstAmount": "0.50"
+        }
+      ],
+      "PartialCancellationAllowed": "true",
+      "CancellationPolicies": [
+        {
+          "CancellationCharge": "100",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 0 to 12 hours from the Wed Aug 12 16:14:00 IST 2026, the cancellation fee is 100%",
+          "TimeBeforeDept": "12",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "50",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 12 to 24 hours from the Wed Aug 12 16:14:00 IST 2026, the cancellation fee is 50%",
+          "TimeBeforeDept": "24",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "10",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens anytime before 24 hours from the Wed Aug 12 16:14:00 IST 2026, the cancellation fee is 10%",
+          "TimeBeforeDept": "-1",
+          "FromDate": "2026-08-12"
+        }
+      ]
+    },
+    {
+      "SrdvIndex": 39,
+      "ResultIndex": "2000001857020059209",
+      "DepartureTime": "2026-08-12T22:00:00",
+      "ArrivalTime": "2026-08-12T23:00:00",
+      "Duration": 60,
+      "IsArrivingNextDay": "false",
+      "AvailableSeats": "15",
+      "MaxSeatsPerTicket": "6",
+      "RouteId": "2000001800000059209",
+      "BusRoute": "Pune-Mumbai",
+      "BusType": "hispano A/C Seater King Size A/c Family Sleeper (1+1)",
+      "OperatorId": "10419079",
+      "TravelsName": "Pune Mumbai Travels",
+      "Seater": "true",
+      "Sleeper": "false",
+      "MTicketEnabled": "true",
+      "IdProofRequired": "false",
+      "IsDropPointMandatory": "false",
+      "IsAC": "true",
+      "LiveTracking": "false",
+      "OTGEnabled": "false",
+      "Amenities": [],
+      "VaccinatedBus": "false",
+      "VaccinatedStaff": "false",
+      "BoardingPoints": [
+        {
+          "Id": "77279",
+          "Name": "Bhosari",
+          "Address": "test",
+          "Location": "Bhosari",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "22:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DroppingPoints": [
+        {
+          "Id": "63888",
+          "Name": "Bandra East",
+          "Address": "test",
+          "Location": "Bandra East",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "23:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DisplayFare": "105.00",
+      "Price": [
+        {
+          "CurrencyCode": "INR",
+          "BaseFare": "100.00",
+          "Tax": "5.00",
+          "OtherCharges": "0.00",
+          "Discount": "0",
+          "PublishedFare": "105.00",
+          "OfferedFare": 100.76,
+          "AgentCommission": 4.24,
+          "MarkUp": "0",
+          "GstTaxableAmount": "100.00",
+          "GstRate": "5",
+          "GstAmount": "5.00"
+        }
+      ],
+      "PartialCancellationAllowed": "true",
+      "CancellationPolicies": [
+        {
+          "CancellationCharge": "100",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 0 to 12 hours from the Wed Aug 12 22:00:00 IST 2026, the cancellation fee is 100%",
+          "TimeBeforeDept": "12",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "50",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 12 to 24 hours from the Wed Aug 12 22:00:00 IST 2026, the cancellation fee is 50%",
+          "TimeBeforeDept": "24",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "10",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens anytime before 24 hours from the Wed Aug 12 22:00:00 IST 2026, the cancellation fee is 10%",
+          "TimeBeforeDept": "-1",
+          "FromDate": "2026-08-12"
+        }
+      ]
+    },
+    {
+      "SrdvIndex": 39,
+      "ResultIndex": "2000001857020059210",
+      "DepartureTime": "2026-08-12T19:00:00",
+      "ArrivalTime": "2026-08-12T20:00:00",
+      "Duration": 60,
+      "IsArrivingNextDay": "false",
+      "AvailableSeats": "14",
+      "MaxSeatsPerTicket": "6",
+      "RouteId": "2000001800000059210",
+      "BusRoute": "Pune-Mumbai",
+      "BusType": "hispano A/C Seater King Size A/c Family Sleeper (1+1)",
+      "OperatorId": "10419079",
+      "TravelsName": "TESTING ACCOUNT",
+      "Seater": "true",
+      "Sleeper": "false",
+      "MTicketEnabled": "true",
+      "IdProofRequired": "false",
+      "IsDropPointMandatory": "false",
+      "IsAC": "true",
+      "LiveTracking": "false",
+      "OTGEnabled": "false",
+      "Amenities": [],
+      "VaccinatedBus": "false",
+      "VaccinatedStaff": "false",
+      "BoardingPoints": [
+        {
+          "Id": "77279",
+          "Name": "Bhosari",
+          "Address": "test",
+          "Location": "Bhosari",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "19:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DroppingPoints": [
+        {
+          "Id": "63888",
+          "Name": "Bandra East",
+          "Address": "test",
+          "Location": "Bandra East",
+          "Landmark": "test",
+          "ContactNumber": "1234567890",
+          "Time": "20:00",
+          "IsPrime": "true"
+        }
+      ],
+      "DisplayFare": "105.00",
+      "Price": [
+        {
+          "CurrencyCode": "INR",
+          "BaseFare": "100.00",
+          "Tax": "5.00",
+          "OtherCharges": "0.00",
+          "Discount": "0",
+          "PublishedFare": "105.00",
+          "OfferedFare": 100.76,
+          "AgentCommission": 4.24,
+          "MarkUp": "0",
+          "GstTaxableAmount": "100.00",
+          "GstRate": "5",
+          "GstAmount": "5.00"
+        }
+      ],
+      "PartialCancellationAllowed": "true",
+      "CancellationPolicies": [
+        {
+          "CancellationCharge": "100",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 0 to 12 hours from the Wed Aug 12 19:00:00 IST 2026, the cancellation fee is 100%",
+          "TimeBeforeDept": "12",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "50",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens between 12 to 24 hours from the Wed Aug 12 19:00:00 IST 2026, the cancellation fee is 50%",
+          "TimeBeforeDept": "24",
+          "FromDate": "2026-08-12"
+        },
+        {
+          "CancellationCharge": "10",
+          "CancellationChargeType": "Percentage",
+          "PolicyString": "If the cancellation happens anytime before 24 hours from the Wed Aug 12 19:00:00 IST 2026, the cancellation fee is 10%",
+          "TimeBeforeDept": "-1",
+          "FromDate": "2026-08-12"
+        }
+      ]
+    }
+  ]
+}
