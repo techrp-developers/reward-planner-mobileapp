@@ -156,6 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
+  const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
@@ -302,13 +303,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       const nextAccessToken = refreshRes.data?.accessToken || null;
+      const nextRefreshToken = refreshRes.data?.refreshToken || null;
 
-      if (!nextAccessToken) {
-        throw new Error("Missing access token from refresh");
+      if (!nextAccessToken || !nextRefreshToken) {
+        throw new Error("Missing token pair from refresh");
       }
 
+      // The backend rotates refresh tokens, so save both replacements before
+      // making any authenticated follow-up request.
+      await Promise.all([
+        persistAuthToken(nextAccessToken),
+        secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+      ]);
       updateAccessToken(nextAccessToken);
-      await persistAuthToken(nextAccessToken);
 
       await fetchProfile();
 
@@ -328,13 +335,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearLocalSession, fetchProfile, checkTerms, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
-    try {
-      await restoreSession();
-    } catch {
-      // Fallback to AuthStack on restore failure.
-    } finally {
-      setIsInitializing(false);
-    }
+    const attemptRestore = async () => {
+      try {
+        await restoreSession();
+        setIsInitializing(false);
+      } catch (error: any) {
+        const status = Number(error?.response?.status || 0);
+
+        if (status === 401 || status === 403) {
+          // The stored refresh session is definitively invalid/revoked.
+          setIsInitializing(false);
+          return;
+        }
+
+        // Keep the splash/session recovery state during temporary network or
+        // server failures instead of flashing the OTP login screen.
+        restoreRetryRef.current = setTimeout(attemptRestore, 5000);
+      }
+    };
+
+    await attemptRestore();
   }, [restoreSession]);
 
   useEffect(() => {
@@ -343,9 +363,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       getRefreshToken: async () => secureGetItem(REFRESH_TOKEN_KEY),
 
-      onAccessTokenRefresh: async (nextAccessToken) => {
+      onSessionRefresh: async (nextAccessToken, nextRefreshToken) => {
+        await Promise.all([
+          persistAuthToken(nextAccessToken),
+          secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+        ]);
         updateAccessToken(nextAccessToken);
-        await persistAuthToken(nextAccessToken);
       },
 
       onLogout: async () => {
@@ -360,6 +383,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     bootstrapSession();
+
+    return () => {
+      if (restoreRetryRef.current) {
+        clearTimeout(restoreRetryRef.current);
+      }
+    };
   }, [bootstrapSession]);
 
   const logout = useCallback(async () => {
