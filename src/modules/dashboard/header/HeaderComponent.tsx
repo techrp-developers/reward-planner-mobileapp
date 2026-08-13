@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import Logo from '../../../assets/menu/logo.png';
+import RewardIcon from '../../../assets/product/rewards.svg';
 import { useGlobalSearch } from './useGlobalSearch';
 import type { SearchData } from '../api/GlobalSearchAPI';
 
@@ -47,6 +48,8 @@ interface HeaderProps {
   onSearchActiveChange?:  (active: boolean) => void;
   onSearchDropdownChange?: (active: boolean) => void;
   onSearchOverlayChange?: (state: SearchOverlayState) => void;
+  showRewardPoints?:      boolean;
+  rewardPoints?:          number;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -62,6 +65,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onSearchActiveChange,
   onSearchDropdownChange,
   onSearchOverlayChange,
+  showRewardPoints = false,
+  rewardPoints = 0,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -96,7 +101,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     nameColor:        '#FFFFFF',
     logoPillBg:       'rgba(255,255,255,0.92)',
     avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
-    dateColor:        isDark ? '#C7D2FE'  : '#E0E7FF',
+    dateColor:        isDark ? '#C7D2FE' : '#E0E7FF',
     iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
     iconTint:         '#FFFFFF',
     searchBg:         '#09090B',
@@ -338,19 +343,35 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
           {/* Icon buttons */}
           <View style={styles.actionRow}>
-            <TouchableOpacity
-              onPress={searchActive ? closeSearch : openSearch}
-              style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
-              activeOpacity={0.75}
-            >
-              <MaterialCommunityIcons
-                name={searchActive ? 'close' : 'magnify'}
-                size={19}
-                color={tk.iconTint}
-              />
-            </TouchableOpacity>
+            {showRewardPoints ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('WalletHistory')}
+                style={[styles.rewardPointsPill, { backgroundColor: tk.iconBg }]}
+                activeOpacity={0.75}
+              >
+                <RewardIcon width={14} height={24} />
+                <View>
+                  <Text style={styles.rewardPointsValue} numberOfLines={1}>
+                    {rewardPoints.toLocaleString('en-IN')}
+                  </Text>
+                  <Text style={styles.rewardPointsLabel}>Reward points</Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={searchActive ? closeSearch : openSearch}
+                style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
+                activeOpacity={0.75}
+              >
+                <MaterialCommunityIcons
+                  name={searchActive ? 'close' : 'magnify'}
+                  size={19}
+                  color={tk.iconTint}
+                />
+              </TouchableOpacity>
+            )}
 
-            {!searchActive && (
+            {(!searchActive || showRewardPoints) && (
               <TouchableOpacity
                 onPress={onNotificationPress}
                 style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
@@ -533,6 +554,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+  },
+  rewardPointsPill: {
+    minWidth: 112,
+    height: 42,
+    borderRadius: 21,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  rewardPointsValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+  },
+  rewardPointsLabel: {
+    color: '#C7D2FE',
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '600',
   },
 
   // Dropdown container — absolute, overlays content below header

@@ -9,33 +9,24 @@ import {
   ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useRoute, RouteProp } from "@react-navigation/native";
 import Logo from "../../../../assets/homepage/login_logo.svg";
-import {
-  verifyActivationOtp,
-  verifyForgotPasswordOtp,
-  resendOtp,
-  resendActivationOtp,
-} from "../api/AuthAPI";
 import { useAlert } from "../../../ecommerce/components/alerts";
+import { useAuth } from "../context/AuthContext";
 import type { AuthStackParamList } from "../navigation/types";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 
-type OTPScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
-type OTPScreenRouteProp = RouteProp<AuthStackParamList, "OTPScreen">;
+type OTPScreenRouteProp = RouteProp<AuthStackParamList, "LoginOTP">;
 
 function OTPScreen() {
-  const navigation = useNavigation<OTPScreenNavigationProp>();
   const route = useRoute<OTPScreenRouteProp>();
   const alert = useAlert();
+  const { verifyLoginOtp, requestLoginOtp } = useAuth();
   const { isDark } = useAppTheme();
 
-  const email = route.params?.email || "";
-  const type = route.params?.type ?? "activation";
-  const isForgotPassword = type === "forgot-password";
+  const identifier = route.params?.identifier || "";
 
-  const [otpValues, setOtpValues] = useState(["", "", "", ""]);
+  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -60,7 +51,7 @@ function OTPScreen() {
     newOtp[index] = text;
     setOtpValues(newOtp);
 
-    if (text && index < 3) {
+    if (text && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -73,23 +64,15 @@ function OTPScreen() {
 
   const handleVerify = async () => {
     const otp = otpValues.join("");
-    if (otp.length !== 4) {
-      alert.error("Validation", "Please enter all 4 digits of OTP");
+    if (otp.length !== 6) {
+      alert.error("Validation", "Please enter all 6 digits of the login code");
       return;
     }
 
     try {
       setLoading(true);
 
-      if (isForgotPassword) {
-        await verifyForgotPasswordOtp({ email, otp });
-        alert.success("Verified", "OTP verified successfully");
-        navigation.navigate("SetNewPassword", { email, type: "forgot-password" });
-      } else {
-        await verifyActivationOtp({ email, otp });
-        alert.success("Verified", "OTP verified successfully");
-        navigation.navigate("SetNewPassword", { email, type: "activation" });
-      }
+      await verifyLoginOtp(identifier, otp);
     } catch (error: any) {
       alert.error(
         "Verification Failed",
@@ -106,16 +89,12 @@ function OTPScreen() {
     try {
       setResendLoading(true);
 
-      if (isForgotPassword) {
-        await resendOtp({ email });
-      } else {
-        await resendActivationOtp({ email });
-      }
+      await requestLoginOtp(identifier);
 
-      alert.info("Resent", "New OTP sent to your email");
+      alert.info("Resent", "A new login code was sent to your registered contact");
       setTimer(60);
       setResendCooldown(true);
-      setOtpValues(["", "", "", ""]);
+      setOtpValues(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
     } catch (error: any) {
       alert.error(
@@ -135,15 +114,15 @@ function OTPScreen() {
 
       <View style={[styles.card, { backgroundColor: isDark ? "#111113" : "#FFFFFF" }]}>
         <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#852BAF" }]}>
-          {isForgotPassword ? "Reset Password OTP" : "Email OTP Verification"}
+          Login Verification
         </Text>
 
         <Text style={[styles.subText, { color: isDark ? "#D4D4D8" : "#555" }]}>
-          Enter the OTP sent to {email || "your email"}
+          Enter the 6-digit code sent to {identifier || "your registered contact"}
         </Text>
 
         <View style={styles.otpRow}>
-          {[0, 1, 2, 3].map((_, i) => (
+          {[0, 1, 2, 3, 4, 5].map((_, i) => (
             <TextInput
               key={i}
               ref={(ref) => {
@@ -242,7 +221,7 @@ const styles = StyleSheet.create({
   otpRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "70%",
+    width: "92%",
     marginBottom: 20,
   },
 

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../../../ecommerce/components/alerts";
@@ -27,14 +27,10 @@ import { useAppTheme } from "../../../../theme/ThemeContext";
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { login, loading } = useAuth();
+  const { requestLoginOtp, loading } = useAuth();
   const { isDark } = useAppTheme();
   const alert = useAlert();
-  const insets = useSafeAreaInsets();
-
   const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const onLogin = useCallback(async () => {
     try {
@@ -50,39 +46,16 @@ export default function LoginScreen({ navigation }: Props) {
         return;
       }
 
-      if (!password) {
-        alert.error("Login Error", "Please enter your password");
-        return;
-      }
-
-      await login({
-        identifier: parsedIdentifier.normalized,
-        email: parsedIdentifier.kind === "email" ? parsedIdentifier.normalized : undefined,
-        phone: parsedIdentifier.kind === "phone" ? parsedIdentifier.normalized : undefined,
-        password,
-      });
+      await requestLoginOtp(parsedIdentifier.normalized);
+      navigation.navigate("LoginOTP", { identifier: parsedIdentifier.normalized });
     } catch (error: any) {
-      const status = Number(error?.response?.status || 0);
       const data = error?.response?.data;
 
-      if (status === 403 && data?.device_verification_required) {
-        alert.error(
-          "New Device Detected",
-          data?.message ||
-            "Approval email has been sent to your registered email. Please allow this device and login again.",
-        );
-        return;
-      }
-
-      const message =
-        data?.message ||
-        (status === 403
-          ? "Email not verified. Please verify your email before login."
-          : "Login failed");
+      const message = data?.message || "Unable to send the login code";
 
       alert.error("Login Error", String(message));
     }
-  }, [identifier, password, login, alert]);
+  }, [identifier, requestLoginOtp, navigation, alert]);
 
   return (
       <SafeAreaView
@@ -138,49 +111,6 @@ export default function LoginScreen({ navigation }: Props) {
                 </Text>
               </View>
 
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: isDark ? "#18181B" : "#F8F8F8",
-                    borderColor: isDark ? "rgba(255,255,255,0.10)" : "#EEE",
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="lock-outline"
-                  size={18}
-                  color={isDark ? "#A1A1AA" : "#999"}
-                  style={styles.inputIcon}
-                />
-
-                <TextInput
-                  placeholder="Password"
-                  placeholderTextColor={isDark ? "#71717A" : "#999"}
-                  secureTextEntry={!passwordVisible}
-                  style={[styles.input, { color: isDark ? "#FFFFFF" : "#333" }]}
-                  value={password}
-                  onChangeText={setPassword}
-                />
-
-                <TouchableOpacity
-                  onPress={() => setPasswordVisible((prev) => !prev)}
-                >
-                  <MaterialCommunityIcons
-                    name={passwordVisible ? "eye-off-outline" : "eye-outline"}
-                    size={18}
-                    color={isDark ? "#F472B6" : "#A654CD"}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => navigation.navigate("ForgotPassword")}
-                style={styles.forgotWrap}
-              >
-                <Text style={[styles.forgotText, { color: isDark ? "#F472B6" : "#A654CD" }]}>Forgot Password?</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={onLogin}
@@ -195,33 +125,13 @@ export default function LoginScreen({ navigation }: Props) {
                   {loading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.loginText}>Log in</Text>
+                    <Text style={styles.loginText}>Send Login Code</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           </ScrollView>
 
-          <View
-            style={[
-              styles.bottomWrap,
-              {
-                paddingBottom: Math.max(insets.bottom, 16),
-                backgroundColor: isDark ? "#09090B" : "#F5F0FF",
-                borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#E8DCF7",
-              },
-            ]}
-          >
-            <View style={styles.bottomRow}>
-              <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#666" }]}>New to Rewards Planners?</Text>
-
-              <TouchableOpacity
-                onPress={() => navigation.navigate("AccountActivate")}
-              >
-                <Text style={[styles.signUp, { color: isDark ? "#F472B6" : "#7B2CBF" }]}>Activate Account</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
   );
