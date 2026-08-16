@@ -32,7 +32,6 @@ export type AppStackParamList = {
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
-  ChangePassword: undefined;
   Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
@@ -249,12 +248,6 @@ function AppNavigator() {
         name="AddressDetails"
         getComponent={() =>
           require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
-        }
-      />
-      <AppStack.Screen
-        name="ChangePassword"
-        getComponent={() =>
-          require("../modules/common/auth/screens/ChangePasswordScreen").default
         }
       />
       <AppStack.Screen

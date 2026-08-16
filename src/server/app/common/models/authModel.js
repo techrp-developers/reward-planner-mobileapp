@@ -377,15 +377,6 @@ class authModel {
     };
   }
 
-  async getUserPassword(conn, userId) {
-    const [rows] = await conn.execute(
-      `SELECT password FROM customer WHERE user_id = ?`,
-      [userId],
-    );
-
-    return rows[0];
-  }
-
   // async updatePassword(conn, userId, hashedPassword) {
   //   await conn.execute(
   //     `UPDATE customer

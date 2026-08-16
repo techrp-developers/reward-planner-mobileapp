@@ -65,9 +65,6 @@ router.post(
 // Reset password
 router.post("/reset-password", authLimiter, authController.resetPassword);
 
-// change password
-router.put("/change-password", auth, authController.changePassword);
-
 /*=============================================Address================================================*/
 // Fetch all the countries
 // router.get("/countries", authController.getCountries);

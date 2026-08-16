@@ -414,16 +414,3 @@
     return res.data;
   };
 
-  // =============================== Change Password ==============================
-
-export type ChangePasswordPayload = {
-  currentPassword: string;
-  newPassword: string;
-};
-
-export const changePassword = async (
-  payload: ChangePasswordPayload
-) => {
-  const res = await api.put("/v1/auth/change-password", payload);
-  return res.data;
-};
