@@ -23,8 +23,7 @@ import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirm
 import { rs, fs } from '../../../utils/responsive';
 import axios from 'axios';
 import Reward from '../../../assets/product/rewards.svg';
-
-const API_BASE_URL = 'https://rewardplanners.com/api/crm';
+import { API_BASE_URL } from '../../../config/apiConfig';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 

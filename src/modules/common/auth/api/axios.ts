@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-
-export const API_BASE_URL = "https://rewardplanners.com/api/crm";
+export { API_BASE_URL } from '../../../../config/apiConfig';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 
 type SessionHandlers = {
   getAccessToken: () => string | null;

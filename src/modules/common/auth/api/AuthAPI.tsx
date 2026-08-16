@@ -1,8 +1,7 @@
   import axios from "axios";
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import api from "./axios";
-
-  const API_BASE_URL = "https://rewardplanners.com/api/crm";
+  import { API_BASE_URL } from '../../../../config/apiConfig';
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
