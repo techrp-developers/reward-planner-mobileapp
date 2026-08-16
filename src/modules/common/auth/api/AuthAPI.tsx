@@ -245,7 +245,18 @@
     }
   };
 
-  export const deleteCustomer = async () => {
+  export type DeleteCustomerResponse = {
+    success: boolean;
+    status?: string;
+    message: string;
+    data?: {
+      gracePeriodDays: number;
+      deletionRequestedAt: string;
+      permanentDeletionAt: string;
+    };
+  };
+
+  export const deleteCustomer = async (): Promise<DeleteCustomerResponse> => {
     try {
       const res = await api.delete("/v1/auth/delete-customer");
 

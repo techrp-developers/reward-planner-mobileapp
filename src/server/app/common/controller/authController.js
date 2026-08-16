@@ -1700,9 +1700,21 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
         await AuthModel.deleteCustomerAccount(userId);
 
+        const gracePeriodDays = 30;
+        const deletionRequestedAt = new Date();
+        const permanentDeletionAt = new Date(deletionRequestedAt);
+        permanentDeletionAt.setUTCDate(
+          permanentDeletionAt.getUTCDate() + gracePeriodDays,
+        );
+
         return res.json({
           success: true,
-          message: "Account deleted successfully",
+          message: "Account deletion scheduled successfully",
+          data: {
+            gracePeriodDays,
+            deletionRequestedAt: deletionRequestedAt.toISOString(),
+            permanentDeletionAt: permanentDeletionAt.toISOString(),
+          },
         });
       } catch (error) {
         console.error("Delete Account Error:", error);
