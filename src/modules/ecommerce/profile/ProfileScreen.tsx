@@ -520,7 +520,7 @@ const ProfileScreen: React.FC = () => {
             <AccountRow icon="file-document-outline" label="Terms & Conditions" isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
             <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
             <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />
-            <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} last onPress={() => navigation.navigate('HelpForm' as any)} />
+            <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} last onPress={() => navigation.navigate('HelpForm' as any, { context: profileContext })} />
           </View>
 
           <View style={[styles.dangerCard, cardColor(isDark, theme)]}>

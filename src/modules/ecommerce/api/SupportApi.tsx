@@ -1,6 +1,7 @@
 // SupportApi.tsx
 
 import api from "../../common/auth/api/axios";
+import { SERVER_URL } from "../../../config/apiConfig";
 
 export type SupportCategory = {
   category_id: number;
@@ -16,12 +17,24 @@ export type SupportTicket = {
   attachment_url?: string;
   created_at: string;
   updated_at: string;
+  support_module: string;
+  reference_type?: string;
+  reference_id?: string;
+  reference_label?: string;
 };
 
 export type CreateSupportTicketPayload = {
-  subject: string;
   description: string;
   category_id: number;
+  support_module: 'general' | 'ecommerce' | 'services' | 'bbps' | 'step_counter';
+  reference_type?: 'order';
+  reference_id?: string;
+  reference_label?: string;
+  attachment?: {
+    uri: string;
+    name: string;
+    type: string;
+  };
 };
 
 type SupportCategoriesResponse = {
@@ -58,6 +71,13 @@ const normalizeTicketStatus = (value: any) => {
   return normalized || "open";
 };
 
+const normalizeAttachmentUrl = (value: unknown) => {
+  const url = String(value || '').trim();
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${SERVER_URL.replace(/\/$/, '')}/${url.replace(/^\/+/, '')}`;
+};
+
 const mapSupportTicket = (item: any): SupportTicket | null => {
   const ticketId = Number(item?.ticket_id ?? item?.id ?? item?.support_id);
   const subject = String(
@@ -80,15 +100,17 @@ const mapSupportTicket = (item: any): SupportTicket | null => {
     status: normalizeTicketStatus(
       item?.status || item?.status_name || item?.ticket_status
     ),
-    attachment_url: item?.attachment_url
-      ? String(item.attachment_url).trim()
-      : undefined,
+    attachment_url: normalizeAttachmentUrl(item?.attachment_url),
     created_at: String(
       item?.created_at || item?.createdAt || item?.date || ""
     ).trim(),
     updated_at: String(
       item?.updated_at || item?.updatedAt || item?.created_at || item?.date || ""
     ).trim(),
+    support_module: String(item?.support_module || 'general'),
+    reference_type: item?.reference_type ? String(item.reference_type) : undefined,
+    reference_id: item?.reference_id ? String(item.reference_id) : undefined,
+    reference_label: item?.reference_label ? String(item.reference_label) : undefined,
   };
 };
 
@@ -124,9 +146,21 @@ export const createSupportTicket = async (
   payload: CreateSupportTicketPayload
 ): Promise<CreateSupportTicketResponse> => {
   try {
+    const formData = new FormData();
+    formData.append('description', payload.description);
+    formData.append('category_id', String(payload.category_id));
+    formData.append('support_module', payload.support_module);
+    if (payload.reference_type) formData.append('reference_type', payload.reference_type);
+    if (payload.reference_id) formData.append('reference_id', payload.reference_id);
+    if (payload.reference_label) formData.append('reference_label', payload.reference_label);
+    if (payload.attachment) {
+      formData.append('attachment', payload.attachment as any);
+    }
+
     const res = await api.post(
       CREATE_SUPPORT_TICKET_ENDPOINT,
-      payload
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
 
     return {
