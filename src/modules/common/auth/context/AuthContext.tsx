@@ -335,7 +335,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearLocalSession, fetchProfile, checkTerms, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
+    const maxRestoreAttempts = 3;
+    let restoreAttempts = 0;
+
     const attemptRestore = async () => {
+      restoreAttempts += 1;
+
       try {
         await restoreSession();
         setIsInitializing(false);
@@ -348,9 +353,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        // Keep the splash/session recovery state during temporary network or
-        // server failures instead of flashing the OTP login screen.
-        restoreRetryRef.current = setTimeout(attemptRestore, 5000);
+        // A local/offline backend must not hold the app on Splash forever.
+        // Preserve the stored session and retry briefly in the background.
+        setIsInitializing(false);
+
+        if (restoreAttempts < maxRestoreAttempts) {
+          restoreRetryRef.current = setTimeout(attemptRestore, 5000);
+        }
       }
     };
 
