@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import Share from 'react-native-share';
+import RazorpayCheckout from 'react-native-razorpay';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
@@ -38,6 +39,13 @@ import {
 } from '../../api/OrderAPI';
 import type { HomeStackParamList } from '../../navigation/type';
 import { useServicesTheme } from '../../utils/useServicesTheme';
+import {
+  checkServicePaymentStatus,
+  createServicePaymentOrder,
+  getServicePaymentError,
+  isServicePaymentVerified,
+  verifyServicePayment,
+} from '../../api/ServicepaymentAPI';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RouteT = RouteProp<HomeStackParamList, 'ServiceOrderDetail'>;
@@ -102,6 +110,7 @@ export default function ServiceOrderDetail() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [invoiceDownloading, setInvoiceDownloading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState('');
 
   // ── API call ───────────────────────────────────────────────────────────────
@@ -189,6 +198,64 @@ export default function ServiceOrderDetail() {
       setInvoiceDownloading(false);
     }
   };
+
+  const handlePayNow = useCallback(async () => {
+    if (paymentLoading) return;
+
+    try {
+      setPaymentLoading(true);
+
+      const currentStatus = await checkServicePaymentStatus(parent_order_id);
+      if (isServicePaymentVerified(currentStatus)) {
+        await fetchOrder(true);
+        Alert.alert('Payment confirmed', 'Your payment is already complete. Document upload is now available.');
+        return;
+      }
+
+      const paymentResponse = await createServicePaymentOrder(parent_order_id);
+      const payment = paymentResponse?.data;
+      if (!payment?.key || !payment?.orderId || !Number(payment?.amount)) {
+        throw new Error('Unable to initialize payment');
+      }
+
+      const response = await RazorpayCheckout.open({
+        key: payment.key,
+        amount: payment.amount,
+        currency: payment.currency || 'INR',
+        order_id: payment.orderId,
+        name: 'Reward Planners',
+        description: `Service order ${parent_order_id}`,
+        theme: { color: PURPLE },
+      });
+
+      let verified = false;
+      try {
+        const result = await verifyServicePayment({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+        });
+        verified = isServicePaymentVerified(result);
+      } catch {
+        const reconciled = await checkServicePaymentStatus(parent_order_id);
+        verified = isServicePaymentVerified(reconciled);
+      }
+
+      if (!verified) {
+        Alert.alert('Payment processing', 'Your payment is still being confirmed. Please refresh this order shortly.');
+        return;
+      }
+
+      await fetchOrder(true);
+      Alert.alert('Payment successful', 'You can now upload the required documents.');
+    } catch (error: any) {
+      const message = getServicePaymentError(error, 'Unable to complete payment');
+      const cancelled = /cancel|dismiss/i.test(message) || Number(error?.code) === 0;
+      if (!cancelled) Alert.alert('Payment unsuccessful', message);
+    } finally {
+      setPaymentLoading(false);
+    }
+  }, [fetchOrder, parent_order_id, paymentLoading]);
 
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
@@ -413,6 +480,8 @@ export default function ServiceOrderDetail() {
             uploaded={uploadedDocumentCount}
             pending={pendingDocumentCount}
             canUpload={documentsUnlocked}
+            paymentLoading={paymentLoading}
+            onPay={handlePayNow}
             onUpload={() =>
               navigation.navigate('DocumentUpload', {
                 order_id: documentOrderId,
@@ -514,12 +583,16 @@ function OrderDocumentsCard({
   uploaded,
   pending,
   canUpload,
+  paymentLoading,
+  onPay,
   onUpload,
 }: {
   total: number;
   uploaded: number;
   pending: number;
   canUpload: boolean;
+  paymentLoading: boolean;
+  onPay: () => void;
   onUpload: () => void;
 }) {
   const servicesTheme = useServicesTheme();
@@ -555,10 +628,21 @@ function OrderDocumentsCard({
           <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
         </TouchableOpacity>
       ) : (
-        <View style={styles.documentsLocked}>
-          <MaterialCommunityIcons name="lock-outline" size={14} color="#64748B" />
-          <Text style={styles.documentsLockedText}>Pay first</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.payNowButton, paymentLoading && styles.payNowButtonDisabled]}
+          activeOpacity={0.82}
+          disabled={paymentLoading}
+          onPress={onPay}
+        >
+          {paymentLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="credit-card-outline" size={15} color="#FFFFFF" />
+              <Text style={styles.payNowText}>Pay now</Text>
+            </>
+          )}
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -739,6 +823,9 @@ const styles = StyleSheet.create({
   uploadDocumentsText: { fontSize: 11, color: '#FFF', fontWeight: '800' },
   documentsLocked: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 9, paddingVertical: 7, borderRadius: 9 },
   documentsLockedText: { fontSize: 10, color: '#64748B', fontWeight: '800' },
+  payNowButton: { minWidth: 82, minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#D97706', paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10 },
+  payNowButtonDisabled: { opacity: 0.65 },
+  payNowText: { fontSize: 11, color: '#FFFFFF', fontWeight: '800' },
   invoiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
