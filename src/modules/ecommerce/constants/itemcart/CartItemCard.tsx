@@ -18,6 +18,7 @@ type Props = {
   price: number
   discountText: string
   quantity: number
+  attributes?: Record<string, string>
   onIncrease?: () => void
   onDecrease?: () => void
   onRemove?: () => void
@@ -34,6 +35,7 @@ export default function CartItemCard({
   price,
   discountText,
   quantity,
+  attributes,
   onIncrease,
   onDecrease,
   onRemove,
@@ -59,6 +61,15 @@ export default function CartItemCard({
 
           <View style={styles.info}>
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+
+            {attributes && Object.keys(attributes).length > 0 ? (
+              <Text style={[styles.variantText, { color: theme.secondaryText }]} numberOfLines={2}>
+                {Object.entries(attributes)
+                  .filter(([, value]) => value != null && String(value).trim())
+                  .map(([key, value]) => `${key.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}: ${value}`)
+                  .join('  •  ')}
+              </Text>
+            ) : null}
 
             <View style={styles.deliveryRow}>
               <MaterialIcons name="local-shipping" size={16} color={theme.secondaryText} />
@@ -151,6 +162,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#222',
+    },
+    variantText: {
+        fontSize: 12,
+        lineHeight: 17,
+        marginTop: 4,
+        fontWeight: '500',
     },
 
     deliveryRow: {

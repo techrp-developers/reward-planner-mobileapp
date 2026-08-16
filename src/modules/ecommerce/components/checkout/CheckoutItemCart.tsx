@@ -85,10 +85,11 @@ export default function CheckoutItemCart({
     "Product";
 
   const productSubtitle =
-    item?.variant_name ||
-    item?.variant?.name ||
-    item?.category_name ||
-    "";
+    Object.entries(item?.attributes || item?.variant_attributes || {})
+      .filter(([, value]) => value != null && String(value).trim())
+      .map(([key, value]) => `${key.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase())}: ${value}`)
+      .join("  •  ") ||
+    item?.variant_name || item?.variant?.name || "";
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
