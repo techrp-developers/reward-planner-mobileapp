@@ -10,6 +10,7 @@ import React, {
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import DeviceInfo from "react-native-device-info";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
@@ -122,9 +123,22 @@ const generateDeviceId = () => {
 };
 
 const getDeviceName = () => {
-  if (Platform.OS === "android") return "android";
-  if (Platform.OS === "ios") return "ios";
-  return "unknown";
+  try {
+    const brand = String(DeviceInfo.getBrand() || "").trim();
+    const model = String(DeviceInfo.getModel() || "").trim();
+    const systemName = String(DeviceInfo.getSystemName() || Platform.OS).trim();
+    const systemVersion = String(DeviceInfo.getSystemVersion() || "").trim();
+    const modelName = brand && model.toLowerCase().startsWith(brand.toLowerCase())
+      ? model
+      : [brand, model].filter(Boolean).join(" ");
+    const operatingSystem = [systemName, systemVersion].filter(Boolean).join(" ");
+
+    return `${modelName || "Unknown device"} (${operatingSystem})`.slice(0, 255);
+  } catch {
+    if (Platform.OS === "android") return "Android device";
+    if (Platform.OS === "ios") return "iOS device";
+    return "Unknown device";
+  }
 };
 
 const getOrCreateDeviceId = async () => {
