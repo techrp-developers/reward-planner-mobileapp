@@ -106,6 +106,10 @@ export default function ProductVariants({
                 const isUnavailable = variantsForValue.length === 0;
                 const isOutOfStock = !isUnavailable && !availableVariant;
                 const disabled = isUnavailable || isOutOfStock;
+                const displayVariant =
+                  (variant && isAvailable(variant) ? variant : null) ||
+                  availableVariant ||
+                  variantWithImage;
                 const colorImagePath = variantWithImage?.images?.[0];
                 const colorImageUrl = colorImagePath
                   ? getProductImageUrl(colorImagePath)
@@ -159,6 +163,19 @@ export default function ProductVariants({
                           <View style={styles.imageCheck}>
                             <MaterialCommunityIcons name="check" size={11} color="#FFFFFF" />
                           </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {isColorAttr && displayVariant ? (
+                      <View style={styles.variantPriceRow}>
+                        <Text style={[styles.variantPrice, { color: theme.text }]}>
+                          ₹{Number(displayVariant.sale_price || 0).toLocaleString("en-IN")}
+                        </Text>
+                        {Number(displayVariant.mrp) > Number(displayVariant.sale_price) ? (
+                          <Text style={[styles.variantMrp, { color: theme.secondaryText }]}>
+                            ₹{Number(displayVariant.mrp).toLocaleString("en-IN")}
+                          </Text>
                         ) : null}
                       </View>
                     ) : null}
@@ -251,7 +268,7 @@ const styles = StyleSheet.create({
 
   colorCard: {
     width: 74,
-    minHeight: 82,
+    minHeight: 104,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -307,6 +324,22 @@ const styles = StyleSheet.create({
 
   optionTextActive: {
     color: "#6D28D9",
+  },
+  variantPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    marginBottom: 3,
+  },
+  variantPrice: {
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  variantMrp: {
+    fontSize: 9,
+    fontWeight: "500",
+    textDecorationLine: "line-through",
   },
   optionCheck: { position: "absolute", right: 4, top: 4 },
 
