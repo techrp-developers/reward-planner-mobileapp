@@ -65,6 +65,9 @@ router.post(
 // Reset password
 router.post("/reset-password", authLimiter, authController.resetPassword);
 
+// change password
+router.put("/change-password", auth, authController.changePassword);
+
 /*=============================================Address================================================*/
 // Fetch all the countries
 // router.get("/countries", authController.getCountries);
@@ -104,5 +107,11 @@ router.put(
 
 // delete customer record
 router.delete("/delete-customer", auth, authController.deleteCustomer);
+
+/*=========================================Device change verification==================================*/
+// Opened directly in a browser from the approval email — no app auth token.
+router.get("/device-change/allow", authController.allowDeviceChange);
+
+router.get("/device-change/deny", authController.denyDeviceChange);
 
 module.exports = router;
