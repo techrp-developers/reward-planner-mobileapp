@@ -236,6 +236,9 @@ export default function ServiceOrderDetail() {
   const allDocuments = allServiceItems.flatMap(item => item.documents);
   const pendingDocumentCount = allDocuments.filter(document => !document.uploaded).length;
   const uploadedDocumentCount = allDocuments.length - pendingDocumentCount;
+  const documentsUnlocked =
+    allServiceItems.length > 0 &&
+    allServiceItems.every(item => String(item.payment_status || '').toLowerCase() === 'paid');
   const documentOrderId =
     allServiceItems.find(item => item.documents.some(document => !document.uploaded))?.id ||
     allServiceItems[0]?.id ||
@@ -357,7 +360,7 @@ export default function ServiceOrderDetail() {
               <Text style={styles.statValue}>
                 ₹{order.total_amount.toLocaleString('en-IN')}
               </Text>
-              <Text style={styles.statLabel}>Total Paid</Text>
+              <Text style={styles.statLabel}>{documentsUnlocked ? 'Total Paid' : 'Order Total'}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
@@ -409,6 +412,7 @@ export default function ServiceOrderDetail() {
             total={allDocuments.length}
             uploaded={uploadedDocumentCount}
             pending={pendingDocumentCount}
+            canUpload={documentsUnlocked}
             onUpload={() =>
               navigation.navigate('DocumentUpload', {
                 order_id: documentOrderId,
@@ -509,11 +513,13 @@ function OrderDocumentsCard({
   total,
   uploaded,
   pending,
+  canUpload,
   onUpload,
 }: {
   total: number;
   uploaded: number;
   pending: number;
+  canUpload: boolean;
   onUpload: () => void;
 }) {
   const servicesTheme = useServicesTheme();
@@ -523,7 +529,7 @@ function OrderDocumentsCard({
     <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
       <View style={[styles.documentsIcon, { backgroundColor: servicesTheme.isDark ? '#18112A' : '#F0ECFF' }]}>
         <MaterialCommunityIcons
-          name={complete ? 'file-check-outline' : 'file-upload-outline'}
+          name={complete ? 'file-check-outline' : canUpload ? 'file-upload-outline' : 'file-lock-outline'}
           size={24}
           color={complete ? '#16A34A' : PURPLE}
         />
@@ -533,6 +539,8 @@ function OrderDocumentsCard({
         <Text style={[styles.documentsText, { color: servicesTheme.colors.muted }]}>
           {complete
             ? `${uploaded} of ${total} documents uploaded`
+            : !canUpload
+            ? 'Document upload unlocks after payment'
             : `${pending} document${pending > 1 ? 's' : ''} still needed`}
         </Text>
       </View>
@@ -541,11 +549,16 @@ function OrderDocumentsCard({
           <MaterialCommunityIcons name="check" size={14} color="#16A34A" />
           <Text style={styles.documentsDoneText}>Complete</Text>
         </View>
-      ) : (
+      ) : canUpload ? (
         <TouchableOpacity style={styles.uploadDocumentsButton} onPress={onUpload}>
           <Text style={styles.uploadDocumentsText}>Upload</Text>
           <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
         </TouchableOpacity>
+      ) : (
+        <View style={styles.documentsLocked}>
+          <MaterialCommunityIcons name="lock-outline" size={14} color="#64748B" />
+          <Text style={styles.documentsLockedText}>Pay first</Text>
+        </View>
       )}
     </View>
   );
@@ -724,6 +737,8 @@ const styles = StyleSheet.create({
   documentsDoneText: { fontSize: 10, color: '#16A34A', fontWeight: '800' },
   uploadDocumentsButton: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PURPLE, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 10 },
   uploadDocumentsText: { fontSize: 11, color: '#FFF', fontWeight: '800' },
+  documentsLocked: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 9, paddingVertical: 7, borderRadius: 9 },
+  documentsLockedText: { fontSize: 10, color: '#64748B', fontWeight: '800' },
   invoiceRow: {
     flexDirection: 'row',
     alignItems: 'center',

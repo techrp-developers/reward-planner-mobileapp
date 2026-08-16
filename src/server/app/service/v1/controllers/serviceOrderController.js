@@ -956,7 +956,8 @@ class ServiceOrderController {
       SELECT
         id,
         service_id,
-        status
+        status,
+        payment_status
       FROM service_orders
       WHERE parent_order_id = ?
       AND user_id = ?
@@ -968,6 +969,16 @@ class ServiceOrderController {
         return res.status(404).json({
           success: false,
           message: "Order not found",
+        });
+      }
+
+      if (orders.some((order) => order.payment_status !== "paid")) {
+        for (const file of req.files || []) {
+          if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        }
+        return res.status(403).json({
+          success: false,
+          message: "Complete payment before uploading documents",
         });
       }
 
