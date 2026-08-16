@@ -182,3 +182,59 @@ transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling 
  INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
  BUNDLE  ./index.js 
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 4% (2/6)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 11% (120/354)
+ BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 25% (354/712)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 43% (711/1076)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70% (1071/1274)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 73% (1273/1489)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1488/1588)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1588/1951)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1950/2087)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91% (2086/2175)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2197/2265)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97% (2266/2294)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2298/2307)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2307/2308)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2308/2308)
+ BUNDLE  ./index.js 
+ ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='V2030 - 12 - API 31' after not responding for 60 seconds.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.

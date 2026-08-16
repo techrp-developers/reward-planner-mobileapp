@@ -20,12 +20,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
-import {
-  errorCodes,
-  isErrorWithCode,
-  pick,
-  types,
-} from '@react-native-documents/picker';
 
 import {
   createSupportTicket,
@@ -291,6 +285,12 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
 
   const handlePickDocument = useCallback(async () => {
     try {
+      const {
+        errorCodes,
+        isErrorWithCode,
+        pick,
+        types,
+      } = require('@react-native-documents/picker');
       const result = await pick({
         type: [types.pdf, types.doc, types.docx, types.xls, types.xlsx, types.plainText],
         allowMultiSelection: false,
@@ -305,8 +305,8 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
         type: getDocumentMimeType(fileName, file.type),
         size: file.size || undefined,
       });
-    } catch (error) {
-      if (isErrorWithCode(error) && error.code === errorCodes.OPERATION_CANCELED) return;
+    } catch (error: any) {
+      if (error?.code === 'OPERATION_CANCELED') return;
       alert.error('Attachment Error', 'Unable to select this document.');
     }
   }, [alert, setValidatedAttachment]);
