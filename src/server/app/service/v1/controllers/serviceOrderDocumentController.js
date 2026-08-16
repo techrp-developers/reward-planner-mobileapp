@@ -72,7 +72,9 @@ class ServiceOrderDocumentController {
       );
 
       if (!orders.length) {
-        return res.status(404).json({ success: false, message: "Order not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Order not found" });
       }
 
       if (orders.some((order) => order.payment_status !== "paid")) {

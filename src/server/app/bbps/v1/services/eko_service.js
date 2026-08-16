@@ -90,10 +90,7 @@ const getCategoryName = (category) =>
   category?.operator_category_name;
 
 const getCategoryId = (category) =>
-  category?.operator_category_id ??
-  category?.category_id ??
-  category?.categoryId ??
-  category?.operator_category;
+  category?.category_id ?? category?.categoryId ?? category?.operator_category;
 
 const isEnabledCategory = (category) =>
   ENABLED_CATEGORY_NAMES.has(normalizeCategoryName(getCategoryName(category)));

@@ -13,9 +13,7 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
-const {
-  deliveryChargeForUser,
-} = require("../utils/deliveryFeePolicy");
+const { deliveryChargeForUser } = require("../utils/deliveryFeePolicy");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path) {
@@ -91,6 +89,7 @@ class CheckoutModel {
         JOIN eproducts p ON v.product_id = p.product_id
 
         WHERE ci.user_id = ?
+          AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
         `,
         [userId],
       );
@@ -571,6 +570,7 @@ class CheckoutModel {
       JOIN eproducts p ON v.product_id = p.product_id
 
       WHERE v.variant_id = ? AND v.product_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       `,
         [variantId, productId],
       );
@@ -920,7 +920,9 @@ class CheckoutModel {
     FROM cart_items ci
     JOIN eproducts p ON ci.product_id = p.product_id
     JOIN product_variants v ON ci.variant_id = v.variant_id AND ci.product_id = v.product_id
+
     WHERE ci.user_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY ci.cart_item_id
     `,
       [userId],
@@ -944,9 +946,10 @@ class CheckoutModel {
       const imagePath = row.variant_image || null;
       let attributes = {};
       try {
-        attributes = typeof row.variant_attributes === "string"
-          ? JSON.parse(row.variant_attributes || "{}")
-          : (row.variant_attributes || {});
+        attributes =
+          typeof row.variant_attributes === "string"
+            ? JSON.parse(row.variant_attributes || "{}")
+            : row.variant_attributes || {};
       } catch {
         attributes = {};
       }
@@ -1266,6 +1269,7 @@ class CheckoutModel {
     JOIN eproducts p ON v.product_id = p.product_id
 
     WHERE v.variant_id = ? AND p.product_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY v.variant_id
     `,
       [variantId, productId],
@@ -1405,9 +1409,10 @@ class CheckoutModel {
     const imagePath = row.variant_image || null;
     let attributes = {};
     try {
-      attributes = typeof row.variant_attributes === "string"
-        ? JSON.parse(row.variant_attributes || "{}")
-        : (row.variant_attributes || {});
+      attributes =
+        typeof row.variant_attributes === "string"
+          ? JSON.parse(row.variant_attributes || "{}")
+          : row.variant_attributes || {};
     } catch {
       attributes = {};
     }
@@ -1607,7 +1612,7 @@ class CheckoutModel {
 
       items: items.map((i) => ({
         product_name: i.product_name,
-        image: i.image,
+        image: i.image ? getPublicUrl(i.image) : null,
         quantity: i.quantity,
         price: Number(i.price),
         item_total: Number(i.price) * i.quantity,

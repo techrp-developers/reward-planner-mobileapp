@@ -10,11 +10,17 @@ const categoryRoutes = require("./categoryRoutes");
 const subCategoryRoutes = require("./subCategoryRoutes");
 const subSubCategoryRoutes = require("./subSubCategoryRoutes");
 const orderRoutes = require("./orderRoutes");
+const vendorReportRoutes = require("./vendorReportRoutes");
+const managerReportRoutes = require("./managerReportRoutes");
 const rewardRoutes = require("./rewardRoutes");
 const logisticRoutes = require("./logisticsRoute");
 const companyRoutes = require("./companyRoute");
 const maintenanceRoutes = require("./maintenanceRoute");
 const campaignRoutes = require("./campaignRoutes");
+const employeeRoutes = require("./employeeRoutes");
+const companyWalletRoutes = require("./companyWalletRoutes");
+const clientOnboardingOtpRoutes = require("./clientOnboardingOtpRoutes");
+const supportTicketRoutes = require("./supportTicketRoutes");
 
 // dashboard Routes
 router.use("/auth", authRoutes);
@@ -27,10 +33,16 @@ router.use("/warehouse", wareHouseRoutes);
 router.use("/subcategory", subCategoryRoutes);
 router.use("/subsubcategory", subSubCategoryRoutes);
 router.use("/order", orderRoutes);
+router.use("/vendor-reports", vendorReportRoutes);
+router.use("/manager-reports", managerReportRoutes);
 router.use("/reward", rewardRoutes);
 router.use("/logistics", logisticRoutes);
 router.use("/company", companyRoutes);
 router.use("/maintenance", maintenanceRoutes);
 router.use("/campaign", campaignRoutes);
+router.use("/employees", employeeRoutes);
+router.use("/company-wallet", companyWalletRoutes);
+router.use("/client-onboarding/otp", clientOnboardingOtpRoutes);
+router.use("/manager", supportTicketRoutes);
 
 module.exports = router;

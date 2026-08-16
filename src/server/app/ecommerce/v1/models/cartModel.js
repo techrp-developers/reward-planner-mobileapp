@@ -49,7 +49,9 @@ class cartModel {
     FROM cart_items ci
     JOIN eproducts p ON ci.product_id = p.product_id
     JOIN product_variants v ON ci.variant_id = v.variant_id AND ci.product_id = v.product_id
+
     WHERE ci.user_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY ci.cart_item_id
     ORDER BY ci.created_at DESC
   `;
@@ -65,9 +67,10 @@ class cartModel {
         let attributes = {};
         if (row.variant_attributes) {
           try {
-            attributes = typeof row.variant_attributes === "string"
-              ? JSON.parse(row.variant_attributes)
-              : row.variant_attributes;
+            attributes =
+              typeof row.variant_attributes === "string"
+                ? JSON.parse(row.variant_attributes)
+                : row.variant_attributes;
           } catch {
             attributes = {};
           }
@@ -127,6 +130,7 @@ class cartModel {
       JOIN eproducts p ON p.product_id = ci.product_id
 
       WHERE ci.user_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     `,
       [user_id],
     );
@@ -237,11 +241,6 @@ class cartModel {
   // Add to cart
   async addToCart({ userId, productId, variantId, quantity }) {
     const conn = await db.getConnection();
-    const requestedQty = Number(quantity);
-
-    if (!Number.isInteger(requestedQty) || requestedQty < 1) {
-      throw new Error("INVALID_QUANTITY");
-    }
 
     try {
       await conn.beginTransaction();
@@ -264,7 +263,7 @@ class cartModel {
         [userId, variantId],
       );
 
-      const newQty = Number(existing?.quantity || 0) + requestedQty;
+      const newQty = (existing?.quantity || 0) + quantity;
 
       if (newQty > variant.stock) {
         throw new Error("INSUFFICIENT_STOCK");
@@ -276,7 +275,7 @@ class cartModel {
       VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE quantity = ?
       `,
-        [userId, productId, variantId, requestedQty, newQty],
+        [userId, productId, variantId, quantity, newQty],
       );
 
       await conn.commit();
