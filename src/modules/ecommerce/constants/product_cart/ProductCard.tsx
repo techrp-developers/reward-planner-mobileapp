@@ -8,6 +8,7 @@ import {
   Alert,
   GestureResponderEvent,
 } from "react-native";
+import { Svg, Polygon } from "react-native-svg";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 
 import { useNavigation } from "@react-navigation/native";
@@ -61,6 +62,19 @@ const getWishlistFlag = (item: any) => {
   return ["1", "true", "yes", "y"].includes(normalized);
 };
 
+// 28×28 tricolor corner triangle clipped by the parent imageWrap's overflow:hidden + borderRadius.
+// Three stacked polygons (SVG renders bottom→top): green outer, white mid, saffron inner tip.
+const RIBBON = 28;
+const TricolorCornerRibbon = React.memo(function TricolorCornerRibbon() {
+  return (
+    <Svg width={RIBBON} height={RIBBON} style={styles.tricolorRibbon}>
+      <Polygon points={`0,0 ${RIBBON},0 0,${RIBBON}`} fill="#138808" />
+      <Polygon points={`0,0 19,0 0,19`} fill="#FFFFFF" />
+      <Polygon points={`0,0 9,0 0,9`} fill="#FF9933" />
+    </Svg>
+  );
+});
+
 const StarRating = React.memo(function StarRating({
   starCount,
 }: {
@@ -79,7 +93,7 @@ const StarRating = React.memo(function StarRating({
 
 const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProductPress }: Props) => {
   const navigation = useNavigation<Nav>();
-  const { isDark, theme } = useAppTheme();
+  const { isDark, isFestive, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
   const [wishlisted, setWishlisted] = useState(() => getWishlistFlag(item));
   const [resolvedVariantId, setResolvedVariantId] = useState<any>(() => getVariantId(item));
@@ -270,7 +284,9 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
   }, [item, normalizedProduct]);
 
   return (
-    <View
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={goToDetails}
       style={[
         styles.card,
         {
@@ -283,49 +299,49 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
         },
       ]}
     >
-      <TouchableOpacity activeOpacity={0.85} onPress={goToDetails}>
-        <View style={[
-          styles.imageWrap,
-          {
-            height: calculations.imageWrapHeight,
-            borderRadius: calculations.borderRadius,
-            paddingTop: Math.round(usedCardWidth * 0.1),
-            backgroundColor: isDark ? "#303038" : "#F9FAFB",
-          },
-        ]}>
-          {!!rp_price && (
-            <View style={styles.discountWrap}>
-              <RPpriceBadge value={rp_price} />
-            </View>
-          )}
+      <View style={[
+        styles.imageWrap,
+        {
+          height: calculations.imageWrapHeight,
+          borderRadius: calculations.borderRadius,
+          paddingTop: Math.round(usedCardWidth * 0.1),
+          backgroundColor: isDark ? "#303038" : "#F9FAFB",
+        },
+      ]}>
+        {isFestive && <TricolorCornerRibbon />}
 
-          <TouchableOpacity
-            style={[styles.heartIcon, { backgroundColor: isDark ? "rgba(38,38,43,0.92)" : "rgba(255,255,255,0.9)" }]}
-            activeOpacity={0.85}
-            onPress={handleWishlistPress}
-            disabled={wishLoading}
-          >
-            <FontAwesome
-              name={wishlisted ? "heart" : "heart-o"}
-              size={14}
-              color={wishlisted ? "#E53935" : theme.secondaryText}
-            />
-          </TouchableOpacity>
+        {!!rp_price && (
+          <View style={styles.discountWrap}>
+            <RPpriceBadge value={rp_price} />
+          </View>
+        )}
 
-          <OptimizedImage
-            path={firstImage}
-            width={calculations.imageDynamicSize}
-            height={calculations.imageDynamicSize}
-            resizeMode="contain"
-            sizePreset="thumbnail"
-            priority="high"
-            quality={40}
-            loadEnabled={shouldLoadImage}
-            style={styles.productImage}
-            fallbackBackgroundColor="transparent"
+        <TouchableOpacity
+          style={[styles.heartIcon, { backgroundColor: isDark ? "rgba(38,38,43,0.92)" : "rgba(255,255,255,0.9)" }]}
+          activeOpacity={0.85}
+          onPress={handleWishlistPress}
+          disabled={wishLoading}
+        >
+          <FontAwesome
+            name={wishlisted ? "heart" : "heart-o"}
+            size={14}
+            color={wishlisted ? "#E53935" : theme.secondaryText}
           />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        <OptimizedImage
+          path={firstImage}
+          width={calculations.imageDynamicSize}
+          height={calculations.imageDynamicSize}
+          resizeMode="contain"
+          sizePreset="thumbnail"
+          priority="high"
+          quality={40}
+          loadEnabled={shouldLoadImage}
+          style={styles.productImage}
+          fallbackBackgroundColor="transparent"
+        />
+      </View>
 
       <View style={styles.details}>
         <View style={styles.titleRow}>
@@ -389,7 +405,7 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
           <PointsButton rewardCoins={rewardCoins} redeemCoins={redeemCoins} onPress={goToDetails} />
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -442,6 +458,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+  },
+  tricolorRibbon: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    zIndex: 1,
   },
   discountWrap: {
     position: "absolute",

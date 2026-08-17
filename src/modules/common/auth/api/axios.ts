@@ -146,11 +146,21 @@ const flushQueuedRequests = (
 const isAuthEndpoint = (url?: string) => {
   if (!url) return false;
   return (
+<<<<<<< HEAD
     url.includes("/v1/auth/check") ||
     url.includes("/v1/auth/send-otp") ||
     url.includes("/v1/auth/verify-otp") ||
     url.includes("/v1/auth/refresh-token") ||
     url.includes("/v1/auth/logout")
+=======
+    url.includes("/v1/auth/login") ||
+    url.includes("/v1/auth/request-otp") ||
+    url.includes("/v1/auth/verify-otp") ||
+    url.includes("/v1/auth/register") ||
+    url.includes("/v1/auth/refresh") ||
+    url.includes("/v1/auth/logout") ||
+    url.includes("/v1/auth/verify-email")
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
   );
 };
 

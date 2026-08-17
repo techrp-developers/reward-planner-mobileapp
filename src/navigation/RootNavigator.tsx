@@ -13,11 +13,15 @@ import MainLayout from "./MainLayout";
 import SplashScreen from "../modules/common/auth/screens/SplashScreen";
 import TermsGateScreen from "../modules/common/auth/screens/TermsGateScreen";
 import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScreen";
+<<<<<<< HEAD
 import WelcomeScreen from "../modules/common/auth/screens/WelcomeScreen";
 import LoginScreen from "../modules/common/auth/screens/LoginScreen";
 import OTPScreen from "../modules/common/auth/screens/OTPScreen";
 import LocationAccessScreen from "../modules/common/auth/screens/LocationAccessScreen";
 import OnboardingScreen from "../modules/common/auth/screens/OnboardingScreen";
+=======
+import OTPScreen from "../modules/common/auth/screens/OTPScreen";
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
 export type { AuthStackParamList };
@@ -84,9 +88,13 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={defaultScreenOptions} initialRouteName="Welcome">
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
+<<<<<<< HEAD
       <AuthStack.Screen name="OTPScreen" component={OTPScreen} />
       <AuthStack.Screen name="LocationAccess" component={LocationAccessScreen} />
       <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
+=======
+      <AuthStack.Screen name="LoginOTP" component={OTPScreen} />
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
     </AuthStack.Navigator>
   );
 }
@@ -388,7 +396,10 @@ export default function RootNavigator() {
     <>
       {navigator}
       <BiometricLockScreen
-        visible={!showSplash && !biometricCleared}
+        // The biometric gate protects an existing authenticated session. Showing
+        // it over the logged-out auth stack can leave users on its dark modal
+        // while the native biometric availability check is still pending.
+        visible={!showSplash && isAuthenticated && !biometricCleared}
         onSuccess={() => setBiometricCleared(true)}
         onUseFallback={() => setBiometricCleared(true)}
       />

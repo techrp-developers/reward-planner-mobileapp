@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { InteractionManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LightTheme, DarkTheme } from "./colors";
+import { isFestivePeriod } from "./festiveTheme";
 
 const THEME_KEY = '@rewardsplanners_dark_theme';
 
@@ -10,6 +11,7 @@ type ThemeColors = typeof LightTheme;
 
 interface ThemeContextType {
   isDark: boolean;
+  isFestive: boolean;
   theme: ThemeColors;
   toggleTheme: () => void;
 }
@@ -19,6 +21,9 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export const AppThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDark, setIsDark]     = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  // Computed once per session — app restart picks up a date change.
+  const isFestive = useMemo(() => isFestivePeriod(), []);
 
   // Load persisted preference once on mount — prevents theme flash
   useEffect(() => {
@@ -42,10 +47,11 @@ export const AppThemeProvider = ({ children }: { children: React.ReactNode }) =>
   const contextValue = useMemo(
     () => ({
       isDark,
+      isFestive,
       theme: isDark ? DarkTheme : LightTheme,
       toggleTheme,
     }),
-    [isDark, toggleTheme],
+    [isDark, isFestive, toggleTheme],
   );
 
   // Wait for AsyncStorage before rendering children — avoids a light→dark flash

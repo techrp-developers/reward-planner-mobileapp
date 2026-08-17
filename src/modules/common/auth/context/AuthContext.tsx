@@ -22,6 +22,12 @@ import {
   updateAccessToken as persistAccessTokenInKeychain,
 } from "../../../../utils/tokenStorage";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
+<<<<<<< HEAD
+=======
+
+const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
+const DEVICE_ID_KEY = "@rewardsplanners_device_id";
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 
 type AuthUser = {
   user_id: number;
@@ -32,6 +38,17 @@ type AuthUser = {
   is_verified?: number;
 };
 
+<<<<<<< HEAD
+=======
+type RegisterPayload = {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  cpassword: string;
+};
+
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
@@ -44,7 +61,15 @@ type AuthContextValue = {
   // null = no pending popup; number = reward coins to show once, post-login.
   firstLoginReward: number | null;
   markFirstLoginRewardShown: () => void;
+<<<<<<< HEAD
   authenticateWithTokens: (result: VerifyOtpResponse) => Promise<void>;
+=======
+  register: (payload: RegisterPayload) => Promise<any>;
+  verifyEmail: (token: string) => Promise<boolean>;
+  resendVerification: (email: string) => Promise<any>;
+  requestLoginOtp: (identifier: string) => Promise<any>;
+  verifyLoginOtp: (identifier: string, otp: string) => Promise<any>;
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
   bootstrapSession: () => Promise<void>;
   restoreSession: () => Promise<void>;
   logout: () => Promise<void>;
@@ -105,12 +130,69 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return user;
   }, []);
 
+<<<<<<< HEAD
   const authenticateWithTokens = useCallback(
     async (result: VerifyOtpResponse) => {
       setLoading(true);
       try {
         if (!result?.accessToken || !result?.refreshToken) {
           throw new Error("Invalid OTP verification response");
+=======
+  const register = useCallback(async (payload: RegisterPayload) => {
+    setLoading(true);
+    try {
+      const response = await api.post("/v1/auth/register", payload);
+      return response.data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyEmail = useCallback(async (token: string) => {
+    if (!token?.trim()) return false;
+
+    const response = await axios.get(`${API_BASE_URL}/v1/auth/verify-email`, {
+      params: { token: token.trim() },
+      responseType: "text",
+    });
+
+    return response.status >= 200 && response.status < 300;
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    const response = await api.post("/v1/auth/resend-verification", { email });
+    return response.data;
+  }, []);
+
+  const requestLoginOtp = useCallback(async (identifier: string) => {
+    setLoading(true);
+    try {
+      const response = await api.post("/v1/auth/request-otp", { login: identifier });
+      return response.data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyLoginOtp = useCallback(
+    async (identifier: string, otp: string) => {
+      setLoading(true);
+      try {
+        const deviceId   = await getOrCreateDeviceId();
+        const deviceName = getDeviceName();
+        const response = await api.post("/v1/auth/verify-otp", {
+          login: identifier,
+          otp,
+          device_id:   deviceId,
+          device_name: deviceName,
+        });
+
+        const nextAccessToken  = response.data?.accessToken  || null;
+        const nextRefreshToken = response.data?.refreshToken || null;
+
+        if (!nextAccessToken || !nextRefreshToken) {
+          throw new Error("Invalid OTP login response");
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
         }
 
         // verifyOtp() already persisted the session (Keychain + cached
@@ -232,7 +314,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setTermsAccepted,
       firstLoginReward,
       markFirstLoginRewardShown,
+<<<<<<< HEAD
       authenticateWithTokens,
+=======
+      register,
+      verifyEmail,
+      resendVerification,
+      requestLoginOtp,
+      verifyLoginOtp,
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
       bootstrapSession,
       restoreSession,
       logout,
@@ -245,7 +335,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       termsAccepted,
       firstLoginReward,
       markFirstLoginRewardShown,
+<<<<<<< HEAD
       authenticateWithTokens,
+=======
+      register,
+      verifyEmail,
+      resendVerification,
+      requestLoginOtp,
+      verifyLoginOtp,
+>>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
       bootstrapSession,
       restoreSession,
       logout,

@@ -17,6 +17,7 @@ export default function ModuleBanner() {
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
   const indexRef = useRef(0);
 
   const bannerHeight = Math.round(width * 0.38);
@@ -36,7 +37,7 @@ export default function ModuleBanner() {
   );
 
   useEffect(() => {
-    if (banners.length < 2) return;
+    if (banners.length < 2 || isSwiping) return;
     const timer = setInterval(() => {
       const next = (indexRef.current + 1) % banners.length;
       scrollRef.current?.scrollTo({ x: next * width, animated: true });
@@ -44,7 +45,7 @@ export default function ModuleBanner() {
       setIndex(next);
     }, 3000);
     return () => clearInterval(timer);
-  }, [width, banners.length]);
+  }, [width, banners.length, isSwiping]);
 
   const t = useMemo(
     () => ({
@@ -61,14 +62,20 @@ export default function ModuleBanner() {
       <ScrollView
         ref={scrollRef}
         horizontal
+        scrollEnabled
+        nestedScrollEnabled
         pagingEnabled
+        directionalLockEnabled
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         snapToInterval={width}
+        onScrollBeginDrag={() => setIsSwiping(true)}
+        onScrollEndDrag={() => setIsSwiping(false)}
         onMomentumScrollEnd={e => {
           const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
           setIndex(newIndex);
           indexRef.current = newIndex;
+          setIsSwiping(false);
         }}
       >
         {banners.map((banner) => (

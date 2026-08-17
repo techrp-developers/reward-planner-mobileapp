@@ -6,7 +6,12 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import RewardIcon from '../../../../assets/product/rewards.svg';
+import { useAppTheme } from '../../../../theme/ThemeContext';
+import { TRICOLOR_GRADIENT } from '../../../../theme/colors';
+
+const SOLID_PURPLE_GRADIENT = ['#6952C6', '#6952C6'];
 
 type Props = {
   rewardCoins: number;
@@ -26,6 +31,8 @@ const PointsButton: React.FC<Props> = ({
   redeemCoins = 0,
   onPress,
 }) => {
+  const { isFestive } = useAppTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -36,7 +43,12 @@ const PointsButton: React.FC<Props> = ({
     >
       {/* Shadow wrapper for iOS — separate from overflow:hidden */}
       <View style={styles.gradientWrapper}>
-        <View style={styles.container}>
+        <LinearGradient
+          colors={isFestive ? TRICOLOR_GRADIENT : SOLID_PURPLE_GRADIENT}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.container}
+        >
           {/* LEFT - EARN */}
           <View style={styles.section}>
             <Text
@@ -81,7 +93,7 @@ const PointsButton: React.FC<Props> = ({
               <RewardIcon width={ICON_SIZE} height={ICON_SIZE} />
             </View>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     </Pressable>
   );
@@ -108,7 +120,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 36,          // fixed px — never use paddingVertical for height control
     paddingHorizontal: 4,
-    backgroundColor: '#6952C6',
   },
 
   // ─── Each side (Earn / Redeem) ────────────────────────────────────

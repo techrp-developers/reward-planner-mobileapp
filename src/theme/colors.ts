@@ -15,3 +15,6 @@ export const DarkTheme = {
   border: "rgba(255,255,255,0.14)",
   primary: "#A78BFA",
 };
+
+// Independence Day accent — used by festive-mode gradients (Aug 13-15).
+export const TRICOLOR_GRADIENT = ["#FF9933", "#FFFFFF", "#138808"];
