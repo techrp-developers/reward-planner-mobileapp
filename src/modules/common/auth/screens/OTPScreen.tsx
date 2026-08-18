@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -16,24 +15,6 @@ import GradientBackground from "../../components/GradientBackground";
 import AuthButton from "../../components/AuthButton";
 import OtpBoxRow from "../../components/OtpBoxRow";
 import { useAlert } from "../../../ecommerce/components/alerts";
-=======
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  ActivityIndicator,
-} from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { useRoute, RouteProp } from "@react-navigation/native";
-import Logo from "../../../../assets/homepage/login_logo.svg";
-import { useAlert } from "../../../ecommerce/components/alerts";
-import { useAuth } from "../context/AuthContext";
-import type { AuthStackParamList } from "../navigation/types";
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 import { useAppTheme } from "../../../../theme/ThemeContext";
 import { useOtpTimer } from "../hooks/useOtpTimer";
 import { useOtpAutofill } from "../hooks/useOtpAutofill";
@@ -46,24 +27,16 @@ import {
 import { maskEmail, maskPhone } from "../utils/validators";
 import type { AuthStackParamList } from "../navigation/types";
 
-<<<<<<< HEAD
 type Nav = NativeStackNavigationProp<AuthStackParamList, "OTPScreen">;
 type OTPScreenRouteProp = RouteProp<AuthStackParamList, "OTPScreen">;
 
 function OTPScreen() {
   const navigation = useNavigation<Nav>();
-=======
-type OTPScreenRouteProp = RouteProp<AuthStackParamList, "LoginOTP">;
-
-function OTPScreen() {
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
   const route = useRoute<OTPScreenRouteProp>();
   const alert = useAlert();
-  const { verifyLoginOtp, requestLoginOtp } = useAuth();
   const { isDark } = useAppTheme();
   const { authenticateWithTokens } = useAuth();
 
-<<<<<<< HEAD
   const { method, destination, maskedDestination } = route.params;
   const displayDestination =
     maskedDestination || (method === "phone" ? maskPhone(destination) : maskEmail(destination));
@@ -90,16 +63,6 @@ function OTPScreen() {
       setOtpValues(Array.from({ length: OTP_LENGTH }, (_, i) => digits[i] ?? ""));
     }
   }, [autofill.code]);
-=======
-  const identifier = route.params?.identifier || "";
-
-  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(60);
-  const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(true);
-  const otpRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 
   useEffect(() => {
     if (autofill.error) {
@@ -125,7 +88,6 @@ function OTPScreen() {
         setVerifying(true);
         setHasError(false);
 
-<<<<<<< HEAD
         const result = await verifyOtp(destination, code);
         await authenticateWithTokens(result);
       } catch (error: any) {
@@ -133,12 +95,6 @@ function OTPScreen() {
         setHasError(true);
         triggerShake();
         setOtpValues(Array(OTP_LENGTH).fill(""));
-=======
-    if (text && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 
         const status = error?.response?.status;
         if (!error?.response) {
@@ -157,26 +113,18 @@ function OTPScreen() {
         setVerifying(false);
       }
     },
-    [verifying, method, destination, navigation, alert, triggerShake],
+    [verifying, method, destination, authenticateWithTokens, alert, triggerShake],
   );
 
-<<<<<<< HEAD
   const handleResend = useCallback(async () => {
     if (!canResend || resending) return;
 
     if (resendCount >= OTP_MAX_RESEND_ATTEMPTS) {
       alert.warning("Resend Limit Reached", "You've reached the maximum number of resend attempts.");
-=======
-  const handleVerify = async () => {
-    const otp = otpValues.join("");
-    if (otp.length !== 6) {
-      alert.error("Validation", "Please enter all 6 digits of the login code");
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
       return;
     }
 
     try {
-<<<<<<< HEAD
       setResending(true);
       await sendOtp(destination);
       setResendCount((prev) => prev + 1);
@@ -194,89 +142,16 @@ function OTPScreen() {
       } else {
         alert.error("Couldn't Resend", error?.response?.data?.message || "Please try again.");
       }
-=======
-      setLoading(true);
-
-      await verifyLoginOtp(identifier, otp);
-    } catch (error: any) {
-      alert.error(
-        "Verification Failed",
-        error?.response?.data?.message || "Invalid OTP"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown || resendLoading) return;
-
-    try {
-      setResendLoading(true);
-
-      await requestLoginOtp(identifier);
-
-      alert.info("Resent", "A new login code was sent to your registered contact");
-      setTimer(60);
-      setResendCooldown(true);
-      setOtpValues(["", "", "", "", "", ""]);
-      otpRefs.current[0]?.focus();
-    } catch (error: any) {
-      alert.error(
-        "Resend Failed",
-        error?.response?.data?.message || "Failed to resend OTP"
-      );
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
     } finally {
       setResending(false);
     }
   }, [canResend, resending, resendCount, method, destination, resetTimer, alert, displayDestination]);
 
   return (
-<<<<<<< HEAD
     <GradientBackground>
       <View style={styles.content}>
         <View style={styles.logoWrap}>
           <Logo width={110} height={110} />
-=======
-    <SafeAreaView style={[styles.screen, { backgroundColor: isDark ? "#09090B" : "#F5F0FF" }]}>
-      <View style={styles.logoWrap}>
-        <Logo width={160} height={160} />
-      </View>
-
-      <View style={[styles.card, { backgroundColor: isDark ? "#111113" : "#FFFFFF" }]}>
-        <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#852BAF" }]}>
-          Login Verification
-        </Text>
-
-        <Text style={[styles.subText, { color: isDark ? "#D4D4D8" : "#555" }]}>
-          Enter the 6-digit code sent to {identifier || "your registered contact"}
-        </Text>
-
-        <View style={styles.otpRow}>
-          {[0, 1, 2, 3, 4, 5].map((_, i) => (
-            <TextInput
-              key={i}
-              ref={(ref) => {
-                otpRefs.current[i] = ref;
-              }}
-              maxLength={1}
-              keyboardType="number-pad"
-              style={[
-                styles.otpInput,
-                {
-                  backgroundColor: isDark ? "#18181B" : "#F9F9F9",
-                  borderColor: isDark ? "rgba(255,255,255,0.10)" : "#E0E0E0",
-                  color: isDark ? "#FFFFFF" : "#111827",
-                },
-              ]}
-              value={otpValues[i]}
-              onChangeText={(text) => handleOtpChange(text, i)}
-              onKeyPress={(e) => handleOtpKeyPress(e, i)}
-              editable={!loading}
-            />
-          ))}
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
         </View>
 
         <Animated.View entering={FadeIn.duration(400)}>
@@ -376,15 +251,9 @@ const styles = StyleSheet.create({
   },
   verifyingRow: {
     flexDirection: "row",
-<<<<<<< HEAD
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
-=======
-    justifyContent: "space-between",
-    width: "92%",
-    marginBottom: 20,
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
   },
   verifyingText: {
     fontSize: 12,

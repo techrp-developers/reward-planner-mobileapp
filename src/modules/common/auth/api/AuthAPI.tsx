@@ -251,7 +251,7 @@ export const checkIdentifier = withLog("checkIdentifier", async (
 export const sendOtp = withLog("sendOtp", async (
   identifier: string,
 ): Promise<SendOtpResponse> => {
-  const { data } = await api.post<SendOtpResponse>("/v1/auth/send-otp", { identifier });
+  const { data } = await api.post<SendOtpResponse>("/v1/auth/request-otp", { login: identifier });
   return data;
 });
 
@@ -259,7 +259,7 @@ export const verifyOtp = withLog("verifyOtp", async (
   identifier: string,
   otp: string,
 ): Promise<VerifyOtpResponse> => {
-  const { data } = await api.post<AuthSuccessResponse>("/v1/auth/verify-otp", { identifier, otp });
+  const { data } = await api.post<AuthSuccessResponse>("/v1/auth/verify-otp", { login: identifier, otp });
   await saveSession(data.accessToken, data.refreshToken, data.user.name);
   setAuthToken(data.accessToken);
   return data;
@@ -268,7 +268,7 @@ export const verifyOtp = withLog("verifyOtp", async (
 export const refreshAccessToken = withLog("refreshAccessToken", async (
   refreshToken: string,
 ): Promise<{ success: boolean; accessToken: string }> => {
-  const { data } = await api.post<{ success: boolean; accessToken: string }>("/v1/auth/refresh-token", { refreshToken });
+  const { data } = await api.post<{ success: boolean; accessToken: string }>("/v1/auth/refresh", { refreshToken });
   return data;
 });
 
@@ -283,7 +283,7 @@ export const logout = withLog("logout", async (): Promise<void> => {
   }
 });
 
-export const restoreSession = async (): Promise<{ accessToken: string } | null> => {
+export const restoreSession = async (): Promise<{ accessToken: string; refreshToken?: string } | null> => {
   const refreshToken = await getRefreshToken();
 
   if (!refreshToken) {
@@ -291,7 +291,10 @@ export const restoreSession = async (): Promise<{ accessToken: string } | null> 
   }
 
   try {
-    const { data } = await api.post<{ success: boolean; accessToken: string }>("/v1/auth/refresh-token", { refreshToken });
+    // The backend rotates refresh tokens on every call (revokes this one,
+    // issues a new one) — callers MUST persist data.refreshToken if present,
+    // or the next restore will fail with an already-revoked token.
+    const { data } = await api.post<{ success: boolean; accessToken: string; refreshToken?: string }>("/v1/auth/refresh", { refreshToken });
     return data;
   } catch (err) {
     console.log("[restoreSession] failed, session invalid", err);

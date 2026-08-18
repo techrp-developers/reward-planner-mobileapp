@@ -46,7 +46,7 @@ const WelcomeScreen = () => {
             style={styles.button}
           >
             <Text style={styles.buttonText}>Get Started</Text>
-            <MaterialCommunityIcons name="chevron-forward" size={18} color="#fff" />
+            <MaterialCommunityIcons name="chevron-right" size={18} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       </View>

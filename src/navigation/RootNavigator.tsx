@@ -13,15 +13,10 @@ import MainLayout from "./MainLayout";
 import SplashScreen from "../modules/common/auth/screens/SplashScreen";
 import TermsGateScreen from "../modules/common/auth/screens/TermsGateScreen";
 import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScreen";
-<<<<<<< HEAD
 import WelcomeScreen from "../modules/common/auth/screens/WelcomeScreen";
 import LoginScreen from "../modules/common/auth/screens/LoginScreen";
 import OTPScreen from "../modules/common/auth/screens/OTPScreen";
 import LocationAccessScreen from "../modules/common/auth/screens/LocationAccessScreen";
-import OnboardingScreen from "../modules/common/auth/screens/OnboardingScreen";
-=======
-import OTPScreen from "../modules/common/auth/screens/OTPScreen";
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
 import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
 export type { AuthStackParamList };
@@ -65,7 +60,6 @@ export type RootStackParamList = {
   App: undefined;
   TermsGate: undefined;
   BiometricGate: undefined;
-  Onboarding: undefined;
 };
 
 // ─── Navigators ───────────────────────────────────────────────────────────────
@@ -88,13 +82,8 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={defaultScreenOptions} initialRouteName="Welcome">
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
-<<<<<<< HEAD
       <AuthStack.Screen name="OTPScreen" component={OTPScreen} />
       <AuthStack.Screen name="LocationAccess" component={LocationAccessScreen} />
-      <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
-=======
-      <AuthStack.Screen name="LoginOTP" component={OTPScreen} />
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
     </AuthStack.Navigator>
   );
 }
@@ -302,11 +291,8 @@ function AppNavigator() {
 //  isAuthenticated = true, termsAccepted = null
 //    └─ Splash  (terms status API call in progress, triggered by login/restore)
 //
-//  isAuthenticated = true, termsAccepted = false
-//    └─ TermsGate  (first-time acceptance; back gesture + hardware back locked)
-//
-//  isAuthenticated = true, termsAccepted = true
-//    └─ App  (normal app flow)
+//  isAuthenticated = true
+//    └─ App  (normal app flow — straight from OTP verification, no onboarding step)
 
 type VersionModalState = {
   visible: boolean;
@@ -370,18 +356,7 @@ export default function RootNavigator() {
   ) : (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
       {isAuthenticated ? (
-        termsAccepted ? (
-          <RootStack.Screen name="App" component={AppNavigator} />
-        ) : (
-          <RootStack.Screen
-            name="Onboarding"
-            component={OnboardingScreen}
-            options={{
-              gestureEnabled: false,
-              animation: "fade",
-            }}
-          />
-        )
+        <RootStack.Screen name="App" component={AppNavigator} />
       ) : (
         // ── Auth flow ─────────────────────────────────────────────
         <RootStack.Screen

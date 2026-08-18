@@ -13,7 +13,7 @@ const PROD_BASE_URL = "https://rewardplanners.com/api/crm";
 // machine's LAN IP. Do not use localhost from a device; it points to the
 // device itself, not the backend machine.
 const USE_PHYSICAL_DEVICE = true;
-const PHYSICAL_DEVICE_LAN_IP = "192.168.1.133";
+const PHYSICAL_DEVICE_LAN_IP = "192.168.1.179";
 const LOCAL_PORT = 5000;
 
 const resolveDevBaseUrl = () => {
@@ -28,4 +28,7 @@ const resolveDevBaseUrl = () => {
   return `http://localhost:${LOCAL_PORT}`;
 };
 
-export const API_BASE_URL = __DEV__ ? resolveDevBaseUrl() : PROD_BASE_URL;
+// Local dev backend isn't running right now — point every build at the live
+// production API instead. Flip back to `__DEV__ ? resolveDevBaseUrl() : PROD_BASE_URL`
+// once the local server is up again.
+export const API_BASE_URL = PROD_BASE_URL;

@@ -6,7 +6,7 @@ export { API_BASE_URL };
 type SessionHandlers = {
   getAccessToken: () => string | null;
   getRefreshToken: () => Promise<string | null>;
-  onAccessTokenRefresh: (nextAccessToken: string) => Promise<void> | void;
+  onAccessTokenRefresh: (nextAccessToken: string, nextRefreshToken?: string) => Promise<void> | void;
   onLogout: (reason: "refresh_failed" | "missing_refresh") => Promise<void> | void;
 };
 
@@ -146,21 +146,11 @@ const flushQueuedRequests = (
 const isAuthEndpoint = (url?: string) => {
   if (!url) return false;
   return (
-<<<<<<< HEAD
     url.includes("/v1/auth/check") ||
-    url.includes("/v1/auth/send-otp") ||
-    url.includes("/v1/auth/verify-otp") ||
-    url.includes("/v1/auth/refresh-token") ||
-    url.includes("/v1/auth/logout")
-=======
-    url.includes("/v1/auth/login") ||
     url.includes("/v1/auth/request-otp") ||
     url.includes("/v1/auth/verify-otp") ||
-    url.includes("/v1/auth/register") ||
     url.includes("/v1/auth/refresh") ||
-    url.includes("/v1/auth/logout") ||
-    url.includes("/v1/auth/verify-email")
->>>>>>> 6e32a67f0be08c611df537476ffc8985ed3f0e28
+    url.includes("/v1/auth/logout")
   );
 };
 
@@ -218,17 +208,18 @@ const handleUnauthorizedResponse = async (
         return Promise.reject(error);
       }
 
-      const refreshResponse = await axios.post(`${API_BASE_URL}/v1/auth/refresh-token`, {
+      const refreshResponse = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {
         refreshToken,
       });
 
       const nextAccessToken = (refreshResponse.data as any)?.accessToken;
+      const nextRefreshToken = (refreshResponse.data as any)?.refreshToken;
 
       if (!nextAccessToken) {
         throw new Error("Refresh endpoint did not return access token");
       }
 
-      await sessionHandlers.onAccessTokenRefresh(nextAccessToken);
+      await sessionHandlers.onAccessTokenRefresh(nextAccessToken, nextRefreshToken);
       flushQueuedRequests(null, nextAccessToken);
 
       const retriedHeaders = {
@@ -239,7 +230,16 @@ const handleUnauthorizedResponse = async (
       return retryRequest({ ...originalConfig, headers: retriedHeaders });
     } catch (refreshError) {
       flushQueuedRequests(refreshError, null);
-      await sessionHandlers.onLogout("refresh_failed");
+
+      // Only clear the session on a definitive rejection from the refresh
+      // endpoint itself (401/403 — token revoked/invalid). A network blip,
+      // timeout, or server 5xx here is transient and must not log the user
+      // out — mirrors the same guard in AuthContext.restoreSession().
+      const refreshStatus = (refreshError as AxiosError)?.response?.status;
+      if (refreshStatus === 401 || refreshStatus === 403) {
+        await sessionHandlers.onLogout("refresh_failed");
+      }
+
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
