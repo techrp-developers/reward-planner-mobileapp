@@ -1438,9 +1438,10 @@ export default function OrderStepUI() {
               onRemove={() => removeItem(item)}
               onPress={() =>
                 Number(item?.product_id) > 0 &&
-                navigation.navigate('ProductDescription', {
-                  productId: Number(item.product_id),
-                })
+                 navigation.navigate('ProductDescription', {
+                   productId: Number(item.product_id),
+                   variantId: Number(item.variant_id),
+                 })
               }
             />
           ))}

@@ -92,9 +92,8 @@ export type HomeStackParamList = {
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   PrivacyPolicy: undefined;
   TermsAndConditions: undefined;
-  HelpForm: undefined;
+  HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
   MyTickets: undefined;
-  ChangePassword: undefined;
   OrderConfirmedScreen: { order_id?: number } | undefined;
   CommonQuestionsScreen: undefined;
   ArticleDetails: { articleId: number; sectionId: number };

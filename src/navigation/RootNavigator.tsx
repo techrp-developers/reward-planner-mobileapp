@@ -32,7 +32,6 @@ export type AppStackParamList = {
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
-  ChangePassword: undefined;
   Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
@@ -43,7 +42,7 @@ export type AppStackParamList = {
   Notification: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
-  HelpForm: undefined;
+  HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
   MyTickets: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;
@@ -175,6 +174,7 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/constants/Support/HelpForm").default
         }
+        initialParams={{ context: "dashboard" }}
       />
       <AppStack.Screen
         name="MyTickets"
@@ -249,12 +249,6 @@ function AppNavigator() {
         name="AddressDetails"
         getComponent={() =>
           require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
-        }
-      />
-      <AppStack.Screen
-        name="ChangePassword"
-        getComponent={() =>
-          require("../modules/common/auth/screens/ChangePasswordScreen").default
         }
       />
       <AppStack.Screen

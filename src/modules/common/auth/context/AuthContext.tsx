@@ -10,6 +10,7 @@ import React, {
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import DeviceInfo from "react-native-device-info";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
@@ -122,9 +123,22 @@ const generateDeviceId = () => {
 };
 
 const getDeviceName = () => {
-  if (Platform.OS === "android") return "android";
-  if (Platform.OS === "ios") return "ios";
-  return "unknown";
+  try {
+    const brand = String(DeviceInfo.getBrand() || "").trim();
+    const model = String(DeviceInfo.getModel() || "").trim();
+    const systemName = String(DeviceInfo.getSystemName() || Platform.OS).trim();
+    const systemVersion = String(DeviceInfo.getSystemVersion() || "").trim();
+    const modelName = brand && model.toLowerCase().startsWith(brand.toLowerCase())
+      ? model
+      : [brand, model].filter(Boolean).join(" ");
+    const operatingSystem = [systemName, systemVersion].filter(Boolean).join(" ");
+
+    return `${modelName || "Unknown device"} (${operatingSystem})`.slice(0, 255);
+  } catch {
+    if (Platform.OS === "android") return "Android device";
+    if (Platform.OS === "ios") return "iOS device";
+    return "Unknown device";
+  }
 };
 
 const getOrCreateDeviceId = async () => {
@@ -156,6 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
+  const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
@@ -302,13 +317,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       const nextAccessToken = refreshRes.data?.accessToken || null;
+      const nextRefreshToken = refreshRes.data?.refreshToken || null;
 
-      if (!nextAccessToken) {
-        throw new Error("Missing access token from refresh");
+      if (!nextAccessToken || !nextRefreshToken) {
+        throw new Error("Missing token pair from refresh");
       }
 
+      // The backend rotates refresh tokens, so save both replacements before
+      // making any authenticated follow-up request.
+      await Promise.all([
+        persistAuthToken(nextAccessToken),
+        secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+      ]);
       updateAccessToken(nextAccessToken);
-      await persistAuthToken(nextAccessToken);
 
       await fetchProfile();
 
@@ -328,13 +349,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearLocalSession, fetchProfile, checkTerms, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
-    try {
-      await restoreSession();
-    } catch {
-      // Fallback to AuthStack on restore failure.
-    } finally {
-      setIsInitializing(false);
-    }
+    const maxRestoreAttempts = 3;
+    let restoreAttempts = 0;
+
+    const attemptRestore = async () => {
+      restoreAttempts += 1;
+
+      try {
+        await restoreSession();
+        setIsInitializing(false);
+      } catch (error: any) {
+        const status = Number(error?.response?.status || 0);
+
+        if (status === 401 || status === 403) {
+          // The stored refresh session is definitively invalid/revoked.
+          setIsInitializing(false);
+          return;
+        }
+
+        // A local/offline backend must not hold the app on Splash forever.
+        // Preserve the stored session and retry briefly in the background.
+        setIsInitializing(false);
+
+        if (restoreAttempts < maxRestoreAttempts) {
+          restoreRetryRef.current = setTimeout(attemptRestore, 5000);
+        }
+      }
+    };
+
+    await attemptRestore();
   }, [restoreSession]);
 
   useEffect(() => {
@@ -343,9 +386,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       getRefreshToken: async () => secureGetItem(REFRESH_TOKEN_KEY),
 
-      onAccessTokenRefresh: async (nextAccessToken) => {
+      onSessionRefresh: async (nextAccessToken, nextRefreshToken) => {
+        await Promise.all([
+          persistAuthToken(nextAccessToken),
+          secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+        ]);
         updateAccessToken(nextAccessToken);
-        await persistAuthToken(nextAccessToken);
       },
 
       onLogout: async () => {
@@ -360,6 +406,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     bootstrapSession();
+
+    return () => {
+      if (restoreRetryRef.current) {
+        clearTimeout(restoreRetryRef.current);
+      }
+    };
   }, [bootstrapSession]);
 
   const logout = useCallback(async () => {

@@ -17,6 +17,7 @@ import {
   removeHelpfulReview,
 } from "../../../api/ReviewApi";
 import { useAppTheme } from "../../../../../theme/ThemeContext";
+import { UPLOADS_URL as REVIEW_UPLOADS_BASE } from '../../../../../config/apiConfig';
 
 type CustomerReviewsViewProps = {
   productId: number | string;
@@ -35,7 +36,6 @@ type ReviewItem = {
 };
 
 const MAX_VISIBLE = 3;
-const REVIEW_UPLOADS_BASE = "https://rewardplanners.com/api/crm/uploads/";
 
 const toNumber = (value: unknown, fallback = 0) => {
   const numeric = Number(value);

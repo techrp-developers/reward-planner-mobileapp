@@ -19,6 +19,7 @@ export type CartItem = {
   price: number;
   quantity: number;
   image?: string;
+  attributes?: Record<string, string>;
 };
 
 type CartContextType = {
@@ -63,6 +64,7 @@ const toCartItems = (rawItems: any[]): CartItem[] => {
     price: Number(item.sale_price || item.price || 0),
     quantity: Number(item.quantity || 1),
     image: item.image || item.product_image,
+    attributes: item.attributes || item.variant_attributes || {},
   }));
 };
 

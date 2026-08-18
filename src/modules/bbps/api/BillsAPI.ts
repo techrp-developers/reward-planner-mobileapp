@@ -1,8 +1,7 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
 import { apiClient, NormalizedApiError } from "./apiClient";
-
-const API_BASE_URL = "https://rewardplanners.com/api/crm";
+import { API_BASE_URL } from '../../../config/apiConfig';
 
 export interface BillCategory {
   operator_category_name: string;
@@ -10,6 +9,26 @@ export interface BillCategory {
   operator_category_group: string;
   status: string;
 }
+
+export const ENABLED_BBPS_CATEGORY_NAMES = [
+  "Mobile Prepaid",
+  "Mobile Postpaid",
+  "Credit Card",
+  "Electricity",
+  "FASTag",
+] as const;
+
+const normalizeBbpsCategoryName = (value: string) =>
+  String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, " ");
+
+const ENABLED_BBPS_CATEGORY_SET = new Set(
+  ENABLED_BBPS_CATEGORY_NAMES.map(normalizeBbpsCategoryName),
+);
+
+export const isEnabledBbpsCategory = (category: BillCategory) =>
+  ENABLED_BBPS_CATEGORY_SET.has(
+    normalizeBbpsCategoryName(category?.operator_category_name),
+  );
 
 export interface BillLocation {
   operator_location_name: string;
@@ -30,7 +49,9 @@ export interface Operator {
 export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
   try {
     const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`);
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+    return Array.isArray(res.data?.data)
+      ? res.data.data.filter(isEnabledBbpsCategory)
+      : [];
   } catch (error: any) {
     if (__DEV__) { console.error("Fetch Categories Error:", error?.response?.data || error); }
     throw error;

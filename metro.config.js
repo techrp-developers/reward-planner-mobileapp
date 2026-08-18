@@ -10,15 +10,12 @@ module.exports = mergeConfig(defaultConfig, {
   // the file watcher to time out ("Failed to start watch mode."). Falling
   // back to Metro's built-in watcher avoids that hang. Remove this once
   // Watchman is installed for faster file-change detection.
-  watcher: {
-    useWatchman: false,
-  },
-
   transformer: {
     babelTransformerPath: require.resolve("react-native-svg-transformer"),
   },
 
   resolver: {
+    useWatchman: false,
     assetExts: defaultConfig.resolver.assetExts.filter(ext => ext !== "svg"),
     sourceExts: [...new Set([...defaultConfig.resolver.sourceExts, "svg"])],
     blockList: exclusionList([
