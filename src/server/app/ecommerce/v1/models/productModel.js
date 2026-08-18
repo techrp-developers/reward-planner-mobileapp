@@ -236,6 +236,7 @@ class ProductModel {
       conditions.push("p.is_visible = 1");
       conditions.push("p.is_searchable = 1");
       conditions.push("p.is_deleted = 0");
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
 
       const whereClause = conditions.length
         ? `WHERE ${conditions.join(" AND ")}`
@@ -567,6 +568,7 @@ class ProductModel {
       LEFT JOIN sub_categories sc ON p.subcategory_id = sc.subcategory_id
       LEFT JOIN sub_sub_categories ssc ON p.sub_subcategory_id = ssc.sub_subcategory_id
       WHERE p.product_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       `,
         [productId],
       );
@@ -639,7 +641,8 @@ class ProductModel {
       SELECT attribute_key
       FROM category_attributes
       WHERE is_variant = 1
-      AND (
+        AND is_active = 1
+        AND (
         subcategory_id = ?
         OR (category_id = ? AND subcategory_id IS NULL)
       )
@@ -656,7 +659,16 @@ class ProductModel {
         delete filteredProductAttributes[key];
       });
 
+      // Vendor-added attributes that aren't defined in category_attributes at
+      // all — these carry their own label since there's no schema row to
+      // resolve one from, so they're kept separate from product_attributes.
+      const customAttributes = Array.isArray(filteredProductAttributes.__custom)
+        ? filteredProductAttributes.__custom
+        : [];
+      delete filteredProductAttributes.__custom;
+
       product.product_attributes = filteredProductAttributes;
+      product.custom_attributes = customAttributes;
 
       // ================= PRODUCT VARIANTS =================
       const [variants] = await db.execute(
@@ -960,6 +972,8 @@ class ProductModel {
       conditions.push("p.is_deleted = ?");
       params.push(0);
 
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
+
       conditions.push("v.variant_id IS NOT NULL");
 
       if (categoryId) {
@@ -1178,6 +1192,8 @@ class ProductModel {
 
       conditions.push("p.is_deleted = ?");
       params.push(0);
+
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
 
       conditions.push("v.variant_id IS NOT NULL");
 
@@ -1467,6 +1483,7 @@ class ProductModel {
       AND p.is_visible = 1
       AND p.is_searchable = 1
       AND p.is_deleted = 0
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       AND v.variant_id IS NOT NULL
       AND (
         ${likeAny("p.product_name")}
@@ -1556,6 +1573,7 @@ class ProductModel {
         AND status = 'approved'
         AND is_deleted = 0
         AND is_visible = 1
+        AND COALESCE(created_via, '') != 'flea_market_quick_create'
       `,
         [productId],
       );
@@ -1639,6 +1657,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
         AND p.product_id != ?
         AND (
           p.category_id = ?
@@ -1854,6 +1873,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       HAVING total_score > 0
@@ -2039,6 +2059,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY p.created_at DESC
@@ -2219,6 +2240,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY frequency DESC
@@ -2395,6 +2417,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY total_sold DESC
@@ -2569,6 +2592,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY total_sold DESC
@@ -2738,6 +2762,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY view_count DESC
@@ -2893,6 +2918,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       HAVING total_reviews >= 3

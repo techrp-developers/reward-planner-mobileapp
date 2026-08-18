@@ -34,6 +34,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { API_V1_URL } from '../../../config/apiConfig';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
@@ -126,7 +127,7 @@ function Dashbord() {
       if (!headers.Authorization) return;
 
       const userRes = await axios.get<{ success: boolean; data: any }>(
-        'https://rewardplanners.com/api/crm/v1/auth/user-info',
+        `${API_V1_URL}/auth/user-info`,
         { headers },
       );
 

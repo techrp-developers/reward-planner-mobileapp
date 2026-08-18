@@ -1,16 +1,9 @@
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "./axios";
-import {
-  AUTH_USER_NAME_KEY,
-  clearAccessToken,
-  clearSession,
-  getAccessToken,
-  getCachedUserName,
-  getRefreshToken,
-  saveSession,
-  updateAccessToken,
-} from "../../../../utils/tokenStorage";
+  import axios from "axios";
+  import AsyncStorage from "@react-native-async-storage/async-storage";
+  import api from "./axios";
+  import { API_BASE_URL } from '../../../../config/apiConfig';
+  const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
+  const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
 let authToken: string | null = null;
 
@@ -193,15 +186,27 @@ export const fetchUserInfo = async () => {
   }
 };
 
-export const deleteCustomer = async () => {
-  try {
-    const res = await api.delete("/v1/auth/delete-customer");
-    return res.data;
-  } catch (error) {
-    console.error("Delete customer API failed", error);
-    throw error;
-  }
-};
+  export type DeleteCustomerResponse = {
+    success: boolean;
+    status?: string;
+    message: string;
+    data?: {
+      gracePeriodDays: number;
+      deletionRequestedAt: string;
+      permanentDeletionAt: string;
+    };
+  };
+
+  export const deleteCustomer = async (): Promise<DeleteCustomerResponse> => {
+    try {
+      const res = await api.delete("/v1/auth/delete-customer");
+
+      return res.data;
+    } catch (error) {
+      console.error('Delete customer API failed', error);
+      throw error;
+    }
+  };
 
 export const updateProfile = async (formData: FormData) => {
   const res = await api.put("/v1/auth/profile", formData, {
@@ -212,97 +217,141 @@ export const updateProfile = async (formData: FormData) => {
   return res.data;
 };
 
-const withLog = <A extends any[], R>(label: string, fn: (...args: A) => Promise<R>) => {
-  return async (...args: A): Promise<R> => {
-    if (__DEV__) console.log(`[${label}] called with`, ...args);
-    try {
-      const result = await fn(...args);
-      if (__DEV__) console.log(`[${label}] success`, result);
-      return result;
-    } catch (err) {
-      if (__DEV__) console.log(`[${label}] failed`, err);
-      throw err;
-    }
+  export type ActivateAccountPayload = {
+    email: string;
   };
-};
 
-export type CheckExistenceResponse = {
-  success: boolean;
-  registered: boolean;
-  type?: "phone" | "email";
-};
+  export const activateAccount = async (payload: ActivateAccountPayload) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/activate-account`,
+      payload
+    );
+    return res.data;
+  };
 
-export type SendOtpResponse = {
-  success: boolean;
-  message: string;
-};
+  export type VerifyActivationOtpPayload = {
+    email: string;
+    otp: string | number;
+  };
 
-export type OtpUser = ApiUser;
+  export const verifyActivationOtp = async (
+    payload: VerifyActivationOtpPayload
+  ) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/verify-activation-otp`,
+      payload
+    );
 
-export type VerifyOtpResponse = AuthSuccessResponse;
+    const token = extractToken(res.data);
+    if (token) {
+      await persistAuthToken(token);
+    }
 
-export const checkIdentifier = withLog("checkIdentifier", async (
-  identifier: string,
-): Promise<CheckIdentifierResponse> => {
-  const { data } = await api.post<CheckIdentifierResponse>("/v1/auth/check", { identifier });
-  return data;
-});
+    const userName = extractUserName(res.data);
+    if (userName) {
+      await setStoredUserName(userName);
+    }
 
-export const sendOtp = withLog("sendOtp", async (
-  identifier: string,
-): Promise<SendOtpResponse> => {
-  const { data } = await api.post<SendOtpResponse>("/v1/auth/request-otp", { login: identifier });
-  return data;
-});
+    return res.data;
+  };
 
-export const verifyOtp = withLog("verifyOtp", async (
-  identifier: string,
-  otp: string,
-): Promise<VerifyOtpResponse> => {
-  const { data } = await api.post<AuthSuccessResponse>("/v1/auth/verify-otp", { login: identifier, otp });
-  await saveSession(data.accessToken, data.refreshToken, data.user.name);
-  setAuthToken(data.accessToken);
-  return data;
-});
+  export type SetPasswordPayload = {
+    email: string;
+    password: string;
+  };
 
-export const refreshAccessToken = withLog("refreshAccessToken", async (
-  refreshToken: string,
-): Promise<{ success: boolean; accessToken: string }> => {
-  const { data } = await api.post<{ success: boolean; accessToken: string }>("/v1/auth/refresh", { refreshToken });
-  return data;
-});
+  export const setPassword = async (payload: SetPasswordPayload) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/set-password`,
+      payload
+    );
 
-export const logout = withLog("logout", async (): Promise<void> => {
-  try {
-    await api.post("/v1/auth/logout");
-  } catch (err) {
-    console.log("[logout] server call failed (clearing local session anyway)", err);
-  } finally {
-    await clearSession();
-    setAuthToken(null);
-  }
-});
+    const token = extractToken(res.data);
+    if (token) {
+      await persistAuthToken(token);
+    }
 
-export const restoreSession = async (): Promise<{ accessToken: string; refreshToken?: string } | null> => {
-  const refreshToken = await getRefreshToken();
+    const userName = extractUserName(res.data);
+    if (userName) {
+      await setStoredUserName(userName);
+    }
 
-  if (!refreshToken) {
-    return null;
-  }
+    return res.data;
+  };
 
-  try {
-    // The backend rotates refresh tokens on every call (revokes this one,
-    // issues a new one) — callers MUST persist data.refreshToken if present,
-    // or the next restore will fail with an already-revoked token.
-    const { data } = await api.post<{ success: boolean; accessToken: string; refreshToken?: string }>("/v1/auth/refresh", { refreshToken });
-    return data;
-  } catch (err) {
-    console.log("[restoreSession] failed, session invalid", err);
-    return null;
-  }
-};
+  // =============================== Forgot Password ==============================
 
-export const completeOnboarding = withLog("completeOnboarding", async () => {
-  const { data } = await api.post<{ success: boolean }>('/v1/auth/complete-onboarding');
-  return data;
-});
+  export type ForgotPasswordPayload = {
+    email: string;
+  };
+
+  export const forgotPassword = async (payload: ForgotPasswordPayload) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/forgot-password`,
+      payload
+    );
+    return res.data;
+  };
+
+  // =============================== Resend OTP ==============================
+
+  export type ResendOtpPayload = {
+    email: string;
+  };
+
+  export const resendOtp = async (payload: ResendOtpPayload) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/resend-otp`,
+      payload
+    );
+    return res.data;
+  };
+
+  // =============================== Verify Forgot Password OTP ==============================
+
+  export type VerifyForgotPasswordOtpPayload = {
+    email: string;
+    otp: string;
+  };
+
+  export const verifyForgotPasswordOtp = async (
+    payload: VerifyForgotPasswordOtpPayload
+  ) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/verify-forgot-password-otp`,
+      payload
+    );
+    return res.data;
+  };
+
+  // =============================== Reset Password ==============================
+
+  export type ResetPasswordPayload = {
+    email: string;
+    newPassword: string;
+  };
+
+  export const resetPassword = async (payload: ResetPasswordPayload) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/reset-password`,
+      payload
+    );
+    return res.data;
+  };
+
+  // =============================== Resend Activation OTP ==============================
+
+  export type ResendActivationOtpPayload = {
+    email: string;
+  };
+
+  export const resendActivationOtp = async (
+    payload: ResendActivationOtpPayload
+  ) => {
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/auth/resend-activation-otp`,
+      payload
+    );
+    return res.data;
+  };
+

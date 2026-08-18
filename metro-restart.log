@@ -1,0 +1,69 @@
+
+> RewardsPlanners@0.0.1 start
+> react-native start --reset-cache
+
+
+Welcome to React Native v0.82
+Starting dev server on http://localhost:8081
+
+
+                        ▒▒▓▓▓▓▒▒
+                     ▒▓▓▓▒▒░░▒▒▓▓▓▒
+                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒
+                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓
+                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓
+                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓
+                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓
+                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒
+                     ▒▓▓▓▒░░░░▒▓▓▓▒
+                        ▒▒▓▓▓▓▒▒
+
+
+ WARN  the transform cache was reset.
+                Welcome to Metro v0.83.7
+              Fast - Scalable - Integrated
+
+
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
+ INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
+ INFO  Connection closed to device='V2030 - 12 - API 31' for app='com.rewardsplanners' with code='1006' and reason=''.
+ INFO  Dev server ready. Press Ctrl+C to exit.
+ INFO  Interactive mode is not supported in this environment
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (42/148)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (85/225)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (165/376)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (261/483)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (316/649)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (382/720)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 40% (488/771)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 42% (551/867)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 42% (552/867)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\order_banner.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 44% (595/914)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 44% (622/971)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\product\product(1).svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 44% (679/1036)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 45% (721/1081)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 45% (722/1081)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 47% (755/1100)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 52% (821/1138)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 55% (895/1196)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 64% (1002/1251)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\serviceBanner.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 71% (1096/1299)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82% (1236/1378)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82% (1380/1549)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1520/1617)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1544/1911)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1640/2013)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1797/2056)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1971/2122)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (2036/2153)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 93% (2109/2194)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97% (2270/2303)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='V2030 - 12 - API 31'.
