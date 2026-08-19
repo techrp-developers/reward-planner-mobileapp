@@ -6,9 +6,9 @@ export type ApiEnvironment = 'local' | 'live';
 export const API_ENVIRONMENT: ApiEnvironment = 'local';
 
 const LOCAL_SERVER_URL = Platform.select({
-  // Physical Android device: use this computer's Wi-Fi/LAN address.
-  // For an Android emulator, change the host back to 10.0.2.2.
-  android: 'http://192.168.1.9:5000',
+  // Physical Android device connected over USB. Run:
+  // adb reverse tcp:5000 tcp:5000
+  android: 'http://localhost:5000',
   ios: 'http://localhost:5000',
   default: 'http://localhost:5000',
 }) as string;
