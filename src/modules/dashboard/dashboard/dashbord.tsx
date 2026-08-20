@@ -43,6 +43,13 @@ const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
   DineOut: '#DC2626',
 };
 
+const MODULE_DISPLAY_NAME: Record<ExploreServiceTab, string> = {
+  Product: 'Product',
+  Services: 'Services',
+  Payments: 'Payments',
+  DineOut: 'Bus Booking',
+};
+
 type DashboardHeaderCache = {
   userName: string;
   userImage: string | null;
@@ -186,7 +193,8 @@ function Dashbord() {
       require('../../bbps/screen/HomePage');
       require('../../step_counter/navigation/RewardHomeStack');
       require('../../step_counter/component/fitness/StepWelcome');
-      require('../../ecommerce/constants/ComingSoon');
+      require('../../busbooking/navigation/BusBookingStack');
+      require('../../busbooking/components/screens/BookingHomeScreen');
     }, 900);
 
     return () => {
@@ -381,7 +389,9 @@ function Dashbord() {
             { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
           ]}
         >
-          <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
+          <Text style={styles.moduleLaunchTitle}>
+            {MODULE_DISPLAY_NAME[openingModule]}
+          </Text>
           <View
             style={[
               styles.moduleLaunchContent,

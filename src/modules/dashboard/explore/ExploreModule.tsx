@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 
@@ -24,11 +25,14 @@ const Explore3 = require('../../../assets/sampleImages/ExploreSevice(3).png');
 const Explore4 = require('../../../assets/sampleImages/ExploreSevice(4).png');
 const Explore5 = require('../../../assets/sampleImages/ExploreSevice(5).png');
 const Explore6 = require('../../../assets/sampleImages/ExploreSevice(6).png');
-const Explore7 = require('../../../assets/sampleImages/ExploreSevice(7).png');
 const Explore8 = require('../../../assets/sampleImages/ExploreSevice(8).png');
 
 type CategoryItem = {
-  image: ReturnType<typeof require>;
+  image?: ReturnType<typeof require>;
+  SvgCard?: React.ComponentType<{
+    width?: number | string;
+    height?: number | string;
+  }>;
   tab: TopTab;
   title?: string;
 };
@@ -37,6 +41,7 @@ const activeServices: CategoryItem[] = [
   { image: Explore1, tab: 'Product' },
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
+  { SvgCard: BusBookingCard, tab: 'DineOut' },
 ];
 
 const upcomingServices: CategoryItem[] = [
@@ -46,7 +51,6 @@ const upcomingServices: CategoryItem[] = [
 ];
 
 const hiddenUpcomingServices: CategoryItem[] = [
-  { image: Explore7, tab: 'DineOut', title: 'Community' },
   { image: Explore8, tab: 'Product', title: 'Expense Tracker' },
 ];
 
@@ -152,11 +156,15 @@ function ExploreModule() {
             ]}
             onPress={() => handleCategoryPress(item.tab)}
           >
-            <Image
-              source={item.image}
-              style={styles.exploreImage}
-              resizeMode="cover"
-            />
+            {item.SvgCard ? (
+              <item.SvgCard width={CARD_WIDTH} height={CARD_HEIGHT} />
+            ) : (
+              <Image
+                source={item.image}
+                style={styles.exploreImage}
+                resizeMode="cover"
+              />
+            )}
           </TouchableOpacity>
         ))}
 
