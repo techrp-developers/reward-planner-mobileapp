@@ -26,7 +26,10 @@ class ItemCancellationModel {
       `SELECT ic.id, ic.order_item_id, ic.order_id, ic.status,
               ic.refund_status, ic.refund_amount, ic.requested_at,
               o.order_ref, c.name AS customer_name,
-              p.product_name, oi.quantity, oi.final_price
+              p.product_name, oi.quantity, oi.final_price,
+              oi.reward_coins_used,
+              (oi.final_price + COALESCE(oi.reward_coins_used, 0))
+                AS refundable_total
        FROM ecommerce_item_cancellations ic
        JOIN eorders o ON o.order_id = ic.order_id
        JOIN customer c ON c.user_id = ic.user_id

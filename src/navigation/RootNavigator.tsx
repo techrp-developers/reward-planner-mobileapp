@@ -14,13 +14,7 @@ import SplashScreen from "../modules/common/auth/screens/SplashScreen";
 import TermsGateScreen from "../modules/common/auth/screens/TermsGateScreen";
 import LoginScreen from "../modules/common/auth/screens/LoginScreen";
 import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScreen";
-import AccountActivate from "../modules/common/auth/screens/AccountActivate";
 import OTPScreen from "../modules/common/auth/screens/OTPScreen";
-import SetNewPassword from "../modules/common/auth/screens/SetNewPassword";
-import AccountActivationSuccess from "../modules/common/auth/screens/AccountActivationSuccess";
-import VerifyEmailScreen from "../modules/common/auth/screens/VerifyEmailScreen";
-import ForgotPasswordScreen from "../modules/common/auth/screens/ForgotPasswordScreen";
-import PasswordUpdatedSuccess from "../modules/common/auth/screens/PasswordUpdatedSuccess";
 import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
 export type { AuthStackParamList };
@@ -38,7 +32,6 @@ export type AppStackParamList = {
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
-  ChangePassword: undefined;
   Profile: { context?: 'dashboard' } | undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
@@ -49,7 +42,7 @@ export type AppStackParamList = {
   Notification: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
-  HelpForm: undefined;
+  HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
   MyTickets: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;
@@ -87,13 +80,7 @@ function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={defaultScreenOptions}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="AccountActivate" component={AccountActivate} />
-      <AuthStack.Screen name="OTPScreen" component={OTPScreen} />
-      <AuthStack.Screen name="SetNewPassword" component={SetNewPassword} />
-      <AuthStack.Screen name="AccountActivationSuccess" component={AccountActivationSuccess} />
-      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <AuthStack.Screen name="PasswordSuccess" component={PasswordUpdatedSuccess} />
-      <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+      <AuthStack.Screen name="LoginOTP" component={OTPScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -187,6 +174,7 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/constants/Support/HelpForm").default
         }
+        initialParams={{ context: "dashboard" }}
       />
       <AppStack.Screen
         name="MyTickets"
@@ -261,12 +249,6 @@ function AppNavigator() {
         name="AddressDetails"
         getComponent={() =>
           require("../modules/ecommerce/components/ItemCardAddress/NewAddressForm").default
-        }
-      />
-      <AppStack.Screen
-        name="ChangePassword"
-        getComponent={() =>
-          require("../modules/common/auth/screens/ChangePasswordScreen").default
         }
       />
       <AppStack.Screen
@@ -408,7 +390,10 @@ export default function RootNavigator() {
     <>
       {navigator}
       <BiometricLockScreen
-        visible={!showSplash && !biometricCleared}
+        // The biometric gate protects an existing authenticated session. Showing
+        // it over the logged-out auth stack can leave users on its dark modal
+        // while the native biometric availability check is still pending.
+        visible={!showSplash && isAuthenticated && !biometricCleared}
         onSuccess={() => setBiometricCleared(true)}
         onUseFallback={() => setBiometricCleared(true)}
       />

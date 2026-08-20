@@ -89,10 +89,12 @@ const CartRow = React.memo(function CartRow({
       price={price}
       discountText={`₹${discount} off`}
       quantity={item.quantity}
+      attributes={item.attributes || item.variant_attributes}
       onPress={() =>
         Number(item?.product_id) > 0 &&
         navigation.navigate('ProductDescription', {
           productId: Number(item.product_id),
+          variantId: Number(item.variant_id),
         })
       }
       

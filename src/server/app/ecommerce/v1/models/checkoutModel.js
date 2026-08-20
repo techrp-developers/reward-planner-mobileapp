@@ -13,9 +13,7 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
-const {
-  deliveryChargeForUser,
-} = require("../utils/deliveryFeePolicy");
+const { deliveryChargeForUser } = require("../utils/deliveryFeePolicy");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path) {
@@ -87,10 +85,11 @@ class CheckoutModel {
           p.is_discount_eligible
 
         FROM cart_items ci
-        JOIN product_variants v ON ci.variant_id = v.variant_id
+        JOIN product_variants v ON ci.variant_id = v.variant_id AND ci.product_id = v.product_id
         JOIN eproducts p ON v.product_id = p.product_id
 
         WHERE ci.user_id = ?
+          AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
         `,
         [userId],
       );
@@ -571,6 +570,7 @@ class CheckoutModel {
       JOIN eproducts p ON v.product_id = p.product_id
 
       WHERE v.variant_id = ? AND v.product_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       `,
         [variantId, productId],
       );
@@ -899,6 +899,7 @@ class CheckoutModel {
       p.is_discount_eligible,
 
       v.variant_id,
+      v.variant_attributes,
       v.mrp,
       v.sale_price,
       v.stock,
@@ -907,14 +908,21 @@ class CheckoutModel {
       v.breadth,
       v.height,
 
-      GROUP_CONCAT(DISTINCT pi.image_url ORDER BY pi.sort_order ASC) AS images
+      COALESCE(
+        (SELECT pvi.image_url FROM product_variant_images pvi
+         WHERE pvi.variant_id = ci.variant_id
+         ORDER BY pvi.sort_order ASC, pvi.image_id ASC LIMIT 1),
+        (SELECT pi2.image_url FROM product_images pi2
+         WHERE pi2.product_id = ci.product_id
+         ORDER BY pi2.sort_order ASC, pi2.image_id ASC LIMIT 1)
+      ) AS variant_image
 
     FROM cart_items ci
     JOIN eproducts p ON ci.product_id = p.product_id
-    JOIN product_variants v ON ci.variant_id = v.variant_id
-    LEFT JOIN product_images pi ON p.product_id = pi.product_id
+    JOIN product_variants v ON ci.variant_id = v.variant_id AND ci.product_id = v.product_id
 
     WHERE ci.user_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY ci.cart_item_id
     `,
       [userId],
@@ -935,7 +943,16 @@ class CheckoutModel {
       const itemTotal = Number(row.sale_price) * Number(row.quantity);
       totalAmount += itemTotal;
 
-      const imagePath = row.images ? row.images.split(",")[0] : null;
+      const imagePath = row.variant_image || null;
+      let attributes = {};
+      try {
+        attributes =
+          typeof row.variant_attributes === "string"
+            ? JSON.parse(row.variant_attributes || "{}")
+            : row.variant_attributes || {};
+      } catch {
+        attributes = {};
+      }
 
       return {
         cart_item_id: row.cart_item_id,
@@ -943,6 +960,8 @@ class CheckoutModel {
         category_id: row.category_id,
         subcategory_id: row.subcategory_id,
         variant_id: row.variant_id,
+        variant_attributes: attributes,
+        attributes,
         vendor_id: row.vendor_id,
 
         title: row.product_name,
@@ -1228,6 +1247,7 @@ class CheckoutModel {
       p.return_window_days,
       p.is_discount_eligible,
       v.variant_id,
+      v.variant_attributes,
       v.mrp,
       v.sale_price,
       v.stock,
@@ -1236,15 +1256,20 @@ class CheckoutModel {
       v.breadth,
       v.height,
 
-      GROUP_CONCAT(pi.image_url ORDER BY pi.sort_order ASC) AS images
+      COALESCE(
+        (SELECT pvi.image_url FROM product_variant_images pvi
+         WHERE pvi.variant_id = v.variant_id
+         ORDER BY pvi.sort_order ASC, pvi.image_id ASC LIMIT 1),
+        (SELECT pi2.image_url FROM product_images pi2
+         WHERE pi2.product_id = p.product_id
+         ORDER BY pi2.sort_order ASC, pi2.image_id ASC LIMIT 1)
+      ) AS variant_image
 
     FROM product_variants v
     JOIN eproducts p ON v.product_id = p.product_id
 
-    LEFT JOIN product_images pi 
-      ON p.product_id = pi.product_id
-
     WHERE v.variant_id = ? AND p.product_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY v.variant_id
     `,
       [variantId, productId],
@@ -1381,12 +1406,23 @@ class CheckoutModel {
     // 7. FINAL
     // ===============================
     const payableAmount = finalItemTotal + shippingCharge;
-    const imagePath = row.images ? row.images.split(",")[0] : null;
+    const imagePath = row.variant_image || null;
+    let attributes = {};
+    try {
+      attributes =
+        typeof row.variant_attributes === "string"
+          ? JSON.parse(row.variant_attributes || "{}")
+          : row.variant_attributes || {};
+    } catch {
+      attributes = {};
+    }
 
     return {
       item: {
         product_id: row.product_id,
         variant_id: row.variant_id,
+        variant_attributes: attributes,
+        attributes,
         title: row.product_name,
         image: getPublicUrl(imagePath),
 
@@ -1576,7 +1612,7 @@ class CheckoutModel {
 
       items: items.map((i) => ({
         product_name: i.product_name,
-        image: i.image,
+        image: i.image ? getPublicUrl(i.image) : null,
         quantity: i.quantity,
         price: Number(i.price),
         item_total: Number(i.price) * i.quantity,

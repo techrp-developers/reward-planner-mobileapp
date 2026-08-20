@@ -189,6 +189,19 @@ function buildBodyValues(templateKey, ctx) {
     case "order_place_confirm":
       return [name, orderId, amount];
 
+    // --- ADMIN ALERTS ---
+    case "admin_new_service_order":
+      return [name, orderId, amount, String(ctx.service_name || "Service")];
+
+    case "admin_new_service_enquiry":
+      return [name, String(ctx.enquiry_ref || orderId), String(ctx.service_name || "Service"), String(ctx.customer_phone || "N/A")];
+
+    case "admin_new_help_request":
+      return [name, String(ctx.request_id || orderId), orderId, String(ctx.issue_type || "General support")];
+
+    case "admin_new_ecommerce_order":
+      return [name, orderId, amount, String(ctx.item_count || "0")];
+
     case "order_place_arriving":
       return [name, orderId];
 
@@ -217,11 +230,13 @@ function buildBodyValues(templateKey, ctx) {
 
     case "reward_planners_launch_inamdar":
     case "reward_planners_launch_ddm":
+    case "reward_planners_launch_lavender":
     case "reward_planners_launch":
     case "reward_planners_launch_invitation":
       return [name];
 
     case "reward_planners_ios_launch":
+    case "flea_market_inamdar":
       return [name];
 
     case "create_account_notification":

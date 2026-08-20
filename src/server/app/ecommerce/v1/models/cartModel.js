@@ -37,21 +37,21 @@ class cartModel {
       v.mrp,
       v.sale_price,
 
-      GROUP_CONCAT(
-        DISTINCT CONCAT(
-          pi.image_id, '::',
-          pi.image_url, '::',
-          pi.sort_order
-        )
-        ORDER BY pi.sort_order ASC
-      ) AS images
+      COALESCE(
+        (SELECT pvi.image_url FROM product_variant_images pvi
+         WHERE pvi.variant_id = ci.variant_id
+         ORDER BY pvi.sort_order ASC, pvi.image_id ASC LIMIT 1),
+        (SELECT pi.image_url FROM product_images pi
+         WHERE pi.product_id = ci.product_id
+         ORDER BY pi.sort_order ASC, pi.image_id ASC LIMIT 1)
+      ) AS image_path
 
     FROM cart_items ci
     JOIN eproducts p ON ci.product_id = p.product_id
-    JOIN product_variants v ON ci.variant_id = v.variant_id
-    LEFT JOIN product_images pi ON p.product_id = pi.product_id
+    JOIN product_variants v ON ci.variant_id = v.variant_id AND ci.product_id = v.product_id
 
     WHERE ci.user_id = ?
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     GROUP BY ci.cart_item_id
     ORDER BY ci.created_at DESC
   `;
@@ -62,15 +62,26 @@ class cartModel {
       items: rows.map((row) => {
         let image = null;
 
-        if (row.images) {
-          const first = row.images.split(",")[0];
-          image = `${CDN_BASE_URL}/${first.split("::")[1]}`;
+        if (row.image_path) image = getPublicUrl(row.image_path);
+
+        let attributes = {};
+        if (row.variant_attributes) {
+          try {
+            attributes =
+              typeof row.variant_attributes === "string"
+                ? JSON.parse(row.variant_attributes)
+                : row.variant_attributes;
+          } catch {
+            attributes = {};
+          }
         }
 
         return {
           cart_item_id: row.cart_item_id,
           product_id: row.product_id,
           variant_id: row.variant_id,
+          variant_attributes: attributes,
+          attributes,
           category_id: row.category_id,
           subcategory_id: row.subcategory_id,
 
@@ -119,6 +130,7 @@ class cartModel {
       JOIN eproducts p ON p.product_id = ci.product_id
 
       WHERE ci.user_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
     `,
       [user_id],
     );
@@ -234,8 +246,14 @@ class cartModel {
       await conn.beginTransaction();
 
       const [[variant]] = await conn.execute(
-        `SELECT stock FROM product_variants WHERE variant_id = ? FOR UPDATE`,
-        [variantId],
+        `SELECT pv.stock
+         FROM product_variants pv
+         JOIN eproducts p ON p.product_id = pv.product_id
+         WHERE pv.variant_id = ?
+           AND pv.product_id = ?
+           AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+         FOR UPDATE`,
+        [variantId, productId],
       );
 
       if (!variant) throw new Error("INVALID_VARIANT");

@@ -34,17 +34,26 @@ function deriveHistoryStatus({
   storedStatus,
   activeItems,
   cancelledItems,
+  cancelledShipmentItems,
   deliveredItems,
   dispatchedItems,
   outForDeliveryItems,
 }) {
   if (storedStatus === "cancelled") return "cancelled";
   if (activeItems === 0 && cancelledItems > 0) return "cancelled";
+  if (
+    activeItems > 0 &&
+    cancelledShipmentItems === activeItems
+  ) {
+    return "cancelled";
+  }
   if (activeItems > 0 && deliveredItems === activeItems) return "delivered";
   if (deliveredItems > 0) return "partially_delivered";
   if (outForDeliveryItems > 0) return "out_for_delivery";
   if (dispatchedItems > 0) return "shipped";
-  if (cancelledItems > 0) return "partially_cancelled";
+  if (cancelledItems > 0 || cancelledShipmentItems > 0) {
+    return "partially_cancelled";
+  }
   return "processing";
 }
 
@@ -186,6 +195,10 @@ class orderModel {
         SUM(oi.fulfillment_status = 'cancelled') AS cancelled_items,
         SUM(
           oi.fulfillment_status <> 'cancelled'
+          AND os.shipping_status = 'cancelled'
+        ) AS cancelled_shipment_items,
+        SUM(
+          oi.fulfillment_status <> 'cancelled'
           AND os.shipping_status = 'delivered'
         ) AS delivered_items,
         SUM(
@@ -270,6 +283,9 @@ class orderModel {
         storedStatus: row.stored_status,
         activeItems: Number(row.active_items || 0),
         cancelledItems: Number(row.cancelled_items || 0),
+        cancelledShipmentItems: Number(
+          row.cancelled_shipment_items || 0,
+        ),
         deliveredItems: Number(row.delivered_items || 0),
         dispatchedItems: Number(row.dispatched_items || 0),
         outForDeliveryItems: Number(row.out_for_delivery_items || 0),
@@ -528,13 +544,16 @@ class orderModel {
           AND sibling.fulfillment_status <> 'cancelled'
       ) AS active_shipment_item_count,
 
-      (
-        SELECT pi.image_url
-        FROM product_images pi
-        WHERE pi.product_id = p.product_id
-        ORDER BY pi.sort_order ASC
-        LIMIT 1
+    
+      COALESCE(
+        (SELECT pvi.image_url FROM product_variant_images pvi
+         WHERE pvi.variant_id = oi.variant_id
+         ORDER BY pvi.sort_order ASC, pvi.image_id ASC LIMIT 1),
+        (SELECT pi.image_url FROM product_images pi
+         WHERE pi.product_id = p.product_id
+         ORDER BY pi.sort_order ASC, pi.image_id ASC LIMIT 1)
       ) AS image
+
 
     FROM eorder_items oi
     JOIN eproducts p 
@@ -561,7 +580,9 @@ class orderModel {
 
       if (i.variant_attributes) {
         try {
-          attributes = JSON.parse(i.variant_attributes);
+          attributes = typeof i.variant_attributes === "string"
+            ? JSON.parse(i.variant_attributes)
+            : i.variant_attributes;
         } catch {
           attributes = {};
         }

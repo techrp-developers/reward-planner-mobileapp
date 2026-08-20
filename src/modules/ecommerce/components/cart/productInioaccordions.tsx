@@ -96,7 +96,9 @@ const buildSpecs = (product: any, selectedVariant: any): SpecGroup[] => {
 
   const str = (v: unknown): string => {
     if (v == null) return "";
-    if (Array.isArray(v)) return v.filter(Boolean).map(String).join(", ").trim();
+    // Arrays on product.attributes are option lists, not specifications for
+    // the currently selected SKU. Selected variant attributes are scalar.
+    if (Array.isArray(v) || typeof v === "object") return "";
     return String(v).trim();
   };
 
@@ -187,7 +189,7 @@ const SpecGroupView = memo(({ group, theme }: { group: SpecGroup; theme: ReturnT
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
-const TABS = ["Specifications", "Product Info", "About Brand"] as const;
+const TABS = ["Product Details", "Description", "About Brand"] as const;
 type TabKey = typeof TABS[number];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -198,7 +200,7 @@ export default function ProductInfoAccordions({
   product,
   selectedVariant,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>("Specifications");
+  const [activeTab, setActiveTab] = useState<TabKey>("Product Details");
   const { theme } = useAppTheme();
 
   const specGroups = useMemo(
@@ -254,7 +256,7 @@ export default function ProductInfoAccordions({
       {/* ── Content area ────────────────────────────────────────────────────── */}
       <View style={[styles.contentArea, { backgroundColor: theme.card }]}>
 
-        {activeTab === "Specifications" && (
+        {activeTab === "Product Details" && (
           specGroups.length > 0 ? (
             <View>
               {specGroups.map((g) => (
@@ -266,7 +268,7 @@ export default function ProductInfoAccordions({
           )
         )}
 
-        {activeTab === "Product Info" && (
+        {activeTab === "Description" && (
           <View>
             {productPoints.map((t, i) => (
               <View key={i} style={styles.pointRow}>

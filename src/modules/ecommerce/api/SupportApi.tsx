@@ -1,6 +1,7 @@
 // SupportApi.tsx
 
 import api from "../../common/auth/api/axios";
+import { SERVER_URL } from "../../../config/apiConfig";
 
 export type SupportCategory = {
   category_id: number;
@@ -16,6 +17,10 @@ export type SupportTicket = {
   attachment_url?: string;
   created_at: string;
   updated_at: string;
+  support_module: string;
+  reference_type?: string;
+  reference_id?: string;
+  reference_label?: string;
 };
 
 export type SupportRecentOrderItem = {
@@ -48,16 +53,8 @@ export type SupportRecentServiceOrder = {
 };
 
 export type CreateSupportTicketPayload = {
-  subject: string;
   description: string;
   category_id: number;
-  product_id?: number;
-  product_name?: string;
-  attachment?: {
-    uri: string;
-    type?: string;
-    fileName?: string;
-  } | null;
 };
 
 type SupportCategoriesResponse = {
@@ -105,6 +102,13 @@ const normalizeTicketStatus = (value: any) => {
   return normalized || "open";
 };
 
+const normalizeAttachmentUrl = (value: unknown) => {
+  const url = String(value || '').trim();
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${SERVER_URL.replace(/\/$/, '')}/${url.replace(/^\/+/, '')}`;
+};
+
 const mapSupportTicket = (item: any): SupportTicket | null => {
   const ticketId = Number(item?.ticket_id ?? item?.id ?? item?.support_id);
   const subject = String(
@@ -127,15 +131,17 @@ const mapSupportTicket = (item: any): SupportTicket | null => {
     status: normalizeTicketStatus(
       item?.status || item?.status_name || item?.ticket_status
     ),
-    attachment_url: item?.attachment_url
-      ? String(item.attachment_url).trim()
-      : undefined,
+    attachment_url: normalizeAttachmentUrl(item?.attachment_url),
     created_at: String(
       item?.created_at || item?.createdAt || item?.date || ""
     ).trim(),
     updated_at: String(
       item?.updated_at || item?.updatedAt || item?.created_at || item?.date || ""
     ).trim(),
+    support_module: String(item?.support_module || 'general'),
+    reference_type: item?.reference_type ? String(item.reference_type) : undefined,
+    reference_id: item?.reference_id ? String(item.reference_id) : undefined,
+    reference_label: item?.reference_label ? String(item.reference_label) : undefined,
   };
 };
 
@@ -171,36 +177,9 @@ export const createSupportTicket = async (
   payload: CreateSupportTicketPayload
 ): Promise<CreateSupportTicketResponse> => {
   try {
-    const formData = new FormData();
-
-    formData.append("subject", payload.subject);
-    formData.append("description", payload.description);
-    formData.append("category_id", String(payload.category_id));
-
-    if (payload.product_id) {
-      formData.append("product_id", String(payload.product_id));
-    }
-
-    if (payload.product_name) {
-      formData.append("product_name", payload.product_name);
-    }
-
-    if (payload.attachment?.uri) {
-      formData.append("attachment", {
-        uri: payload.attachment.uri,
-        type: payload.attachment.type || "image/jpeg",
-        name: payload.attachment.fileName || `support-${Date.now()}.jpg`,
-      } as any);
-    }
-
     const res = await api.post(
       CREATE_SUPPORT_TICKET_ENDPOINT,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      payload
     );
 
     return {

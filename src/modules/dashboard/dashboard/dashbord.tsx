@@ -28,6 +28,15 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import type { BirthdayEmployee } from '../birthday/types';
+import { useQuery } from '@tanstack/react-query';
+import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
+import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
+import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { API_V1_URL } from '../../../config/apiConfig';
+
+const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
+  'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+];
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
@@ -75,6 +84,7 @@ function Dashbord() {
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
+  const dashboardLayout = useDashboardLayout('main', MAIN_DASHBOARD_SECTION_KEYS);
 
   const [headerUserName, setHeaderUserName] = useState<string>(
     () => dashboardHeaderCache?.userName ?? user?.name ?? 'User',
@@ -99,6 +109,14 @@ function Dashbord() {
   );
   const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
+  const { data: walletBalanceResponse } = useQuery({
+    queryKey: ['dashboard', 'header-wallet-balance'],
+    queryFn: fetchWalletBalance,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -121,7 +139,7 @@ function Dashbord() {
       if (!headers.Authorization) return;
 
       const userRes = await axios.get<{ success: boolean; data: any }>(
-        'https://rewardplanners.com/api/crm/v1/auth/user-info',
+        `${API_V1_URL}/auth/user-info`,
         { headers },
       );
 
@@ -253,10 +271,6 @@ function Dashbord() {
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
-  const quoteBannerGradient: string[] = isDark
-    ? ['#18181B', '#27233A', '#4338CA']
-    : ['#111827', '#312E81', '#4F46E5'];
-
   const topSectionGradient: string[] = isDark
     ? ['#09090B', '#111827', '#18181B']
     : ['#111827', '#1E1B4B', '#312E81'];
@@ -264,6 +278,10 @@ function Dashbord() {
   const rootGradient = isDark
     ? ['#09090B', '#111827', '#151526']
     : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
+
+  const quoteBannerGradient: string[] = isDark
+    ? ['#18181B', '#27233A', '#4338CA']
+    : ['#111827', '#312E81', '#4F46E5'];
 
   const t = useMemo(() => StyleSheet.create({
     iconContainer: { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.16)' },
@@ -287,74 +305,60 @@ function Dashbord() {
         removeClippedSubviews={Platform.OS === 'android'}
         bounces
       >
-        <LinearGradient
-          colors={topSectionGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.topSection}
-        >
-          <HeaderComponent
-            userName={headerUserName}
-            userImageUri={headerUserImage ?? undefined}
-            companyLogoUri={headerCompanyLogo ?? undefined}
-            surface="transparent"
-            dismissSignal={searchDismissSignal}
-            onSearchActiveChange={setIsSearchOpen}
-            onSearchOverlayChange={setSearchOverlay}
-            onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-            onNotificationPress={() => navigation.navigate('Notification')}
-          />
-
-          {/* Motivational Quote Banner */}
-          <Pressable onPress={dismissSearch}>
-            <View style={[styles.bannerOuter, { paddingHorizontal: rs(16), paddingTop: rs(2) }]}>
-              <LinearGradient
-                colors={quoteBannerGradient}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.card, t.card]}
-              >
-                <LinearGradient
-                  colors={[
-                    'rgba(255,255,255,0)',
-                    'rgba(255,255,255,0.035)',
-                    'rgba(255,255,255,0.10)',
-                  ]}
-                  locations={[0, 0.58, 1]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.quoteHighlight}
-                  pointerEvents="none"
-                />
-
-                <View style={[styles.iconContainer, t.iconContainer]}>
-                  <MaterialCommunityIcons
-                    name="lightbulb-on-outline"
-                    size={iconSize}
-                    color={isDark ? '#FFFFFF' : '#9B3DD8'}
+        {dashboardLayout.sections.map(({ key }) => {
+          switch (key as MainDashboardSectionKey) {
+            case 'header':
+              return (
+                <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
+                  <HeaderComponent
+                    userName={headerUserName}
+                    userImageUri={headerUserImage ?? undefined}
+                    companyLogoUri={headerCompanyLogo ?? undefined}
+                    surface="transparent"
+                    dismissSignal={searchDismissSignal}
+                    onSearchActiveChange={setIsSearchOpen}
+                    onSearchOverlayChange={setSearchOverlay}
+                    onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+                    onNotificationPress={() => navigation.navigate('Notification')}
+                    showRewardPoints
+                    rewardPoints={rewardPoints}
                   />
-                </View>
-
-                <Text style={styles.quote}>
-                  {thought
-                    ? `"${thought}"`
-                    : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                </Text>
-              </LinearGradient>
-            </View>
-          </Pressable>
-        </LinearGradient>
-        {hasBirthdays && (
-          <Pressable onPress={dismissSearch}>
-          <MemoBirthdayCarousel birthdays={birthdays} />
-          </Pressable>
-        )}
-        <Pressable onPress={dismissSearch}>
-          <MemoHomeChart goalSteps={stepGoal} />
-          <MemoServicesModule onModulePress={handleExploreModulePress} />
-          <MemoModuleBanner />
-          <MemoRewardsOverview />
-        </Pressable>
+                  <Pressable onPress={dismissSearch}>
+                    <View style={styles.bannerOuter}>
+                      <LinearGradient colors={quoteBannerGradient} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={[styles.card, t.card]}>
+                        <LinearGradient
+                          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
+                          locations={[0, 0.58, 1]}
+                          start={{ x: 0, y: 0.5 }}
+                          end={{ x: 1, y: 0.5 }}
+                          style={styles.quoteHighlight}
+                          pointerEvents="none"
+                        />
+                        <View style={[styles.iconContainer, t.iconContainer]}>
+                          <MaterialCommunityIcons name="lightbulb-on-outline" size={iconSize} color={isDark ? '#FFFFFF' : '#9B3DD8'} />
+                        </View>
+                        <Text style={styles.quote}>
+                          {thought ? `"${thought}"` : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </Pressable>
+                </LinearGradient>
+              );
+            case 'birthdays':
+              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
+            case 'stepProgress':
+              return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
+            case 'exploreModules':
+              return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
+            case 'moduleBanner':
+              return <MemoModuleBanner key={key} />;
+            case 'rewardsOverview':
+              return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
+            default:
+              return null;
+          }
+        })}
       </ScrollView>
 
       {searchOverlay?.visible && (
@@ -440,6 +444,7 @@ const styles = StyleSheet.create({
     // paddingBottom set inline so it scales with rs() and TAB_BAR_HEIGHT
   },
 
+
   topSection: {
     paddingBottom: rs(16),
     borderBottomLeftRadius: rs(30),
@@ -453,8 +458,52 @@ const styles = StyleSheet.create({
   },
 
   bannerOuter: {
-    // paddingHorizontal and paddingTop set inline
+    paddingHorizontal: rs(16),
+    paddingTop: rs(2),
   },
+  card: {
+    borderRadius: rs(20),
+    paddingVertical: rs(13),
+    paddingHorizontal: rs(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: rs(10) },
+    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
+    shadowRadius: rs(18),
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  quoteHighlight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '62%',
+  },
+  iconContainer: {
+    width: rs(48),
+    height: rs(48),
+    borderRadius: rs(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: rs(13),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  quote: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: fs(13.5),
+    lineHeight: rs(20),
+    fontStyle: 'italic',
+    fontWeight: '600',
+  },
+
   searchOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 250,
@@ -474,54 +523,6 @@ const styles = StyleSheet.create({
     elevation: 32,
   },
 
-  card: {
-    borderRadius: rs(20),
-    paddingVertical: rs(13),
-    paddingHorizontal: rs(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    // shadowColor via t.card
-    shadowOffset: { width: 0, height: rs(10) },
-    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
-    shadowRadius: rs(18),
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-
-  quoteHighlight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '62%',
-  },
-
-  iconContainer: {
-    width: rs(48),
-    height: rs(48),
-    borderRadius: rs(14),
-    // backgroundColor via t.iconContainer
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: rs(13),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-
-  quote: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: fs(13.5),
-    lineHeight: rs(20),
-    fontStyle: 'italic',
-    fontWeight: '600',
-    letterSpacing: 0,
-  },
   moduleLaunchOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 500,

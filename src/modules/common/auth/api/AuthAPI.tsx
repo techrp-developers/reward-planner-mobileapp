@@ -1,8 +1,7 @@
   import axios from "axios";
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import api from "./axios";
-
-  const API_BASE_URL = "https://rewardplanners.com/api/crm";
+  import { API_BASE_URL } from '../../../../config/apiConfig';
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
@@ -246,7 +245,18 @@
     }
   };
 
-  export const deleteCustomer = async () => {
+  export type DeleteCustomerResponse = {
+    success: boolean;
+    status?: string;
+    message: string;
+    data?: {
+      gracePeriodDays: number;
+      deletionRequestedAt: string;
+      permanentDeletionAt: string;
+    };
+  };
+
+  export const deleteCustomer = async (): Promise<DeleteCustomerResponse> => {
     try {
       const res = await api.delete("/v1/auth/delete-customer");
 
@@ -404,16 +414,3 @@
     return res.data;
   };
 
-  // =============================== Change Password ==============================
-
-export type ChangePasswordPayload = {
-  currentPassword: string;
-  newPassword: string;
-};
-
-export const changePassword = async (
-  payload: ChangePasswordPayload
-) => {
-  const res = await api.put("/v1/auth/change-password", payload);
-  return res.data;
-};

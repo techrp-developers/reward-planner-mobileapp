@@ -12,6 +12,8 @@ import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
+import type { EcommerceDashboardSectionKey } from '../../common/cms/dashboardLayout';
 
 // Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -43,38 +45,19 @@ const LazyProductCategory = React.lazy(() =>
   Promise.resolve({ default: require('./ProductCategoriesScreen').default }),
 );
 
-type SectionKey =
-  | 'categories'
-  | 'bestSeller'
-  | 'topRated'
-  | 'offerHome'
-  | 'newArrivals'
-  | 'mostView'
-  | 'recommended'
-  | 'features'
-  | 'recent'
-  | 'productCategory';
+type SectionKey = EcommerceDashboardSectionKey;
 
 type HomeSection = {
   key: SectionKey;
 };
 
-const HOME_SECTIONS: HomeSection[] = [
-  { key: 'categories' },
-  { key: 'bestSeller' },
-  { key: 'topRated' },
-  { key: 'offerHome' },
-  { key: 'newArrivals' },
-  { key: 'mostView' },
-  { key: 'recommended' },
-  { key: 'features' },
-  { key: 'recent' },
-  { key: 'productCategory' },
+const ECOMMERCE_SECTION_KEYS: readonly SectionKey[] = [
+  'categories', 'bestSeller', 'topRated', 'offerHome', 'newArrivals',
+  'mostView', 'recommended', 'features', 'recent', 'productCategory',
 ];
 
 const INITIAL_VISIBLE_SECTIONS = ['categories'] as const;
 const INITIAL_VISIBLE_SECTION_SET = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
-const HOME_SECTION_KEYS = HOME_SECTIONS.map((section) => section.key);
 const SECTION_RENDER_AHEAD = 1;
 
 const SECTION_HEIGHTS: Record<SectionKey, number> = {
@@ -88,26 +71,6 @@ const SECTION_HEIGHTS: Record<SectionKey, number> = {
   features: 620,
   recent: 360,
   productCategory: 720,
-};
-
-const SECTION_OFFSETS: Record<SectionKey, number> = HOME_SECTIONS.reduce(
-  (acc, section, index) => {
-    const previous = index === 0 ? 0 : acc[HOME_SECTIONS[index - 1].key] + SECTION_HEIGHTS[HOME_SECTIONS[index - 1].key];
-    acc[section.key] = previous;
-    return acc;
-  },
-  {} as Record<SectionKey, number>,
-);
-
-const getSectionIndex = (key: SectionKey) => HOME_SECTION_KEYS.indexOf(key);
-const getSectionRange = (startKey: SectionKey, ahead = SECTION_RENDER_AHEAD) => {
-  const startIndex = getSectionIndex(startKey);
-  if (startIndex < 0) return [];
-
-  return HOME_SECTION_KEYS.slice(
-    startIndex,
-    Math.min(HOME_SECTION_KEYS.length, startIndex + ahead + 1),
-  );
 };
 
 const SECTION_PREFETCHERS: Partial<Record<SectionKey, () => Promise<unknown>>> = {
@@ -257,6 +220,20 @@ const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
 
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
+  const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
+  const homeSections = useMemo<HomeSection[]>(
+    () => layout.sections.map(({ key }) => ({ key: key as SectionKey })),
+    [layout.sections],
+  );
+  const homeSectionKeys = useMemo(() => homeSections.map(({ key }) => key), [homeSections]);
+  const sectionOffsets = useMemo(() => {
+    let offset = 0;
+    return homeSections.reduce((result, section) => {
+      result[section.key] = offset;
+      offset += SECTION_HEIGHTS[section.key];
+      return result;
+    }, {} as Partial<Record<SectionKey, number>>);
+  }, [homeSections]);
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(INITIAL_VISIBLE_SECTION_SET),
   );
@@ -330,7 +307,8 @@ function HomeScreen() {
         const key = (entry.item as HomeSection | undefined)?.key;
         if (!key) return;
 
-        getSectionRange(key, SECTION_RENDER_AHEAD).forEach((sectionKey) => {
+        const startIndex = homeSectionKeys.indexOf(key);
+        homeSectionKeys.slice(startIndex, startIndex + SECTION_RENDER_AHEAD + 1).forEach((sectionKey) => {
           keysToRender.add(sectionKey);
           keysToPrefetch.add(sectionKey);
         });
@@ -340,7 +318,7 @@ function HomeScreen() {
       enqueueSectionPrefetch(Array.from(keysToPrefetch));
       markSectionsReady(sectionsToRender);
     },
-    [enqueueSectionPrefetch, markSectionsReady],
+    [enqueueSectionPrefetch, homeSectionKeys, markSectionsReady],
   );
 
   useEffect(() => {
@@ -375,20 +353,20 @@ function HomeScreen() {
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
   const getItemLayout = useCallback(
     (_: ArrayLike<HomeSection> | null | undefined, index: number) => {
-      const key = HOME_SECTIONS[index].key;
+      const key = homeSections[index].key;
       return {
         length: SECTION_HEIGHTS[key],
-        offset: SECTION_OFFSETS[key],
+        offset: sectionOffsets[key] ?? 0,
         index,
       };
     },
-    [],
+    [homeSections, sectionOffsets],
   );
 
   return (
     <ThemedHomeSurface>
       <FlatList
-        data={HOME_SECTIONS}
+        data={homeSections}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}

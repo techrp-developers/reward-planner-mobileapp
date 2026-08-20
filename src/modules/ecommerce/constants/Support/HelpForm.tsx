@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +22,7 @@ import {
 } from 'react-native-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import {
   createSupportTicket,
@@ -30,208 +32,12 @@ import {
   SupportRecentEcommerceOrder,
   SupportRecentServiceOrder,
 } from '../../api/SupportApi';
+
 import { useAlert } from '../../components/alerts';
 import type { AppStackParamList } from '../../../../navigation/RootNavigator';
 import { useAppTheme } from '../../../../theme/ThemeContext';
 
 type HelpFormProps = NativeStackScreenProps<AppStackParamList, 'HelpForm'>;
-
-type SupportModuleOption = {
-  key: string;
-  label: string;
-};
-
-type SupportOrderOption = {
-  id: number;
-  ref: string;
-  label: string;
-  subtitle?: string;
-  productId?: number;
-  productName?: string;
-};
-
-type SupportAttachment = PickerAsset & {
-  uri: string;
-};
-
-const DEFAULT_MODULE_OPTIONS: SupportModuleOption[] = [
-  { key: 'other', label: 'Other' },
-];
-
-const SERVICE_PRODUCT_MODULE_OPTIONS: SupportModuleOption[] = [
-  { key: 'product', label: 'Product' },
-  { key: 'service', label: 'Service' },
-];
-
-const PROFILE_MODULE_OPTIONS: SupportModuleOption[] = [
-  { key: 'profile', label: 'Profile' },
-];
-
-const normalizeValue = (value?: string | null) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ');
-
-const getModuleOptionsForCategory = (
-  category: SupportCategory | null,
-): SupportModuleOption[] => {
-  const categoryName = normalizeValue(category?.name);
-
-  if (
-    categoryName.includes('order') ||
-    categoryName.includes('payment') ||
-    categoryName.includes('refund') ||
-    categoryName.includes('technical')
-  ) {
-    return SERVICE_PRODUCT_MODULE_OPTIONS;
-  }
-
-  if (
-    categoryName.includes('account') ||
-    categoryName.includes('wallet') ||
-    categoryName.includes('reward') ||
-    categoryName.includes('step')
-  ) {
-    return PROFILE_MODULE_OPTIONS;
-  }
-
-  if (categoryName.includes('other')) {
-    return DEFAULT_MODULE_OPTIONS;
-  }
-
-  return DEFAULT_MODULE_OPTIONS;
-};
-
-const buildTicketSubject = ({
-  category,
-  moduleOption,
-  order,
-}: {
-  category: SupportCategory;
-  moduleOption: SupportModuleOption;
-  order: SupportOrderOption | null;
-}) => {
-  const parts = [category.name, moduleOption.label];
-
-  if (order?.ref) {
-    parts.push(order.ref);
-  } else if (order?.id) {
-    parts.push(`Order #${order.id}`);
-  }
-
-  return parts.join(' - ');
-};
-
-const moduleRequiresOrder = (moduleOption: SupportModuleOption | null) =>
-  moduleOption?.key === 'product' || moduleOption?.key === 'service';
-
-const mapEcommerceOrdersToOptions = (
-  orders: SupportRecentEcommerceOrder[],
-): SupportOrderOption[] =>
-  orders
-    .flatMap(order => {
-      const orderRef = String(order.order_ref || `Order #${order.order_id}`).trim();
-
-      if (!order.items.length) {
-        return [
-          {
-            id: order.order_id,
-            ref: orderRef,
-            label: orderRef,
-            subtitle: orderRef,
-          },
-        ];
-      }
-
-      return order.items.map(item => ({
-        id: order.order_id,
-        ref: orderRef,
-        label:
-          String(item.product_name || item.brand_name || orderRef).trim() ||
-          orderRef,
-        subtitle: orderRef,
-        productId: item.product_id,
-        productName: item.product_name
-          ? String(item.product_name).trim()
-          : undefined,
-      }));
-    })
-    .slice(0, 5);
-
-const mapServiceOrdersToOptions = (
-  orders: SupportRecentServiceOrder[],
-): SupportOrderOption[] =>
-  orders.map(order => ({
-    id: order.id,
-    ref: String(order.order_ref || `Service #${order.id}`).trim(),
-    label:
-      [order.service_name, order.variant_name].filter(Boolean).join(' - ') ||
-      `Service #${order.id}`,
-    subtitle: String(order.order_ref || `Service #${order.id}`).trim(),
-  }));
-
-function SelectField({
-  label,
-  value,
-  placeholder,
-  icon,
-  isDark,
-  themePrimary,
-  isOpen,
-  onToggle,
-  children,
-}: {
-  label: string;
-  value?: string;
-  placeholder: string;
-  icon: string;
-  isDark: boolean;
-  themePrimary: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  children?: React.ReactNode;
-}) {
-  return (
-    <>
-      <Text style={[styles.label, isDark && darkStyles.primaryText]}>
-        {label}
-      </Text>
-
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={[styles.inputWrap, isDark && darkStyles.inputWrap]}
-        onPress={onToggle}
-      >
-        <MaterialCommunityIcons
-          name={icon}
-          size={18}
-          color={isDark ? '#A1A1AA' : '#999'}
-          style={styles.inputIcon}
-        />
-
-        <Text
-          style={[
-            styles.dropdownText,
-            isDark && darkStyles.inputText,
-            !value && styles.placeholderText,
-            !value && isDark && darkStyles.placeholderText,
-          ]}
-        >
-          {value || placeholder}
-        </Text>
-
-        <MaterialCommunityIcons
-          name={isOpen ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={themePrimary}
-        />
-      </TouchableOpacity>
-
-      {isOpen ? children : null}
-    </>
-  );
-}
 
 export default function HelpForm({ navigation }: HelpFormProps) {
   const alert = useAlert();
@@ -258,9 +64,10 @@ export default function HelpForm({ navigation }: HelpFormProps) {
   const successTranslateY = useRef(new Animated.Value(60)).current;
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showModuleDropdown, setShowModuleDropdown] = useState(false);
-  const [showOrderDropdown, setShowOrderDropdown] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -345,10 +152,6 @@ export default function HelpForm({ navigation }: HelpFormProps) {
     loadCategories();
   }, [loadCategories]);
 
-  useEffect(() => {
-    loadRecentOrders();
-  }, [loadRecentOrders]);
-
   const hideSuccessCard = useCallback(() => {
     Animated.parallel([
       Animated.timing(successOpacity, {
@@ -397,40 +200,7 @@ export default function HelpForm({ navigation }: HelpFormProps) {
     });
   }, [hideSuccessCard, successOpacity, successTranslateY]);
 
-  const handlePickAttachment = useCallback(async () => {
-    try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        selectionLimit: 1,
-        quality: 0.8,
-      });
-
-      if (result.didCancel) {
-        return;
-      }
-
-      if (result.errorMessage) {
-        alert.error('Upload Error', result.errorMessage);
-        return;
-      }
-
-      const asset = result.assets?.find(
-        (item): item is SupportAttachment => Boolean(item?.uri),
-      );
-
-      if (!asset) {
-        alert.error('Upload Error', 'No image selected');
-        return;
-      }
-
-      setSelectedAttachment(asset);
-    } catch (error: any) {
-      alert.error(
-        'Upload Error',
-        error?.message || 'Unable to open image picker',
-      );
-    }
-  }, [alert]);
+  // ============================ SUBMIT ============================
 
   const handleCreateTicket = useCallback(async () => {
     try {
@@ -439,13 +209,8 @@ export default function HelpForm({ navigation }: HelpFormProps) {
         return;
       }
 
-      if (!selectedModule) {
-        alert.error('Validation Error', 'Please select module name');
-        return;
-      }
-
-      if (requiresOrderSelection && !selectedOrder?.id) {
-        alert.error('Validation Error', 'Please select your order');
+      if (subject.trim().length < 3) {
+        alert.error('Validation Error', 'Subject must be minimum 3 characters');
         return;
       }
 
@@ -466,22 +231,9 @@ export default function HelpForm({ navigation }: HelpFormProps) {
       setLoading(true);
 
       const res = await createSupportTicket({
-        subject,
+        subject: subject.trim(),
         description: description.trim(),
         category_id: selectedCategory.category_id,
-        product_id:
-          selectedModule?.key === 'product' ? selectedOrder?.productId : undefined,
-        product_name:
-          selectedModule?.key === 'product'
-            ? selectedOrder?.productName
-            : undefined,
-        attachment: selectedAttachment
-          ? {
-              uri: selectedAttachment.uri,
-              type: selectedAttachment.type,
-              fileName: selectedAttachment.fileName,
-            }
-          : null,
       });
 
       if (res.success) {
@@ -492,12 +244,6 @@ export default function HelpForm({ navigation }: HelpFormProps) {
 
         setDescription('');
         setSelectedCategory(null);
-        setSelectedModule(null);
-        setSelectedOrder(null);
-        setSelectedAttachment(null);
-        setShowCategoryDropdown(false);
-        setShowModuleDropdown(false);
-        setShowOrderDropdown(false);
 
         showSuccessCard();
         return;
@@ -512,16 +258,7 @@ export default function HelpForm({ navigation }: HelpFormProps) {
     } finally {
       setLoading(false);
     }
-  }, [
-    alert,
-    description,
-    requiresOrderSelection,
-    selectedAttachment,
-    selectedCategory,
-    selectedModule,
-    selectedOrder,
-    showSuccessCard,
-  ]);
+  }, [selectedCategory, subject, description, alert, showSuccessCard]);
 
   useEffect(() => {
     return () => {
@@ -574,136 +311,49 @@ export default function HelpForm({ navigation }: HelpFormProps) {
             </View>
 
             <Text style={[styles.headerSub, isDark && darkStyles.mutedText]}>
-              Raise your issue and our team will help you.
+              Tell us what happened. We’ll attach the right account context so
+              our team can help faster.
             </Text>
           </View>
 
           <View style={[styles.card, isDark && darkStyles.card]}>
-            <SelectField
-              label="Category"
-              value={selectedCategory?.name}
-              placeholder="Select Category"
-              icon="shape-outline"
-              isDark={isDark}
-              themePrimary={theme.primary}
-              isOpen={showCategoryDropdown}
-              onToggle={() => {
-                setShowCategoryDropdown(prev => !prev);
-                setShowModuleDropdown(false);
-                setShowOrderDropdown(false);
-              }}
+            {/* CATEGORY */}
+
+            <Text style={[styles.label, isDark && darkStyles.primaryText]}>
+              Category
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.inputWrap, isDark && darkStyles.inputWrap]}
+              onPress={() => setShowDropdown(prev => !prev)}
             >
-              <View style={[styles.dropdown, isDark && darkStyles.dropdown]}>
-                {categoryLoading ? (
-                  <ActivityIndicator color={theme.primary} />
-                ) : (
-                  categories.map(item => (
-                    <TouchableOpacity
-                      key={item.category_id}
-                      style={[
-                        styles.dropdownItem,
-                        isDark && darkStyles.dropdownItem,
-                      ]}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        setSelectedCategory(item);
-                        resetDependentFields();
-                        setShowCategoryDropdown(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownItemText,
-                          isDark && darkStyles.inputText,
-                        ]}
-                      >
-                        {item.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
-            </SelectField>
+              <MaterialCommunityIcons
+                name="shape-outline"
+                size={18}
+                color={isDark ? '#A1A1AA' : '#999'}
+                style={styles.inputIcon}
+              />
 
-            <SelectField
-              label="Issue Type"
-              value={selectedModule?.label}
-              placeholder="Select Module"
-              icon="view-grid-outline"
-              isDark={isDark}
-              themePrimary={theme.primary}
-              isOpen={showModuleDropdown}
-              onToggle={() => {
-                if (!selectedCategory) {
-                  alert.error(
-                    'Validation Error',
-                    'Please select category first',
-                  );
-                  return;
-                }
+              <Text
+                style={[
+                  styles.dropdownText,
+                  isDark && darkStyles.inputText,
+                  !selectedCategory && styles.placeholderText,
+                  !selectedCategory && isDark && darkStyles.placeholderText,
+                ]}
+              >
+                {selectedCategory?.name || 'Select Category'}
+              </Text>
 
-                setShowModuleDropdown(prev => !prev);
-                setShowCategoryDropdown(false);
-                setShowOrderDropdown(false);
-              }}
-            >
-              <View style={[styles.dropdown, isDark && darkStyles.dropdown]}>
-                {moduleOptions.map(item => (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={[
-                      styles.dropdownItem,
-                      isDark && darkStyles.dropdownItem,
-                    ]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setSelectedModule(item);
-                      setSelectedOrder(null);
-                      setSelectedAttachment(null);
-                      setShowModuleDropdown(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownItemText,
-                        isDark && darkStyles.inputText,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </SelectField>
+              <MaterialCommunityIcons
+                name={showDropdown ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={theme.primary}
+              />
+            </TouchableOpacity>
 
-            <SelectField
-              label="My Order"
-              value={selectedOrder?.label}
-              placeholder={
-                selectedModule?.key === 'service'
-                  ? 'Select Service Order'
-                  : selectedModule?.key === 'product'
-                    ? 'Select Product Order'
-                    : 'Select Order'
-              }
-              icon="clipboard-list-outline"
-              isDark={isDark}
-              themePrimary={theme.primary}
-              isOpen={showOrderDropdown}
-              onToggle={() => {
-                if (!selectedModule) {
-                  alert.error(
-                    'Validation Error',
-                    'Please select module name first',
-                  );
-                  return;
-                }
-
-                setShowOrderDropdown(prev => !prev);
-                setShowCategoryDropdown(false);
-                setShowModuleDropdown(false);
-              }}
-            >
+            {showDropdown && (
               <View style={[styles.dropdown, isDark && darkStyles.dropdown]}>
                 {ordersLoading ? (
                   <ActivityIndicator color={theme.primary} />
@@ -742,117 +392,35 @@ export default function HelpForm({ navigation }: HelpFormProps) {
                       ) : null}
                     </TouchableOpacity>
                   ))
-                ) : (
-                  <View style={styles.dropdownEmptyState}>
-                    <Text
-                      style={[
-                        styles.dropdownEmptyStateText,
-                        isDark && darkStyles.mutedText,
-                      ]}
-                    >
-                      {selectedModule?.key === 'service'
-                        ? 'No recent service orders found'
-                        : selectedModule?.key === 'product'
-                          ? 'No recent product orders found'
-                          : 'No recent orders found'}
-                    </Text>
-                  </View>
                 )}
               </View>
-            </SelectField>
+            )}
+
+            {/* SUBJECT */}
 
             <Text style={[styles.label, isDark && darkStyles.primaryText]}>
-              Order ID
+              Subject
             </Text>
 
             <View style={[styles.inputWrap, isDark && darkStyles.inputWrap]}>
               <MaterialCommunityIcons
-                name="identifier"
+                name="text-box-outline"
                 size={18}
                 color={isDark ? '#A1A1AA' : '#999'}
                 style={styles.inputIcon}
               />
 
-              <Text
-                style={[
-                  styles.dropdownText,
-                  isDark && darkStyles.inputText,
-                  !selectedOrder?.id && styles.placeholderText,
-                  !selectedOrder?.id && isDark && darkStyles.placeholderText,
-                ]}
-              >
-                {selectedOrder?.id
-                  ? String(selectedOrder.id)
-                  : 'Selected order ID'}
-              </Text>
+              <TextInput
+                placeholder="Enter Subject"
+                placeholderTextColor={isDark ? '#71717A' : '#999'}
+                selectionColor={theme.primary}
+                style={[styles.input, isDark && darkStyles.inputText]}
+                value={subject}
+                onChangeText={setSubject}
+              />
             </View>
 
-            {selectedModule?.key === 'product' ? (
-              <>
-                <Text style={[styles.label, isDark && darkStyles.primaryText]}>
-                  Product ID
-                </Text>
-
-                <View style={[styles.inputWrap, isDark && darkStyles.inputWrap]}>
-                  <MaterialCommunityIcons
-                    name="barcode"
-                    size={18}
-                    color={isDark ? '#A1A1AA' : '#999'}
-                    style={styles.inputIcon}
-                  />
-
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      isDark && darkStyles.inputText,
-                      !selectedOrder?.productId && styles.placeholderText,
-                      !selectedOrder?.productId &&
-                        isDark &&
-                        darkStyles.placeholderText,
-                    ]}
-                  >
-                    {selectedOrder?.productId
-                      ? String(selectedOrder.productId)
-                      : 'Selected product ID'}
-                  </Text>
-                </View>
-              </>
-            ) : null}
-
-            <Text style={[styles.label, isDark && darkStyles.primaryText]}>
-              Upload Image
-            </Text>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={[styles.inputWrap, isDark && darkStyles.inputWrap]}
-              onPress={handlePickAttachment}
-            >
-              <MaterialCommunityIcons
-                name="image-outline"
-                size={18}
-                color={isDark ? '#A1A1AA' : '#999'}
-                style={styles.inputIcon}
-              />
-
-              <Text
-                style={[
-                  styles.dropdownText,
-                  isDark && darkStyles.inputText,
-                  !selectedAttachment && styles.placeholderText,
-                  !selectedAttachment && isDark && darkStyles.placeholderText,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedAttachment?.fileName || 'Choose image'}
-              </Text>
-
-              <MaterialCommunityIcons
-                name="upload"
-                size={18}
-                color={theme.primary}
-              />
-            </TouchableOpacity>
+            {/* DESCRIPTION */}
 
             <Text style={[styles.label, isDark && darkStyles.primaryText]}>
               Description
@@ -870,6 +438,63 @@ export default function HelpForm({ navigation }: HelpFormProps) {
                 onChangeText={setDescription}
               />
             </View>
+
+            <Text style={[styles.label, isDark && darkStyles.primaryText]}>
+              Attachment <Text style={styles.optionalLabel}>(optional)</Text>
+            </Text>
+            <Text style={[styles.attachmentHint, isDark && darkStyles.mutedText]}>
+              Add an image, video, PDF, Word, Excel or text file. Maximum 25 MB.
+            </Text>
+
+            <View style={styles.attachmentActions}>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                style={[styles.attachmentButton, isDark && darkStyles.attachmentButton]}
+                onPress={handlePickMedia}
+              >
+                <MaterialCommunityIcons name="image-multiple-outline" size={20} color={theme.primary} />
+                <Text style={[styles.attachmentButtonText, isDark && darkStyles.primaryText]}>Photo / Video</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                style={[styles.attachmentButton, isDark && darkStyles.attachmentButton]}
+                onPress={handlePickDocument}
+              >
+                <MaterialCommunityIcons name="file-document-outline" size={20} color={theme.primary} />
+                <Text style={[styles.attachmentButtonText, isDark && darkStyles.primaryText]}>Document</Text>
+              </TouchableOpacity>
+            </View>
+
+            {attachment ? (
+              <View style={[styles.selectedAttachment, isDark && darkStyles.selectedAttachment]}>
+                {attachment.type.startsWith('image/') ? (
+                  <Image source={{ uri: attachment.uri }} style={styles.attachmentPreview} resizeMode="cover" />
+                ) : (
+                  <View style={styles.attachmentFileIcon}>
+                    <MaterialCommunityIcons
+                      name={attachment.type.startsWith('video/') ? 'play-circle-outline' : 'file-check-outline'}
+                      size={24}
+                      color={theme.primary}
+                    />
+                  </View>
+                )}
+                <View style={styles.attachmentCopy}>
+                  <Text numberOfLines={1} style={[styles.attachmentName, isDark && darkStyles.primaryText]}>
+                    {attachment.name}
+                  </Text>
+                  <Text style={[styles.attachmentSize, isDark && darkStyles.mutedText]}>
+                    {formatFileSize(attachment.size) || 'Ready to upload'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  accessibilityLabel="Remove attachment"
+                  style={styles.removeAttachment}
+                  onPress={() => setAttachment(null)}
+                >
+                  <MaterialCommunityIcons name="close" size={20} color={isDark ? '#D4D4D8' : '#64748B'} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             {selectedAttachment ? (
               <Text style={[styles.helperText, isDark && darkStyles.mutedText]}>
@@ -1005,6 +630,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     minHeight: '100%',
   },
+
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -1086,11 +712,7 @@ const styles = StyleSheet.create({
     color: '#333',
     minHeight: 120,
   },
-  helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 18,
-  },
+
   submitBtn: {
     height: 54,
     borderRadius: 12,
@@ -1169,11 +791,11 @@ const darkStyles = StyleSheet.create({
     backgroundColor: '#27272A',
     borderColor: 'rgba(255,255,255,0.20)',
   },
-  historyBtnText: {color: '#C4B5FD'},
+  historyBtnText: { color: '#C4B5FD' },
   successCard: {
     backgroundColor: '#18181B',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.20)',
   },
-  successTitle: {color: '#FFFFFF'},
+  successTitle: { color: '#FFFFFF' },
 });

@@ -15,6 +15,44 @@ function getPublicUrl(path, updatedAt) {
   return `${CDN_BASE_URL}/${path}${version}`;
 }
 
+const SEARCH_SYNONYMS = {
+  earbud: ["earphone"],
+  earphone: ["earbud"],
+  headphone: ["headset"],
+  headset: ["headphone"],
+  men: ["man", "male", "mens"],
+  man: ["men", "male", "mens"],
+  dress: ["clothing", "clothes", "apparel"],
+  clothing: ["dress", "clothes", "apparel"],
+};
+
+function singularizeSearchToken(token) {
+  if (token.endsWith("ies") && token.length > 4) return `${token.slice(0, -3)}y`;
+  if (token.endsWith("es") && token.length > 4) return token.slice(0, -2);
+  if (token.endsWith("s") && token.length > 3) return token.slice(0, -1);
+  return token;
+}
+
+function buildSearchPatterns(search) {
+  const normalized = String(search)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const ignoredWords = new Set(["and", "for", "the"]);
+  const terms = new Set(normalized ? [normalized] : []);
+
+  for (const rawToken of normalized.split(" ")) {
+    if (!rawToken || ignoredWords.has(rawToken)) continue;
+    const token = singularizeSearchToken(rawToken);
+    terms.add(rawToken);
+    terms.add(token);
+    for (const synonym of SEARCH_SYNONYMS[token] || []) terms.add(synonym);
+  }
+
+  return [...terms].filter(Boolean).map((term) => `%${term}%`);
+}
+
 class ProductModel {
   // async getAllProducts({ search, sortBy, sortOrder, limit, offset }) {
   //   try {
@@ -198,6 +236,7 @@ class ProductModel {
       conditions.push("p.is_visible = 1");
       conditions.push("p.is_searchable = 1");
       conditions.push("p.is_deleted = 0");
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
 
       const whereClause = conditions.length
         ? `WHERE ${conditions.join(" AND ")}`
@@ -529,6 +568,7 @@ class ProductModel {
       LEFT JOIN sub_categories sc ON p.subcategory_id = sc.subcategory_id
       LEFT JOIN sub_sub_categories ssc ON p.sub_subcategory_id = ssc.sub_subcategory_id
       WHERE p.product_id = ?
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       `,
         [productId],
       );
@@ -601,7 +641,8 @@ class ProductModel {
       SELECT attribute_key
       FROM category_attributes
       WHERE is_variant = 1
-      AND (
+        AND is_active = 1
+        AND (
         subcategory_id = ?
         OR (category_id = ? AND subcategory_id IS NULL)
       )
@@ -618,7 +659,16 @@ class ProductModel {
         delete filteredProductAttributes[key];
       });
 
+      // Vendor-added attributes that aren't defined in category_attributes at
+      // all — these carry their own label since there's no schema row to
+      // resolve one from, so they're kept separate from product_attributes.
+      const customAttributes = Array.isArray(filteredProductAttributes.__custom)
+        ? filteredProductAttributes.__custom
+        : [];
+      delete filteredProductAttributes.__custom;
+
       product.product_attributes = filteredProductAttributes;
+      product.custom_attributes = customAttributes;
 
       // ================= PRODUCT VARIANTS =================
       const [variants] = await db.execute(
@@ -922,6 +972,8 @@ class ProductModel {
       conditions.push("p.is_deleted = ?");
       params.push(0);
 
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
+
       conditions.push("v.variant_id IS NOT NULL");
 
       if (categoryId) {
@@ -1141,6 +1193,8 @@ class ProductModel {
       conditions.push("p.is_deleted = ?");
       params.push(0);
 
+      conditions.push("COALESCE(p.created_via, '') != 'flea_market_quick_create'");
+
       conditions.push("v.variant_id IS NOT NULL");
 
       if (subcategoryId) {
@@ -1322,10 +1376,16 @@ class ProductModel {
   // Search Suggestions
   async getSearchSuggestions({ search, limit }) {
     if (!search || search.length < 2) {
-      return [];
+      return {
+        categories: [],
+        subcategories: [],
+        products: [],
+      };
     }
 
-    const keyword = `%${search}%`;
+    const patterns = buildSearchPatterns(search);
+    const likeAny = (column) =>
+      `(${patterns.map(() => `${column} LIKE ?`).join(" OR ")})`;
 
     /* ========================================
      1 Category Suggestions
@@ -1340,10 +1400,10 @@ class ProductModel {
     FROM categories
     WHERE status = 1
       AND is_visible_in_ui = 1
-      AND category_name LIKE ?
+      AND ${likeAny("category_name")}
     LIMIT ?
     `,
-      [keyword, limit],
+      [...patterns, limit],
     );
 
     /* ========================================
@@ -1352,16 +1412,22 @@ class ProductModel {
     const [subcategories] = await db.execute(
       `
     SELECT 
-      subcategory_id AS id,
-      subcategory_name AS title,
-      cover_image AS image,
+      sc.subcategory_id AS id,
+      sc.subcategory_name AS title,
+      sc.cover_image AS image,
+      sc.category_id,
+      c.category_name,
       'subcategory' AS type
-    FROM sub_categories
-    WHERE status = 1
-      AND subcategory_name LIKE ?
+    FROM sub_categories sc
+    INNER JOIN categories c
+      ON c.category_id = sc.category_id
+    WHERE sc.status = 1
+      AND c.status = 1
+      AND c.is_visible_in_ui = 1
+      AND (${likeAny("sc.subcategory_name")} OR ${likeAny("c.category_name")})
     LIMIT ?
     `,
-      [keyword, limit],
+      [...patterns, ...patterns, limit],
     );
 
     /* ========================================
@@ -1374,6 +1440,10 @@ class ProductModel {
       p.product_name AS title,
       pi.image_url AS image,
       pi.updated_at AS image_updated_at,
+      p.category_id,
+      c.category_name,
+      p.subcategory_id,
+      sc.subcategory_name,
       'product' AS type
 
     FROM eproducts p
@@ -1413,18 +1483,26 @@ class ProductModel {
       AND p.is_visible = 1
       AND p.is_searchable = 1
       AND p.is_deleted = 0
+      AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
       AND v.variant_id IS NOT NULL
       AND (
-        p.product_name LIKE ?
-        OR p.brand_name LIKE ?
-        OR c.category_name LIKE ?
-        OR sc.subcategory_name LIKE ?
-        OR ssc.name LIKE ?
+        ${likeAny("p.product_name")}
+        OR ${likeAny("p.brand_name")}
+        OR ${likeAny("c.category_name")}
+        OR ${likeAny("sc.subcategory_name")}
+        OR ${likeAny("ssc.name")}
       )
 
     LIMIT ?
     `,
-      [keyword, keyword, keyword, keyword, keyword, limit],
+      [
+        ...patterns,
+        ...patterns,
+        ...patterns,
+        ...patterns,
+        ...patterns,
+        limit,
+      ],
     );
 
     /* ========================================
@@ -1433,25 +1511,38 @@ class ProductModel {
     const formattedCategories = categories.map((cat) => ({
       ...cat,
       image: getPublicUrl(cat.image),
+      navigation: {
+        destination: "category_products",
+        category_id: cat.id,
+      },
     }));
 
     const formattedSubcategories = subcategories.map((sub) => ({
       ...sub,
       image: getPublicUrl(sub.image),
+      navigation: {
+        destination: "subcategory_products",
+        category_id: sub.category_id,
+        subcategory_id: sub.id,
+      },
     }));
 
     const formattedProducts = products.map(
       ({ image, image_updated_at, ...prod }) => ({
         ...prod,
         image: getPublicUrl(image, image_updated_at),
+        navigation: {
+          destination: "product_details",
+          product_id: prod.id,
+        },
       }),
     );
 
-    return [
-      ...formattedCategories,
-      ...formattedSubcategories,
-      ...formattedProducts,
-    ].slice(0, limit);
+    return {
+      categories: formattedCategories,
+      subcategories: formattedSubcategories,
+      products: formattedProducts,
+    };
   }
 
   // Load Products
@@ -1482,6 +1573,7 @@ class ProductModel {
         AND status = 'approved'
         AND is_deleted = 0
         AND is_visible = 1
+        AND COALESCE(created_via, '') != 'flea_market_quick_create'
       `,
         [productId],
       );
@@ -1565,6 +1657,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
         AND p.product_id != ?
         AND (
           p.category_id = ?
@@ -1780,6 +1873,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       HAVING total_score > 0
@@ -1965,6 +2059,7 @@ class ProductModel {
       WHERE p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY p.created_at DESC
@@ -2145,6 +2240,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY frequency DESC
@@ -2321,6 +2417,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY total_sold DESC
@@ -2495,6 +2592,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY total_sold DESC
@@ -2664,6 +2762,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       ORDER BY view_count DESC
@@ -2819,6 +2918,7 @@ class ProductModel {
         AND p.status = 'approved'
         AND p.is_deleted = 0
         AND p.is_visible = 1
+        AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
       GROUP BY p.product_id
       HAVING total_reviews >= 3

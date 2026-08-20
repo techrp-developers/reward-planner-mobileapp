@@ -10,11 +10,11 @@ import React, {
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import DeviceInfo from "react-native-device-info";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
-import { parseLoginIdentifier } from "../utils/loginIdentifier";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -36,13 +36,6 @@ type RegisterPayload = {
   cpassword: string;
 };
 
-type LoginPayload = {
-  identifier: string;
-  email?: string;
-  phone?: string;
-  password: string;
-};
-
 type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
@@ -58,7 +51,8 @@ type AuthContextValue = {
   register: (payload: RegisterPayload) => Promise<any>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendVerification: (email: string) => Promise<any>;
-  login: (payload: LoginPayload) => Promise<any>;
+  requestLoginOtp: (identifier: string) => Promise<any>;
+  verifyLoginOtp: (identifier: string, otp: string) => Promise<any>;
   bootstrapSession: () => Promise<void>;
   restoreSession: () => Promise<void>;
   logout: () => Promise<void>;
@@ -129,9 +123,22 @@ const generateDeviceId = () => {
 };
 
 const getDeviceName = () => {
-  if (Platform.OS === "android") return "android";
-  if (Platform.OS === "ios") return "ios";
-  return "unknown";
+  try {
+    const brand = String(DeviceInfo.getBrand() || "").trim();
+    const model = String(DeviceInfo.getModel() || "").trim();
+    const systemName = String(DeviceInfo.getSystemName() || Platform.OS).trim();
+    const systemVersion = String(DeviceInfo.getSystemVersion() || "").trim();
+    const modelName = brand && model.toLowerCase().startsWith(brand.toLowerCase())
+      ? model
+      : [brand, model].filter(Boolean).join(" ");
+    const operatingSystem = [systemName, systemVersion].filter(Boolean).join(" ");
+
+    return `${modelName || "Unknown device"} (${operatingSystem})`.slice(0, 255);
+  } catch {
+    if (Platform.OS === "android") return "Android device";
+    if (Platform.OS === "ios") return "iOS device";
+    return "Unknown device";
+  }
 };
 
 const getOrCreateDeviceId = async () => {
@@ -163,6 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
+  const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
@@ -224,27 +232,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return response.data;
   }, []);
 
-  const login = useCallback(
-    async (payload: LoginPayload) => {
+  const requestLoginOtp = useCallback(async (identifier: string) => {
+    setLoading(true);
+    try {
+      const response = await api.post("/v1/auth/request-otp", { login: identifier });
+      return response.data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyLoginOtp = useCallback(
+    async (identifier: string, otp: string) => {
       setLoading(true);
       try {
         const deviceId   = await getOrCreateDeviceId();
         const deviceName = getDeviceName();
-        const parsedIdentifier = parseLoginIdentifier(payload.identifier);
-        const identifier = String(payload.identifier || "").trim();
-        const email =
-          payload.email?.trim().toLowerCase() ||
-          (parsedIdentifier.kind === "email" ? parsedIdentifier.normalized : undefined);
-        const phone =
-          payload.phone?.trim() ||
-          (parsedIdentifier.kind === "phone" ? parsedIdentifier.normalized : undefined);
-
-        const response = await api.post("/v1/auth/login", {
-          identifier,
-          login:       identifier,
-          email,
-          phone,
-          password:    payload.password,
+        const response = await api.post("/v1/auth/verify-otp", {
+          login: identifier,
+          otp,
           device_id:   deviceId,
           device_name: deviceName,
         });
@@ -253,7 +259,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const nextRefreshToken = response.data?.refreshToken || null;
 
         if (!nextAccessToken || !nextRefreshToken) {
-          throw new Error("Invalid login response");
+          throw new Error("Invalid OTP login response");
         }
 
         updateAccessToken(nextAccessToken);
@@ -311,13 +317,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       const nextAccessToken = refreshRes.data?.accessToken || null;
+      const nextRefreshToken = refreshRes.data?.refreshToken || null;
 
-      if (!nextAccessToken) {
-        throw new Error("Missing access token from refresh");
+      if (!nextAccessToken || !nextRefreshToken) {
+        throw new Error("Missing token pair from refresh");
       }
 
+      // The backend rotates refresh tokens, so save both replacements before
+      // making any authenticated follow-up request.
+      await Promise.all([
+        persistAuthToken(nextAccessToken),
+        secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+      ]);
       updateAccessToken(nextAccessToken);
-      await persistAuthToken(nextAccessToken);
 
       await fetchProfile();
 
@@ -337,13 +349,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearLocalSession, fetchProfile, checkTerms, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
-    try {
-      await restoreSession();
-    } catch {
-      // Fallback to AuthStack on restore failure.
-    } finally {
-      setIsInitializing(false);
-    }
+    const maxRestoreAttempts = 3;
+    let restoreAttempts = 0;
+
+    const attemptRestore = async () => {
+      restoreAttempts += 1;
+
+      try {
+        await restoreSession();
+        setIsInitializing(false);
+      } catch (error: any) {
+        const status = Number(error?.response?.status || 0);
+
+        if (status === 401 || status === 403) {
+          // The stored refresh session is definitively invalid/revoked.
+          setIsInitializing(false);
+          return;
+        }
+
+        // A local/offline backend must not hold the app on Splash forever.
+        // Preserve the stored session and retry briefly in the background.
+        setIsInitializing(false);
+
+        if (restoreAttempts < maxRestoreAttempts) {
+          restoreRetryRef.current = setTimeout(attemptRestore, 5000);
+        }
+      }
+    };
+
+    await attemptRestore();
   }, [restoreSession]);
 
   useEffect(() => {
@@ -352,9 +386,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       getRefreshToken: async () => secureGetItem(REFRESH_TOKEN_KEY),
 
-      onAccessTokenRefresh: async (nextAccessToken) => {
+      onSessionRefresh: async (nextAccessToken, nextRefreshToken) => {
+        await Promise.all([
+          persistAuthToken(nextAccessToken),
+          secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
+        ]);
         updateAccessToken(nextAccessToken);
-        await persistAuthToken(nextAccessToken);
       },
 
       onLogout: async () => {
@@ -369,6 +406,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     bootstrapSession();
+
+    return () => {
+      if (restoreRetryRef.current) {
+        clearTimeout(restoreRetryRef.current);
+      }
+    };
   }, [bootstrapSession]);
 
   const logout = useCallback(async () => {
@@ -406,7 +449,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register,
       verifyEmail,
       resendVerification,
-      login,
+      requestLoginOtp,
+      verifyLoginOtp,
       bootstrapSession,
       restoreSession,
       logout,
@@ -422,7 +466,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register,
       verifyEmail,
       resendVerification,
-      login,
+      requestLoginOtp,
+      verifyLoginOtp,
       bootstrapSession,
       restoreSession,
       logout,

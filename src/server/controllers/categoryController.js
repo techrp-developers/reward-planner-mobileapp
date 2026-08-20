@@ -138,6 +138,9 @@ class CategoryController {
       const subcategoryId = req.query.subcategoryId
         ? Number(req.query.subcategoryId)
         : null;
+      const subSubCategoryId = req.query.subSubCategoryId
+        ? Number(req.query.subSubCategoryId)
+        : null;
 
       const [attributes] = await db.execute(
         `
@@ -247,6 +250,16 @@ class CategoryController {
       // workbook
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+      const metaSheet = XLSX.utils.aoa_to_sheet([
+        ["key", "value"],
+        ["categoryId", categoryId],
+        ["subcategoryId", subcategoryId],
+        ["subSubCategoryId", subSubCategoryId ?? ""],
+        ["templateVersion", 2],
+      ]);
+      XLSX.utils.book_append_sheet(wb, metaSheet, "_meta");
+      wb.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 2 }] };
 
       const buffer = XLSX.write(wb, {
         type: "buffer",
