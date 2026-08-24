@@ -2,10 +2,49 @@
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import api from "./axios";
   import { API_BASE_URL } from '../../../../config/apiConfig';
+  import {
+    clearAccessToken,
+    clearSession,
+    getAccessToken,
+    getCachedUserName,
+    getRefreshToken,
+    saveSession,
+    updateAccessToken,
+  } from "../../../../utils/tokenStorage";
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
 let authToken: string | null = null;
+
+const extractToken = (responseData: any) => {
+  return (
+    responseData?.token ||
+    responseData?.accessToken ||
+    responseData?.access_token ||
+    responseData?.data?.token ||
+    responseData?.data?.accessToken ||
+    responseData?.data?.access_token ||
+    responseData?.data?.jwt ||
+    responseData?.jwt ||
+    responseData?.data?.tokens?.access?.token ||
+    responseData?.tokens?.access?.token ||
+    null
+  );
+};
+
+const extractUserName = (responseData: any) => {
+  return (
+    responseData?.name ||
+    responseData?.user?.name ||
+    responseData?.user?.full_name ||
+    responseData?.user?.username ||
+    responseData?.data?.name ||
+    responseData?.data?.user?.name ||
+    responseData?.data?.user?.full_name ||
+    responseData?.data?.user?.username ||
+    null
+  );
+};
 
 const normalizeToken = (token?: string | null) => {
   const cleaned = String(token || "").trim();
@@ -354,4 +393,103 @@ export const updateProfile = async (formData: FormData) => {
     );
     return res.data;
   };
+
+  // =============================== OTP Login ==============================
+  // Consumed by OTPScreen / LocationAccessScreen via AuthContext's
+  // authenticateWithTokens(). Restored after a merge silently dropped these.
+
+  const withLog = <A extends any[], R>(label: string, fn: (...args: A) => Promise<R>) => {
+    return async (...args: A): Promise<R> => {
+      if (__DEV__) console.log(`[${label}] called with`, ...args);
+      try {
+        const result = await fn(...args);
+        if (__DEV__) console.log(`[${label}] success`, result);
+        return result;
+      } catch (err) {
+        if (__DEV__) console.log(`[${label}] failed`, err);
+        throw err;
+      }
+    };
+  };
+
+  export type CheckExistenceResponse = {
+    success: boolean;
+    registered: boolean;
+    type?: "phone" | "email";
+  };
+
+  export type SendOtpResponse = {
+    success: boolean;
+    message: string;
+  };
+
+  export type OtpUser = ApiUser;
+
+  export type VerifyOtpResponse = AuthSuccessResponse;
+
+  export const checkIdentifier = withLog("checkIdentifier", async (
+    identifier: string,
+  ): Promise<CheckIdentifierResponse> => {
+    const { data } = await api.post<CheckIdentifierResponse>("/v1/auth/check", { identifier });
+    return data;
+  });
+
+  export const sendOtp = withLog("sendOtp", async (
+    identifier: string,
+  ): Promise<SendOtpResponse> => {
+    const { data } = await api.post<SendOtpResponse>("/v1/auth/request-otp", { login: identifier });
+    return data;
+  });
+
+  export const verifyOtp = withLog("verifyOtp", async (
+    identifier: string,
+    otp: string,
+  ): Promise<VerifyOtpResponse> => {
+    const { data } = await api.post<AuthSuccessResponse>("/v1/auth/verify-otp", { login: identifier, otp });
+    await saveSession(data.accessToken, data.refreshToken, data.user.name);
+    setAuthToken(data.accessToken);
+    return data;
+  });
+
+  export const refreshAccessToken = withLog("refreshAccessToken", async (
+    refreshToken: string,
+  ): Promise<{ success: boolean; accessToken: string }> => {
+    const { data } = await api.post<{ success: boolean; accessToken: string }>("/v1/auth/refresh", { refreshToken });
+    return data;
+  });
+
+  export const logout = withLog("logout", async (): Promise<void> => {
+    try {
+      await api.post("/v1/auth/logout");
+    } catch (err) {
+      console.log("[logout] server call failed (clearing local session anyway)", err);
+    } finally {
+      await clearSession();
+      setAuthToken(null);
+    }
+  });
+
+  export const restoreSession = async (): Promise<{ accessToken: string; refreshToken?: string } | null> => {
+    const refreshToken = await getRefreshToken();
+
+    if (!refreshToken) {
+      return null;
+    }
+
+    try {
+      // The backend rotates refresh tokens on every call (revokes this one,
+      // issues a new one) — callers MUST persist data.refreshToken if present,
+      // or the next restore will fail with an already-revoked token.
+      const { data } = await api.post<{ success: boolean; accessToken: string; refreshToken?: string }>("/v1/auth/refresh", { refreshToken });
+      return data;
+    } catch (err) {
+      console.log("[restoreSession] failed, session invalid", err);
+      return null;
+    }
+  };
+
+  export const completeOnboarding = withLog("completeOnboarding", async () => {
+    const { data } = await api.post<{ success: boolean }>('/v1/auth/complete-onboarding');
+    return data;
+  });
 

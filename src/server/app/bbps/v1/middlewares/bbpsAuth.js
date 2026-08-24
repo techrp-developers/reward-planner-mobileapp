@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const AuthModel = require("../../../common/models/authModel");
+const { getAccessTokenSecret } = require("../../../common/utils/customerAuthSession");
 
 const bbpsAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -14,7 +15,7 @@ const bbpsAuth = (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const decoded = jwt.verify(token, getAccessTokenSecret());
 
     AuthModel.findById(decoded.user_id)
       .then((user) => {

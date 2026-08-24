@@ -7,13 +7,20 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import DeviceInfo from "react-native-device-info";
-import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
-import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
-import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
+import { setSessionHandlers } from "../api/axios";
+import {
+  fetchUserInfo,
+  isOnboardingComplete,
+  logout as logoutRequest,
+  restoreSession as restoreAuthSession,
+  VerifyOtpResponse,
+} from "../api/AuthAPI";
+import {
+  clearSession,
+  getRefreshToken,
+  saveRefreshToken,
+  updateAccessToken as persistAccessTokenInKeychain,
+} from "../../../../utils/tokenStorage";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 
 type AuthUser = {
@@ -53,44 +60,6 @@ const extractUser = (payload: any): AuthUser | null => {
   return user;
 };
 
-const generateDeviceId = () => {
-  const randomPart = Math.random().toString(36).substring(2, 12);
-  const timePart = Date.now().toString(36);
-
-  return `rp-${Platform.OS}-${timePart}-${randomPart}`;
-};
-
-const getDeviceName = () => {
-  try {
-    const brand = String(DeviceInfo.getBrand() || "").trim();
-    const model = String(DeviceInfo.getModel() || "").trim();
-    const systemName = String(DeviceInfo.getSystemName() || Platform.OS).trim();
-    const systemVersion = String(DeviceInfo.getSystemVersion() || "").trim();
-    const modelName = brand && model.toLowerCase().startsWith(brand.toLowerCase())
-      ? model
-      : [brand, model].filter(Boolean).join(" ");
-    const operatingSystem = [systemName, systemVersion].filter(Boolean).join(" ");
-
-    return `${modelName || "Unknown device"} (${operatingSystem})`.slice(0, 255);
-  } catch {
-    if (Platform.OS === "android") return "Android device";
-    if (Platform.OS === "ios") return "iOS device";
-    return "Unknown device";
-  }
-};
-
-const getOrCreateDeviceId = async () => {
-  const existingDeviceId = await secureGetItem(DEVICE_ID_KEY);
-
-  if (existingDeviceId) {
-    return existingDeviceId;
-  }
-
-  const newDeviceId = generateDeviceId();
-  await secureSetItem(DEVICE_ID_KEY, newDeviceId);
-  return newDeviceId;
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser]               = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -108,7 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const accessTokenRef    = useRef<string | null>(null);
   const isLoggingOutRef   = useRef(false);
-  const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
@@ -179,30 +147,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      const refreshRes = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {
-        refreshToken,
-      });
+      const refreshRes = await restoreAuthSession();
+      const nextAccessToken = refreshRes?.accessToken || null;
 
-      const nextAccessToken = refreshRes.data?.accessToken || null;
-      const nextRefreshToken = refreshRes.data?.refreshToken || null;
-
-      if (!nextAccessToken || !nextRefreshToken) {
-        throw new Error("Missing token pair from refresh");
+      if (!nextAccessToken) {
+        throw new Error("Missing access token from refresh");
       }
 
-      // The backend rotates refresh tokens, so save both replacements before
-      // making any authenticated follow-up request.
-      await Promise.all([
-        persistAuthToken(nextAccessToken),
-        secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
-      ]);
       updateAccessToken(nextAccessToken);
+      await persistAccessTokenInKeychain(nextAccessToken);
 
-      await fetchProfile();
+      // The backend rotates refresh tokens on every use — the old one is
+      // revoked server-side, so the new one MUST replace it in Keychain or
+      // the next restore attempt will fail with an already-used token.
+      if (refreshRes?.refreshToken) {
+        await saveRefreshToken(refreshRes.refreshToken);
+      }
 
-      // Re-check terms on every session restore so the gate shows
-      // correctly if the user was previously mid-onboarding.
-      await checkTerms();
+      const profile = await fetchProfile();
+      setTermsAccepted(isOnboardingComplete(profile as any));
     } catch (error: any) {
       const status = error?.response?.status;
 
@@ -214,35 +177,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearLocalSession, fetchProfile, updateAccessToken]);
 
   const bootstrapSession = useCallback(async () => {
-    const maxRestoreAttempts = 3;
-    let restoreAttempts = 0;
-
-    const attemptRestore = async () => {
-      restoreAttempts += 1;
-
-      try {
-        await restoreSession();
-        setIsInitializing(false);
-      } catch (error: any) {
-        const status = Number(error?.response?.status || 0);
-
-        if (status === 401 || status === 403) {
-          // The stored refresh session is definitively invalid/revoked.
-          setIsInitializing(false);
-          return;
-        }
-
-        // A local/offline backend must not hold the app on Splash forever.
-        // Preserve the stored session and retry briefly in the background.
-        setIsInitializing(false);
-
-        if (restoreAttempts < maxRestoreAttempts) {
-          restoreRetryRef.current = setTimeout(attemptRestore, 5000);
-        }
-      }
-    };
-
-    await attemptRestore();
+    try {
+      await restoreSession();
+    } catch (error) {
+      // Fallback to AuthStack on restore failure.
+      if (__DEV__) console.log("[AuthContext] bootstrapSession restore failed", error);
+    } finally {
+      setIsInitializing(false);
+    }
   }, [restoreSession]);
 
   useEffect(() => {
@@ -252,11 +194,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       getRefreshToken: async () => getRefreshToken(),
 
       onSessionRefresh: async (nextAccessToken, nextRefreshToken) => {
-        await Promise.all([
-          persistAuthToken(nextAccessToken),
-          secureSetItem(REFRESH_TOKEN_KEY, nextRefreshToken),
-        ]);
         updateAccessToken(nextAccessToken);
+        await persistAccessTokenInKeychain(nextAccessToken);
+
+        if (nextRefreshToken) {
+          await saveRefreshToken(nextRefreshToken);
+        }
       },
 
       onLogout: async () => {
@@ -271,12 +214,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     bootstrapSession();
-
-    return () => {
-      if (restoreRetryRef.current) {
-        clearTimeout(restoreRetryRef.current);
-      }
-    };
   }, [bootstrapSession]);
 
   const logout = useCallback(async () => {

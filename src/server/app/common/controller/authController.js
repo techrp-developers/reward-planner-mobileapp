@@ -144,6 +144,29 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     });
   }
 
+  function activationOtpErrorResponse(reason) {
+    switch (reason) {
+      case "missing":
+        return { status: 400, message: "Request a new OTP first." };
+      case "expired":
+        return { status: 400, message: "OTP expired. Request a new one." };
+      case "too_many_attempts":
+        return { status: 429, message: "Too many OTP attempts. Request a new OTP." };
+      case "invalid":
+      default:
+        return { status: 400, message: "Invalid OTP." };
+    }
+  }
+
+  async function awardFirstLoginBonus(userId) {
+    try {
+      return await WalletModel.createWalletOnFirstLogin(userId);
+    } catch (error) {
+      console.error("First login wallet bonus failed:", error);
+      return false;
+    }
+  }
+
   /* ======================================================
     DEVICE CHANGE VERIFICATION
     A device_id the app hasn't sent before on this account is held until the
@@ -378,7 +401,8 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     VERIFY OTP
   ====================================================== */
     async verifyActivationOTP(req, res) {
-      const conn = await db.getConnection();
+      let conn;
+      let transactionStarted = false;
       try {
         const { otp } = req.body;
         const identity = getActivationIdentity(req.body);
@@ -390,23 +414,20 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
+        const otpRecord = await AuthModel.getOtpVerificationResult(
+          identity.otpKey,
+          otp,
+        );
 
-        if (attempt && attempt.attempt_count >= 5) {
-          return res.status(429).json({
+        if (!otpRecord.ok) {
+          if (otpRecord.reason === "invalid") {
+            await AuthModel.incrementOtpAttempts(identity.otpKey);
+          }
+
+          const errorResponse = activationOtpErrorResponse(otpRecord.reason);
+          return res.status(errorResponse.status).json({
             success: false,
-            message: "Too many OTP attempts. Try again later.",
-          });
-        }
-
-        const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
-
-        if (!otpRecord) {
-          await AuthModel.incrementOtpAttempts(identity.otpKey);
-
-          return res.status(400).json({
-            success: false,
-            message: "Invalid or expired OTP",
+            message: errorResponse.message,
           });
         }
 
@@ -460,14 +481,18 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         // Password login is not required for OTP-created accounts.
         const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
 
+        conn = await db.getConnection();
         await conn.beginTransaction();
+        transactionStarted = true;
         const user = await AuthModel.findOrCreateCustomerForEmployee(
           employee,
           unusablePassword,
           conn,
         );
+        const tokens = await issueCustomerSession(user.user_id, req, res, conn);
         await AuthModel.deleteOTP(identity.otpKey, conn);
         await conn.commit();
+        transactionStarted = false;
 
         // A brand-new account has nothing to compare a device against yet —
         // trust the device this account was created on.
@@ -475,9 +500,8 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           await AuthModel.bootstrapDevice(user.user_id, deviceId, deviceName);
         }
 
-        const tokens = await issueCustomerSession(user.user_id, req, res);
         await AuthModel.updateLoginMeta(user.user_id, req.ip);
-        const firstLoginBonus = await WalletModel.createWalletOnFirstLogin(user.user_id);
+        const firstLoginBonus = await awardFirstLoginBonus(user.user_id);
 
         if (firstLoginBonus) {
           notifyUser(
@@ -576,17 +600,26 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           },
         });
       } catch (err) {
-        try {
-          await conn.rollback();
-        } catch {}
-        console.error("Verify activation OTP error:", err);
+        if (transactionStarted && conn) {
+          try {
+            await conn.rollback();
+          } catch (rollbackError) {
+            console.error("Verify activation OTP rollback failed:", rollbackError);
+          }
+        }
+        console.error("Verify activation OTP error:", {
+          message: err?.message,
+          code: err?.code,
+          stack: err?.stack,
+          loginPresent: Boolean(getActivationIdentity(req.body).otpKey),
+        });
 
         return res.status(500).json({
           success: false,
-          message: "Server error",
+          message: "Unable to verify OTP right now. Please try again.",
         });
       } finally {
-        conn.release();
+        if (conn) conn.release();
       }
     }
 

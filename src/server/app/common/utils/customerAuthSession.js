@@ -6,6 +6,22 @@ const REFRESH_COOKIE = "rp_customer_refresh";
 const ACCESS_EXPIRES = "15m";
 const REFRESH_DAYS = 90;
 
+function getAccessTokenSecret() {
+  const secret = process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error("ACCESS_TOKEN_SECRET is missing from environment configuration");
+  }
+
+  if (!process.env.ACCESS_TOKEN_SECRET && process.env.JWT_SECRET) {
+    console.warn(
+      "[CustomerAuthSession] ACCESS_TOKEN_SECRET missing; falling back to JWT_SECRET.",
+    );
+  }
+
+  return secret;
+}
+
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
@@ -53,17 +69,17 @@ function clearRefreshCookie(res) {
 }
 
 function createAccessToken(userId) {
-  return jwt.sign({ user_id: userId, type: "access" }, process.env.ACCESS_TOKEN_SECRET, {
+  return jwt.sign({ user_id: userId, type: "access" }, getAccessTokenSecret(), {
     expiresIn: ACCESS_EXPIRES,
   });
 }
 
-async function issueCustomerSession(userId, req, res) {
+async function issueCustomerSession(userId, req, res, conn = db) {
   const refreshToken = randomToken();
   const familyId = crypto.randomUUID();
   const deviceName = String(req.body?.deviceName || req.body?.device_name || "").slice(0, 255) || null;
 
-  await db.execute(
+  await conn.execute(
     `INSERT INTO customer_auth_sessions
       (user_id, token_hash, family_id, device_name, user_agent, ip_address, expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -170,6 +186,7 @@ async function revokeCustomerSession(req, res) {
 }
 
 module.exports = {
+  getAccessTokenSecret,
   issueCustomerSession,
   rotateCustomerSession,
   revokeCustomerSession,

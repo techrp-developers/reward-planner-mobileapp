@@ -1,7 +1,5 @@
 const db = require("../../../config/database");
 const bcrypt = require("bcryptjs");
-const fs = require("fs");
-const path = require("path");
 const { getPublicUrl } = require("../../../utils/publicUrl");
 
 class authModel {
@@ -93,7 +91,7 @@ class authModel {
 
   async findByCompanyUserId(company_user_id) {
     const [rows] = await db.execute(
-      `SELECT user_id, name, email, company_user_id, status, is_verified, deleted_at, device_id, device_name
+      `SELECT user_id, name, email, phone, company_user_id, status, is_verified, deleted_at, device_id, device_name
      FROM customer
      WHERE company_user_id = ?`,
       [company_user_id],
@@ -173,6 +171,10 @@ class authModel {
   }
 
   async findEmployeeByPhone(phone) {
+    const digits = String(phone || "").replace(/\D/g, "");
+    const withoutCountryCode =
+      digits.length > 10 && digits.startsWith("91") ? digits.slice(2) : digits;
+
     const [rows] = await db.execute(
       `SELECT
         id,
@@ -181,9 +183,14 @@ class authModel {
         email,
         contact AS phone
      FROM company_users
-     WHERE TRIM(contact) = ? AND status = 1
+     WHERE status = 1
+       AND (
+         TRIM(contact) = ?
+         OR REPLACE(REPLACE(REPLACE(REPLACE(TRIM(contact), '+', ''), ' ', ''), '-', ''), '(', '') = ?
+         OR RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(TRIM(contact), '+', ''), ' ', ''), '-', ''), '(', ''), 10) = ?
+       )
      LIMIT 1`,
-      [phone],
+      [phone, digits, withoutCountryCode],
     );
 
     return rows[0];
@@ -248,6 +255,46 @@ class authModel {
     if (!isMatch) return null;
 
     return { id: otpRecord.id, attempt_count: otpRecord.attempt_count };
+  }
+
+  async getOtpVerificationResult(email, otp) {
+    const [rows] = await db.execute(
+      `SELECT id, otp, attempt_count, expiry
+     FROM email_otps
+     WHERE email = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+      [email.toLowerCase()],
+    );
+
+    const otpRecord = rows[0];
+    if (!otpRecord) {
+      return { ok: false, reason: "missing" };
+    }
+
+    if (Number(otpRecord.attempt_count || 0) >= 5) {
+      return { ok: false, reason: "too_many_attempts" };
+    }
+
+    if (new Date(otpRecord.expiry) <= new Date()) {
+      return { ok: false, reason: "expired", id: otpRecord.id };
+    }
+
+    const isMatch = await bcrypt.compare(otp.toString(), otpRecord.otp);
+    if (!isMatch) {
+      return {
+        ok: false,
+        reason: "invalid",
+        id: otpRecord.id,
+        attempt_count: Number(otpRecord.attempt_count || 0),
+      };
+    }
+
+    return {
+      ok: true,
+      id: otpRecord.id,
+      attempt_count: Number(otpRecord.attempt_count || 0),
+    };
   }
 
   async incrementOtpAttempts(email) {

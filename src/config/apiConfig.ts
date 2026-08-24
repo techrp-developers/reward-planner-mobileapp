@@ -3,7 +3,14 @@ import { Platform } from 'react-native';
 export type ApiEnvironment = 'local' | 'live';
 
 // Change only this value to switch every app API call.
-export const API_ENVIRONMENT: ApiEnvironment = 'local';
+// Routed through a function rather than assigned directly — TS narrows a
+// const/let's literal initializer to its exact literal type for same-file
+// comparisons, which makes every `=== 'local'` check below a type error the
+// moment this literal is 'live' (or vice versa). Returning it from a
+// function with an explicit ApiEnvironment return type keeps the type as
+// the full union everywhere it's read.
+const resolveEnvironment = (): ApiEnvironment => 'live';
+export const API_ENVIRONMENT: ApiEnvironment = resolveEnvironment();
 
 const LOCAL_SERVER_URL = Platform.select({
   // Physical Android device: use this computer's Wi-Fi/LAN address.

@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const AuthModel = require("../models/authModel");
+const { getAccessTokenSecret } = require("../utils/customerAuthSession");
 
 const optionalAuth = async (req, res, next) => {
   try {
@@ -11,7 +12,7 @@ const optionalAuth = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const decoded = jwt.verify(token, getAccessTokenSecret());
 
     const user = await AuthModel.findById(decoded.user_id);
 

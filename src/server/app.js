@@ -7,13 +7,18 @@ const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 
+require("dotenv").config();
+
 // Initialize Quiz Game DB Tables
 // const setupQuizDB = require("./config/setupQuizDB");
 // const setupTodoReminderDB = require("./config/setupTodoReminderDB");
+const setupCustomerAuthDB = require("./config/setupCustomerAuthDB");
 // setupQuizDB();
 // setupTodoReminderDB();
-
-require("dotenv").config();
+let customerAuthSetupError = null;
+const customerAuthSetupReady = setupCustomerAuthDB().catch((error) => {
+  customerAuthSetupError = error;
+});
 require("./services/ExpressBees/cron/shipmentCron");
 require("./services/Bbps/retryCron");
 require("./services/Bbps/refundCron");
@@ -172,6 +177,22 @@ app.use("/", dashboardRoute);
 app.use("/v1", ecommerceRoute);
 app.use("/v1", serviceRoute);
 app.use("/v1", stepCounterRoute);
+app.use("/v1/auth", async (req, res, next) => {
+  try {
+    await customerAuthSetupReady;
+    if (customerAuthSetupError) throw customerAuthSetupError;
+    next();
+  } catch (error) {
+    console.error("[CustomerAuthSetup] Auth route blocked:", {
+      message: error?.message,
+      code: error?.code,
+    });
+    res.status(503).json({
+      success: false,
+      message: "Authentication service is initializing. Please try again shortly.",
+    });
+  }
+});
 app.use("/v1", commonRoute);
 app.use("/v1", bbpsRoute);
 app.use("/v1", gamesRoute);
