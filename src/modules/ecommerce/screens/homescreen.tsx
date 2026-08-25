@@ -8,6 +8,7 @@ import {
   ViewToken,
 } from 'react-native';
 import CategoriesSection from '../components/home/categories_section';
+import HomeHeaderBanners from '../components/home/HomeHeaderBanners';
 import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import { useAuth } from '../../common/auth/context/AuthContext';
@@ -379,6 +380,7 @@ function HomeScreen() {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={getItemLayout}
+        ListHeaderComponent={HomeHeaderBanners}
         ListFooterComponent={ListFooterSpacer}
       />
     </ThemedHomeSurface>

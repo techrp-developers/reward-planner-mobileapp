@@ -18,16 +18,16 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useQuery } from "@tanstack/react-query";
+import LinearGradient from "react-native-linear-gradient";
 
 import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import ServiceTop from "./assete/Service_BG.png";
-import PaymentTop from "./assete/Payment_BG.png";
-import BusBookingTop from "./assete/Bus_BG.png";
-import Background1 from "./assete/Background1.jpeg";
+import Navbar_Background from "./Navbar_Background";
+import { useNavbarBanners } from "./hooks/useNavbarBanners";
+import { TAB_THEME, TopTab, isTopTab } from "./navbarConstants";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Home_Nav from "../assets/menu/Home_Nav.svg";
@@ -43,7 +43,7 @@ import { useAppTheme } from "../theme/ThemeContext";
 import type { RootStackParamList } from "@/navigation/types";
 
 // --- Types & Constants ---
-export type TopTab = "Product" | "Services" | "Payments" | "DineOut";
+export type { TopTab } from "./navbarConstants";
 
 type NavbarProps = {
   activeModule?: TopTab;
@@ -110,27 +110,6 @@ const PAYMENT_ROUTES = new Set([
   "BBPSCategory",
   "BBPSBillers",
 ]);
-
-const BG_MAP: Record<TopTab, any> = {
-  Product: Background1,
-  Services: ServiceTop,
-  Payments: PaymentTop,
-  DineOut: BusBookingTop,
-};
-
-const TAB_THEME: Record<TopTab, { bgColor: string; activeTint?: string }> = {
-  Product: { bgColor: "#5F341A" },
-  Services: { bgColor: "#4F6BFF" },
-  Payments: { bgColor: "#EAE2FF", activeTint: "#532C99" },
-  DineOut: { bgColor: "#FFE3E8", activeTint: "#CE1538" },
-};
-
-const TOP_TABS: TopTab[] = ["Product", "Services", "Payments", "DineOut"];
-
-const isTopTab = (value?: string): value is TopTab => {
-  if (!value) return false;
-  return TOP_TABS.includes(value as TopTab);
-};
 
 // --- Helpers ---
 
@@ -204,6 +183,10 @@ const getActiveTab = (
   return "Product";
 };
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const ACTIVE_TAB_SCALE = 1.05;
+const PRESSED_SCALE_DELTA = 0.06;
+
 // --- Sub-component (✅ tints SVG icon + label properly) ---
 const TopIconWithLabel = React.memo(
   ({
@@ -232,26 +215,77 @@ const TopIconWithLabel = React.memo(
     const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
     const RenderIcon = active && ActiveIcon ? ActiveIcon : Icon;
 
+    // Base scale grows with a spring when the tab becomes active (visual
+    // weight), and presses shrink from whatever the current base is —
+    // never fighting an in-flight active/inactive transition.
+    const scale = React.useRef(new Animated.Value(active ? ACTIVE_TAB_SCALE : 1)).current;
+    const isPressedRef = React.useRef(false);
+
+    React.useEffect(() => {
+      if (isPressedRef.current) return;
+      Animated.spring(scale, {
+        toValue: active ? ACTIVE_TAB_SCALE : 1,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 8,
+      }).start();
+    }, [active, scale]);
+
+    const handlePressIn = React.useCallback(() => {
+      isPressedRef.current = true;
+      Animated.spring(scale, {
+        toValue: (active ? ACTIVE_TAB_SCALE : 1) - PRESSED_SCALE_DELTA,
+        useNativeDriver: true,
+        speed: 40,
+        bounciness: 4,
+      }).start();
+    }, [active, scale]);
+
+    const handlePressOut = React.useCallback(() => {
+      isPressedRef.current = false;
+      Animated.spring(scale, {
+        toValue: active ? ACTIVE_TAB_SCALE : 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 8,
+      }).start();
+    }, [active, scale]);
+
     return (
-      <TouchableOpacity
+      <AnimatedTouchableOpacity
         activeOpacity={0.9}
         onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         style={[
           styles.topTabCard,
           {
             backgroundColor: inactiveBackground,
             borderColor: inactiveBorder,
+            transform: [{ scale }],
           },
           active && styles.topTabCardActive,
           active && { backgroundColor: activeColor },
         ]}
       >
+        {active ? (
+          <LinearGradient
+            colors={["rgba(255,255,255,0.35)", "rgba(255,255,255,0)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.topTabCardGlass}
+            pointerEvents="none"
+          />
+        ) : null}
+
         {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
             We pass all 3 so it works in most cases. */}
         <RenderIcon width={28} height={28} fill={tint} stroke={tint} color={tint} />
 
         <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
-      </TouchableOpacity>
+
+        {active ? <View style={[styles.activeIndicator, { backgroundColor: tint }]} /> : null}
+      </AnimatedTouchableOpacity>
     );
   }
 );
@@ -292,43 +326,26 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const activeTab = activeModule ?? detectedActiveTab;
   const showLocation = activeTab === "Product";
 
+  // Campaign-driven banner config per tab (falls back to the bundled static
+  // images/colors in navbarConstants when the API has no data for a tab).
+  const { banners } = useNavbarBanners();
+
   const activeThemeColor = React.useMemo(
-    () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
-    [activeTab]
+    () => banners[activeTab]?.bgColor ?? TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
+    [activeTab, banners]
   );
   const walletBadgeColor = React.useMemo(
     () => TAB_THEME[activeTab]?.activeTint ?? activeThemeColor,
     [activeTab, activeThemeColor]
   );
   const navbarSurface = isDark ? theme.card : "#FFFFFF";
+  // Search bar + wallet button float over the campaign banner, so they read
+  // as translucent glass cards rather than solid boxes on top of it.
+  const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.9)";
   const navbarBorder = isDark ? theme.border : "rgba(0,0,0,0.10)";
   const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
   const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
-  const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
-    Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
-    Services: new Animated.Value(activeTab === "Services" ? 1 : 0),
-    Payments: new Animated.Value(activeTab === "Payments" ? 1 : 0),
-    DineOut: new Animated.Value(activeTab === "DineOut" ? 1 : 0),
-  }).current;
-
-  // Cross-fade the background instead of remounting the Image on every tab
-  // switch — remounting could briefly leave the previous module's background
-  // visible underneath while the content below had already switched, and
-  // felt like a hard cut rather than a smooth transition.
-  React.useEffect(() => {
-    const animations = TOP_TABS.map((tab) => {
-      backgroundOpacities[tab].stopAnimation();
-      return Animated.timing(backgroundOpacities[tab], {
-        toValue: tab === activeTab ? 1 : 0,
-        duration: 150,
-        useNativeDriver: true,
-      });
-    });
-
-    Animated.parallel(animations).start();
-    return () => animations.forEach((animation) => animation.stop());
-  }, [activeTab, backgroundOpacities]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
@@ -539,23 +556,13 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         backgroundColor="transparent"
       />
 
-      {/* ✅ Background cross-fades smoothly between modules */}
-      <View
-        style={[styles.bgWrapper, { backgroundColor: activeThemeColor }]}
-        pointerEvents="none"
-      >
-        {TOP_TABS.map((tab) => (
-          <Animated.Image
-            key={tab}
-            source={BG_MAP[tab]}
-            style={[
-              styles.absoluteFill,
-              { top: -insets.top, opacity: backgroundOpacities[tab] },
-            ]}
-            resizeMode="cover"
-          />
-        ))}
-      </View>
+      {/* ✅ Campaign-driven banner, cross-fades smoothly between modules */}
+      <Navbar_Background
+        activeTab={activeTab}
+        banners={banners}
+        insetsTop={insets.top}
+        isDark={isDark}
+      />
 
       {/* TOP 4 ICON TABS */}
       <View style={styles.topIconsRow}>
@@ -649,7 +656,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           style={[
             styles.searchContainer,
             {
-              backgroundColor: navbarSurface,
+              backgroundColor: frostedSurface,
               borderColor: navbarBorder,
               shadowColor: isDark ? "#000000" : "#000000",
             },
@@ -673,7 +680,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
 
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.walletBox}
+          style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
           onPress={() => navigateToScreen("WalletHistory")}
           hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
         >
@@ -709,28 +716,21 @@ const shadow = Platform.select({
   },
 });
 
+const activeCardShadow = Platform.select({
+  ios: {
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  android: {
+    elevation: 10,
+  },
+});
+
 const styles = StyleSheet.create({
   wrapper: {
     paddingTop: 8,
-  },
-
-  bgWrapper: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 280,
-    overflow: "hidden",
-  },
-
-  absoluteFill: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
   },
 
   topIconsRow: {
@@ -743,18 +743,36 @@ const styles = StyleSheet.create({
   topTabCard: {
     width: 82,
     height: 70,
-    borderRadius: 16,
+    borderRadius: 22,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.06)",
+    overflow: "hidden",
     ...shadow,
   },
 
   topTabCardActive: {
     borderColor: "transparent",
+    ...activeCardShadow,
+  },
+
+  topTabCardGlass: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  activeIndicator: {
+    position: "absolute",
+    bottom: 6,
+    width: 16,
+    height: 3,
+    borderRadius: 2,
   },
 
   topTabLabel: {

@@ -32,6 +32,8 @@ import {
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import { normalizeLocalCmsImageUrl } from "../../../../config/apiConfig";
+import { useProductContent } from "../../hooks/useProductContent";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -337,6 +339,9 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
   const { theme } = useAppTheme();
+  const { productContent, isLoading: isProductContentLoading, isError: isProductContentError } = useProductContent();
+  const cmsOffersBanner = productContent?.offers_banner ?? null;
+  const [cmsImageFailed, setCmsImageFailed] = useState(false);
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
@@ -382,6 +387,14 @@ export default function OfferHome() {
     })),
     [campaignHome]
   );
+  const rawCmsOffersImageUrl = cmsOffersBanner?.content_type === 'image' ? cmsOffersBanner.image_url : null;
+  const cmsOffersImageUrl = useMemo(
+    () => normalizeLocalCmsImageUrl(rawCmsOffersImageUrl),
+    [rawCmsOffersImageUrl],
+  );
+  const hasCmsOffersImage = cmsOffersBanner?.content_type === 'image' && !!cmsOffersImageUrl && !cmsImageFailed;
+  const hasCmsOffersColor = !hasCmsOffersImage && !!cmsOffersBanner?.color_value;
+  const shouldShowCmsOffersBanner = !!cmsOffersBanner && (hasCmsOffersImage || hasCmsOffersColor);
 
   const flashSalesPoster = useMemo(() => {
     const flash = campaignHome?.data?.flash_sales?.[0];
@@ -399,6 +412,32 @@ export default function OfferHome() {
     }
   };
 
+  useEffect(() => {
+    setCmsImageFailed(false);
+  }, [cmsOffersImageUrl]);
+
+  useEffect(() => {
+    if (!__DEV__) return;
+    console.log("[CMS] Product content loaded", {
+      isLoading: isProductContentLoading,
+      isError: isProductContentError,
+    });
+    console.log("[CMS] Offers banner:", cmsOffersBanner);
+    console.log("[CMS] Offers banner raw image URL:", rawCmsOffersImageUrl);
+    console.log("[CMS] Offers banner final image URL:", cmsOffersImageUrl);
+  }, [
+    cmsOffersBanner,
+    cmsOffersImageUrl,
+    isProductContentError,
+    isProductContentLoading,
+    rawCmsOffersImageUrl,
+  ]);
+
+  const handleCmsOffersPress = () => {
+    if (!cmsOffersBanner?.redirect_link) return;
+    Linking.openURL(cmsOffersBanner.redirect_link).catch(() => undefined);
+  };
+
   if (isProductsLoading || isCampaignLoading) {
     return <HomeSectionSkeleton height={390} backgroundColor={theme.background} />;
   }
@@ -406,7 +445,64 @@ export default function OfferHome() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Banner Carousel */}
-      {banner.length > 0 && (
+      {shouldShowCmsOffersBanner ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.offersScroll}
+        >
+          <TouchableOpacity
+            style={[
+              styles.offerCard,
+              { backgroundColor: hasCmsOffersColor ? cmsOffersBanner!.color_value! : theme.card },
+            ]}
+            activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
+            onPress={cmsOffersBanner?.redirect_link ? handleCmsOffersPress : undefined}
+            disabled={!cmsOffersBanner?.redirect_link}
+          >
+            {hasCmsOffersImage ? (
+              <RNImage
+                source={{ uri: cmsOffersImageUrl! }}
+                style={styles.offerImage}
+                resizeMode="cover"
+                onLoad={() => {
+                  if (__DEV__) {
+                    console.log("[CMS] Offers banner image loaded", {
+                      url: cmsOffersImageUrl,
+                    });
+                  }
+                }}
+                onError={(error) => {
+                  if (__DEV__) {
+                    console.error("[CMS] Offers banner image failed", {
+                      url: cmsOffersImageUrl,
+                      error,
+                    });
+                  }
+                  setCmsImageFailed(true);
+                }}
+              />
+            ) : null}
+
+            {(cmsOffersBanner?.title || cmsOffersBanner?.cta_text) ? (
+              <View style={styles.cmsOfferTextBlock}>
+                {!!cmsOffersBanner?.title && (
+                  <Text style={styles.cmsOfferTitle} numberOfLines={2}>
+                    {cmsOffersBanner.title}
+                  </Text>
+                )}
+                {!!cmsOffersBanner?.cta_text && (
+                  <View style={styles.cmsOfferCta}>
+                    <Text style={styles.cmsOfferCtaText} numberOfLines={1}>
+                      {cmsOffersBanner.cta_text}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </ScrollView>
+      ) : banner.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -423,7 +519,7 @@ export default function OfferHome() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      )}
+      ) : null}
 
       {/* Flash Sales Section */}
       <View style={styles.flashSectionContainer}>
@@ -511,6 +607,33 @@ const styles = StyleSheet.create({
   offerImage: {
     width: "100%",
     height: "100%",
+  },
+  cmsOfferTextBlock: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    bottom: 10,
+  },
+  cmsOfferTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  cmsOfferCta: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  cmsOfferCtaText: {
+    color: "#111827",
+    fontSize: 11,
+    fontWeight: "800",
   },
   flashSectionContainer: {
     width: "100%",
