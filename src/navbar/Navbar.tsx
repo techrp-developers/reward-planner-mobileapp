@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
+  Image as RNImage,
+  ScrollView,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
@@ -27,16 +29,11 @@ import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecomme
 
 import Navbar_Background from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
-import { TAB_THEME, TopTab, isTopTab } from "./navbarConstants";
+import { TAB_MODULE_MAP, TAB_THEME, TopTab, isTopTab } from "./navbarConstants";
+import { useModuleIcons } from "./hooks/useModuleIcons";
+import type { ModuleIcon } from "./api/ModuleIconsApi";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
-import Home_Nav from "../assets/menu/Home_Nav.svg";
-import Services from "../assets/menu/Services.svg";
-import Payments from "../assets/menu/Payments.svg";
-import Payments2 from "../assets/menu/Payments2.svg";
-// import Dine_Out from "../assets/menu/Dine_Out.svg";
-import Bus_Booking from "../assets/menu/Bus_Booking.svg";
-import Bus from "../assets/menu/Bus.svg";
 import Reward from "../assets/product/rewards.svg";
 import { useAppTheme } from "../theme/ThemeContext";
 
@@ -59,14 +56,6 @@ type ApiAddress = {
   state?: string;
   zipcode?: string;
 };
-
-type SvgIcon = React.ComponentType<{
-  width?: number;
-  height?: number;
-  fill?: string;
-  stroke?: string;
-  color?: string;
-}>;
 
 type NavStateLike = {
   index: number;
@@ -183,6 +172,68 @@ const getActiveTab = (
   return "Product";
 };
 
+const TOP_TAB_BY_ROUTE_KEY: Record<string, TopTab> = {
+  ProductModule: "Product",
+  ServicesModule: "Services",
+  PaymentsModule: "Payments",
+  DineOutModule: "DineOut",
+};
+
+const MODULE_KEY_BY_TOP_TAB = Object.entries(TAB_MODULE_MAP).reduce(
+  (acc, [tab, moduleKey]) => {
+    acc[tab as TopTab] = moduleKey;
+    return acc;
+  },
+  {} as Record<TopTab, string>
+);
+
+const FALLBACK_MODULES: ModuleIcon[] = [
+  {
+    icon_id: -1,
+    module_key: "product",
+    icon_type: "image",
+    icon_url: null,
+    active_icon_url: null,
+    label: "Product",
+    sort_order: 0,
+    is_active: 1,
+    route_key: "ProductModule",
+  },
+  {
+    icon_id: -2,
+    module_key: "service",
+    icon_type: "image",
+    icon_url: null,
+    active_icon_url: null,
+    label: "Services",
+    sort_order: 1,
+    is_active: 1,
+    route_key: "ServicesModule",
+  },
+  {
+    icon_id: -3,
+    module_key: "payment",
+    icon_type: "image",
+    icon_url: null,
+    active_icon_url: null,
+    label: "Payments",
+    sort_order: 2,
+    is_active: 1,
+    route_key: "PaymentsModule",
+  },
+  {
+    icon_id: -4,
+    module_key: "dineout",
+    icon_type: "image",
+    icon_url: null,
+    active_icon_url: null,
+    label: "Bus Booking",
+    sort_order: 3,
+    is_active: 1,
+    route_key: "DineOutModule",
+  },
+];
+
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 const ACTIVE_TAB_SCALE = 1.05;
 const PRESSED_SCALE_DELTA = 0.06;
@@ -192,8 +243,8 @@ const TopIconWithLabel = React.memo(
   ({
     active,
     onPress,
-    Icon,
-    ActiveIcon,
+    iconUrl,
+    moduleKey,
     label,
     activeColor,
     activeTint,
@@ -203,8 +254,8 @@ const TopIconWithLabel = React.memo(
   }: {
     active: boolean;
     onPress: () => void;
-    Icon: SvgIcon;
-    ActiveIcon?: SvgIcon;
+    iconUrl: string | null;
+    moduleKey: string;
     label: string;
     activeColor: string;
     activeTint?: string;
@@ -213,8 +264,6 @@ const TopIconWithLabel = React.memo(
     inactiveBorder: string;
   }) => {
     const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
-    const RenderIcon = active && ActiveIcon ? ActiveIcon : Icon;
-
     // Base scale grows with a spring when the tab becomes active (visual
     // weight), and presses shrink from whatever the current base is —
     // never fighting an in-flight active/inactive transition.
@@ -278,9 +327,23 @@ const TopIconWithLabel = React.memo(
           />
         ) : null}
 
-        {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
-            We pass all 3 so it works in most cases. */}
-        <RenderIcon width={28} height={28} fill={tint} stroke={tint} color={tint} />
+        {iconUrl ? (
+          <RNImage
+            source={{ uri: iconUrl }}
+            style={styles.moduleIcon}
+            resizeMode="contain"
+            onLoad={() => {
+              if (__DEV__) {
+                console.log("[CMS] Module icon loaded:", moduleKey);
+              }
+            }}
+            onError={() => {
+              if (__DEV__) {
+                console.log("[CMS] Module icon failed:", moduleKey, iconUrl);
+              }
+            }}
+          />
+        ) : null}
 
         <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
 
@@ -329,6 +392,29 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   // Campaign-driven banner config per tab (falls back to the bundled static
   // images/colors in navbarConstants when the API has no data for a tab).
   const { banners } = useNavbarBanners();
+  const { modules: cmsModules } = useModuleIcons();
+  const modules = cmsModules.length > 0 ? cmsModules : FALLBACK_MODULES;
+  const activeModuleKeyFromRoute = MODULE_KEY_BY_TOP_TAB[activeTab];
+  const [selectedModuleKey, setSelectedModuleKey] = React.useState(activeModuleKeyFromRoute);
+
+  React.useEffect(() => {
+    setSelectedModuleKey(activeModuleKeyFromRoute);
+  }, [activeModuleKeyFromRoute]);
+
+  React.useEffect(() => {
+    if (!__DEV__) return;
+    console.log("[CMS] Modules:", modules);
+    modules.forEach((module) => {
+      console.log("[CMS] Module:", {
+        module_key: module.module_key,
+        label: module.label,
+        icon_url: module.icon_url,
+        active_icon_url: module.active_icon_url,
+        route_key: module.route_key,
+        is_active: module.is_active,
+      });
+    });
+  }, [modules]);
 
   const activeThemeColor = React.useMemo(
     () => banners[activeTab]?.bgColor ?? TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
@@ -463,6 +549,39 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     [activeTab, navigation, onModuleChange]
   );
 
+  const handleModulePress = React.useCallback(
+    (module: ModuleIcon) => {
+      if (module.module_key === selectedModuleKey || isNavigatingRef.current) return;
+
+      setSelectedModuleKey(module.module_key);
+
+      if (!module.route_key) return;
+
+      const knownTab = TOP_TAB_BY_ROUTE_KEY[module.route_key];
+      if (knownTab) {
+        handleTab(knownTab);
+        return;
+      }
+
+      try {
+        (navigation as any).navigate("Home", {
+          screen: module.route_key,
+          params: { moduleName: module.module_key },
+          moduleName: module.module_key,
+        });
+      } catch (error) {
+        if (__DEV__) {
+          console.warn("Navigation to CMS module failed:", {
+            module_key: module.module_key,
+            route_key: module.route_key,
+            error,
+          });
+        }
+      }
+    },
+    [handleTab, navigation, selectedModuleKey]
+  );
+
   const navigateToAddAddress = React.useCallback(() => {
     navigateToScreen("AddressSelect", { manageOnly: true });
   }, [navigateToScreen]);
@@ -564,58 +683,40 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         isDark={isDark}
       />
 
-      {/* TOP 4 ICON TABS */}
-      <View style={styles.topIconsRow}>
-        <TopIconWithLabel
-          active={activeTab === "Product"}
-          onPress={() => handleTab("Product")}
-          Icon={Home_Nav as unknown as SvgIcon}
-          label="Product"
-          activeColor={TAB_THEME.Product.bgColor}
-          activeTint={TAB_THEME.Product.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
+      {/* TOP MODULE TABS */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.topIconsRow}
+      >
+        {modules.map((module) => {
+          const moduleTab = module.route_key ? TOP_TAB_BY_ROUTE_KEY[module.route_key] : undefined;
+          const active = module.module_key === selectedModuleKey;
+          const iconUrl = active
+            ? module.active_icon_url || module.icon_url
+            : module.icon_url;
+          const activeColor = moduleTab
+            ? TAB_THEME[moduleTab]?.bgColor ?? activeThemeColor
+            : activeThemeColor;
+          const activeTint = moduleTab ? TAB_THEME[moduleTab]?.activeTint : undefined;
 
-        <TopIconWithLabel
-          active={activeTab === "Services"}
-          onPress={() => handleTab("Services")}
-          Icon={Services as unknown as SvgIcon}
-          label="Services"
-          activeColor={TAB_THEME.Services.bgColor}
-          activeTint={TAB_THEME.Services.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "Payments"}
-          onPress={() => handleTab("Payments")}
-          Icon={Payments as unknown as SvgIcon}
-          ActiveIcon={Payments2 as unknown as SvgIcon}
-          label="Payments"
-          activeColor={TAB_THEME.Payments.bgColor}
-          activeTint={TAB_THEME.Payments.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "DineOut"}
-          onPress={() => handleTab("DineOut")}
-          Icon={Bus_Booking as unknown as SvgIcon}
-          ActiveIcon={Bus as unknown as SvgIcon}
-          label="Bus Booking"
-          activeColor={TAB_THEME.DineOut.bgColor}
-          activeTint={TAB_THEME.DineOut.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-      </View>
+          return (
+            <TopIconWithLabel
+              key={module.icon_id}
+              active={active}
+              onPress={() => handleModulePress(module)}
+              iconUrl={iconUrl}
+              moduleKey={module.module_key}
+              label={module.label}
+              activeColor={activeColor}
+              activeTint={activeTint}
+              inactiveTint={navbarIconColor}
+              inactiveBackground={navbarSurface}
+              inactiveBorder={navbarBorder}
+            />
+          );
+        })}
+      </ScrollView>
 
       {/* LOCATION */}
       <View style={styles.topRow}>
@@ -736,8 +837,10 @@ const styles = StyleSheet.create({
   topIconsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    minWidth: "100%",
     paddingHorizontal: 18,
     marginTop: 8,
+    gap: 10,
   },
 
   topTabCard: {
@@ -773,6 +876,11 @@ const styles = StyleSheet.create({
     width: 16,
     height: 3,
     borderRadius: 2,
+  },
+
+  moduleIcon: {
+    width: 28,
+    height: 28,
   },
 
   topTabLabel: {

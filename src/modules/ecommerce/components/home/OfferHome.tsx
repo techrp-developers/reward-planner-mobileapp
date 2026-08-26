@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ScrollView,
   View,
@@ -34,6 +34,7 @@ import {
 import { useAppTheme } from "../../../../theme/ThemeContext";
 import { normalizeLocalCmsImageUrl } from "../../../../config/apiConfig";
 import { useProductContent } from "../../hooks/useProductContent";
+import type { ContentZoneImage } from "../../api/ProductContentApi";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -338,10 +339,10 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
-  const { theme } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
   const { productContent, isLoading: isProductContentLoading, isError: isProductContentError } = useProductContent();
   const cmsOffersBanner = productContent?.offers_banner ?? null;
-  const [cmsImageFailed, setCmsImageFailed] = useState(false);
+  const [failedSlideIds, setFailedSlideIds] = useState<Set<string>>(new Set());
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
@@ -387,14 +388,51 @@ export default function OfferHome() {
     })),
     [campaignHome]
   );
-  const rawCmsOffersImageUrl = cmsOffersBanner?.content_type === 'image' ? cmsOffersBanner.image_url : null;
-  const cmsOffersImageUrl = useMemo(
-    () => normalizeLocalCmsImageUrl(rawCmsOffersImageUrl),
-    [rawCmsOffersImageUrl],
-  );
-  const hasCmsOffersImage = cmsOffersBanner?.content_type === 'image' && !!cmsOffersImageUrl && !cmsImageFailed;
-  const hasCmsOffersColor = !hasCmsOffersImage && !!cmsOffersBanner?.color_value;
-  const shouldShowCmsOffersBanner = !!cmsOffersBanner && (hasCmsOffersImage || hasCmsOffersColor);
+  // Backend already resolved the active campaign/priority/scheduling — this
+  // only turns its content_type into what to render. Prefer the images[]
+  // gallery (sorted, active-only); fall back to the single legacy image_url
+  // for older campaigns that never populated a gallery.
+  const cmsOffersSlides = useMemo(() => {
+    if (cmsOffersBanner?.content_type !== 'image') return [];
+
+    const gallery: ContentZoneImage[] = Array.isArray(cmsOffersBanner.images)
+      ? cmsOffersBanner.images
+      : [];
+    const active = gallery
+      .filter((img) => Number(img?.is_active) === 1)
+      .slice()
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+
+    if (active.length > 0) {
+      return active
+        .map((img) => ({
+          id: String(img.image_id ?? `${cmsOffersBanner.content_id}_${img.sort_order}`),
+          url: normalizeLocalCmsImageUrl(img.image_url) || '',
+        }))
+        .filter((slide) => !!slide.url);
+    }
+
+    const legacyUrl = normalizeLocalCmsImageUrl(cmsOffersBanner.image_url);
+    return legacyUrl ? [{ id: `legacy_${cmsOffersBanner.content_id}`, url: legacyUrl }] : [];
+  }, [cmsOffersBanner]);
+
+  // A new campaign/image set gets a clean slate instead of inheriting
+  // failure state from whatever was showing before.
+  const slideKey = cmsOffersSlides.map((s) => s.id).join('|');
+  const prevSlideKeyRef = useRef(slideKey);
+  useEffect(() => {
+    if (prevSlideKeyRef.current !== slideKey) {
+      prevSlideKeyRef.current = slideKey;
+      setFailedSlideIds(new Set());
+    }
+  }, [slideKey]);
+
+  const markSlideFailed = (id: string) => {
+    setFailedSlideIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+  };
+
+  const hasCmsOffersColor = cmsOffersSlides.length === 0 && !!cmsOffersBanner?.color_value;
+  const shouldShowCmsOffersBanner = !!cmsOffersBanner && (cmsOffersSlides.length > 0 || hasCmsOffersColor);
 
   const flashSalesPoster = useMemo(() => {
     const flash = campaignHome?.data?.flash_sales?.[0];
@@ -413,25 +451,14 @@ export default function OfferHome() {
   };
 
   useEffect(() => {
-    setCmsImageFailed(false);
-  }, [cmsOffersImageUrl]);
-
-  useEffect(() => {
     if (!__DEV__) return;
     console.log("[CMS] Product content loaded", {
       isLoading: isProductContentLoading,
       isError: isProductContentError,
     });
     console.log("[CMS] Offers banner:", cmsOffersBanner);
-    console.log("[CMS] Offers banner raw image URL:", rawCmsOffersImageUrl);
-    console.log("[CMS] Offers banner final image URL:", cmsOffersImageUrl);
-  }, [
-    cmsOffersBanner,
-    cmsOffersImageUrl,
-    isProductContentError,
-    isProductContentLoading,
-    rawCmsOffersImageUrl,
-  ]);
+    console.log("[CMS] Offers banner slides:", cmsOffersSlides);
+  }, [cmsOffersBanner, cmsOffersSlides, isProductContentError, isProductContentLoading]);
 
   const handleCmsOffersPress = () => {
     if (!cmsOffersBanner?.redirect_link) return;
@@ -451,56 +478,90 @@ export default function OfferHome() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.offersScroll}
         >
-          <TouchableOpacity
-            style={[
-              styles.offerCard,
-              { backgroundColor: hasCmsOffersColor ? cmsOffersBanner!.color_value! : theme.card },
-            ]}
-            activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
-            onPress={cmsOffersBanner?.redirect_link ? handleCmsOffersPress : undefined}
-            disabled={!cmsOffersBanner?.redirect_link}
-          >
-            {hasCmsOffersImage ? (
-              <RNImage
-                source={{ uri: cmsOffersImageUrl! }}
-                style={styles.offerImage}
-                resizeMode="cover"
-                onLoad={() => {
-                  if (__DEV__) {
-                    console.log("[CMS] Offers banner image loaded", {
-                      url: cmsOffersImageUrl,
-                    });
-                  }
-                }}
-                onError={(error) => {
-                  if (__DEV__) {
-                    console.error("[CMS] Offers banner image failed", {
-                      url: cmsOffersImageUrl,
-                      error,
-                    });
-                  }
-                  setCmsImageFailed(true);
-                }}
-              />
-            ) : null}
+          {cmsOffersSlides.length > 0 ? (
+            cmsOffersSlides.map((slide, index) => {
+              const slideFailed = failedSlideIds.has(slide.id);
 
-            {(cmsOffersBanner?.title || cmsOffersBanner?.cta_text) ? (
-              <View style={styles.cmsOfferTextBlock}>
-                {!!cmsOffersBanner?.title && (
-                  <Text style={styles.cmsOfferTitle} numberOfLines={2}>
-                    {cmsOffersBanner.title}
-                  </Text>
-                )}
-                {!!cmsOffersBanner?.cta_text && (
-                  <View style={styles.cmsOfferCta}>
-                    <Text style={styles.cmsOfferCtaText} numberOfLines={1}>
-                      {cmsOffersBanner.cta_text}
+              return (
+                <TouchableOpacity
+                  key={slide.id}
+                  style={[styles.offerCard, { backgroundColor: theme.card }]}
+                  activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
+                  onPress={cmsOffersBanner?.redirect_link ? handleCmsOffersPress : undefined}
+                  disabled={!cmsOffersBanner?.redirect_link}
+                >
+                  {/* A single failed image only loses its own slide — the
+                      rest of the carousel keeps working. */}
+                  {slideFailed ? (
+                    <View
+                      style={[styles.offerImage, { backgroundColor: isDark ? "#111827" : "#FFF8E7" }]}
+                    />
+                  ) : (
+                    <RNImage
+                      source={{ uri: slide.url }}
+                      style={styles.offerImage}
+                      resizeMode="cover"
+                      onLoad={() => {
+                        if (__DEV__) {
+                          console.log("[CMS] Offers banner image loaded", { url: slide.url });
+                        }
+                      }}
+                      onError={(error) => {
+                        if (__DEV__) {
+                          console.error("[CMS] Offers banner image failed", {
+                            url: slide.url,
+                            error,
+                          });
+                        }
+                        markSlideFailed(slide.id);
+                      }}
+                    />
+                  )}
+
+                  {index === 0 && (cmsOffersBanner?.title || cmsOffersBanner?.cta_text) ? (
+                    <View style={styles.cmsOfferTextBlock}>
+                      {!!cmsOffersBanner?.title && (
+                        <Text style={styles.cmsOfferTitle} numberOfLines={2}>
+                          {cmsOffersBanner.title}
+                        </Text>
+                      )}
+                      {!!cmsOffersBanner?.cta_text && (
+                        <View style={styles.cmsOfferCta}>
+                          <Text style={styles.cmsOfferCtaText} numberOfLines={1}>
+                            {cmsOffersBanner.cta_text}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <TouchableOpacity
+              style={[styles.offerCard, { backgroundColor: cmsOffersBanner!.color_value! }]}
+              activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
+              onPress={cmsOffersBanner?.redirect_link ? handleCmsOffersPress : undefined}
+              disabled={!cmsOffersBanner?.redirect_link}
+            >
+              {(cmsOffersBanner?.title || cmsOffersBanner?.cta_text) ? (
+                <View style={styles.cmsOfferTextBlock}>
+                  {!!cmsOffersBanner?.title && (
+                    <Text style={styles.cmsOfferTitle} numberOfLines={2}>
+                      {cmsOffersBanner.title}
                     </Text>
-                  </View>
-                )}
-              </View>
-            ) : null}
-          </TouchableOpacity>
+                  )}
+                  {!!cmsOffersBanner?.cta_text && (
+                    <View style={styles.cmsOfferCta}>
+                      <Text style={styles.cmsOfferCtaText} numberOfLines={1}>
+                        {cmsOffersBanner.cta_text}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          )}
         </ScrollView>
       ) : banner.length > 0 ? (
         <ScrollView
