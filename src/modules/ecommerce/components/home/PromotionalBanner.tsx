@@ -1,49 +1,36 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Image as RNImage,
-  Linking,
-} from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { useAppTheme } from "../../../../theme/ThemeContext";
+import { View, StyleSheet, TouchableOpacity, Linking, Animated, ImageLoadEvent } from "react-native";
 import { normalizeLocalCmsImageUrl } from "../../../../config/apiConfig";
 import { useProductContent } from "../../hooks/useProductContent";
 
-const { width } = Dimensions.get("window");
-const BANNER_HEIGHT = width * 0.42;
+// Matches the old fixed `width * 0.92` banner proportions — used both as the
+// pure color fallback ratio (no image to measure) and as the placeholder
+// ratio shown for the brief moment before a real image's natural dimensions
+// are known.
+const FALLBACK_ASPECT_RATIO = 1 / 0.92;
+const MIN_ASPECT_RATIO = 0.45;
+const MAX_ASPECT_RATIO = 2.2;
 
-// Emergency fallback only — shown when the CMS has no promotional_banner
-// entry at all (network failure, nothing published yet). The CMS
-// content_type: "color" default entry renders through the normal color
-// branch below, not this one.
-const FALLBACK_TITLE = "Big Savings. Bigger Smiles.";
-const FALLBACK_GRADIENT_LIGHT = ["#A95ACD", "#FC8BAD"];
-const FALLBACK_GRADIENT_DARK = ["#18181B", "#3B0764", "#BE185D"];
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 function PromotionalBanner() {
-  const { isDark } = useAppTheme();
   const { productContent, isLoading, isError } = useProductContent();
   const banner = productContent?.promotional_banner ?? null;
 
-  const [imageFailed, setImageFailed] = React.useState(false);
-
-  // Reset the failure flag whenever the CMS points at a different image, so
-  // a newly published campaign gets a fresh chance to load.
   const rawBannerImageUrl = banner?.content_type === "image" ? banner.image_url : null;
   const bannerImageUrl = React.useMemo(
     () => normalizeLocalCmsImageUrl(rawBannerImageUrl),
     [rawBannerImageUrl]
   );
-  const prevImageUrlRef = React.useRef(bannerImageUrl);
+
+  const [imageAspectRatio, setImageAspectRatio] = React.useState<number | null>(null);
+  const [imageFailed, setImageFailed] = React.useState(false);
+
+  // A newly published campaign (or one that previously failed) gets a fresh
+  // chance to load and measure its own ratio.
   React.useEffect(() => {
-    if (prevImageUrlRef.current !== bannerImageUrl) {
-      prevImageUrlRef.current = bannerImageUrl;
-      setImageFailed(false);
-    }
+    setImageAspectRatio(null);
+    setImageFailed(false);
   }, [bannerImageUrl]);
 
   React.useEffect(() => {
@@ -60,70 +47,60 @@ function PromotionalBanner() {
     }
   }, [banner?.redirect_link]);
 
-  const showRemoteImage = banner?.content_type === "image" && !!bannerImageUrl && !imageFailed;
+  const handleImageLoad = React.useCallback(
+    (event: ImageLoadEvent) => {
+      const { width, height } = event.nativeEvent.source;
+      if (width && height) {
+        setImageAspectRatio(clamp(width / height, MIN_ASPECT_RATIO, MAX_ASPECT_RATIO));
+      }
+      if (__DEV__) {
+        console.log("[CMS] Promotional banner image loaded", { url: bannerImageUrl, width, height });
+      }
+    },
+    [bannerImageUrl]
+  );
+
+  const handleImageError = React.useCallback(() => {
+    setImageFailed(true);
+    if (__DEV__) {
+      console.error("[CMS] Promotional banner image failed", { url: bannerImageUrl });
+    }
+  }, [bannerImageUrl]);
+
+  const showRemoteImage = !!bannerImageUrl && !imageFailed;
   const showColor = !showRemoteImage && !!banner?.color_value;
-  const title = banner?.title || (showColor || showRemoteImage ? undefined : FALLBACK_TITLE);
   const Wrapper = banner?.redirect_link ? TouchableOpacity : View;
+  // Full height once the real image has loaded and reported its own ratio;
+  // the fixed ratio otherwise (no image, or still loading it).
+  const bannerAspectRatio = showRemoteImage && imageAspectRatio ? imageAspectRatio : FALLBACK_ASPECT_RATIO;
+
+  // No CMS entry for this zone (nothing published, or the fetch hasn't
+  // resolved yet) — render nothing so the home screen flows straight from
+  // the navbar into the categories section instead of showing a placeholder.
+  if (!showRemoteImage && !showColor) {
+    return null;
+  }
 
   return (
     <View style={styles.wrapper}>
       <Wrapper
         activeOpacity={0.9}
         onPress={banner?.redirect_link ? handlePress : undefined}
-        style={styles.bannerBox}
+        style={[styles.bannerBox, { aspectRatio: bannerAspectRatio }]}
       >
-        {/* Base fill always shows through — a CMS color, or the app default
-            gradient — so a slow/failed image never leaves a blank box. */}
         {showColor ? (
           <View style={[StyleSheet.absoluteFill, { backgroundColor: banner!.color_value! }]} />
-        ) : (
-          <LinearGradient
-            colors={isDark ? FALLBACK_GRADIENT_DARK : FALLBACK_GRADIENT_LIGHT}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
-
-        {showRemoteImage ? (
-          <RNImage
-            source={{ uri: bannerImageUrl! }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onLoad={() => {
-              if (__DEV__) {
-                console.log("[CMS] Promotional banner image loaded", {
-                  url: bannerImageUrl,
-                });
-              }
-            }}
-            onError={(error) => {
-              if (__DEV__) {
-                console.error("[CMS] Promotional banner image failed", {
-                  url: bannerImageUrl,
-                  error,
-                });
-              }
-              setImageFailed(true);
-            }}
-          />
         ) : null}
 
-        {(title || banner?.cta_text) && (
-          <View style={styles.textBlock}>
-            {!!title && (
-              <Text style={styles.bannerTitle} numberOfLines={2}>
-                {title}
-              </Text>
-            )}
-
-            {!!banner?.cta_text && (
-              <View style={styles.ctaButton}>
-                <Text style={styles.ctaText}>{banner.cta_text}</Text>
-              </View>
-            )}
-          </View>
-        )}
+        {showRemoteImage ? (
+          <Animated.Image
+            source={{ uri: bannerImageUrl! }}
+            style={[StyleSheet.absoluteFill, imageAspectRatio === null ? styles.imageLoading : null]}
+            resizeMode="cover"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        ) : null}
       </Wrapper>
     </View>
   );
@@ -133,15 +110,12 @@ export default React.memo(PromotionalBanner);
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 8,
   },
 
   bannerBox: {
-    height: BANNER_HEIGHT,
+    width: "100%",
     justifyContent: "flex-end",
-    borderRadius: 22,
     overflow: "hidden",
     elevation: 4,
     shadowColor: "#000",
@@ -150,29 +124,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
 
-  textBlock: {
-    padding: 16,
-  },
-
-  bannerTitle: {
-    fontSize: width * 0.05,
-    fontWeight: "700",
-    color: "#fff",
-    lineHeight: width * 0.065,
-  },
-
-  ctaButton: {
-    marginTop: 10,
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-
-  ctaText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#111827",
+  // Dims the image slightly while it's still sized to the placeholder ratio
+  // (before its own dimensions are known), so the crop/reflow the instant
+  // it loads reads as a fade-in rather than a visible jump.
+  imageLoading: {
+    opacity: 0.85,
   },
 });

@@ -18,12 +18,10 @@ import type { HomeStackParamList } from '../navigation/types';
 import type { RootStackParamList } from '../../../navigation/RootNavigator';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import { getStoredUserName, deleteCustomer, getAuthHeaders, updateProfile } from '../../common/auth/api/AuthAPI';
+import { fetchUserInfo, getStoredUserName, deleteCustomer, updateProfile } from '../../common/auth/api/AuthAPI';
 import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirmationModal';
 import { rs, fs } from '../../../utils/responsive';
-import axios from 'axios';
 import Reward from '../../../assets/product/rewards.svg';
-import { API_BASE_URL } from '../../../config/apiConfig';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -94,6 +92,51 @@ const formatDate = (dateStr: string): string => {
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
+const normalizeUserInfo = (payload: any): UserInfo | null => {
+  const user = payload?.user || payload?.data?.user || payload?.data || payload;
+  if (!user) return null;
+
+  const employee = user.employeeInfo || user.employee_info || {};
+  const address = user.defaultAddress || user.default_address || {};
+
+  return {
+    userId: Number(user.userId ?? user.user_id ?? user.id ?? 0),
+    name: String(user.name || user.full_name || user.username || 'User'),
+    email: String(user.email || ''),
+    phone: String(user.phone || user.mobile || ''),
+    rewardPoints: Number(user.rewardPoints ?? user.reward_points ?? user.points ?? 0),
+    company: {
+      name: String(user.company?.name || user.company_name || ''),
+      logo: String(user.company?.logo || user.company_logo || ''),
+    },
+    employeeInfo: {
+      dateOfJoining: String(employee.dateOfJoining || employee.date_of_joining || ''),
+      role: String(employee.role || ''),
+      date_of_birth: String(employee.date_of_birth || ''),
+      department: String(employee.department || ''),
+    },
+    defaultAddress: {
+      addressId: Number(address.addressId ?? address.address_id ?? address.id ?? 0),
+      type: String(address.type || ''),
+      line1: String(address.line1 || address.address_line_1 || address.address || ''),
+      line2: String(address.line2 || address.address_line_2 || ''),
+      city: String(address.city || ''),
+      state: String(address.state || ''),
+      country: String(address.country || ''),
+      zipcode: String(address.zipcode || address.pincode || ''),
+      landmark: String(address.landmark || ''),
+    },
+    steps: {
+      steps: Number(user.steps?.steps ?? user.steps_count ?? 0),
+      goal_steps: Number(user.steps?.goal_steps ?? user.goal_steps ?? 0),
+      progress_percent: Number(user.steps?.progress_percent ?? user.progress_percent ?? 0),
+    },
+    thought: String(user.thought || ''),
+    userImage: String(user.userImage || user.user_image || user.profile_image || ''),
+    created_at: String(user.created_at || user.createdAt || ''),
+  };
+};
+
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
@@ -135,17 +178,11 @@ const ProfileScreen: React.FC = () => {
         if (stored) setDisplayName(stored);
       }
 
-      const headers = await getAuthHeaders();
-      if (!headers.Authorization) return;
+      const profile = normalizeUserInfo(await fetchUserInfo());
 
-      const res = await axios.get<{ success: boolean; data: UserInfo }>(
-        `${API_BASE_URL}/v1/auth/user-info`,
-        { headers }
-      );
-
-      if (res.data?.success) {
-        setUserInfo(res.data.data);
-        setDisplayName(res.data.data.name);
+      if (profile) {
+        setUserInfo(profile);
+        setDisplayName(profile.name || authUser?.name || 'User');
       }
     } catch {
       const fallback = await getStoredUserName();
@@ -477,7 +514,7 @@ const ProfileScreen: React.FC = () => {
                 <MaterialCommunityIcons name={profileContext === 'services' ? 'briefcase-check-outline' : 'shopping-outline'} size={17} color="#4F46E5" />
               </View>
               <View style={styles.flex1}>
-                <Text style={[styles.rowVal, { color: theme.text }]}>My Orders</Text>
+                <Text style={[styles.rowVal, { color: profileTextColor(isDark) }]}>My Orders</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={18} color="#CBD5E1" />
             </TouchableOpacity>
@@ -534,7 +571,7 @@ const ProfileScreen: React.FC = () => {
           <View style={styles.footer}>
             
             {userInfo?.created_at ? (
-              <Text style={[styles.footerMember, { color: theme.secondaryText }]}>
+              <Text style={[styles.footerMember, { color: profileMutedTextColor(isDark) }]}>
                 Member since {formatDate(userInfo.created_at)}
               </Text>
             ) : null}
@@ -588,7 +625,7 @@ const SectionHead = ({ title, isDark, action, onAction }: {
   title: string; isDark: boolean; action?: string; onAction?: () => void;
 }) => (
   <View style={styles.secHead}>
-    <Text style={[styles.secTitle, { color: isDark ? '#A1A1AA' : '#475569' }]}>
+    <Text style={[styles.secTitle, { color: profileMutedTextColor(isDark) }]}>
       {title.toUpperCase()}
     </Text>
     {action && (
@@ -627,12 +664,12 @@ const InfoTableRow: React.FC<InfoTableRowProps> = ({
       <View style={[styles.infoTableIcon, { backgroundColor: isDark ? 'rgba(129,140,248,0.14)' : '#EEF2FF' }]}>
         <MaterialCommunityIcons name={icon} size={15} color="#6366F1" />
       </View>
-      <Text style={[styles.infoTableLabel, { color: theme.secondaryText }]} numberOfLines={1}>
+      <Text style={[styles.infoTableLabel, { color: profileMutedTextColor(isDark) }]} numberOfLines={1}>
         {label}
       </Text>
     </View>
     <View style={styles.infoTableValueCol}>
-      <Text style={[styles.infoTableValue, { color: theme.text }]} numberOfLines={2}>
+      <Text style={[styles.infoTableValue, { color: profileTextColor(isDark) }]} numberOfLines={2}>
         {value || '-'}
       </Text>
       {badge ? (
@@ -668,8 +705,8 @@ const AccountRow: React.FC<AccountRowProps> = ({
       <MaterialCommunityIcons name={icon} size={16} color={danger ? '#EF4444' : '#6366F1'} />
     </View>
     <View style={{ flex: 1 }}>
-      <Text style={[styles.rowVal, { color: danger ? '#EF4444' : theme.text }]}>{label}</Text>
-      {sub ? <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>{sub}</Text> : null}
+      <Text style={[styles.rowVal, { color: danger ? '#EF4444' : profileTextColor(isDark) }]}>{label}</Text>
+      {sub ? <Text style={[styles.rowLbl, { color: profileMutedTextColor(isDark) }]}>{sub}</Text> : null}
     </View>
     {!danger && (
       <MaterialCommunityIcons name="chevron-right" size={18} color={isDark ? '#52525B' : '#CBD5E1'} />
@@ -692,8 +729,8 @@ const DarkModeRow: React.FC<{ isDark: boolean; theme: any; onToggle: () => void 
       />
     </View>
     <View style={{ flex: 1 }}>
-      <Text style={[styles.rowVal, { color: theme.text }]}>Dark Mode</Text>
-      <Text style={[styles.rowLbl, { color: theme.secondaryText }]}>
+      <Text style={[styles.rowVal, { color: profileTextColor(isDark) }]}>Dark Mode</Text>
+      <Text style={[styles.rowLbl, { color: profileMutedTextColor(isDark) }]}>
         {isDark ? 'Dark theme active' : 'Light theme active'}
       </Text>
     </View>
@@ -713,6 +750,9 @@ const cardColor = (isDark: boolean, _theme: any) => ({
   borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)',
   shadowColor: isDark ? '#000' : '#94A3B8',
 });
+
+const profileTextColor = (isDark: boolean) => isDark ? '#FFFFFF' : '#0F172A';
+const profileMutedTextColor = (isDark: boolean) => isDark ? '#A1A1AA' : '#475569';
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({

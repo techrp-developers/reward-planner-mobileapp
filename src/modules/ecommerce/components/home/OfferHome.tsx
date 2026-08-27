@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   View,
@@ -8,8 +8,10 @@ import {
   Text,
   TouchableOpacity,
   Image as RNImage,
+  Animated,
   Alert,
   Linking,
+  ImageLoadEvent,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
@@ -39,7 +41,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
 const OFFER_WIDTH = SCREEN_WIDTH * 0.38;
-const OFFER_HEIGHT = OFFER_WIDTH * 1.8;
+// Card width stays fixed (a horizontally-scrolling carousel needs a
+// predictable card width) but height now comes from each image's own
+// aspect ratio via OfferSlideImage below. This ratio (matching the old
+// OFFER_WIDTH * 1.8 height) is used only for the color-only CMS card,
+// which has no image to measure.
+const OFFER_CARD_FALLBACK_ASPECT_RATIO = 1 / 1.8;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
@@ -52,6 +59,61 @@ const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
 const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+
+const clampRatio = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const OFFER_MIN_ASPECT_RATIO = 0.35;
+const OFFER_MAX_ASPECT_RATIO = 1.2;
+
+// Self-contained (no shared cross-file component) — sizes each offers_banner
+// slide from its own image, falling back to OFFER_CARD_FALLBACK_ASPECT_RATIO
+// while loading or if the CMS asset has no image at all.
+const OfferSlideImage = React.memo(({ uri }: { uri: string | null | undefined }) => {
+  const { isDark } = useAppTheme();
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setRatio(null);
+    setFailed(false);
+  }, [uri]);
+
+  const handleLoad = (event: ImageLoadEvent) => {
+    const { width, height } = event.nativeEvent.source;
+    if (width && height) {
+      setRatio(clampRatio(width / height, OFFER_MIN_ASPECT_RATIO, OFFER_MAX_ASPECT_RATIO));
+    }
+    if (__DEV__) {
+      console.log("[CMS] Offers banner image loaded", { url: uri, width, height });
+    }
+  };
+
+  const handleError = () => {
+    setFailed(true);
+    if (__DEV__) {
+      console.error("[CMS] Offers banner image failed", { url: uri });
+    }
+  };
+
+  const showImage = !!uri && !failed;
+  const baseStyle = isDark ? styles.offerImageBaseDark : styles.offerImageBaseLight;
+
+  return (
+    <View style={[styles.offerImageRoot, { aspectRatio: ratio ?? OFFER_CARD_FALLBACK_ASPECT_RATIO }]}>
+      <View style={[StyleSheet.absoluteFill, baseStyle]} />
+      {showImage ? (
+        <Animated.Image
+          source={{ uri: uri as string }}
+          style={[StyleSheet.absoluteFill, ratio === null ? styles.offerImageLoading : null]}
+          resizeMode="cover"
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      ) : null}
+    </View>
+  );
+});
+
+OfferSlideImage.displayName = "OfferSlideImage";
 
 const hasWishlistFlag = (item: any) =>
   item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
@@ -339,10 +401,9 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 export default function OfferHome() {
   const navigation = useNavigation<Nav>();
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
   const { productContent, isLoading: isProductContentLoading, isError: isProductContentError } = useProductContent();
   const cmsOffersBanner = productContent?.offers_banner ?? null;
-  const [failedSlideIds, setFailedSlideIds] = useState<Set<string>>(new Set());
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
@@ -416,21 +477,6 @@ export default function OfferHome() {
     return legacyUrl ? [{ id: `legacy_${cmsOffersBanner.content_id}`, url: legacyUrl }] : [];
   }, [cmsOffersBanner]);
 
-  // A new campaign/image set gets a clean slate instead of inheriting
-  // failure state from whatever was showing before.
-  const slideKey = cmsOffersSlides.map((s) => s.id).join('|');
-  const prevSlideKeyRef = useRef(slideKey);
-  useEffect(() => {
-    if (prevSlideKeyRef.current !== slideKey) {
-      prevSlideKeyRef.current = slideKey;
-      setFailedSlideIds(new Set());
-    }
-  }, [slideKey]);
-
-  const markSlideFailed = (id: string) => {
-    setFailedSlideIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-  };
-
   const hasCmsOffersColor = cmsOffersSlides.length === 0 && !!cmsOffersBanner?.color_value;
   const shouldShowCmsOffersBanner = !!cmsOffersBanner && (cmsOffersSlides.length > 0 || hasCmsOffersColor);
 
@@ -480,8 +526,6 @@ export default function OfferHome() {
         >
           {cmsOffersSlides.length > 0 ? (
             cmsOffersSlides.map((slide, index) => {
-              const slideFailed = failedSlideIds.has(slide.id);
-
               return (
                 <TouchableOpacity
                   key={slide.id}
@@ -491,32 +535,9 @@ export default function OfferHome() {
                   disabled={!cmsOffersBanner?.redirect_link}
                 >
                   {/* A single failed image only loses its own slide — the
-                      rest of the carousel keeps working. */}
-                  {slideFailed ? (
-                    <View
-                      style={[styles.offerImage, { backgroundColor: isDark ? "#111827" : "#FFF8E7" }]}
-                    />
-                  ) : (
-                    <RNImage
-                      source={{ uri: slide.url }}
-                      style={styles.offerImage}
-                      resizeMode="cover"
-                      onLoad={() => {
-                        if (__DEV__) {
-                          console.log("[CMS] Offers banner image loaded", { url: slide.url });
-                        }
-                      }}
-                      onError={(error) => {
-                        if (__DEV__) {
-                          console.error("[CMS] Offers banner image failed", {
-                            url: slide.url,
-                            error,
-                          });
-                        }
-                        markSlideFailed(slide.id);
-                      }}
-                    />
-                  )}
+                      rest of the carousel keeps working (OfferSlideImage
+                      falls back to its own tinted base layer on error). */}
+                  <OfferSlideImage uri={slide.url} />
 
                   {index === 0 && (cmsOffersBanner?.title || cmsOffersBanner?.cta_text) ? (
                     <View style={styles.cmsOfferTextBlock}>
@@ -539,7 +560,11 @@ export default function OfferHome() {
             })
           ) : (
             <TouchableOpacity
-              style={[styles.offerCard, { backgroundColor: cmsOffersBanner!.color_value! }]}
+              style={[
+                styles.offerCard,
+                styles.offerCardColorOnly,
+                { backgroundColor: cmsOffersBanner!.color_value! },
+              ]}
               activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
               onPress={cmsOffersBanner?.redirect_link ? handleCmsOffersPress : undefined}
               disabled={!cmsOffersBanner?.redirect_link}
@@ -576,7 +601,7 @@ export default function OfferHome() {
               activeOpacity={0.85}
               onPress={() => handleBannerPress(offer)}
             >
-              <RNImage source={{ uri: offer.image }} style={styles.offerImage} resizeMode="cover" />
+              <OfferSlideImage uri={offer.image} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -660,14 +685,27 @@ const styles = StyleSheet.create({
   },
   offerCard: {
     width: OFFER_WIDTH,
-    height: OFFER_HEIGHT,
     borderRadius: 12,
     overflow: "hidden",
     marginRight: 12,
   },
-  offerImage: {
+  // Only the color-only CMS card (no image to derive a height from) needs
+  // an explicit ratio — every image-backed card sizes itself.
+  offerCardColorOnly: {
+    aspectRatio: OFFER_CARD_FALLBACK_ASPECT_RATIO,
+  },
+  offerImageRoot: {
     width: "100%",
-    height: "100%",
+    overflow: "hidden",
+  },
+  offerImageBaseLight: {
+    backgroundColor: "#FFF8E7",
+  },
+  offerImageBaseDark: {
+    backgroundColor: "#111827",
+  },
+  offerImageLoading: {
+    opacity: 0.85,
   },
   cmsOfferTextBlock: {
     position: "absolute",

@@ -1,4 +1,10 @@
-import { api } from "../../modules/common/auth/api/axios";
+import axios from "axios";
+import { CMS_API_BASE_URL } from "../../config/apiConfig";
+
+const cmsApi = axios.create({
+  baseURL: CMS_API_BASE_URL,
+  timeout: 20000,
+});
 
 export type NavbarModule = "product" | "service" | "payment" | "dineout";
 
@@ -47,6 +53,6 @@ interface NavbarContentResponse {
 // dineout). The backend has already applied scheduling/priority/default
 // resolution — this call just fetches whatever it decided is active.
 export const fetchNavbarContent = async (): Promise<NavbarContentData> => {
-  const { data } = await api.get<NavbarContentResponse>("/content/resolved/navbar");
+  const { data } = await cmsApi.get<NavbarContentResponse>("/content/resolved/navbar");
   return data.data;
 };

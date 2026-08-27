@@ -1,5 +1,11 @@
-import { api } from "../../common/auth/api/axios";
+import axios from "axios";
+import { CMS_API_BASE_URL } from "../../../config/apiConfig";
 import type { NavbarContentEntry } from "../../../navbar/api/NavbarContentApi";
+
+const cmsApi = axios.create({
+  baseURL: CMS_API_BASE_URL,
+  timeout: 20000,
+});
 
 // offers_banner can carry a set of gallery images (multi-image carousel) in
 // addition to the single legacy image_url. navbar_background/promotional_banner
@@ -33,6 +39,6 @@ interface ProductContentResponse {
 // scheduling/priority/default resolution — this call just fetches whatever
 // it decided is active for each zone.
 export const fetchProductContent = async (): Promise<ProductResolvedContent> => {
-  const { data } = await api.get<ProductContentResponse>("/content/resolved/product");
+  const { data } = await cmsApi.get<ProductContentResponse>("/content/resolved/product");
   return data.data;
 };

@@ -4,8 +4,8 @@ export type ApiEnvironment = 'local' | 'live';
 export type LocalAndroidTarget = 'physical' | 'emulator';
 export type LocalIosTarget = 'simulator' | 'physical';
 
-// Change only this value to switch every app API call.
-export const API_ENVIRONMENT: ApiEnvironment = 'local';
+// Customer app APIs stay live; CMS preview endpoints use CMS_API_BASE_URL below.
+export const API_ENVIRONMENT: ApiEnvironment = 'live';
 
 // Local development targets. Keep these explicit because React Native cannot
 // reach the development PC through localhost on a physical phone.
@@ -15,7 +15,7 @@ export const LOCAL_IOS_TARGET: LocalIosTarget = 'simulator';
 const isLocalEnvironment = (environment: ApiEnvironment) => environment === 'local';
 const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 
-const DEVELOPMENT_PC_LAN_URL = 'http://192.168.1.232:5000';
+const DEVELOPMENT_PC_LAN_URL = 'http://192.168.1.177:5000';
 const ANDROID_EMULATOR_SERVER_URL = 'http://10.0.2.2:5000';
 const IOS_SIMULATOR_SERVER_URL = 'http://localhost:5000';
 
@@ -48,6 +48,11 @@ export const UPLOADS_URL =
     ? `${SERVER_URL}/uploads/`
     : `${API_BASE_URL}/uploads/`;
 
+// Local content-management preview server for homepage/navbar banners/offers.
+export const CMS_API_BASE_URL = LOCAL_SERVER_URL;
+export const CMS_V1_URL = `${CMS_API_BASE_URL}/v1`;
+export const CMS_UPLOADS_URL = `${CMS_API_BASE_URL}/uploads/`;
+
 export const normalizeLocalCmsImageUrl = (
   imageUrl: string | null | undefined,
 ): string | null => {
@@ -62,17 +67,16 @@ export const normalizeLocalCmsImageUrl = (
   }
 
   if (
-    __DEV__ &&
-    (trimmed.startsWith('http://localhost:5000') ||
-      trimmed.startsWith('http://127.0.0.1:5000'))
+    trimmed.startsWith('http://localhost:5000') ||
+    trimmed.startsWith('http://127.0.0.1:5000')
   ) {
     return trimmed
-      .replace('http://localhost:5000', LOCAL_API_BASE_URL)
-      .replace('http://127.0.0.1:5000', LOCAL_API_BASE_URL);
+      .replace('http://localhost:5000', CMS_API_BASE_URL)
+      .replace('http://127.0.0.1:5000', CMS_API_BASE_URL);
   }
 
-  if (__DEV__ && trimmed.startsWith('/uploads/')) {
-    return `${LOCAL_API_BASE_URL}${trimmed}`;
+  if (trimmed.startsWith('/uploads/')) {
+    return `${CMS_API_BASE_URL}${trimmed}`;
   }
 
   return trimmed;
