@@ -11,7 +11,6 @@ import {
   Animated,
   Alert,
   Linking,
-  ImageLoadEvent,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
@@ -41,12 +40,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
 const OFFER_WIDTH = SCREEN_WIDTH * 0.38;
-// Card width stays fixed (a horizontally-scrolling carousel needs a
-// predictable card width) but height now comes from each image's own
-// aspect ratio via OfferSlideImage below. This ratio (matching the old
-// OFFER_WIDTH * 1.8 height) is used only for the color-only CMS card,
-// which has no image to measure.
-const OFFER_CARD_FALLBACK_ASPECT_RATIO = 1 / 1.8;
+// CMS offers assets are authored at 720x900. Keep every slide at the same
+// 4:5 frame and use contain so the full source image remains visible.
+const OFFER_BANNER_ASPECT_RATIO = 4 / 5;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
@@ -60,30 +56,18 @@ const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
-const clampRatio = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-const OFFER_MIN_ASPECT_RATIO = 0.35;
-const OFFER_MAX_ASPECT_RATIO = 1.2;
-
-// Self-contained (no shared cross-file component) — sizes each offers_banner
-// slide from its own image, falling back to OFFER_CARD_FALLBACK_ASPECT_RATIO
-// while loading or if the CMS asset has no image at all.
+// Self-contained renderer for each independent offers_banner slide.
 const OfferSlideImage = React.memo(({ uri }: { uri: string | null | undefined }) => {
   const { isDark } = useAppTheme();
-  const [ratio, setRatio] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setRatio(null);
     setFailed(false);
   }, [uri]);
 
-  const handleLoad = (event: ImageLoadEvent) => {
-    const { width, height } = event.nativeEvent.source;
-    if (width && height) {
-      setRatio(clampRatio(width / height, OFFER_MIN_ASPECT_RATIO, OFFER_MAX_ASPECT_RATIO));
-    }
+  const handleLoad = () => {
     if (__DEV__) {
-      console.log("[CMS] Offers banner image loaded", { url: uri, width, height });
+      console.log("[CMS] Offers banner image loaded", { url: uri });
     }
   };
 
@@ -98,13 +82,13 @@ const OfferSlideImage = React.memo(({ uri }: { uri: string | null | undefined })
   const baseStyle = isDark ? styles.offerImageBaseDark : styles.offerImageBaseLight;
 
   return (
-    <View style={[styles.offerImageRoot, { aspectRatio: ratio ?? OFFER_CARD_FALLBACK_ASPECT_RATIO }]}>
+    <View style={styles.offerImageRoot}>
       <View style={[StyleSheet.absoluteFill, baseStyle]} />
       {showImage ? (
         <Animated.Image
           source={{ uri: uri as string }}
-          style={[StyleSheet.absoluteFill, ratio === null ? styles.offerImageLoading : null]}
-          resizeMode="cover"
+          style={StyleSheet.absoluteFill}
+          resizeMode="contain"
           onLoad={handleLoad}
           onError={handleError}
         />
@@ -689,13 +673,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginRight: 12,
   },
-  // Only the color-only CMS card (no image to derive a height from) needs
-  // an explicit ratio — every image-backed card sizes itself.
+  // Color-only CMS fallback keeps the same frame as image-backed slides.
   offerCardColorOnly: {
-    aspectRatio: OFFER_CARD_FALLBACK_ASPECT_RATIO,
+    aspectRatio: OFFER_BANNER_ASPECT_RATIO,
   },
   offerImageRoot: {
     width: "100%",
+    aspectRatio: OFFER_BANNER_ASPECT_RATIO,
     overflow: "hidden",
   },
   offerImageBaseLight: {
@@ -703,9 +687,6 @@ const styles = StyleSheet.create({
   },
   offerImageBaseDark: {
     backgroundColor: "#111827",
-  },
-  offerImageLoading: {
-    opacity: 0.85,
   },
   cmsOfferTextBlock: {
     position: "absolute",

@@ -11,7 +11,6 @@
     saveSession,
     updateAccessToken,
   } from "../../../../utils/tokenStorage";
-  const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
 let authToken: string | null = null;

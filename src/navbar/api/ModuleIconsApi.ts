@@ -1,10 +1,4 @@
-import axios from "axios";
-import { CMS_API_BASE_URL } from "../../config/apiConfig";
-
-const cmsApi = axios.create({
-  baseURL: CMS_API_BASE_URL,
-  timeout: 20000,
-});
+import { cmsApi } from "../../config/cmsApiClient";
 
 export interface ApiModuleIcon {
   module_key: string;
@@ -27,8 +21,6 @@ interface ModuleIconResponse {
 }
 
 export const getModules = async (): Promise<ApiModuleIcon[]> => {
-  // Public/customer-facing endpoint — no auth role required, unlike
-  // /content/modules which is gated to vendor_manager/admin on the backend.
-  const { data } = await cmsApi.get<ModuleIconResponse>("/content/resolved/modules");
+  const { data } = await cmsApi.get<ModuleIconResponse>("/content/modules");
   return Array.isArray(data.data) ? data.data : [];
 };

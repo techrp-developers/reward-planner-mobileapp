@@ -1,10 +1,4 @@
-import axios from "axios";
-import { CMS_API_BASE_URL } from "../../config/apiConfig";
-
-const cmsApi = axios.create({
-  baseURL: CMS_API_BASE_URL,
-  timeout: 20000,
-});
+import { cmsApi } from "../../config/cmsApiClient";
 
 export type NavbarModule = "product" | "service" | "payment" | "dineout";
 
