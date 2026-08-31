@@ -50,8 +50,11 @@ export default function LoginScreen({ navigation }: Props) {
       navigation.navigate("LoginOTP", { identifier: parsedIdentifier.normalized });
     } catch (error: any) {
       const data = error?.response?.data;
-
-      const message = data?.message || "Unable to send the login code";
+      const message =
+        data?.message ||
+        error?.message ||
+        error?.error?.message ||
+        "Unable to send the login code";
 
       alert.error("Login Error", String(message));
     }

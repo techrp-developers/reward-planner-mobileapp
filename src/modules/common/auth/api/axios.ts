@@ -103,7 +103,7 @@ api.interceptors.request.use((config) => {
   const nextConfig = applyNoStoreHeaders(config);
   const token = sessionHandlers?.getAccessToken?.();
 
-  if (token) {
+  if (token && !isAuthEndpoint(nextConfig.url)) {
     const headers: any = nextConfig.headers;
     if (headers && typeof headers.set === "function") {
       headers.set("Authorization", `Bearer ${token}`);
