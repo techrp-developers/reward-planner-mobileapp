@@ -6,9 +6,11 @@ import {
   StatusBar,
   TouchableOpacity,
   Animated,
-  Platform,
+  Image as RNImage,
+  ScrollView,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import LinearGradient from "react-native-linear-gradient";
 import {
   useNavigation,
   useRoute,
@@ -21,29 +23,24 @@ import { useQuery } from "@tanstack/react-query";
 
 import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
 import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
+import { getNotificationBadge } from "../modules/dashboard/notification/NotificationAPI";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import ServiceTop from "./assete/Service_BG.png";
-import PaymentTop from "./assete/Payment_BG.png";
-import BusBookingTop from "./assete/Bus_BG.png";
-import Background1 from "./assete/Background1.jpeg";
+import Navbar_Background from "./Navbar_Background";
+import { useNavbarBanners } from "./hooks/useNavbarBanners";
+import { TAB_MODULE_MAP, TAB_THEME, TopTab, isTopTab } from "./navbarConstants";
+import { useModuleIcons } from "./hooks/useModuleIcons";
+import type { ApiModuleIcon } from "./api/ModuleIconsApi";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
-import Home_Nav from "../assets/menu/Home_Nav.svg";
-import Services from "../assets/menu/Services.svg";
-import Payments from "../assets/menu/Payments.svg";
-import Payments2 from "../assets/menu/Payments2.svg";
-// import Dine_Out from "../assets/menu/Dine_Out.svg";
-import Bus_Booking from "../assets/menu/Bus_Booking.svg";
-import Bus from "../assets/menu/Bus.svg";
 import Reward from "../assets/product/rewards.svg";
 import { useAppTheme } from "../theme/ThemeContext";
 
 import type { RootStackParamList } from "@/navigation/types";
 
 // --- Types & Constants ---
-export type TopTab = "Product" | "Services" | "Payments" | "DineOut";
+export type { TopTab } from "./navbarConstants";
 
 type NavbarProps = {
   activeModule?: TopTab;
@@ -59,14 +56,6 @@ type ApiAddress = {
   state?: string;
   zipcode?: string;
 };
-
-type SvgIcon = React.ComponentType<{
-  width?: number;
-  height?: number;
-  fill?: string;
-  stroke?: string;
-  color?: string;
-}>;
 
 type NavStateLike = {
   index: number;
@@ -110,27 +99,6 @@ const PAYMENT_ROUTES = new Set([
   "BBPSCategory",
   "BBPSBillers",
 ]);
-
-const BG_MAP: Record<TopTab, any> = {
-  Product: Background1,
-  Services: ServiceTop,
-  Payments: PaymentTop,
-  DineOut: BusBookingTop,
-};
-
-const TAB_THEME: Record<TopTab, { bgColor: string; activeTint?: string }> = {
-  Product: { bgColor: "#5F341A" },
-  Services: { bgColor: "#4F6BFF" },
-  Payments: { bgColor: "#EAE2FF", activeTint: "#532C99" },
-  DineOut: { bgColor: "#FFE3E8", activeTint: "#CE1538" },
-};
-
-const TOP_TABS: TopTab[] = ["Product", "Services", "Payments", "DineOut"];
-
-const isTopTab = (value?: string): value is TopTab => {
-  if (!value) return false;
-  return TOP_TABS.includes(value as TopTab);
-};
 
 // --- Helpers ---
 
@@ -204,54 +172,150 @@ const getActiveTab = (
   return "Product";
 };
 
-// --- Sub-component (✅ tints SVG icon + label properly) ---
+const TOP_TAB_BY_ROUTE_KEY: Record<string, TopTab> = {
+  ProductModule: "Product",
+  ServicesModule: "Services",
+  PaymentsModule: "Payments",
+  DineOutModule: "DineOut",
+};
+
+const MODULE_KEY_BY_TOP_TAB = Object.entries(TAB_MODULE_MAP).reduce(
+  (acc, [tab, moduleKey]) => {
+    acc[tab as TopTab] = moduleKey;
+    return acc;
+  },
+  {} as Record<TopTab, string>
+);
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const ACTIVE_TAB_SCALE = 1.08;
+const PRESSED_SCALE_DELTA = 0.08;
+
+// --- Sub-component (icon-forward, no card background — dot indicator marks active) ---
 const TopIconWithLabel = React.memo(
   ({
     active,
     onPress,
-    Icon,
-    ActiveIcon,
+    iconUrl,
+    moduleKey,
     label,
-    activeColor,
     activeTint,
     inactiveTint,
-    inactiveBackground,
-    inactiveBorder,
+    gradientStart,
+    gradientEnd,
   }: {
     active: boolean;
     onPress: () => void;
-    Icon: SvgIcon;
-    ActiveIcon?: SvgIcon;
+    iconUrl: string | null;
+    moduleKey: string;
     label: string;
-    activeColor: string;
     activeTint?: string;
     inactiveTint: string;
-    inactiveBackground: string;
-    inactiveBorder: string;
+    gradientStart?: string | null;
+    gradientEnd?: string | null;
   }) => {
+    const hasGradient = Boolean(gradientStart && gradientEnd);
     const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
-    const RenderIcon = active && ActiveIcon ? ActiveIcon : Icon;
+    // Base scale grows with a spring when the tab becomes active (visual
+    // weight), and presses shrink from whatever the current base is —
+    // never fighting an in-flight active/inactive transition.
+    const scale = React.useRef(new Animated.Value(active ? ACTIVE_TAB_SCALE : 1)).current;
+    const isPressedRef = React.useRef(false);
+
+    React.useEffect(() => {
+      if (isPressedRef.current) return;
+      Animated.spring(scale, {
+        toValue: active ? ACTIVE_TAB_SCALE : 1,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 8,
+      }).start();
+    }, [active, scale]);
+
+    const handlePressIn = React.useCallback(() => {
+      isPressedRef.current = true;
+      Animated.spring(scale, {
+        toValue: (active ? ACTIVE_TAB_SCALE : 1) - PRESSED_SCALE_DELTA,
+        useNativeDriver: true,
+        speed: 40,
+        bounciness: 4,
+      }).start();
+    }, [active, scale]);
+
+    const handlePressOut = React.useCallback(() => {
+      isPressedRef.current = false;
+      Animated.spring(scale, {
+        toValue: active ? ACTIVE_TAB_SCALE : 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 8,
+      }).start();
+    }, [active, scale]);
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <AnimatedTouchableOpacity
+        activeOpacity={0.75}
         onPress={onPress}
-        style={[
-          styles.topTabCard,
-          {
-            backgroundColor: inactiveBackground,
-            borderColor: inactiveBorder,
-          },
-          active && styles.topTabCardActive,
-          active && { backgroundColor: activeColor },
-        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[styles.tabItem, { transform: [{ scale }] }]}
       >
-        {/* NOTE: depending on how your SVG is exported, it may use fill/stroke or color.
-            We pass all 3 so it works in most cases. */}
-        <RenderIcon width={28} height={28} fill={tint} stroke={tint} color={tint} />
+        {iconUrl ? (
+          hasGradient ? (
+            <LinearGradient
+              colors={[gradientStart as string, gradientEnd as string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.moduleIconGradientWrap}
+            >
+              <RNImage
+                source={{ uri: iconUrl }}
+                style={styles.moduleIconInGradient}
+                resizeMode="contain"
+                onLoad={() => {
+                  if (__DEV__) {
+                    console.log("[CMS] Module icon loaded:", moduleKey);
+                  }
+                }}
+                onError={() => {
+                  if (__DEV__) {
+                    console.log("[CMS] Module icon failed:", moduleKey, iconUrl);
+                  }
+                }}
+              />
+            </LinearGradient>
+          ) : (
+            <RNImage
+              source={{ uri: iconUrl }}
+              style={styles.moduleIcon}
+              resizeMode="contain"
+              onLoad={() => {
+                if (__DEV__) {
+                  console.log("[CMS] Module icon loaded:", moduleKey);
+                }
+              }}
+              onError={() => {
+                if (__DEV__) {
+                  console.log("[CMS] Module icon failed:", moduleKey, iconUrl);
+                }
+              }}
+            />
+          )
+        ) : null}
 
-        <Text style={[styles.topTabLabel, { color: tint }]}>{label}</Text>
-      </TouchableOpacity>
+        <Text
+          style={[styles.topTabLabel, { color: tint, opacity: active ? 1 : 0.75 }]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+
+        {active ? (
+          <View style={[styles.activeDot, { backgroundColor: tint }]} />
+        ) : (
+          <View style={styles.activeDotSpacer} />
+        )}
+      </AnimatedTouchableOpacity>
     );
   }
 );
@@ -292,43 +356,56 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const activeTab = activeModule ?? detectedActiveTab;
   const showLocation = activeTab === "Product";
 
+  // Campaign-driven banner config per tab (falls back to the bundled static
+  // images/colors in navbarConstants when the API has no data for a tab).
+  const { banners } = useNavbarBanners();
+  React.useEffect(() => {
+    if (!__DEV__) return;
+    console.log("[CMS] Navbar active tab:", activeTab);
+    console.log("[CMS] Navbar banner:", banners[activeTab]);
+    console.log("[CMS] Navbar image URL:", banners[activeTab]?.imageUrl);
+  }, [activeTab, banners]);
+
+  // API failure/empty response just yields an empty list — no hardcoded
+  // Product/Services/Payments/etc. fallback, per the CMS-only requirement.
+  const { modules } = useModuleIcons();
+  const activeModuleKeyFromRoute = MODULE_KEY_BY_TOP_TAB[activeTab];
+  const [selectedModuleKey, setSelectedModuleKey] = React.useState(activeModuleKeyFromRoute);
+
+  React.useEffect(() => {
+    setSelectedModuleKey(activeModuleKeyFromRoute);
+  }, [activeModuleKeyFromRoute]);
+
+  React.useEffect(() => {
+    if (!__DEV__) return;
+    console.log("[CMS] Modules:", modules);
+    modules.forEach((module) => {
+      console.log("[CMS] Module:", {
+        module_key: module.module_key,
+        label: module.label,
+        icon_url: module.icon_url,
+        active_icon_url: module.active_icon_url,
+        route_key: module.route_key,
+        is_active: module.is_active,
+      });
+    });
+  }, [modules]);
+
   const activeThemeColor = React.useMemo(
-    () => TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
-    [activeTab]
+    () => banners[activeTab]?.bgColor ?? TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
+    [activeTab, banners]
   );
   const walletBadgeColor = React.useMemo(
     () => TAB_THEME[activeTab]?.activeTint ?? activeThemeColor,
     [activeTab, activeThemeColor]
   );
-  const navbarSurface = isDark ? theme.card : "#FFFFFF";
+  // Search bar + wallet button float over the campaign banner, so they read
+  // as translucent glass cards rather than solid boxes on top of it.
+  const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.9)";
   const navbarBorder = isDark ? theme.border : "rgba(0,0,0,0.10)";
   const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
   const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
-  const backgroundOpacities = React.useRef<Record<TopTab, Animated.Value>>({
-    Product: new Animated.Value(activeTab === "Product" ? 1 : 0),
-    Services: new Animated.Value(activeTab === "Services" ? 1 : 0),
-    Payments: new Animated.Value(activeTab === "Payments" ? 1 : 0),
-    DineOut: new Animated.Value(activeTab === "DineOut" ? 1 : 0),
-  }).current;
-
-  // Cross-fade the background instead of remounting the Image on every tab
-  // switch — remounting could briefly leave the previous module's background
-  // visible underneath while the content below had already switched, and
-  // felt like a hard cut rather than a smooth transition.
-  React.useEffect(() => {
-    const animations = TOP_TABS.map((tab) => {
-      backgroundOpacities[tab].stopAnimation();
-      return Animated.timing(backgroundOpacities[tab], {
-        toValue: tab === activeTab ? 1 : 0,
-        duration: 150,
-        useNativeDriver: true,
-      });
-    });
-
-    Animated.parallel(animations).start();
-    return () => animations.forEach((animation) => animation.stop());
-  }, [activeTab, backgroundOpacities]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
@@ -344,6 +421,14 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     enabled: isAuthenticated,
     staleTime: 10 * 60 * 1000,
   });
+
+  const { data: notificationBadge } = useQuery({
+    queryKey: ["notification", "badge"],
+    queryFn: getNotificationBadge,
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+  const hasUnreadNotifications = Boolean(notificationBadge?.success && notificationBadge.count > 0);
 
   React.useEffect(() => {
     if (!isAuthenticated || !liveAddressData) return;
@@ -446,6 +531,39 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     [activeTab, navigation, onModuleChange]
   );
 
+  const handleModulePress = React.useCallback(
+    (module: ApiModuleIcon) => {
+      if (module.module_key === selectedModuleKey || isNavigatingRef.current) return;
+
+      setSelectedModuleKey(module.module_key);
+
+      if (!module.route_key) return;
+
+      const knownTab = TOP_TAB_BY_ROUTE_KEY[module.route_key];
+      if (knownTab) {
+        handleTab(knownTab);
+        return;
+      }
+
+      try {
+        (navigation as any).navigate("Home", {
+          screen: module.route_key,
+          params: { moduleName: module.module_key },
+          moduleName: module.module_key,
+        });
+      } catch (error) {
+        if (__DEV__) {
+          console.warn("Navigation to CMS module failed:", {
+            module_key: module.module_key,
+            route_key: module.route_key,
+            error,
+          });
+        }
+      }
+    },
+    [handleTab, navigation, selectedModuleKey]
+  );
+
   const navigateToAddAddress = React.useCallback(() => {
     navigateToScreen("AddressSelect", { manageOnly: true });
   }, [navigateToScreen]);
@@ -532,126 +650,97 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   }, [loadNavbarUser]);
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + 8 }]}>
+    <View style={styles.wrapper}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         translucent
         backgroundColor="transparent"
       />
 
-      {/* ✅ Background cross-fades smoothly between modules */}
-      <View
-        style={[styles.bgWrapper, { backgroundColor: activeThemeColor }]}
-        pointerEvents="none"
-      >
-        {TOP_TABS.map((tab) => (
-          <Animated.Image
-            key={tab}
-            source={BG_MAP[tab]}
-            style={[
-              styles.absoluteFill,
-              { top: -insets.top, opacity: backgroundOpacities[tab] },
-            ]}
-            resizeMode="cover"
-          />
-        ))}
-      </View>
+      {/* ✅ Campaign-driven banner, cross-fades smoothly between modules */}
+      <Navbar_Background
+        activeTab={activeTab}
+        banners={banners}
+        insetsTop={insets.top}
+        isDark={isDark}
+      />
 
-      {/* TOP 4 ICON TABS */}
-      <View style={styles.topIconsRow}>
-        <TopIconWithLabel
-          active={activeTab === "Product"}
-          onPress={() => handleTab("Product")}
-          Icon={Home_Nav as unknown as SvgIcon}
-          label="Product"
-          activeColor={TAB_THEME.Product.bgColor}
-          activeTint={TAB_THEME.Product.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "Services"}
-          onPress={() => handleTab("Services")}
-          Icon={Services as unknown as SvgIcon}
-          label="Services"
-          activeColor={TAB_THEME.Services.bgColor}
-          activeTint={TAB_THEME.Services.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "Payments"}
-          onPress={() => handleTab("Payments")}
-          Icon={Payments as unknown as SvgIcon}
-          ActiveIcon={Payments2 as unknown as SvgIcon}
-          label="Payments"
-          activeColor={TAB_THEME.Payments.bgColor}
-          activeTint={TAB_THEME.Payments.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-
-        <TopIconWithLabel
-          active={activeTab === "DineOut"}
-          onPress={() => handleTab("DineOut")}
-          Icon={Bus_Booking as unknown as SvgIcon}
-          ActiveIcon={Bus as unknown as SvgIcon}
-          label="Bus Booking"
-          activeColor={TAB_THEME.DineOut.bgColor}
-          activeTint={TAB_THEME.DineOut.activeTint}
-          inactiveTint={navbarIconColor}
-          inactiveBackground={navbarSurface}
-          inactiveBorder={navbarBorder}
-        />
-      </View>
-
-      {/* LOCATION */}
-      <View style={styles.topRow}>
-        <View
-          style={[styles.locationRow, !showLocation && styles.locationRowHidden]}
-          pointerEvents={showLocation ? "auto" : "none"}
+      {/* PROFILE: avatar + greeting/address, wallet + notifications */}
+      <View style={styles.profileRow}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={[styles.avatarWrap, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+          onPress={() => navigateToScreen("Profile")}
         >
-          <MaterialCommunityIcons name="map-marker" size={18} color="#16A34A" />
-          <Text style={[styles.locationText, { color: "#111827" }]} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={[styles.homeBold, { color: "#111827" }]}>HOME- </Text>
-            {displayName}
-            {hasAddress ? `, ${displayAddress}` : ""}
+          <MaterialCommunityIcons name="account-circle" size={40} color={navbarIconColor} />
+        </TouchableOpacity>
+
+        <View style={styles.greetColumn}>
+          <Text style={styles.helloText} numberOfLines={1}>
+            Hello, {displayName}!
           </Text>
-          {hasAddress ? (
+
+          <View
+            style={[styles.miniLocationRow, !showLocation && styles.locationRowHidden]}
+            pointerEvents={showLocation ? "auto" : "none"}
+          >
+            <MaterialCommunityIcons name="map-marker" size={13} color="#4ADE80" />
             <Text
-              style={styles.addAddressLink}
+              style={styles.miniLocationText}
               numberOfLines={1}
-              onPress={navigateToChangeAddress}
+              ellipsizeMode="tail"
+              onPress={hasAddress ? navigateToChangeAddress : navigateToAddAddress}
             >
-              {" "}Change Address
+              {hasAddress ? displayAddress : "Add address"}
             </Text>
-          ) : (
-            <Text
-              style={styles.addAddressLink}
-              numberOfLines={1}
-              onPress={navigateToAddAddress}
+            <MaterialCommunityIcons name="chevron-down" size={13} color="rgba(255,255,255,0.85)" />
+          </View>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+            onPress={() => navigateToScreen("WalletHistory")}
+            hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
+          >
+            <WalletSvg width={26} height={26} />
+            <View
+              style={[
+                styles.walletTag,
+                { backgroundColor: walletBadgeColor },
+              ]}
             >
-              {" "}Add Address
-            </Text>
-          )}
+              <View style={styles.walletTagInner}>
+                <Reward width={11} height={11} />
+                <Text style={styles.walletTagText} numberOfLines={1}>
+                  {rewardPointsLabel}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.bellBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+            onPress={() => navigateToScreen("Notification")}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <MaterialCommunityIcons name="bell-outline" size={20} color={navbarIconColor} />
+            {hasUnreadNotifications ? <View style={styles.bellDot} /> : null}
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* SEARCH + WALLET */}
+      {/* SEARCH */}
       <View style={styles.searchRow}>
         <TouchableOpacity
           activeOpacity={0.9}
           style={[
             styles.searchContainer,
             {
-              backgroundColor: navbarSurface,
+              backgroundColor: frostedSurface,
               borderColor: navbarBorder,
-              shadowColor: isDark ? "#000000" : "#000000",
             },
           ]}
           onPress={() => {
@@ -668,131 +757,122 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           }}
         >
           <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
-          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]}>Search “Reward Planners”</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={styles.walletBox}
-          onPress={() => navigateToScreen("WalletHistory")}
-          hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
-        >
-          <WalletSvg width={26} height={26} />
-          <View
-            style={[
-              styles.walletTag,
-              { backgroundColor: walletBadgeColor },
-            ]}
-          >
-            <View style={styles.walletTagInner}>
-              <Reward width={11} height={11} />
-              <Text style={styles.walletTagText} numberOfLines={1}>
-                {rewardPointsLabel}
-              </Text>
-            </View>
-          </View>
+          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]}>Search products, services & more</Text>
         </TouchableOpacity>
       </View>
+
+      {/* MODULE TABS */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.topIconsRow}
+      >
+        {modules.map((module) => {
+          const active = module.module_key === selectedModuleKey;
+          const iconUrl = active
+            ? module.active_icon_url || module.icon_url
+            : module.icon_url;
+
+          return (
+            <TopIconWithLabel
+              key={module.module_key}
+              active={active}
+              onPress={() => handleModulePress(module)}
+              iconUrl={iconUrl}
+              moduleKey={module.module_key}
+              label={module.label}
+              activeTint={module.active_color || "#FFD166"}
+              inactiveTint={module.normal_color || navbarIconColor}
+              gradientStart={module.gradient_start_color}
+              gradientEnd={module.gradient_end_color}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
-const shadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  android: {
-    elevation: 6,
-  },
-});
-
 const styles = StyleSheet.create({
   wrapper: {
-    paddingTop: 8,
+    paddingTop: 18,
   },
 
-  bgWrapper: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 280,
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    gap: 10,
+    marginTop: 4,
+  },
+
+  avatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
     overflow: "hidden",
   },
 
-  absoluteFill: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
+  greetColumn: {
+    flex: 1,
+    minWidth: 0,
   },
 
-  topIconsRow: {
+  helloText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+
+  miniLocationRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    marginTop: 8,
-  },
-
-  topTabCard: {
-    width: 82,
-    height: 70,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
-    justifyContent: "center",
+    marginTop: 3,
     gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-    ...shadow,
   },
 
-  topTabCardActive: {
-    borderColor: "transparent",
-  },
-
-  topTabLabel: {
+  miniLocationText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#374151",
-  },
-
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    alignItems: "center",
-    marginTop: 12,
-  },
-
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    maxWidth: "72%",
-    marginRight: 10,
-  },
-
-  locationRowHidden: {
-    opacity: 0,
-  },
-
-  homeBold: {
-    fontWeight: "900",
-    color: "#111827",
-  },
-
-  locationText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: "#111827",
-    fontWeight: "700",
+    fontWeight: "600",
     flexShrink: 1,
+    color: "rgba(255,255,255,0.9)",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  bellBtn: {
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 999,
+    width: 46,
+    height: 46,
+    borderWidth: 1,
+  },
+
+  bellDot: {
+    position: "absolute",
+    top: 9,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#fff",
   },
 
   searchRow: {
@@ -800,43 +880,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
     gap: 12,
-    marginBottom: 15,
-    marginTop: 10,
+    marginTop: 14,
   },
 
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 14,
     paddingHorizontal: 14,
-    height: 48,
-    borderColor: "rgba(0,0,0,0.10)",
+    height: 46,
     borderWidth: 1,
-    ...shadow,
   },
 
   fakePlaceholder: {
     flex: 1,
     marginLeft: 9,
-    color: "#6B7280",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13.5,
+    fontWeight: "500",
   },
 
   walletBox: {
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 999,
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
     overflow: "visible",
-    ...shadow,
   },
 
   walletTag: {
@@ -868,11 +940,63 @@ const styles = StyleSheet.create({
     maxWidth: 34,
   },
 
-  addAddressLink: {
-    color: "#2563EB",
-    textDecorationLine: "underline",
-    fontWeight: "800",
-    fontSize: 14,
-    flexShrink: 0,
+  locationRowHidden: {
+    opacity: 0,
+  },
+
+  // --- Module tabs: no box, icon-forward, bottom of navbar ---
+  topIconsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minWidth: "100%",
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 14,
+    gap: 22,
+  },
+
+  tabItem: {
+    alignItems: "center",
+    justifyContent: "flex-start",
+    minWidth: 56,
+  },
+
+  moduleIcon: {
+    width: 64,
+    height: 64,
+  },
+
+  // Only used when a module has both gradient_start_color and
+  // gradient_end_color from the CMS — keeps the same 64x64 footprint as the
+  // plain icon so layout never shifts, just shows a colored backdrop.
+  moduleIconGradientWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+
+  moduleIconInGradient: {
+    width: 40,
+    height: 40,
+  },
+
+  topTabLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.1,
+  },
+
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 4,
+  },
+
+  activeDotSpacer: {
+    height: 8,
   },
 });

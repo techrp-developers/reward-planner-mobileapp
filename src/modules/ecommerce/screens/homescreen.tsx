@@ -26,6 +26,9 @@ const LazyTopRated = React.lazy(() =>
 const LazyOfferHome = React.lazy(() =>
   Promise.resolve({ default: require('../components/home/OfferHome').default }),
 );
+const LazyHomeBanner = React.lazy(() =>
+  Promise.resolve({ default: require('../components/home/HomeBanner').default }),
+);
 const LazyNewArrivals = React.lazy(() =>
   Promise.resolve({ default: require('../components/Promotion/NewArrivals').default }),
 );
@@ -52,16 +55,17 @@ type HomeSection = {
 };
 
 const ECOMMERCE_SECTION_KEYS: readonly SectionKey[] = [
-  'categories', 'bestSeller', 'topRated', 'offerHome', 'newArrivals',
+  'homeBanner', 'categories', 'bestSeller', 'topRated', 'offerHome', 'newArrivals',
   'mostView', 'recommended', 'features', 'recent', 'productCategory',
 ];
 
-const INITIAL_VISIBLE_SECTIONS = ['categories'] as const;
+const INITIAL_VISIBLE_SECTIONS = ['homeBanner', 'categories'] as const;
 const INITIAL_VISIBLE_SECTION_SET = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
 const SECTION_RENDER_AHEAD = 1;
 
 const SECTION_HEIGHTS: Record<SectionKey, number> = {
   categories: 260,
+  homeBanner: 180,
   bestSeller: 360,
   topRated: 360,
   offerHome: 430,
@@ -77,6 +81,10 @@ const SECTION_PREFETCHERS: Partial<Record<SectionKey, () => Promise<unknown>>> =
   categories: () => {
     const { prefetchCategoriesSection } = require('../components/home/categories_section');
     return prefetchCategoriesSection();
+  },
+  homeBanner: () => {
+    const { prefetchHomeBannerSection } = require('../components/home/HomeBanner');
+    return prefetchHomeBannerSection();
   },
   bestSeller: () => {
     const { prefetchBestSellerSection } = require('../components/Promotion/BestSeller');
@@ -154,6 +162,8 @@ const HomeSectionLoader = React.memo(function HomeSectionLoader({
   sectionKey: SectionKey;
 }) {
   switch (sectionKey) {
+    case 'homeBanner':
+      return <LazySection sectionKey={sectionKey}><LazyHomeBanner /></LazySection>;
     case 'categories':
       return <MemoCategoriesSection />;
     case 'bestSeller':

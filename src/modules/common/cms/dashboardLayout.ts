@@ -9,6 +9,7 @@ export type MainDashboardSectionKey =
   | 'rewardsOverview';
 
 export type EcommerceDashboardSectionKey =
+  | 'homeBanner'
   | 'categories'
   | 'bestSeller'
   | 'topRated'
@@ -63,16 +64,17 @@ export const DEFAULT_DASHBOARD_LAYOUTS: Record<DashboardLayoutId, DashboardLayou
     id: 'ecommerce',
     version: 1,
     sections: [
-      section('categories', 10),
-      section('bestSeller', 20),
-      section('topRated', 30),
-      section('offerHome', 40),
-      section('newArrivals', 50),
-      section('mostView', 60),
-      section('recommended', 70),
-      section('features', 80),
-      section('recent', 90),
-      section('productCategory', 100),
+      section('homeBanner', 10),
+      section('categories', 20),
+      section('bestSeller', 30),
+      section('topRated', 40),
+      section('offerHome', 50),
+      section('newArrivals', 60),
+      section('mostView', 70),
+      section('recommended', 80),
+      section('features', 90),
+      section('recent', 100),
+      section('productCategory', 110),
     ],
   },
   services: { id: 'services', version: 1, sections: [] },
