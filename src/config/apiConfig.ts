@@ -1,34 +1,19 @@
 import { Platform } from 'react-native';
 
 export type ApiEnvironment = 'local' | 'live';
-export type LocalApiTarget =
-  | 'androidPhysical'
-  | 'androidEmulator'
-  | 'iosSimulator'
-  | 'iosPhysical';
 
 // Change only this value to switch every app API call.
 export const API_ENVIRONMENT: ApiEnvironment = 'local';
-export const LOCAL_API_TARGET = 'androidPhysical' as LocalApiTarget;
-export const LOCAL_PC_IP = '192.168.1.220';
 export const LOCAL_API_PORT = 5000;
 
 const isLocalEnvironment = (environment: ApiEnvironment) => environment === 'local';
 const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 
-const LOCAL_PC_SERVER_URL = `http://${LOCAL_PC_IP}:${LOCAL_API_PORT}`;
-const LOCAL_ANDROID_EMULATOR_SERVER_URL = `http://10.0.2.2:${LOCAL_API_PORT}`;
 const LOCALHOST_SERVER_URL = `http://localhost:${LOCAL_API_PORT}`;
 
 const LOCAL_SERVER_URL = Platform.select({
-  android:
-    LOCAL_API_TARGET === 'androidEmulator'
-      ? LOCAL_ANDROID_EMULATOR_SERVER_URL
-      : LOCAL_PC_SERVER_URL,
-  ios:
-    LOCAL_API_TARGET === 'iosPhysical'
-      ? LOCAL_PC_SERVER_URL
-      : LOCALHOST_SERVER_URL,
+  android: LOCALHOST_SERVER_URL,
+  ios: LOCALHOST_SERVER_URL,
   default: LOCALHOST_SERVER_URL,
 }) as string;
 
