@@ -31,13 +31,24 @@ export const CmsAppShellProvider = ({ children }: { children: React.ReactNode })
   React.useEffect(() => {
     let cancelled = false;
 
+    console.log('[CMS] AppShell fetch starting');
+
     Promise.all([fetchResolvedModules(), fetchResolvedNavbar()])
       .then(([modules, navbar]) => {
-        if (!cancelled) {
-          setState({ modules, navbar, isLoading: false, error: null });
+        console.log('[CMS] AppShell fetch resolved:', {
+          modules: JSON.stringify(modules),
+          navbar: JSON.stringify(navbar),
+        });
+        if (cancelled) {
+          console.log('[CMS] AppShell fetch resolved but effect was cancelled — state not stored');
+          return;
         }
+        const nextState = { modules, navbar, isLoading: false, error: null };
+        console.log('[CMS] AppShell storing state:', JSON.stringify(nextState));
+        setState(nextState);
       })
       .catch((error) => {
+        console.log('[CMS] AppShell fetch failed:', error?.message ?? error);
         if (!cancelled) {
           setState({ ...defaultState, isLoading: false, error });
         }

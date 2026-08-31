@@ -9,17 +9,24 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { queryClient } from '../../../../query/queryClient';
-import { fetchProductContent } from '../../api/ProductContentApi';
-import { PRODUCT_CONTENT_QUERY_KEY } from '../../hooks/useProductContent';
-import { useProductContent } from '../../hooks/useProductContent';
+import { fetchResolvedZones } from '../../../common/cms/cmsContentApi';
+import type { CmsModuleKey } from '../../../common/cms/cmsContentApi';
+import { useModuleContent, moduleContentQueryKey } from '../../../common/cms/useModuleContent';
 
 const DEFAULT_PROMO_BG = '#852BAF';
 
-function PromotionalBanner() {
+type Props = {
+  module?: CmsModuleKey;
+};
+
+function PromotionalBanner({ module = 'product' }: Props) {
   const { width } = useWindowDimensions();
-  const { productContent } = useProductContent();
-  const banner = productContent?.promotional_banner ?? null;
+  const { moduleContent } = useModuleContent(module);
+  const banner = moduleContent?.promotional_banner ?? null;
   const [imageFailed, setImageFailed] = React.useState(false);
+
+  console.log('[CMS] Promotional banner module:', module);
+  console.log('[CMS] Promotional banner:', JSON.stringify(banner));
 
   React.useEffect(() => {
     setImageFailed(false);
@@ -34,6 +41,8 @@ function PromotionalBanner() {
       ? banner.image_url
       : null;
   const bgColor = banner.color_value || DEFAULT_PROMO_BG;
+  console.log('[CMS] Promotional image URL:', imageUrl);
+  console.log('[CMS] Promotional background:', bgColor);
   const isPressable = Boolean(banner.redirect_link);
   const showCta = Boolean(banner.cta_text && banner.redirect_link);
   const Container = isPressable ? TouchableOpacity : View;
@@ -62,7 +71,10 @@ function PromotionalBanner() {
             source={{ uri: imageUrl }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
-            onError={() => setImageFailed(true)}
+            onError={(event) => {
+              console.log('[CMS] Promotional image failed:', imageUrl, event.nativeEvent);
+              setImageFailed(true);
+            }}
           />
         ) : null}
 
@@ -80,10 +92,10 @@ function PromotionalBanner() {
 
 export default React.memo(PromotionalBanner);
 
-export const prefetchPromotionalBanner = () =>
+export const prefetchPromotionalBanner = (module: CmsModuleKey = 'product') =>
   queryClient.prefetchQuery({
-    queryKey: PRODUCT_CONTENT_QUERY_KEY,
-    queryFn: fetchProductContent,
+    queryKey: moduleContentQueryKey(module),
+    queryFn: () => fetchResolvedZones(module),
     staleTime: 5 * 60 * 1000,
   });
 

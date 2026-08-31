@@ -1,26 +1,18 @@
-import { Platform } from 'react-native';
-
 export type ApiEnvironment = 'local' | 'live';
 
-// Change only this value to switch every app API call.
+// Change only this value to switch every API call in the app.
 export const API_ENVIRONMENT: ApiEnvironment = 'local';
 export const LOCAL_API_PORT = 5000;
 
 const isLocalEnvironment = (environment: ApiEnvironment) => environment === 'local';
 const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 
-const LOCALHOST_SERVER_URL = `http://localhost:${LOCAL_API_PORT}`;
-
-const LOCAL_SERVER_URL = Platform.select({
-  android: LOCALHOST_SERVER_URL,
-  ios: LOCALHOST_SERVER_URL,
-  default: LOCALHOST_SERVER_URL,
-}) as string;
+export const LOCAL_SERVER_HOST = 'localhost';
+const LOCAL_SERVER_URL = `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`;
 
 const LIVE_SERVER_URL = 'https://rewardplanners.com';
 
-export const SERVER_URL =
-  IS_LOCAL_ENVIRONMENT ? LOCAL_SERVER_URL : LIVE_SERVER_URL;
+export const SERVER_URL = IS_LOCAL_ENVIRONMENT ? LOCAL_SERVER_URL : LIVE_SERVER_URL;
 
 // Live traffic uses the reverse-proxy prefix; the local Express server does not.
 export const API_BASE_URL =
@@ -59,7 +51,13 @@ export const normalizeLocalCmsImageUrl = (
         (!url.port && url.protocol === 'http:');
 
       if (isLoopbackHost && isLocalCmsPort) {
-        return `${API_BASE_URL}${url.pathname}${url.search}${url.hash}`;
+        // RN's built-in URL polyfill force-appends a trailing "/" to
+        // .pathname for any URL with no query/hash, corrupting file paths
+        // (e.g. "...jpg" -> "...jpg/"). Slice the path off the original
+        // string instead of trusting url.pathname/search/hash.
+        const originMatch = trimmed.match(/^https?:\/\/[^/]+/i);
+        const pathAndQuery = originMatch ? trimmed.slice(originMatch[0].length) : '';
+        return `${SERVER_URL}${pathAndQuery}`;
       }
     } catch {
       return trimmed;

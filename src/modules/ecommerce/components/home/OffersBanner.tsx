@@ -11,9 +11,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { queryClient } from '../../../../query/queryClient';
-import { fetchProductContent } from '../../api/ProductContentApi';
-import { PRODUCT_CONTENT_QUERY_KEY } from '../../hooks/useProductContent';
-import { useProductContent } from '../../hooks/useProductContent';
+import { fetchResolvedZones } from '../../../common/cms/cmsContentApi';
+import type { CmsModuleKey } from '../../../common/cms/cmsContentApi';
+import { useModuleContent, moduleContentQueryKey } from '../../../common/cms/useModuleContent';
 
 const AUTOPLAY_MS = 3500;
 const OFFER_ASPECT_RATIO = 4 / 5;
@@ -23,10 +23,14 @@ type OfferSlide = {
   imageUrl: string;
 };
 
-function OffersBanner() {
+type Props = {
+  module?: CmsModuleKey;
+};
+
+function OffersBanner({ module = 'product' }: Props) {
   const { width } = useWindowDimensions();
-  const { productContent } = useProductContent();
-  const banner = productContent?.offers_banner ?? null;
+  const { moduleContent } = useModuleContent(module);
+  const banner = moduleContent?.offers_banner ?? null;
   const listRef = React.useRef<FlatList<OfferSlide>>(null);
   const pauseCyclesRef = React.useRef(0);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -180,10 +184,10 @@ function OffersBanner() {
 
 export default React.memo(OffersBanner);
 
-export const prefetchOffersBanner = () =>
+export const prefetchOffersBanner = (module: CmsModuleKey = 'product') =>
   queryClient.prefetchQuery({
-    queryKey: PRODUCT_CONTENT_QUERY_KEY,
-    queryFn: fetchProductContent,
+    queryKey: moduleContentQueryKey(module),
+    queryFn: () => fetchResolvedZones(module),
     staleTime: 5 * 60 * 1000,
   });
 

@@ -1,5 +1,5 @@
 import { cmsApi } from '../../../config/cmsApiClient';
-import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
+import { API_BASE_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import { CMS_MODULE_KEYS, type CmsModuleKey } from './moduleMapping';
 
 export type { CmsModuleKey } from './moduleMapping';
@@ -85,9 +85,13 @@ const normalizeZoneEntry = <T extends CmsZoneEntry | CmsOffersBannerEntry>(
     return null;
   }
 
+  const normalizedImageUrl = normalizeLocalCmsImageUrl(entry.image_url);
+  console.log('[CMS] Image URL before normalize:', entry.image_url);
+  console.log('[CMS] Image URL after normalize:', normalizedImageUrl);
+
   return {
     ...entry,
-    image_url: normalizeLocalCmsImageUrl(entry.image_url),
+    image_url: normalizedImageUrl,
     images: Array.isArray((entry as CmsOffersBannerEntry).images)
       ? (entry as CmsOffersBannerEntry).images?.map(normalizeOfferImage)
       : (entry as CmsOffersBannerEntry).images,
@@ -103,20 +107,52 @@ const normalizeResolvedZones = (
 });
 
 export const fetchResolvedModules = async (): Promise<CmsModule[]> => {
-  const { data } = await cmsApi.get<CmsModulesResponse>('/content/resolved/modules');
-  return Array.isArray(data.data) ? data.data.map(normalizeModule) : [];
+  const path = '/content/resolved/modules';
+  console.log('[CMS] Fetching modules from:', `${API_BASE_URL}${path}`);
+  try {
+    const response = await cmsApi.get<CmsModulesResponse>(path);
+    console.log('[CMS] Raw modules response:', JSON.stringify(response.data));
+    const mapped = Array.isArray(response.data.data) ? response.data.data.map(normalizeModule) : [];
+    console.log('[CMS] Mapped modules result:', JSON.stringify(mapped));
+    return mapped;
+  } catch (error: any) {
+    console.log('[CMS] Fetch failed:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.response?.status,
+      url: error?.config?.url,
+    });
+    throw error;
+  }
 };
 
 export const fetchResolvedNavbar = async (): Promise<CmsNavbarBackgroundMap> => {
-  const { data } = await cmsApi.get<CmsResolvedNavbarResponse>('/content/resolved/navbar');
-  const raw = data.data ?? {};
+  const path = '/content/resolved/navbar';
+  console.log('[CMS] Fetching navbar from:', `${API_BASE_URL}${path}`);
+  try {
+    const response = await cmsApi.get<CmsResolvedNavbarResponse>(path);
+    console.log('[CMS] Raw navbar response:', JSON.stringify(response.data));
+    const raw = response.data.data ?? {};
 
-  const map: CmsNavbarBackgroundMap = {};
-  CMS_MODULE_KEYS.forEach((key) => {
-    map[key] = normalizeZoneEntry(raw[key]);
-  });
+    const map: CmsNavbarBackgroundMap = {};
+    CMS_MODULE_KEYS.forEach((key) => {
+      const entry = raw[key] ?? null;
+      console.log(`[CMS] ${key} raw entry:`, JSON.stringify(entry));
+      map[key] = normalizeZoneEntry(entry);
+      console.log(`[CMS] ${key} normalized entry:`, JSON.stringify(map[key]));
+    });
 
-  return map;
+    console.log('[CMS] Mapped navbar result:', JSON.stringify(map));
+    return map;
+  } catch (error: any) {
+    console.log('[CMS] Fetch failed:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.response?.status,
+      url: error?.config?.url,
+    });
+    throw error;
+  }
 };
 
 export const fetchResolvedZones = async (

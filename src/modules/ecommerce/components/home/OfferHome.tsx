@@ -32,9 +32,9 @@ import {
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
 import { useAppTheme } from "../../../../theme/ThemeContext";
-import { PRODUCT_CONTENT_QUERY_KEY, useProductContent } from "../../hooks/useProductContent";
-import { fetchProductContent } from "../../api/ProductContentApi";
-import type { ContentZoneImage } from "../../api/ProductContentApi";
+import { fetchResolvedZones } from "../../../common/cms/cmsContentApi";
+import type { CmsModuleKey, CmsOfferImage as ContentZoneImage } from "../../../common/cms/cmsContentApi";
+import { useModuleContent, moduleContentQueryKey } from "../../../common/cms/useModuleContent";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -75,7 +75,10 @@ const OfferSlideImage = React.memo(({ uri }: { uri: string | null | undefined })
           source={{ uri: uri as string }}
           style={StyleSheet.absoluteFill}
           resizeMode="contain"
-          onError={() => setFailed(true)}
+          onError={(event) => {
+            console.log('[CMS] Offer image failed:', uri, event.nativeEvent);
+            setFailed(true);
+          }}
         />
       ) : null}
     </View>
@@ -368,11 +371,22 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------
-export default function OfferHome() {
+type Props = {
+  module?: CmsModuleKey;
+};
+
+// The CMS offers-banner carousel below is module-generic; the flash-sale /
+// campaign / wishlist section is ecommerce (Product) specific business
+// logic and is intentionally NOT parameterized by module.
+export default function OfferHome({ module = "product" }: Props) {
   const navigation = useNavigation<Nav>();
   const { theme } = useAppTheme();
-  const { productContent } = useProductContent();
-  const cmsOffersBanner = productContent?.offers_banner ?? null;
+  const { moduleContent } = useModuleContent(module);
+  const cmsOffersBanner = moduleContent?.offers_banner ?? null;
+
+  console.log('[CMS] Offers banner module:', module);
+  console.log('[CMS] Offers banner:', JSON.stringify(cmsOffersBanner));
+  console.log('[CMS] Offers images:', JSON.stringify(cmsOffersBanner?.images));
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
@@ -430,10 +444,18 @@ export default function OfferHome() {
       .filter((img) => Number(img?.is_active) === 1)
       .slice()
       .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
-      .map((img) => ({
-        id: String(img.image_id ?? `${cmsOffersBanner.content_id}_${img.sort_order}`),
-        image: img.image_url,
-      }))
+      .map((img) => {
+        console.log('[CMS] Offer image:', {
+          imageId: img.image_id,
+          imageUrl: img.image_url,
+          sortOrder: img.sort_order,
+          isActive: img.is_active,
+        });
+        return {
+          id: String(img.image_id ?? `${cmsOffersBanner.content_id}_${img.sort_order}`),
+          image: img.image_url,
+        };
+      })
       .filter((slide) => !!slide.image);
   }, [cmsOffersBanner]);
 
@@ -565,10 +587,10 @@ export default function OfferHome() {
   );
 }
 
-export const prefetchOfferHomeSection = async () => {
+export const prefetchOfferHomeSection = async (module: CmsModuleKey = "product") => {
   await queryClient.prefetchQuery({
-    queryKey: PRODUCT_CONTENT_QUERY_KEY,
-    queryFn: fetchProductContent,
+    queryKey: moduleContentQueryKey(module),
+    queryFn: () => fetchResolvedZones(module),
     staleTime: 5 * 60 * 1000,
   });
 

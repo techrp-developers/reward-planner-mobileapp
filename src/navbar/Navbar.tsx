@@ -29,7 +29,7 @@ import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecomme
 
 import Navbar_Background from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
-import { TAB_MODULE_MAP, TAB_THEME, TopTab, isTopTab } from "./navbarConstants";
+import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
 import { useModuleIcons } from "./hooks/useModuleIcons";
 import type { ApiModuleIcon } from "./api/ModuleIconsApi";
 
@@ -392,12 +392,12 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   }, [modules]);
 
   const activeThemeColor = React.useMemo(
-    () => banners[activeTab]?.bgColor ?? TAB_THEME[activeTab]?.bgColor ?? TAB_THEME.Product.bgColor,
+    () => banners[activeTab]?.bgColor ?? "transparent",
     [activeTab, banners]
   );
   const walletBadgeColor = React.useMemo(
-    () => TAB_THEME[activeTab]?.activeTint ?? activeThemeColor,
-    [activeTab, activeThemeColor]
+    () => activeThemeColor,
+    [activeThemeColor]
   );
   // Search bar + wallet button float over the campaign banner, so they read
   // as translucent glass cards rather than solid boxes on top of it.
@@ -781,7 +781,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
               iconUrl={iconUrl}
               moduleKey={module.module_key}
               label={module.label}
-              activeTint={module.active_color || "#FFD166"}
+              activeTint={module.active_color || activeThemeColor}
               inactiveTint={module.normal_color || navbarIconColor}
               gradientStart={module.gradient_start_color}
               gradientEnd={module.gradient_end_color}

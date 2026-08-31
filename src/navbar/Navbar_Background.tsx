@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { NavbarBannerMap } from "./api/NavbarContentApi";
-import { TAB_THEME, TopTab } from "./navbarConstants";
+import { TopTab } from "./navbarConstants";
 
 type Props = {
   activeTab: TopTab;
@@ -53,7 +53,15 @@ export default function Navbar_Background({
     const banner = banners[tab];
     const imageUrl = banner?.imageUrl;
     const showImage = Boolean(imageUrl && !failedImages[imageUrl]);
-    const bgColor = banner?.bgColor ?? TAB_THEME[tab]?.bgColor ?? TAB_THEME.Product.bgColor;
+    const bgColor = banner?.bgColor ?? "transparent";
+
+    console.log('[CMS] renderLayer:', {
+      tab,
+      imageUrl,
+      hasFailedBefore: imageUrl ? Boolean(failedImages[imageUrl]) : undefined,
+      showImage,
+      bgColor,
+    });
 
     return (
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
@@ -89,7 +97,7 @@ export default function Navbar_Background({
           backgroundColor:
             currentBanner?.bgColor ??
             previousBanner?.bgColor ??
-            TAB_THEME[activeTab]?.bgColor,
+            "transparent",
         },
       ]}
     >
