@@ -14,10 +14,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { HomeStackParamList } from "../../navigation/types";
-import PointsButton from "./PointsButton";
+import AddToCartButton from "./AddToCartButton";
 import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
 import OptimizedImage from "../../components/common/OptimizedImage";
-import RPpriceBadge from "./RPpriceBadge";
 import { normalizeProduct } from "../../utils/normalizeProduct";
 import { fetchProductDetailsByID } from "../../api/ProductApi";
 import { useAppTheme } from "../../../../theme/ThemeContext";
@@ -27,6 +26,7 @@ const { width: screenWidth } = Dimensions.get("window");
 const PADDING = screenWidth * 0.03;
 const GAP = screenWidth * 0.02;
 const CARD_WIDTH = (screenWidth - PADDING * 2 - GAP * 2) / 3;
+const RP_PRICE_COLOR = "#F2811D";
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 type Props = {
@@ -34,6 +34,7 @@ type Props = {
   cardWidth?: number;
   shouldLoadImage?: boolean;
   onProductPress?: (productId: string | number, item: any) => void;
+  onAddToCart?: (productId: string | number, item: any) => void;
 };
 
 const getProductId = (item: any) => item?.id ?? item?.product_id ?? item?.productId;
@@ -77,7 +78,13 @@ const StarRating = React.memo(function StarRating({
   );
 });
 
-const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProductPress }: Props) => {
+const ProductCardComponent = ({
+  item,
+  cardWidth,
+  shouldLoadImage = true,
+  onProductPress,
+  onAddToCart,
+}: Props) => {
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
@@ -111,6 +118,15 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
     }
     navigation.navigate("ProductDescription", { productId });
   }, [item, navigation, onProductPress, productId]);
+
+  const handleAddToCart = useCallback(() => {
+    if (!productId) return;
+    if (onAddToCart) {
+      onAddToCart(productId, item);
+      return;
+    }
+    goToDetails();
+  }, [goToDetails, item, onAddToCart, productId]);
 
   const firstImage = useMemo(() => {
     const candidates = [
@@ -241,30 +257,41 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
   const {
     starCount,
     reviewText,
-    productTitle,
+    brandText,
+    productNameText,
     priceText,
     originalPriceText,
+    rpPriceText,
     discount,
-    rewardCoins,
-    redeemCoins,
-    rp_price
   } = useMemo(() => {
     const ratingValue = Number(normalizedProduct.rating ?? 4.5);
     const safeRating = Number.isFinite(ratingValue)
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
+    // Backend sends null/0 when no redemption rule applies to this product —
+    // treat those (and their string forms) as "no RP price" rather than "₹0".
+    const rawRpPrice = String(normalizedProduct.rp_price ?? "").trim();
+    const hasRpPrice = !!rawRpPrice && !["0", "0.00", "null", "undefined"].includes(rawRpPrice.toLowerCase());
+    if (__DEV__ && !hasRpPrice) {
+      console.log('[ProductCard] No RP price for product', getProductId(item), {
+        rp_price: item?.rp_price,
+        rpPrice: item?.rpPrice,
+        redeem_coins: item?.redeem_coins,
+      });
+    }
+    const formattedRpPrice = hasRpPrice
+      ? (/[₹]|rs\.?/i.test(rawRpPrice) ? rawRpPrice : `₹${rawRpPrice}`)
+      : "";
+
     return {
       starCount: Math.round(safeRating),
       reviewText: normalizedProduct.reviews ? `(${normalizedProduct.reviews})` : "",
-      productTitle: [item?.product_name || item?.title, item?.brand || item?.brand_name]
-        .filter(Boolean)
-        .join(" "),
+      brandText: item?.brand || item?.brand_name || "",
+      productNameText: item?.product_name || item?.title || "",
       priceText: String(normalizedProduct.price ?? ""),
       originalPriceText: String(normalizedProduct.originalPrice ?? ""),
-      rewardCoins: normalizedProduct.rewardCoins,
-      redeemCoins: normalizedProduct.redeem_coins,
-      rp_price: normalizedProduct.rp_price ?? "",
+      rpPriceText: formattedRpPrice,
       discount: normalizedProduct.discount ?? "",
     };
   }, [item, normalizedProduct]);
@@ -293,9 +320,20 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
             backgroundColor: isDark ? "#303038" : "#F9FAFB",
           },
         ]}>
-          {!!rp_price && (
-            <View style={styles.discountWrap}>
-              <RPpriceBadge value={rp_price} />
+          {/* Discount badge, top-left over the image */}
+          {!!discount && (
+            <View style={styles.discountBadgeWrap}>
+              <View style={styles.discountBadge}>
+                <Text style={[styles.discountArrow, { fontSize: calculations.fontSizeDiscount }]}>
+                  ↓
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.discountText, { fontSize: calculations.fontSizeDiscount }]}
+                >
+                  {discount}
+                </Text>
+              </View>
             </View>
           )}
 
@@ -328,65 +366,66 @@ const ProductCardComponent = ({ item, cardWidth, shouldLoadImage = true, onProdu
       </TouchableOpacity>
 
       <View style={styles.details}>
-        <View style={styles.titleRow}>
+        {/* Brand name up front, with rating alongside it */}
+        <View style={styles.brandRow}>
           <Text
-            style={[
-              styles.productTitle,
-              { fontSize: calculations.fontSizeLabel },
-              { color: theme.text },
-            ]}
-            numberOfLines={2}
+            style={[styles.brandName, { fontSize: calculations.fontSizeLabel, color: theme.text }]}
+            numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {productTitle}
+            {brandText}
           </Text>
+          <View style={styles.ratingRow}>
+            <StarRating starCount={starCount} />
+            {!!reviewText && (
+              <Text style={[styles.reviews, { fontSize: calculations.fontSizeReview, color: theme.secondaryText }]}>
+                {reviewText}
+              </Text>
+            )}
+          </View>
         </View>
 
-        <View style={styles.ratingRow}>
-          <StarRating starCount={starCount} />
-          <Text style={[styles.reviews, { fontSize: calculations.fontSizeReview, color: theme.secondaryText }]}>
-            {reviewText}
-          </Text>
-        </View>
+        {/* Product name under the brand name */}
+        <Text
+          style={[
+            styles.productTitle,
+            { fontSize: calculations.fontSizeLabel, color: theme.secondaryText },
+          ]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {productNameText}
+        </Text>
 
-        {/* ========== RESPONSIVE PRICE ROW ========== */}
+        {/* ========== RP PRICE + MRP ROW ========== */}
         <View style={styles.priceRow}>
-          {/* Discount indicator (arrow + text) */}
-          {!!discount && (
-            <View style={styles.discountInline}>
-              <Text style={[styles.discountArrow, { fontSize: calculations.fontSizeDiscount }]}>
-                ↓
-              </Text>
-              <Text 
-                numberOfLines={1} 
-                style={[styles.discountText, { fontSize: calculations.fontSizeDiscount }]}
-              >
-                {discount}
-              </Text>
-            </View>
-          )}
+          {/* RP price (falls back to the plain price when no RP price exists) */}
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.price,
+              {
+                fontSize: calculations.fontSizePrice,
+                color: rpPriceText ? RP_PRICE_COLOR : theme.text,
+              },
+            ]}
+          >
+            {rpPriceText ? `RP ${rpPriceText}` : priceText}
+          </Text>
 
-          {/* Original price (strikethrough) */}
+          {/* MRP (strikethrough) */}
           {!!originalPriceText && (
-            <Text 
-              numberOfLines={1} 
+            <Text
+              numberOfLines={1}
               style={[styles.original, { fontSize: calculations.fontSizeOriginal, color: theme.secondaryText }]}
             >
               {originalPriceText}
             </Text>
           )}
-
-          {/* Final price */}
-          <Text 
-            numberOfLines={1} 
-            style={[styles.price, { fontSize: calculations.fontSizePrice, color: theme.text }]}
-          >
-            {priceText}
-          </Text>
         </View>
 
         <View style={styles.pointsWrap}>
-          <PointsButton rewardCoins={rewardCoins} redeemCoins={redeemCoins} onPress={goToDetails} />
+          <AddToCartButton onPress={handleAddToCart} />
         </View>
       </View>
     </View>
@@ -413,17 +452,14 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevItem?.originalPrice === nextItem?.originalPrice &&
     prevItem?.original_price === nextItem?.original_price &&
     prevItem?.mrp === nextItem?.mrp &&
-    prevItem?.rewardCoins === nextItem?.rewardCoins &&
-    prevItem?.reward_coins === nextItem?.reward_coins &&
-    prevItem?.redeem_coins === nextItem?.redeem_coins &&
-    prevItem?.redeemCoins === nextItem?.redeemCoins &&
     getProductImage(prevItem) === getProductImage(nextItem) &&
     prevItem?.product_name === nextItem?.product_name &&
     prevItem?.title === nextItem?.title &&
     prevItem?.brand === nextItem?.brand &&
     prevItem?.brand_name === nextItem?.brand_name &&
     prevProps.shouldLoadImage === nextProps.shouldLoadImage &&
-    prevProps.onProductPress === nextProps.onProductPress
+    prevProps.onProductPress === nextProps.onProductPress &&
+    prevProps.onAddToCart === nextProps.onAddToCart
   );
 });
 
@@ -443,11 +479,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
   },
-  discountWrap: {
+  discountBadgeWrap: {
     position: "absolute",
     top: 6,
     left: 6,
     zIndex: 10,
+  },
+  discountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountArrow: {
+    color: "#16A34A",
+    fontWeight: "900",
+    marginRight: 1,
+  },
+  discountText: {
+    color: "#16A34A",
+    fontWeight: "700",
   },
   heartIcon: {
     position: "absolute",
@@ -469,19 +522,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
   },
-  titleRow: {
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 4,
+  },
+  brandName: {
+    fontWeight: "700",
+    flexShrink: 1,
   },
   productTitle: {
     color: "#374151",
     fontWeight: "400",
     lineHeight: 17,
     minHeight: 34,
+    marginTop: 2,
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    marginLeft: 6,
   },
   starText: {
     fontSize: 10,
@@ -502,34 +563,18 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",      
+    flexWrap: "wrap",
+    width: "100%",
     marginTop: 6,
     columnGap: 6,
     rowGap: 4,
-  },
-  discountInline: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  discountArrow: {
-    color: "#16A34A",
-    fontWeight: "900",
-    marginRight: 1,
-  },
-  discountText: {
-    color: "#16A34A",
-    fontWeight: "700",
   },
   original: {
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
   price: {
-    fontWeight: "900",
+    fontWeight: "700",
     color: "#111827",
   },
   pointsWrap: {
