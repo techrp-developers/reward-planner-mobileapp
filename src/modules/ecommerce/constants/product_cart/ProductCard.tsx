@@ -14,7 +14,6 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { HomeStackParamList } from "../../navigation/types";
-import AddToCartButton from "./AddToCartButton";
 import { checkWishlist, isWishlistPresent, setWishlistState } from "../../api/WishlistApi";
 import OptimizedImage from "../../components/common/OptimizedImage";
 import { normalizeProduct } from "../../utils/normalizeProduct";
@@ -34,7 +33,6 @@ type Props = {
   cardWidth?: number;
   shouldLoadImage?: boolean;
   onProductPress?: (productId: string | number, item: any) => void;
-  onAddToCart?: (productId: string | number, item: any) => void;
 };
 
 const getProductId = (item: any) => item?.id ?? item?.product_id ?? item?.productId;
@@ -49,6 +47,23 @@ const getProductImage = (item: any) =>
   item?.image_url ??
   item?.thumbnail ??
   (Array.isArray(item?.images) ? item.images[0] : undefined);
+
+const getRpPriceText = (item: any, normalizedProduct: any) => {
+  const rawRpPrice = String(
+    normalizedProduct?.rp_price ??
+      item?.rp_price ??
+      item?.rpPrice ??
+      item?.rp_price_text ??
+      item?.redeem_price ??
+      ""
+  ).trim();
+
+  if (!rawRpPrice || ["0", "0.00", "null", "undefined"].includes(rawRpPrice.toLowerCase())) {
+    return "";
+  }
+
+  return /(\u20B9|rs\.?)/i.test(rawRpPrice) ? rawRpPrice : `\u20B9${rawRpPrice}`;
+};
 
 const hasWishlistFlag = (item: any) =>
   item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
@@ -83,7 +98,6 @@ const ProductCardComponent = ({
   cardWidth,
   shouldLoadImage = true,
   onProductPress,
-  onAddToCart,
 }: Props) => {
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
@@ -118,15 +132,6 @@ const ProductCardComponent = ({
     }
     navigation.navigate("ProductDescription", { productId });
   }, [item, navigation, onProductPress, productId]);
-
-  const handleAddToCart = useCallback(() => {
-    if (!productId) return;
-    if (onAddToCart) {
-      onAddToCart(productId, item);
-      return;
-    }
-    goToDetails();
-  }, [goToDetails, item, onAddToCart, productId]);
 
   const firstImage = useMemo(() => {
     const candidates = [
@@ -291,7 +296,7 @@ const ProductCardComponent = ({
       productNameText: item?.product_name || item?.title || "",
       priceText: String(normalizedProduct.price ?? ""),
       originalPriceText: String(normalizedProduct.originalPrice ?? ""),
-      rpPriceText: formattedRpPrice,
+      rpPriceText: getRpPriceText(item, normalizedProduct),
       discount: normalizedProduct.discount ?? "",
     };
   }, [item, normalizedProduct]);
@@ -302,11 +307,11 @@ const ProductCardComponent = ({
         styles.card,
         {
           width: usedCardWidth,
-          minHeight: calculations.cardMinHeight,
+          minHeight: calculations.cardMinHeight - 42,
           borderRadius: calculations.borderRadius,
-          backgroundColor: theme.card,
-          borderWidth: isDark ? 1 : 0,
-          borderColor: theme.border,
+          backgroundColor: isDark ? theme.card : "#FFFFFF",
+          borderWidth: 1,
+          borderColor: isDark ? theme.border : "#EEF0F4",
         },
       ]}
     >
@@ -316,7 +321,6 @@ const ProductCardComponent = ({
           {
             height: calculations.imageWrapHeight,
             borderRadius: calculations.borderRadius,
-            paddingTop: Math.round(usedCardWidth * 0.1),
             backgroundColor: isDark ? "#303038" : "#F9FAFB",
           },
         ]}>
@@ -423,10 +427,6 @@ const ProductCardComponent = ({
             </Text>
           )}
         </View>
-
-        <View style={styles.pointsWrap}>
-          <AddToCartButton onPress={handleAddToCart} />
-        </View>
       </View>
     </View>
   );
@@ -458,8 +458,7 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevItem?.brand === nextItem?.brand &&
     prevItem?.brand_name === nextItem?.brand_name &&
     prevProps.shouldLoadImage === nextProps.shouldLoadImage &&
-    prevProps.onProductPress === nextProps.onProductPress &&
-    prevProps.onAddToCart === nextProps.onAddToCart
+    prevProps.onProductPress === nextProps.onProductPress
   );
 });
 
@@ -469,15 +468,24 @@ export default ProductCard;
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFF",
-    padding: 6,
-    marginBottom: 12,
+    padding: 7,
+    marginBottom: 14,
     justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#EEF0F4",
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
   imageWrap: {
     backgroundColor: "#F9FAFB",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#F1F2F5",
   },
   discountBadgeWrap: {
     position: "absolute",
@@ -488,9 +496,9 @@ const styles = StyleSheet.create({
   discountBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    backgroundColor: "#EAF8EF",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     borderRadius: 4,
   },
   discountArrow: {
@@ -507,18 +515,23 @@ const styles = StyleSheet.create({
     top: 5,
     right: 5,
     zIndex: 3,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "rgba(255,255,255,0.9)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   productImage: {
     alignSelf: "center",
   },
   details: {
-    marginTop: 8,
+    marginTop: 9,
     flex: 1,
     justifyContent: "space-between",
   },
@@ -526,29 +539,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 4,
   },
   brandName: {
-    fontWeight: "700",
+    fontWeight: "800",
     flexShrink: 1,
+    marginRight: 6,
   },
   productTitle: {
     color: "#374151",
-    fontWeight: "400",
+    fontWeight: "500",
     lineHeight: 17,
     minHeight: 34,
-    marginTop: 2,
+    marginTop: 3,
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 6,
+    flexShrink: 0,
   },
   starText: {
     fontSize: 10,
     lineHeight: 12,
     includeFontPadding: false,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
   starTextFilled: {
     color: "#FFC514",
@@ -558,7 +571,7 @@ const styles = StyleSheet.create({
   },
   reviews: {
     color: "#9CA3AF",
-    marginLeft: 4,
+    marginLeft: 3,
   },
   priceRow: {
     flexDirection: "row",
@@ -567,18 +580,14 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 6,
     columnGap: 6,
-    rowGap: 4,
+    rowGap: 3,
   },
   original: {
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
   price: {
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#111827",
-  },
-  pointsWrap: {
-    marginTop: 8,
-    width: "100%",
   },
 });
