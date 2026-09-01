@@ -1,13 +1,54 @@
+import { Platform } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+
 export type ApiEnvironment = 'local' | 'live';
 
-// Change only this value to switch every API call in the app.
-export const API_ENVIRONMENT: ApiEnvironment = 'local';
+// Leave this as null for the normal behavior:
+// - debug/development builds use the local API
+// - production/release builds use the live API
+// Set to 'live' or 'local' only when you need to force a target while testing.
+const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = null;
+
+export const API_ENVIRONMENT: ApiEnvironment =
+  API_ENVIRONMENT_OVERRIDE ?? (__DEV__ ? 'local' : 'live');
 export const LOCAL_API_PORT = 5000;
 
 const isLocalEnvironment = (environment: ApiEnvironment) => environment === 'local';
 const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 
-export const LOCAL_SERVER_HOST = 'localhost';
+// The ONLY place to edit when your dev machine's LAN IP changes (DHCP
+// renewal, new Wi-Fi network, etc). Run `ipconfig` (Windows) / `ifconfig`
+// (Mac/Linux) to find it — physical devices need this because 'localhost'
+// on-device points back at the device itself, not your PC.
+export const LOCAL_API_HOST = '192.168.1.220';
+
+// Keep false for normal Wi-Fi/LAN development. Set true only when developing
+// over USB with `adb reverse tcp:5000 tcp:5000`.
+export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = true;
+
+// Resolve the right local host per target automatically:
+// - Android emulator: 10.0.2.2 is the AVD's alias for the host machine.
+// - iOS simulator: shares the host's network namespace, so localhost works.
+// - Physical device (either OS): must hit the dev machine's real LAN IP.
+const resolveLocalHost = (): string => {
+  const isEmulator = DeviceInfo.isEmulatorSync();
+
+  if (Platform.OS === 'android') {
+    if (!isEmulator && USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL) {
+      return 'localhost';
+    }
+
+    return isEmulator ? '10.0.2.2' : LOCAL_API_HOST;
+  }
+
+  if (Platform.OS === 'ios') {
+    return isEmulator ? 'localhost' : LOCAL_API_HOST;
+  }
+
+  return LOCAL_API_HOST;
+};
+
+export const LOCAL_SERVER_HOST = IS_LOCAL_ENVIRONMENT ? resolveLocalHost() : '';
 const LOCAL_SERVER_URL = `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`;
 
 const LIVE_SERVER_URL = 'https://rewardplanners.com';
@@ -23,6 +64,14 @@ export const UPLOADS_URL =
   IS_LOCAL_ENVIRONMENT
     ? `${SERVER_URL}/uploads/`
     : `${API_BASE_URL}/uploads/`;
+
+if (__DEV__) {
+  console.log(`[API] Environment: ${API_ENVIRONMENT}`);
+  console.log(`[API] Platform: ${Platform.OS} (${DeviceInfo.isEmulatorSync() ? 'emulator/simulator' : 'physical device'})`);
+  console.log(`[API] Local host: ${LOCAL_SERVER_HOST || '(not used)'}`);
+  console.log(`[API] Local port: ${LOCAL_API_PORT}`);
+  console.log(`[API] Base URL: ${API_BASE_URL}`);
+}
 
 export const normalizeLocalCmsImageUrl = (
   imageUrl: string | null | undefined,

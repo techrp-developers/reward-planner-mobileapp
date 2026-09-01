@@ -1,127 +1,143 @@
-import React from 'react';
-import {
-  Image,
-  Linking,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
-} from 'react-native';
-import { queryClient } from '../../../../query/queryClient';
-import { fetchResolvedZones } from '../../../common/cms/cmsContentApi';
-import type { CmsModuleKey } from '../../../common/cms/cmsContentApi';
-import { useModuleContent, moduleContentQueryKey } from '../../../common/cms/useModuleContent';
+import React from "react";
+import { View, StyleSheet, TouchableOpacity, Linking, Animated, ImageLoadEvent } from "react-native";
+import { normalizeLocalCmsImageUrl } from "../../../../config/apiConfig";
+import { useProductContent, PRODUCT_CONTENT_QUERY_KEY } from "../../hooks/useProductContent";
+import { fetchResolvedZones } from "../../../common/cms/cmsContentApi";
+import { queryClient } from "../../../../query/queryClient";
 
-const DEFAULT_PROMO_BG = '#852BAF';
+// Matches the old fixed `width * 0.92` banner proportions — used both as the
+// pure color fallback ratio (no image to measure) and as the placeholder
+// ratio shown for the brief moment before a real image's natural dimensions
+// are known.
+const FALLBACK_ASPECT_RATIO = 1 / 0.92;
+const MIN_ASPECT_RATIO = 0.45;
+const MAX_ASPECT_RATIO = 2.2;
 
-type Props = {
-  module?: CmsModuleKey;
-};
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-function PromotionalBanner({ module = 'product' }: Props) {
-  const { width } = useWindowDimensions();
-  const { moduleContent } = useModuleContent(module);
-  const banner = moduleContent?.promotional_banner ?? null;
+function PromotionalBanner() {
+  console.log('[CMS] PromotionalBanner render invoked');
+  const { productContent, isLoading, isError } = useProductContent();
+  const banner = productContent?.promotional_banner ?? null;
+
+  const rawBannerImageUrl = banner?.content_type === "image" ? banner.image_url : null;
+  const bannerImageUrl = React.useMemo(
+    () => normalizeLocalCmsImageUrl(rawBannerImageUrl),
+    [rawBannerImageUrl]
+  );
+
+  const [imageAspectRatio, setImageAspectRatio] = React.useState<number | null>(null);
   const [imageFailed, setImageFailed] = React.useState(false);
 
-  console.log('[CMS] Promotional banner module:', module);
-  console.log('[CMS] Promotional banner:', JSON.stringify(banner));
+  // A newly published campaign (or one that previously failed) gets a fresh
+  // chance to load and measure its own ratio.
+  React.useEffect(() => {
+    setImageAspectRatio(null);
+    setImageFailed(false);
+  }, [bannerImageUrl]);
 
   React.useEffect(() => {
-    setImageFailed(false);
-  }, [banner?.content_id, banner?.image_url]);
+    if (!__DEV__) return;
+    console.log("[CMS] Product content loaded", { isLoading, isError });
+    console.log("[CMS] Promotional banner:", banner);
+    console.log("[CMS] Promotional banner raw image URL:", rawBannerImageUrl);
+    console.log("[CMS] Promotional banner final image URL:", bannerImageUrl);
+  }, [banner, bannerImageUrl, isLoading, isError, rawBannerImageUrl]);
 
-  if (!banner) {
+  const handlePress = React.useCallback(() => {
+    if (banner?.redirect_link) {
+      Linking.openURL(banner.redirect_link).catch(() => undefined);
+    }
+  }, [banner?.redirect_link]);
+
+  const handleImageLoad = React.useCallback(
+    (event: ImageLoadEvent) => {
+      const { width, height } = event.nativeEvent.source;
+      if (width && height) {
+        setImageAspectRatio(clamp(width / height, MIN_ASPECT_RATIO, MAX_ASPECT_RATIO));
+      }
+      if (__DEV__) {
+        console.log("[CMS] Promotional banner image loaded", { url: bannerImageUrl, width, height });
+      }
+    },
+    [bannerImageUrl]
+  );
+
+  const handleImageError = React.useCallback(() => {
+    setImageFailed(true);
+    if (__DEV__) {
+      console.error("[CMS] Promotional banner image failed", { url: bannerImageUrl });
+    }
+  }, [bannerImageUrl]);
+
+  const showRemoteImage = !!bannerImageUrl && !imageFailed;
+  const showColor = !showRemoteImage && !!banner?.color_value;
+  const Wrapper = banner?.redirect_link ? TouchableOpacity : View;
+  // Full height once the real image has loaded and reported its own ratio;
+  // the fixed ratio otherwise (no image, or still loading it).
+  const bannerAspectRatio = showRemoteImage && imageAspectRatio ? imageAspectRatio : FALLBACK_ASPECT_RATIO;
+
+  // No CMS entry for this zone (nothing published, or the fetch hasn't
+  // resolved yet) — render nothing so the home screen flows straight from
+  // the navbar into the categories section instead of showing a placeholder.
+  if (!showRemoteImage && !showColor) {
     return null;
   }
 
-  const imageUrl =
-    banner.content_type === 'image' && !imageFailed
-      ? banner.image_url
-      : null;
-  const bgColor = banner.color_value || DEFAULT_PROMO_BG;
-  console.log('[CMS] Promotional image URL:', imageUrl);
-  console.log('[CMS] Promotional background:', bgColor);
-  const isPressable = Boolean(banner.redirect_link);
-  const showCta = Boolean(banner.cta_text && banner.redirect_link);
-  const Container = isPressable ? TouchableOpacity : View;
-
-  const handlePress = () => {
-    if (banner.redirect_link) {
-      Linking.openURL(banner.redirect_link).catch(() => undefined);
-    }
-  };
-
   return (
     <View style={styles.wrapper}>
-      <Container
+      <Wrapper
         activeOpacity={0.9}
-        onPress={isPressable ? handlePress : undefined}
-        style={[
-          styles.banner,
-          {
-            width: width - 32,
-            backgroundColor: bgColor,
-          },
-        ]}
+        onPress={banner?.redirect_link ? handlePress : undefined}
+        style={[styles.bannerBox, { aspectRatio: bannerAspectRatio }]}
       >
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onError={(event) => {
-              console.log('[CMS] Promotional image failed:', imageUrl, event.nativeEvent);
-              setImageFailed(true);
-            }}
-          />
+        {showColor ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: banner!.color_value! }]} />
         ) : null}
 
-        {showCta ? (
-          <View style={styles.ctaPill}>
-            <Text style={styles.ctaText} numberOfLines={1}>
-              {banner.cta_text}
-            </Text>
-          </View>
+        {showRemoteImage ? (
+          <Animated.Image
+            source={{ uri: bannerImageUrl! }}
+            style={[StyleSheet.absoluteFill, imageAspectRatio === null ? styles.imageLoading : null]}
+            resizeMode="cover"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
         ) : null}
-      </Container>
+      </Wrapper>
     </View>
   );
 }
 
 export default React.memo(PromotionalBanner);
 
-export const prefetchPromotionalBanner = (module: CmsModuleKey = 'product') =>
+export const prefetchPromotionalBanner = () =>
   queryClient.prefetchQuery({
-    queryKey: moduleContentQueryKey(module),
-    queryFn: () => fetchResolvedZones(module),
+    queryKey: PRODUCT_CONTENT_QUERY_KEY,
+    queryFn: () => fetchResolvedZones("product"),
     staleTime: 5 * 60 * 1000,
   });
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 8,
   },
-  banner: {
-    height: 150,
-    borderRadius: 12,
-    overflow: 'hidden',
+
+  bannerBox: {
+    width: "100%",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
   },
-  ctaPill: {
-    position: 'absolute',
-    right: 14,
-    bottom: 14,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  ctaText: {
-    color: '#111827',
-    fontSize: 12,
-    fontWeight: '800',
+
+  // Dims the image slightly while it's still sized to the placeholder ratio
+  // (before its own dimensions are known), so the crop/reflow the instant
+  // it loads reads as a fade-in rather than a visible jump.
+  imageLoading: {
+    opacity: 0.85,
   },
 });
