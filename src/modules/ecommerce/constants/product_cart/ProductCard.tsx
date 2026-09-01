@@ -48,21 +48,24 @@ const getProductImage = (item: any) =>
   item?.thumbnail ??
   (Array.isArray(item?.images) ? item.images[0] : undefined);
 
-const getRpPriceText = (item: any, normalizedProduct: any) => {
-  const rawRpPrice = String(
-    normalizedProduct?.rp_price ??
-      item?.rp_price ??
-      item?.rpPrice ??
-      item?.rp_price_text ??
-      item?.redeem_price ??
-      ""
-  ).trim();
+const formatRpPriceValue = (value: number): string =>
+  Number.isInteger(value) ? String(value) : value.toFixed(2);
 
-  if (!rawRpPrice || ["0", "0.00", "null", "undefined"].includes(rawRpPrice.toLowerCase())) {
-    return "";
+// Single source of truth: rp_price is shown only when it's a finite number > 0.
+// null / undefined / "" / 0 / "0" / "0.00" (and any other non-positive value)
+// all mean "no RP price" \u2014 redeem_coins and reward.enabled are never consulted.
+const getRpPriceText = (rpPrice: unknown): string | undefined => {
+  if (rpPrice === null || rpPrice === undefined || rpPrice === "") {
+    return undefined;
   }
 
-  return /(\u20B9|rs\.?)/i.test(rawRpPrice) ? rawRpPrice : `\u20B9${rawRpPrice}`;
+  const numericRpPrice = Number(rpPrice);
+
+  if (!Number.isFinite(numericRpPrice) || numericRpPrice <= 0) {
+    return undefined;
+  }
+
+  return `RP \u20B9${formatRpPriceValue(numericRpPrice)}`;
 };
 
 const hasWishlistFlag = (item: any) =>
@@ -274,21 +277,6 @@ const ProductCardComponent = ({
       ? Math.max(0, Math.min(5, ratingValue))
       : 4.5;
 
-    // Backend sends null/0 when no redemption rule applies to this product —
-    // treat those (and their string forms) as "no RP price" rather than "₹0".
-    const rawRpPrice = String(normalizedProduct.rp_price ?? "").trim();
-    const hasRpPrice = !!rawRpPrice && !["0", "0.00", "null", "undefined"].includes(rawRpPrice.toLowerCase());
-    if (__DEV__ && !hasRpPrice) {
-      console.log('[ProductCard] No RP price for product', getProductId(item), {
-        rp_price: item?.rp_price,
-        rpPrice: item?.rpPrice,
-        redeem_coins: item?.redeem_coins,
-      });
-    }
-    const formattedRpPrice = hasRpPrice
-      ? (/[₹]|rs\.?/i.test(rawRpPrice) ? rawRpPrice : `₹${rawRpPrice}`)
-      : "";
-
     return {
       starCount: Math.round(safeRating),
       reviewText: normalizedProduct.reviews ? `(${normalizedProduct.reviews})` : "",
@@ -296,7 +284,7 @@ const ProductCardComponent = ({
       productNameText: item?.product_name || item?.title || "",
       priceText: String(normalizedProduct.price ?? ""),
       originalPriceText: String(normalizedProduct.originalPrice ?? ""),
-      rpPriceText: getRpPriceText(item, normalizedProduct),
+      rpPriceText: getRpPriceText(normalizedProduct.rp_price),
       discount: normalizedProduct.discount ?? "",
     };
   }, [item, normalizedProduct]);
@@ -414,7 +402,7 @@ const ProductCardComponent = ({
               },
             ]}
           >
-            {rpPriceText ? `RP ${rpPriceText}` : priceText}
+            {rpPriceText || priceText}
           </Text>
 
           {/* MRP (strikethrough) */}
