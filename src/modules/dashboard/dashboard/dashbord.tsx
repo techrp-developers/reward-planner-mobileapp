@@ -6,9 +6,9 @@ import {
   ScrollView,
   Platform,
   Pressable,
+  ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import HeaderComponent, { type SearchOverlayState } from '../header/HeaderComponent';
@@ -32,10 +32,14 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { fetchResolvedZones } from '../../common/cms/cmsContentApi';
+import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
 import { API_V1_URL } from '../../../config/apiConfig';
+import OffersBanner from '../../ecommerce/components/home/OffersBanner';
+import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
-  'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+  'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
 ];
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
@@ -70,10 +74,11 @@ const MemoServicesModule = memo(ServicesModule);
 const MemoModuleBanner = memo(ModuleBanner);
 const MemoRewardsOverview = memo(RewardsOverview);
 const MemoBirthdayCarousel = memo(BirthdayCarousel);
+const MemoOffersBanner = memo(OffersBanner);
+const MemoInvestmentInsuranceOverview = memo(InvestmentInsuranceOverview);
 
 function Dashbord() {
   const { isDark } = useAppTheme();
-  const iconSize = rs(26);
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
@@ -109,7 +114,27 @@ function Dashbord() {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const { data: mobileDashboardContent } = useQuery({
+    queryKey: moduleContentQueryKey('mobile_dashboard'),
+    queryFn: () => fetchResolvedZones('mobile_dashboard'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
+  const mobileDashboardBackground = mobileDashboardContent?.navbar_background ?? null;
+  const mobileDashboardImageUrl =
+    mobileDashboardBackground?.content_type === 'image'
+      ? mobileDashboardBackground.image_url
+      : null;
+  const mobileDashboardColor =
+    mobileDashboardBackground?.content_type === 'color'
+      ? mobileDashboardBackground.color_value
+      : null;
+  const hasMobileDashboardOffers =
+    mobileDashboardContent?.offers_banner?.content_type === 'image' &&
+    Array.isArray(mobileDashboardContent.offers_banner.images) &&
+    mobileDashboardContent.offers_banner.images.some((image) => image.is_active === 1 && image.image_url);
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -263,22 +288,80 @@ function Dashbord() {
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
-  const topSectionGradient: string[] = isDark
-    ? ['#09090B', '#111827', '#18181B']
-    : ['#111827', '#1E1B4B', '#312E81'];
+  const topSectionGradient: string[] = useMemo(
+    () => (isDark ? ['#09090B', '#111827', '#18181B'] : ['#111827', '#1E1B4B', '#312E81']),
+    [isDark],
+  );
 
   const rootGradient = isDark
     ? ['#09090B', '#111827', '#151526']
-    : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
+    : ['#F8FAFC', '#FFFFFF', '#F8FAFC'];
 
-  const quoteBannerGradient: string[] = isDark
-    ? ['#18181B', '#27233A', '#4338CA']
-    : ['#111827', '#312E81', '#4F46E5'];
+  const renderHeaderSection = useCallback((key: string) => {
+    const headerContent = (
+      <>
+        <HeaderComponent
+          userName={headerUserName}
+          userImageUri={headerUserImage ?? undefined}
+          companyLogoUri={headerCompanyLogo ?? undefined}
+          surface="transparent"
+          dismissSignal={searchDismissSignal}
+          onSearchActiveChange={setIsSearchOpen}
+          onSearchOverlayChange={setSearchOverlay}
+          onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+          onNotificationPress={() => navigation.navigate('Notification')}
+          showRewardPoints
+          rewardPoints={rewardPoints}
+        />
+      </>
+    );
 
-  const t = useMemo(() => StyleSheet.create({
-    iconContainer: { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.16)' },
-    card: { shadowColor: isDark ? '#000000' : '#312E81' },
-  }), [isDark]);
+    if (mobileDashboardImageUrl) {
+      return (
+        <ImageBackground
+          key={key}
+          source={{ uri: mobileDashboardImageUrl }}
+          resizeMode="cover"
+          style={styles.topSection}
+          imageStyle={styles.topSectionImage}
+        >
+          <LinearGradient
+            colors={isDark ? ['rgba(9,9,11,0.70)', 'rgba(17,24,39,0.54)'] : ['rgba(17,24,39,0.56)', 'rgba(49,46,129,0.36)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {headerContent}
+        </ImageBackground>
+      );
+    }
+
+    if (mobileDashboardColor) {
+      return (
+        <View key={key} style={[styles.topSection, { backgroundColor: mobileDashboardColor }]}>
+          {headerContent}
+        </View>
+      );
+    }
+
+    return (
+      <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
+        {headerContent}
+      </LinearGradient>
+    );
+  }, [
+    headerCompanyLogo,
+    headerUserImage,
+    headerUserName,
+    isDark,
+    mobileDashboardColor,
+    mobileDashboardImageUrl,
+    navigation,
+    rewardPoints,
+    searchDismissSignal,
+    topSectionGradient,
+  ]);
 
   return (
     <LinearGradient
@@ -300,51 +383,28 @@ function Dashbord() {
         {dashboardLayout.sections.map(({ key }) => {
           switch (key as MainDashboardSectionKey) {
             case 'header':
-              return (
-                <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
-                  <HeaderComponent
-                    userName={headerUserName}
-                    userImageUri={headerUserImage ?? undefined}
-                    companyLogoUri={headerCompanyLogo ?? undefined}
-                    surface="transparent"
-                    dismissSignal={searchDismissSignal}
-                    onSearchActiveChange={setIsSearchOpen}
-                    onSearchOverlayChange={setSearchOverlay}
-                    onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-                    onNotificationPress={() => navigation.navigate('Notification')}
-                    showRewardPoints
-                    rewardPoints={rewardPoints}
-                  />
-                  <Pressable onPress={dismissSearch}>
-                    <View style={styles.bannerOuter}>
-                      <LinearGradient colors={quoteBannerGradient} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={[styles.card, t.card]}>
-                        <LinearGradient
-                          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
-                          locations={[0, 0.58, 1]}
-                          start={{ x: 0, y: 0.5 }}
-                          end={{ x: 1, y: 0.5 }}
-                          style={styles.quoteHighlight}
-                          pointerEvents="none"
-                        />
-                        <View style={[styles.iconContainer, t.iconContainer]}>
-                          <MaterialCommunityIcons name="lightbulb-on-outline" size={iconSize} color={isDark ? '#FFFFFF' : '#9B3DD8'} />
-                        </View>
-                        <Text style={styles.quote}>
-                          {thought ? `"${thought}"` : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                        </Text>
-                      </LinearGradient>
-                    </View>
-                  </Pressable>
-                </LinearGradient>
-              );
+              return renderHeaderSection(key);
             case 'birthdays':
               return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
             case 'stepProgress':
               return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
+            case 'investmentInsurance':
+              return <Pressable key={key} onPress={dismissSearch}><MemoInvestmentInsuranceOverview /></Pressable>;
             case 'exploreModules':
               return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
             case 'moduleBanner':
-              return <MemoModuleBanner key={key} />;
+              return hasMobileDashboardOffers ? (
+                <MemoOffersBanner
+                  key={key}
+                  module="mobile_dashboard"
+                  moduleContent={mobileDashboardContent}
+                  aspectRatio={2.55}
+                  resizeMode="cover"
+                  wrapperStyle={styles.dashboardOffers}
+                />
+              ) : (
+                <MemoModuleBanner key={key} />
+              );
             case 'rewardsOverview':
               return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
             default:
@@ -439,6 +499,7 @@ const styles = StyleSheet.create({
     paddingBottom: rs(16),
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
+    overflow: 'hidden',
     zIndex: 20,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: rs(12) },
@@ -446,52 +507,14 @@ const styles = StyleSheet.create({
     shadowRadius: rs(18),
     elevation: 8,
   },
+  topSectionImage: {
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
+  },
 
-  bannerOuter: {
-    paddingHorizontal: rs(16),
-    paddingTop: rs(2),
-  },
-  card: {
-    borderRadius: rs(20),
-    paddingVertical: rs(13),
-    paddingHorizontal: rs(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: rs(10) },
-    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
-    shadowRadius: rs(18),
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-  quoteHighlight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '62%',
-  },
-  iconContainer: {
-    width: rs(48),
-    height: rs(48),
-    borderRadius: rs(14),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: rs(13),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  quote: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: fs(13.5),
-    lineHeight: rs(20),
-    fontStyle: 'italic',
-    fontWeight: '600',
+  dashboardOffers: {
+    paddingTop: rs(12),
+    paddingBottom: rs(8),
   },
 
   searchOverlay: {

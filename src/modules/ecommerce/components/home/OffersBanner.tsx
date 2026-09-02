@@ -2,17 +2,20 @@ import React from 'react';
 import {
   FlatList,
   Image,
+  ImageResizeMode,
   Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
+  StyleProp,
   TouchableOpacity,
   View,
+  ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import { queryClient } from '../../../../query/queryClient';
 import { fetchResolvedZones } from '../../../common/cms/cmsContentApi';
-import type { CmsModuleKey } from '../../../common/cms/cmsContentApi';
+import type { CmsModuleKey, CmsResolvedZones } from '../../../common/cms/cmsContentApi';
 import { useModuleContent, moduleContentQueryKey } from '../../../common/cms/useModuleContent';
 
 const AUTOPLAY_MS = 3500;
@@ -25,11 +28,22 @@ type OfferSlide = {
 
 type Props = {
   module?: CmsModuleKey;
+  aspectRatio?: number;
+  resizeMode?: ImageResizeMode;
+  moduleContent?: CmsResolvedZones | null;
+  wrapperStyle?: StyleProp<ViewStyle>;
 };
 
-function OffersBanner({ module = 'product' }: Props) {
+function OffersBanner({
+  module = 'product',
+  aspectRatio = OFFER_ASPECT_RATIO,
+  resizeMode = 'contain',
+  moduleContent: controlledModuleContent,
+  wrapperStyle,
+}: Props) {
   const { width } = useWindowDimensions();
-  const { moduleContent } = useModuleContent(module);
+  const { moduleContent: fetchedModuleContent } = useModuleContent(module);
+  const moduleContent = controlledModuleContent ?? fetchedModuleContent;
   const banner = moduleContent?.offers_banner ?? null;
   const listRef = React.useRef<FlatList<OfferSlide>>(null);
   const pauseCyclesRef = React.useRef(0);
@@ -111,7 +125,7 @@ function OffersBanner({ module = 'product' }: Props) {
 
   if (showColorFallback) {
     return (
-      <View style={styles.wrapper}>
+      <View style={[styles.wrapper, wrapperStyle]}>
         <TouchableOpacity
           activeOpacity={banner.redirect_link ? 0.9 : 1}
           disabled={!banner.redirect_link}
@@ -120,6 +134,7 @@ function OffersBanner({ module = 'product' }: Props) {
             styles.colorFallback,
             {
               width: itemWidth,
+              aspectRatio,
               backgroundColor: banner.color_value as string,
             },
           ]}
@@ -129,7 +144,7 @@ function OffersBanner({ module = 'product' }: Props) {
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, wrapperStyle]}>
       <FlatList
         ref={listRef}
         data={slides}
@@ -151,12 +166,12 @@ function OffersBanner({ module = 'product' }: Props) {
             activeOpacity={banner.redirect_link ? 0.9 : 1}
             disabled={!banner.redirect_link}
             onPress={handlePress}
-            style={[styles.slide, { width: itemWidth }]}
+            style={[styles.slide, { width: itemWidth, aspectRatio }]}
           >
             <Image
               source={{ uri: item.imageUrl }}
               style={StyleSheet.absoluteFill}
-              resizeMode="contain"
+              resizeMode={resizeMode}
               onError={() => {
                 setFailedImages((current) => ({
                   ...current,
@@ -198,13 +213,11 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   slide: {
-    aspectRatio: OFFER_ASPECT_RATIO,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#F8FAFC',
   },
   colorFallback: {
-    aspectRatio: OFFER_ASPECT_RATIO,
     borderRadius: 12,
   },
   dots: {
