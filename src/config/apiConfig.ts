@@ -65,6 +65,12 @@ export const UPLOADS_URL =
     ? `${SERVER_URL}/uploads/`
     : `${API_BASE_URL}/uploads/`;
 
+const LOCAL_BACKEND_HOSTS = new Set([
+  'localhost',
+  '127.0.0.1',
+  LOCAL_API_HOST,
+]);
+
 if (__DEV__) {
   console.log(`[API] Environment: ${API_ENVIRONMENT}`);
   console.log(`[API] Platform: ${Platform.OS} (${DeviceInfo.isEmulatorSync() ? 'emulator/simulator' : 'physical device'})`);
@@ -93,13 +99,12 @@ export const normalizeLocalCmsImageUrl = (
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const url = new URL(trimmed);
-      const isLoopbackHost =
-        url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      const isLocalBackendHost = LOCAL_BACKEND_HOSTS.has(url.hostname);
       const isLocalCmsPort =
         url.port === String(LOCAL_API_PORT) ||
         (!url.port && url.protocol === 'http:');
 
-      if (isLoopbackHost && isLocalCmsPort) {
+      if (IS_LOCAL_ENVIRONMENT && isLocalBackendHost && isLocalCmsPort) {
         // RN's built-in URL polyfill force-appends a trailing "/" to
         // .pathname for any URL with no query/hash, corrupting file paths
         // (e.g. "...jpg" -> "...jpg/"). Slice the path off the original
