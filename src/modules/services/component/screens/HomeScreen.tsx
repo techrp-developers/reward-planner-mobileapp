@@ -8,9 +8,13 @@ import MostBookedServices from '../home/MostBookedServices';
 import QuickServices from '../home/QuickServices';
 import BundleService from '../home/BundleService';
 import ExclusiveOffers from '../home/ExclusiveOffers';
+import PromotionalBanner from '../../../ecommerce/components/home/PromotionalBanner';
+import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type ServiceSectionKey =
+  | 'promotionalBanner'
+  | 'offersBanner'
   | 'banner'
   | 'services'
   | 'slider'
@@ -19,7 +23,13 @@ type ServiceSectionKey =
   | 'exclusiveOffers'
   | 'bundles';
 
+// Promotional Banner and Offers Banner are Service-module CMS content
+// (fetchResolvedZones("service")) and must render above the rest of the
+// existing Service home content. Both components already render null when
+// their CMS entry is null/absent — no placeholder is shown for either.
 const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
+  { key: 'promotionalBanner' },
+  { key: 'offersBanner' },
   { key: 'banner' },
   { key: 'services' },
   { key: 'slider' },
@@ -29,7 +39,13 @@ const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
   { key: 'bundles' },
 ];
 
-const INITIAL_SERVICE_SECTIONS = new Set<ServiceSectionKey>(['banner', 'services', 'slider']);
+const INITIAL_SERVICE_SECTIONS = new Set<ServiceSectionKey>([
+  'promotionalBanner',
+  'offersBanner',
+  'banner',
+  'services',
+  'slider',
+]);
 const READY_SERVICE_SECTIONS = new Set<ServiceSectionKey>(INITIAL_SERVICE_SECTIONS);
 
 const ServiceSection = React.memo(({
@@ -42,6 +58,8 @@ const ServiceSection = React.memo(({
   if (!isReady) return <View style={styles.sectionPlaceholder} />;
 
   switch (sectionKey) {
+    case 'promotionalBanner': return <PromotionalBanner module="service" />;
+    case 'offersBanner': return <OffersBanner module="service" />;
     case 'banner': return <Banner />;
     case 'services': return <ServicesHome />;
     case 'slider': return <BannerSliderManual />;

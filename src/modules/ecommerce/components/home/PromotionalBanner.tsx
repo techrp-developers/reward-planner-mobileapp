@@ -1,8 +1,9 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Linking, Animated, ImageLoadEvent } from "react-native";
 import { normalizeLocalCmsImageUrl } from "../../../../config/apiConfig";
-import { useProductContent, PRODUCT_CONTENT_QUERY_KEY } from "../../hooks/useProductContent";
 import { fetchResolvedZones } from "../../../common/cms/cmsContentApi";
+import type { CmsModuleKey } from "../../../common/cms/cmsContentApi";
+import { useModuleContent, moduleContentQueryKey } from "../../../common/cms/useModuleContent";
 import { queryClient } from "../../../../query/queryClient";
 
 // Matches the old fixed `width * 0.92` banner proportions — used both as the
@@ -15,10 +16,13 @@ const MAX_ASPECT_RATIO = 2.2;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-function PromotionalBanner() {
-  console.log('[CMS] PromotionalBanner render invoked');
-  const { productContent, isLoading, isError } = useProductContent();
-  const banner = productContent?.promotional_banner ?? null;
+type Props = {
+  module?: CmsModuleKey;
+};
+
+function PromotionalBanner({ module = "product" }: Props) {
+  const { moduleContent, isLoading, isError } = useModuleContent(module);
+  const banner = moduleContent?.promotional_banner ?? null;
 
   const rawBannerImageUrl = banner?.content_type === "image" ? banner.image_url : null;
   const bannerImageUrl = React.useMemo(
@@ -38,11 +42,8 @@ function PromotionalBanner() {
 
   React.useEffect(() => {
     if (!__DEV__) return;
-    console.log("[CMS] Product content loaded", { isLoading, isError });
-    console.log("[CMS] Promotional banner:", banner);
-    console.log("[CMS] Promotional banner raw image URL:", rawBannerImageUrl);
-    console.log("[CMS] Promotional banner final image URL:", bannerImageUrl);
-  }, [banner, bannerImageUrl, isLoading, isError, rawBannerImageUrl]);
+    console.log(`[CMS] Promotional banner (${module}):`, { isLoading, isError, banner, bannerImageUrl });
+  }, [module, banner, bannerImageUrl, isLoading, isError]);
 
   const handlePress = React.useCallback(() => {
     if (banner?.redirect_link) {
@@ -111,10 +112,10 @@ function PromotionalBanner() {
 
 export default React.memo(PromotionalBanner);
 
-export const prefetchPromotionalBanner = () =>
+export const prefetchPromotionalBanner = (module: CmsModuleKey = "product") =>
   queryClient.prefetchQuery({
-    queryKey: PRODUCT_CONTENT_QUERY_KEY,
-    queryFn: () => fetchResolvedZones("product"),
+    queryKey: moduleContentQueryKey(module),
+    queryFn: () => fetchResolvedZones(module),
     staleTime: 5 * 60 * 1000,
   });
 
