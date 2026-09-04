@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Alert, Platform, Linking, Switch,
+  Image, ActivityIndicator, Alert, Modal, Platform, Linking, Share, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -120,6 +120,11 @@ const ProfileScreen: React.FC = () => {
     gracePeriodDays: number;
   } | null>(null);
   const [deletionExitLoading, setDeletionExitLoading] = useState(false);
+  const [visitCardQr, setVisitCardQr] = useState<string | null>(null);
+  const [visitCardHeaders, setVisitCardHeaders] = useState<Record<string, string>>({});
+  const [, setVisitCardLoading] = useState(false);
+  const [visitCardRequested, setVisitCardRequested] = useState(false);
+  const [visitCardModalVisible, setVisitCardModalVisible] = useState(false);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -257,6 +262,49 @@ const ProfileScreen: React.FC = () => {
     }
   }, []);
 
+  const loadVisitCardQr = useCallback(async (): Promise<string | null> => {
+    if (visitCardQr) return visitCardQr;
+    try {
+      setVisitCardLoading(true);
+      const headers = await getAuthHeaders();
+      if (!headers.Authorization) throw new Error('Please sign in again to view your visiting card.');
+      const qrUri = `${API_BASE_URL}/v1/auth/visit-card/qr`;
+      setVisitCardHeaders(headers as Record<string, string>);
+      setVisitCardQr(qrUri);
+      return qrUri;
+    } catch (error: any) {
+      const serverMessage = error?.response?.data?.message ?? error?.response?.data?.error;
+      const status = error?.response?.status;
+      console.warn('Visit card QR request failed', {
+        status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      Alert.alert(
+        'Visiting card unavailable',
+        serverMessage || (status ? `The server returned error ${status}. Please try again.` : error?.message || 'Could not load your QR code. Please try again.'),
+      );
+      return null;
+    } finally {
+      setVisitCardLoading(false);
+    }
+  }, [visitCardQr]);
+
+  const handleShareVisitCard = useCallback(async () => {
+    await Share.share({
+      title: `${displayName}'s visiting card`,
+      message: [displayName, userInfo?.employeeInfo?.role, userInfo?.company?.name,
+        userInfo?.phone, userInfo?.email].filter(Boolean).join('\n'),
+    });
+  }, [displayName, userInfo]);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && !visitCardRequested) {
+      setVisitCardRequested(true);
+      loadVisitCardQr();
+    }
+  }, [isAuthenticated, loadVisitCardQr, loading, visitCardRequested]);
+
   // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -380,6 +428,23 @@ const ProfileScreen: React.FC = () => {
             STATS ROW — Reward pts (big) + company logo
         ════════════════════════════════════ */}
         <View style={styles.body}>
+          {isDashboardProfile && (
+            <>
+              <SectionHead title="My Cards" isDark={isDark} />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRail}>
+                <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={() => setVisitCardModalVisible(true)} activeOpacity={0.78}>
+                  <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
+                    <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View style={styles.cardDirectoryCopy}>
+                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Visiting Card</Text>
+                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view your digital card</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
+                </TouchableOpacity>
+              </ScrollView>
+            </>
+          )}
 
           {/* ════════════════════════════════════
               CONTACT INFO
@@ -543,6 +608,60 @@ const ProfileScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      <Modal visible={visitCardModalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setVisitCardModalVisible(false)}>
+        <View style={styles.cardModalBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel="Close visiting card" />
+          <View style={[styles.cardModalSheet, { backgroundColor: '#000000' }]}>
+            <View style={styles.cardModalHandle} />
+            <View style={styles.cardModalHeader}>
+              <TouchableOpacity style={[styles.cardModalClose, { backgroundColor: '#18181B' }]} onPress={() => setVisitCardModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard}>
+              <View style={styles.cardAccentTop} />
+              <View style={styles.cardAccentLeft} />
+              <View style={styles.cardAccentRight} />
+              <View style={styles.businessCardHeader}>
+                <View style={styles.businessBrand}>
+                  <View style={styles.businessBrandIcon}><MaterialCommunityIcons name="card-account-details-outline" size={17} color="#FFFFFF" /></View>
+                  <Text style={styles.businessBrandText}>RewardPlanners</Text>
+                </View>
+              </View>
+              <View style={styles.businessCardBody}>
+                <View style={styles.businessDetails}>
+                  <View style={styles.businessIdentityRow}>
+                    <View style={styles.businessAvatar}>
+                      {(avatarUri || userInfo?.userImage) ? <Image source={{ uri: (avatarUri || userInfo?.userImage)! }} style={styles.businessAvatarImage} /> : <Text style={styles.businessInitial}>{displayName.trim().charAt(0).toUpperCase() || 'U'}</Text>}
+                    </View>
+                    <View style={styles.businessIdentityCopy}>
+                      <Text style={styles.businessName} numberOfLines={1}>{displayName}</Text>
+                      {emp?.role ? <Text style={styles.businessRole} numberOfLines={1}>{emp.role}</Text> : null}
+                      {userInfo?.company?.name ? <Text style={styles.businessCompany} numberOfLines={1}>{userInfo.company.name}</Text> : null}
+                    </View>
+                  </View>
+                  <View style={styles.businessContacts}>
+                    {userInfo?.phone ? <BusinessContact icon="phone-outline" value={formatPhone(userInfo.phone)} /> : null}
+                    {userInfo?.email ? <BusinessContact icon="email-outline" value={userInfo.email} /> : null}
+                  </View>
+                </View>
+                <View style={styles.businessQrColumn}>
+                  <View style={styles.businessQrBox}>
+                    {visitCardQr ? <Image source={{ uri: visitCardQr, headers: visitCardHeaders }} style={styles.businessQr} resizeMode="contain" onError={() => Alert.alert('Visiting card unavailable', 'The server response could not be displayed as a QR image.')} /> : <ActivityIndicator color="#4F46E5" />}
+                  </View>
+                  <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8}>
+                <MaterialCommunityIcons name="share-variant-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.businessShareText}>Share card</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
       <LogoutConfirmationModal
         visible={logoutModalVisible}
         isLoading={logoutLoading}
@@ -583,6 +702,15 @@ const ProfileScreen: React.FC = () => {
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const BusinessContact = ({ icon, value }: { icon: string; value: string }) => (
+  <View style={styles.businessContactRow}>
+    <View style={styles.businessContactIcon}>
+      <MaterialCommunityIcons name={icon} size={11} color="#FFFFFF" />
+    </View>
+    <Text style={styles.businessContactText} numberOfLines={1}>{value}</Text>
+  </View>
+);
 
 const SectionHead = ({ title, isDark, action, onAction }: {
   title: string; isDark: boolean; action?: string; onAction?: () => void;
@@ -838,6 +966,46 @@ const styles = StyleSheet.create({
   secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: rs(22), marginBottom: rs(9), marginLeft: rs(10), marginRight: rs(8) },
   secTitle: { fontSize: fs(10), fontWeight: '800', letterSpacing: 0.6 },
   secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
+
+  cardsRail: { paddingRight: rs(16) },
+  cardDirectoryItem: { width: rs(285), minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  cardDirectoryIcon: { width: rs(50), height: rs(50), borderRadius: rs(15), alignItems: 'center', justifyContent: 'center' },
+  cardDirectoryCopy: { flex: 1, minWidth: 0 },
+  cardDirectoryTitle: { fontSize: fs(14), fontWeight: '900' },
+  cardDirectorySubtitle: { fontSize: fs(9), lineHeight: fs(13), fontWeight: '600', marginTop: rs(3) },
+  cardModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'flex-end' },
+  cardModalSheet: { height: '90%', borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24), paddingHorizontal: rs(16), paddingTop: rs(8), paddingBottom: rs(16), elevation: 20 },
+  cardModalHandle: { width: rs(40), height: rs(4), borderRadius: rs(2), backgroundColor: '#71717A', opacity: 0.7, alignSelf: 'center', marginBottom: rs(8) },
+  cardModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: rs(8) },
+  cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center' },
+  businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)', elevation: 5, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
+  cardAccentTop: { position: 'absolute', top: 0, right: rs(42), width: rs(110), height: rs(8), backgroundColor: '#F59E0B', borderBottomLeftRadius: rs(12), borderBottomRightRadius: rs(12) },
+  cardAccentLeft: { position: 'absolute', top: rs(48), left: rs(-72), width: rs(155), height: rs(155), borderRadius: rs(78), backgroundColor: '#4F46E5', opacity: 0.22 },
+  cardAccentRight: { position: 'absolute', top: rs(200), right: rs(-75), width: rs(160), height: rs(160), borderRadius: rs(80), backgroundColor: '#F59E0B', opacity: 0.18 },
+  businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(16), zIndex: 2 },
+  businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
+  businessBrandIcon: { width: rs(29), height: rs(29), borderRadius: rs(9), backgroundColor: '#F59E0B', alignItems: 'center', justifyContent: 'center' },
+  businessBrandText: { color: '#FFFFFF', fontSize: fs(11), fontWeight: '800' },
+  businessCardBody: { flex: 1, alignItems: 'stretch', zIndex: 2 },
+  businessDetails: { minWidth: 0 },
+  businessIdentityRow: { flexDirection: 'column', alignItems: 'flex-start', gap: rs(8) },
+  businessIdentityCopy: { width: '100%' },
+  businessAvatar: { width: rs(92), height: rs(92), borderRadius: rs(46), borderWidth: 4, borderColor: '#FFFFFF', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5' },
+  businessAvatarImage: { width: '100%', height: '100%' },
+  businessInitial: { color: '#FFFFFF', fontSize: fs(32), fontWeight: '900' },
+  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900' },
+  businessRole: { color: '#22D3EE', fontSize: fs(12), fontWeight: '700', marginTop: rs(4) },
+  businessCompany: { color: '#FBBF24', fontSize: fs(12), fontWeight: '800', marginTop: rs(5) },
+  businessContacts: { width: '100%', gap: rs(8), marginTop: rs(16) },
+  businessContactRow: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
+  businessContactIcon: { width: rs(26), height: rs(26), borderRadius: rs(13), backgroundColor: '#F59E0B', alignItems: 'center', justifyContent: 'center' },
+  businessContactText: { flex: 1, color: 'rgba(255,255,255,0.90)', fontSize: fs(11), fontWeight: '600' },
+  businessQrColumn: { alignSelf: 'flex-end', alignItems: 'center', gap: rs(8), marginTop: rs(16), marginBottom: rs(8) },
+  businessQrBox: { width: rs(132), height: rs(132), padding: rs(8), borderRadius: rs(17), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  businessQr: { width: '100%', height: '100%' },
+  businessScanText: { color: '#C4B5FD', fontSize: fs(7), fontWeight: '900', letterSpacing: 0.6 },
+  businessShareButton: { position: 'absolute', left: rs(16), bottom: rs(16), flexDirection: 'row', alignItems: 'center', gap: rs(8), paddingHorizontal: rs(16), paddingVertical: rs(10), borderRadius: rs(10), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', zIndex: 3 },
+  businessShareText: { color: '#FFFFFF', fontSize: fs(11), fontWeight: '800' },
 
   card: {
     borderRadius: rs(18),
