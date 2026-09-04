@@ -620,9 +620,6 @@ const ProfileScreen: React.FC = () => {
             </View>
 
             <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard}>
-              <View style={styles.cardAccentTop} />
-              <View style={styles.cardAccentLeft} />
-              <View style={styles.cardAccentRight} />
               <View style={styles.businessCardHeader}>
                 <View style={styles.businessBrand}>
                   <View style={styles.businessBrandIcon}><MaterialCommunityIcons name="card-account-details-outline" size={17} color="#FFFFFF" /></View>
@@ -652,11 +649,11 @@ const ProfileScreen: React.FC = () => {
                   </View>
                   <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
                 </View>
+                <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8}>
+                  <MaterialCommunityIcons name="share-variant-outline" size={14} color="#FFFFFF" />
+                  <Text style={styles.businessShareText}>Share card</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8}>
-                <MaterialCommunityIcons name="share-variant-outline" size={14} color="#FFFFFF" />
-                <Text style={styles.businessShareText}>Share card</Text>
-              </TouchableOpacity>
             </LinearGradient>
           </View>
         </View>
@@ -979,33 +976,30 @@ const styles = StyleSheet.create({
   cardModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: rs(8) },
   cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center' },
   businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)', elevation: 5, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
-  cardAccentTop: { position: 'absolute', top: 0, right: rs(42), width: rs(110), height: rs(8), backgroundColor: '#F59E0B', borderBottomLeftRadius: rs(12), borderBottomRightRadius: rs(12) },
-  cardAccentLeft: { position: 'absolute', top: rs(48), left: rs(-72), width: rs(155), height: rs(155), borderRadius: rs(78), backgroundColor: '#4F46E5', opacity: 0.22 },
-  cardAccentRight: { position: 'absolute', top: rs(200), right: rs(-75), width: rs(160), height: rs(160), borderRadius: rs(80), backgroundColor: '#F59E0B', opacity: 0.18 },
-  businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(16), zIndex: 2 },
+  businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: rs(16), zIndex: 2 },
   businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
-  businessBrandIcon: { width: rs(29), height: rs(29), borderRadius: rs(9), backgroundColor: '#F59E0B', alignItems: 'center', justifyContent: 'center' },
+  businessBrandIcon: { width: rs(29), height: rs(29), borderRadius: rs(9), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
   businessBrandText: { color: '#FFFFFF', fontSize: fs(11), fontWeight: '800' },
-  businessCardBody: { flex: 1, alignItems: 'stretch', zIndex: 2 },
-  businessDetails: { minWidth: 0 },
-  businessIdentityRow: { flexDirection: 'column', alignItems: 'flex-start', gap: rs(8) },
-  businessIdentityCopy: { width: '100%' },
-  businessAvatar: { width: rs(92), height: rs(92), borderRadius: rs(46), borderWidth: 4, borderColor: '#FFFFFF', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5' },
+  businessCardBody: { flex: 1, alignItems: 'center', zIndex: 2 },
+  businessDetails: { width: '100%', minWidth: 0, alignItems: 'center' },
+  businessIdentityRow: { width: '100%', flexDirection: 'column', alignItems: 'center', gap: rs(8) },
+  businessIdentityCopy: { width: '100%', alignItems: 'center' },
+  businessAvatar: { width: rs(92), height: rs(92), borderRadius: rs(46), borderWidth: 4, borderColor: '#818CF8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5' },
   businessAvatarImage: { width: '100%', height: '100%' },
   businessInitial: { color: '#FFFFFF', fontSize: fs(32), fontWeight: '900' },
-  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900' },
-  businessRole: { color: '#22D3EE', fontSize: fs(12), fontWeight: '700', marginTop: rs(4) },
-  businessCompany: { color: '#FBBF24', fontSize: fs(12), fontWeight: '800', marginTop: rs(5) },
-  businessContacts: { width: '100%', gap: rs(8), marginTop: rs(16) },
+  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900', textAlign: 'center' },
+  businessRole: { color: '#A5B4FC', fontSize: fs(12), fontWeight: '700', marginTop: rs(4), textAlign: 'center' },
+  businessCompany: { color: '#C4B5FD', fontSize: fs(12), fontWeight: '800', marginTop: rs(5), textAlign: 'center' },
+  businessContacts: { width: '82%', gap: rs(8), marginTop: rs(16), alignSelf: 'center' },
   businessContactRow: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
-  businessContactIcon: { width: rs(26), height: rs(26), borderRadius: rs(13), backgroundColor: '#F59E0B', alignItems: 'center', justifyContent: 'center' },
+  businessContactIcon: { width: rs(26), height: rs(26), borderRadius: rs(13), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
   businessContactText: { flex: 1, color: 'rgba(255,255,255,0.90)', fontSize: fs(11), fontWeight: '600' },
-  businessQrColumn: { alignSelf: 'flex-end', alignItems: 'center', gap: rs(8), marginTop: rs(16), marginBottom: rs(8) },
+  businessQrColumn: { alignSelf: 'center', alignItems: 'center', gap: rs(8), marginTop: rs(16) },
   businessQrBox: { width: rs(132), height: rs(132), padding: rs(8), borderRadius: rs(17), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   businessQr: { width: '100%', height: '100%' },
   businessScanText: { color: '#C4B5FD', fontSize: fs(7), fontWeight: '900', letterSpacing: 0.6 },
-  businessShareButton: { position: 'absolute', left: rs(16), bottom: rs(16), flexDirection: 'row', alignItems: 'center', gap: rs(8), paddingHorizontal: rs(16), paddingVertical: rs(10), borderRadius: rs(10), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', zIndex: 3 },
-  businessShareText: { color: '#FFFFFF', fontSize: fs(11), fontWeight: '800' },
+  businessShareButton: { alignSelf: 'center', minWidth: '56%', minHeight: rs(48), marginTop: rs(24), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(8), paddingHorizontal: rs(20), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', zIndex: 3 },
+  businessShareText: { color: '#FFFFFF', fontSize: fs(13), fontWeight: '900' },
 
   card: {
     borderRadius: rs(18),
