@@ -3,10 +3,10 @@
 // API:    GET /v1/auth/user-info  (via getAuthHeaders)
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Alert, Modal, Platform, Linking, Share, Switch,
+  Image, ActivityIndicator, Alert, Animated, Easing, Modal, Platform, Linking, Share, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -125,6 +125,7 @@ const ProfileScreen: React.FC = () => {
   const [, setVisitCardLoading] = useState(false);
   const [visitCardRequested, setVisitCardRequested] = useState(false);
   const [visitCardModalVisible, setVisitCardModalVisible] = useState(false);
+  const cardFlipAnimation = useRef(new Animated.Value(0)).current;
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -298,6 +299,20 @@ const ProfileScreen: React.FC = () => {
     });
   }, [displayName, userInfo]);
 
+  const handleOpenVisitCard = useCallback(() => {
+    cardFlipAnimation.setValue(0);
+    setVisitCardModalVisible(true);
+  }, [cardFlipAnimation]);
+
+  const handleVisitCardModalShown = useCallback(() => {
+    Animated.timing(cardFlipAnimation, {
+      toValue: 1,
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [cardFlipAnimation]);
+
   useEffect(() => {
     if (!loading && isAuthenticated && !visitCardRequested) {
       setVisitCardRequested(true);
@@ -432,7 +447,7 @@ const ProfileScreen: React.FC = () => {
             <>
               <SectionHead title="My Cards" isDark={isDark} />
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRail}>
-                <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={() => setVisitCardModalVisible(true)} activeOpacity={0.78}>
+                <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={handleOpenVisitCard} activeOpacity={0.78}>
                   <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
                     <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
                   </LinearGradient>
@@ -608,7 +623,7 @@ const ProfileScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      <Modal visible={visitCardModalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setVisitCardModalVisible(false)}>
+      <Modal visible={visitCardModalVisible} transparent animationType="fade" statusBarTranslucent onShow={handleVisitCardModalShown} onRequestClose={() => setVisitCardModalVisible(false)}>
         <View style={styles.cardModalBackdrop}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel="Close visiting card" />
           <View style={[styles.cardModalSheet, { backgroundColor: '#000000' }]}>
@@ -619,6 +634,7 @@ const ProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
+            <Animated.View style={[styles.businessCardFlipWrap, { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnimation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
             <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard}>
               <View style={styles.businessCardHeader}>
                 <View style={styles.businessBrand}>
@@ -655,6 +671,7 @@ const ProfileScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </LinearGradient>
+            </Animated.View>
           </View>
         </View>
       </Modal>
@@ -964,8 +981,8 @@ const styles = StyleSheet.create({
   secTitle: { fontSize: fs(10), fontWeight: '800', letterSpacing: 0.6 },
   secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
 
-  cardsRail: { paddingRight: rs(16) },
-  cardDirectoryItem: { width: rs(285), minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  cardsRail: { minWidth: '100%' },
+  cardDirectoryItem: { flex: 1, width: '100%', minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
   cardDirectoryIcon: { width: rs(50), height: rs(50), borderRadius: rs(15), alignItems: 'center', justifyContent: 'center' },
   cardDirectoryCopy: { flex: 1, minWidth: 0 },
   cardDirectoryTitle: { fontSize: fs(14), fontWeight: '900' },
@@ -975,6 +992,7 @@ const styles = StyleSheet.create({
   cardModalHandle: { width: rs(40), height: rs(4), borderRadius: rs(2), backgroundColor: '#71717A', opacity: 0.7, alignSelf: 'center', marginBottom: rs(8) },
   cardModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: rs(8) },
   cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center' },
+  businessCardFlipWrap: { width: '100%', flex: 1, backfaceVisibility: 'hidden' },
   businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)', elevation: 5, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
   businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: rs(16), zIndex: 2 },
   businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
