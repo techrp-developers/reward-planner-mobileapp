@@ -42,6 +42,21 @@ const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
 ];
 
+// The CMS only stores one solid color per navbar_background entry — turn it
+// into a two-stop gradient client-side (rather than needing a second
+// gradient-end field added to the backend) by blending it toward black.
+const darkenHexColor = (hex: string, amount: number): string => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return hex;
+
+  const channel = (start: number) =>
+    Math.max(0, Math.min(255, Math.round(parseInt(normalized.slice(start, start + 2), 16) * (1 - amount))))
+      .toString(16)
+      .padStart(2, '0');
+
+  return `#${channel(0)}${channel(2)}${channel(4)}`;
+};
+
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
   Services: 'ServicesModule',
@@ -131,6 +146,7 @@ function Dashbord() {
     mobileDashboardBackground?.content_type === 'color'
       ? mobileDashboardBackground.color_value
       : null;
+  const mobileDashboardTextColor = mobileDashboardBackground?.text_color ?? null;
   const hasMobileDashboardOffers =
     mobileDashboardContent?.offers_banner?.content_type === 'image' &&
     Array.isArray(mobileDashboardContent.offers_banner.images) &&
@@ -288,8 +304,13 @@ function Dashbord() {
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
+  // Default (no CMS navbar_background configured for this module) header
+  // background — matches the light, near-white reference design. Only used
+  // as a fallback: renderHeaderSection still swaps in the CMS-provided
+  // image/color first when one is published, so this never overrides
+  // dynamic content — it just fixes what shows before any is set.
   const topSectionGradient: string[] = useMemo(
-    () => (isDark ? ['#09090B', '#111827', '#18181B'] : ['#111827', '#1E1B4B', '#312E81']),
+    () => (isDark ? ['#09090B', '#111827', '#18181B'] : ['#F8FAFC', '#FFFFFF', '#F1F5F9']),
     [isDark],
   );
 
@@ -298,6 +319,15 @@ function Dashbord() {
     : ['#F8FAFC', '#FFFFFF', '#F8FAFC'];
 
   const renderHeaderSection = useCallback((key: string) => {
+    // Only override the theme-aware text colors when a CMS background
+    // (image or color) is actually active — the default fallback gradient
+    // below keeps HeaderComponent's own light/dark text, matching the
+    // reference design when no CMS content has been published yet.
+    const hasDynamicHeaderBackground = !!(mobileDashboardImageUrl || mobileDashboardColor);
+    const headerTextColor = hasDynamicHeaderBackground
+      ? mobileDashboardTextColor ?? '#FFFFFF'
+      : undefined;
+
     const headerContent = (
       <>
         <HeaderComponent
@@ -305,6 +335,7 @@ function Dashbord() {
           userImageUri={headerUserImage ?? undefined}
           companyLogoUri={headerCompanyLogo ?? undefined}
           surface="transparent"
+          textColor={headerTextColor}
           dismissSignal={searchDismissSignal}
           onSearchActiveChange={setIsSearchOpen}
           onSearchOverlayChange={setSearchOverlay}
@@ -339,9 +370,15 @@ function Dashbord() {
 
     if (mobileDashboardColor) {
       return (
-        <View key={key} style={[styles.topSection, { backgroundColor: mobileDashboardColor }]}>
+        <LinearGradient
+          key={key}
+          colors={[mobileDashboardColor, darkenHexColor(mobileDashboardColor, 0.28)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topSection}
+        >
           {headerContent}
-        </View>
+        </LinearGradient>
       );
     }
 
@@ -357,6 +394,7 @@ function Dashbord() {
     isDark,
     mobileDashboardColor,
     mobileDashboardImageUrl,
+    mobileDashboardTextColor,
     navigation,
     rewardPoints,
     searchDismissSignal,

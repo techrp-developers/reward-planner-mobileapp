@@ -20,10 +20,10 @@ const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 // renewal, new Wi-Fi network, etc). Run `ipconfig` (Windows) / `ifconfig`
 // (Mac/Linux) to find it — physical devices need this because 'localhost'
 // on-device points back at the device itself, not your PC.
-export const LOCAL_API_HOST = '192.168.1.220';
+export const LOCAL_API_HOST = '192.168.1.245';
 
-// Keep false for normal Wi-Fi/LAN development. Set true only when developing
-// over USB with `adb reverse tcp:5000 tcp:5000`.
+// Physical Android devices must use the dev machine's LAN IP. Android
+// resolves "localhost" to the device itself, not this computer.
 export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = true;
 
 // Resolve the right local host per target automatically:
@@ -34,10 +34,6 @@ const resolveLocalHost = (): string => {
   const isEmulator = DeviceInfo.isEmulatorSync();
 
   if (Platform.OS === 'android') {
-    if (!isEmulator && USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL) {
-      return 'localhost';
-    }
-
     return isEmulator ? '10.0.2.2' : LOCAL_API_HOST;
   }
 

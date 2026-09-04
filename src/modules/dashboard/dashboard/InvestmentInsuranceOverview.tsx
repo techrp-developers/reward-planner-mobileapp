@@ -58,28 +58,30 @@ const InvestmentInsuranceOverview: React.FC = () => {
         onPress={goToInvestments}
         style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
       >
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconBubble, { backgroundColor: GREEN_BG }]}>
-            <MaterialCommunityIcons name="trending-up" size={13} color={GREEN} />
+        <View>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconBubble, { backgroundColor: GREEN_BG }]}>
+              <MaterialCommunityIcons name="trending-up" size={13} color={GREEN} />
+            </View>
+            <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
+              Investments
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color={theme.secondaryText} />
           </View>
-          <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
-            Investments
+
+          <Text style={[styles.label, { color: theme.secondaryText }]}>Total Portfolio Value</Text>
+          <Text style={[styles.value, { color: theme.text }]} numberOfLines={1}>
+            {PORTFOLIO_VALUE}
           </Text>
-          <MaterialCommunityIcons name="chevron-right" size={16} color={theme.secondaryText} />
-        </View>
+          <View style={styles.growthRow}>
+            <MaterialCommunityIcons name="arrow-up-bold" size={10} color={GREEN} />
+            <Text style={styles.growthText}>{PORTFOLIO_GROWTH_PERCENT}</Text>
+            <Text style={[styles.growthMuted, { color: theme.secondaryText }]}>(All time)</Text>
+          </View>
 
-        <Text style={[styles.label, { color: theme.secondaryText }]}>Total Portfolio Value</Text>
-        <Text style={[styles.value, { color: theme.text }]} numberOfLines={1}>
-          {PORTFOLIO_VALUE}
-        </Text>
-        <View style={styles.growthRow}>
-          <MaterialCommunityIcons name="arrow-up-bold" size={10} color={GREEN} />
-          <Text style={styles.growthText}>{PORTFOLIO_GROWTH_PERCENT}</Text>
-          <Text style={[styles.growthMuted, { color: theme.secondaryText }]}>(All time)</Text>
-        </View>
-
-        <View style={styles.sparklineWrap}>
-          <Sparkline />
+          <View style={styles.sparklineWrap}>
+            <Sparkline />
+          </View>
         </View>
 
         <View style={[styles.ctaButton, { backgroundColor: GREEN_BG }]}>
@@ -94,29 +96,31 @@ const InvestmentInsuranceOverview: React.FC = () => {
         onPress={goToInsurance}
         style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
       >
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconBubble, { backgroundColor: PURPLE_BG }]}>
-            <MaterialCommunityIcons name="shield-check" size={13} color={PURPLE} />
+        <View>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconBubble, { backgroundColor: PURPLE_BG }]}>
+              <MaterialCommunityIcons name="shield-check" size={13} color={PURPLE} />
+            </View>
+            <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
+              Insurance
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color={theme.secondaryText} />
           </View>
-          <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
-            Insurance
-          </Text>
-          <MaterialCommunityIcons name="chevron-right" size={16} color={theme.secondaryText} />
-        </View>
 
-        <Text style={[styles.label, { color: theme.secondaryText }]}>Active Policies</Text>
-        <Text style={[styles.value, { color: theme.text }]} numberOfLines={1}>
-          {ACTIVE_POLICIES}
-        </Text>
-        <View style={styles.growthRow}>
-          <View style={styles.statusDot} />
-          <Text style={[styles.growthMuted, { color: theme.secondaryText }]}>
-            All policies are active
+          <Text style={[styles.label, { color: theme.secondaryText }]}>Active Policies</Text>
+          <Text style={[styles.value, { color: theme.text }]} numberOfLines={1}>
+            {ACTIVE_POLICIES}
           </Text>
-        </View>
+          <View style={styles.growthRow}>
+            <View style={styles.statusDot} />
+            <Text style={[styles.growthMuted, { color: theme.secondaryText }]}>
+              All policies are active
+            </Text>
+          </View>
 
-        <View style={styles.shieldDecorationWrap} pointerEvents="none">
-          <MaterialCommunityIcons name="shield-check" size={44} color={PURPLE_BG} />
+          <View style={styles.shieldDecorationWrap} pointerEvents="none">
+            <MaterialCommunityIcons name="shield-check" size={44} color={PURPLE_BG} />
+          </View>
         </View>
 
         <View style={[styles.ctaButton, { backgroundColor: PURPLE_BG }]}>
@@ -142,6 +146,11 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minWidth: 0,
+    // Two children: the content group (header/value/etc.) and the CTA
+    // button. space-between pins the button to the card's bottom edge so
+    // "View Portfolio"/"View Policies" line up with each other regardless
+    // of how much content sits above them in each card.
+    justifyContent: "space-between",
     borderRadius: 16,
     borderWidth: 1,
     padding: 11,

@@ -22,6 +22,7 @@ export interface CmsZoneEntry {
   content_id: number;
   content_type: 'color' | 'image';
   color_value: string | null;
+  text_color: string | null;
   image_url: string | null;
   title: string;
   cta_text: string | null;

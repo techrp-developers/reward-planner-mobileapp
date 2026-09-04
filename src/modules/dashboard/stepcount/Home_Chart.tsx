@@ -125,14 +125,14 @@ export default function Home_Chart({ goalSteps }: HomeChartProps) {
           imageStyle={styles.heroImage}
         >
           <LinearGradient
-            colors={isDark ? ["rgba(15,23,42,0.78)", "rgba(15,23,42,0.34)", "rgba(15,23,42,0.88)"] : ["rgba(255,255,255,0.98)", "rgba(255,255,255,0.54)", "rgba(255,255,255,0.90)"]}
+            colors={isDark ? ["rgba(15,23,42,0.82)", "rgba(15,23,42,0.12)", "rgba(15,23,42,0.55)"] : ["rgba(255,255,255,0.92)", "rgba(255,255,255,0.10)", "rgba(255,255,255,0.35)"]}
             locations={[0, 0.56, 1]}
             start={{ x: 0, y: 0.45 }}
             end={{ x: 1, y: 0.45 }}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          <View style={styles.heroTopRow}>
+          {/* <View style={styles.heroTopRow}>
             <View style={styles.titleRow}>
               <View style={styles.walkIcon}>
                 <MaterialCommunityIcons name="walk" size={rs(16)} color="#FFFFFF" />
@@ -143,7 +143,7 @@ export default function Home_Chart({ goalSteps }: HomeChartProps) {
               <Text style={styles.keepText}>Keep it up!</Text>
               <MaterialCommunityIcons name="fire" size={rs(11)} color="#F97316" />
             </View>
-          </View>
+          </View> */}
 
           <View style={styles.heroBody}>
             <View style={styles.stepsColumn}>
@@ -229,10 +229,9 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: rs(20),
     padding: rs(12),
-    overflow: "hidden",
+    // overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(148,163,184,0.18)",
-    backgroundColor: "#EEF2FF",
   },
   heroImage: {
     borderRadius: rs(20),

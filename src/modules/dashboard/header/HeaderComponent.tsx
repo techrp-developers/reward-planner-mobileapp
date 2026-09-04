@@ -39,6 +39,13 @@ interface HeaderProps {
   userImageUri?:          string;
   companyLogoUri?:        string;
   surface?:               'solid' | 'transparent';
+  // CMS-driven text color for the header strip (greeting name, subtitle,
+  // search placeholder/icon tints, bell icon) — used when a CMS
+  // navbar_background image/color is active, since the theme-based
+  // light/dark text tokens can't know if that background is readable
+  // against them. Leave unset to keep the normal theme-aware colors
+  // (e.g. the default no-CMS-content fallback background).
+  textColor?:             string;
   dismissSignal?:         number;
   onNotificationPress?:   () => void;
   onAIToggle?:            (value: boolean) => void;
@@ -50,12 +57,25 @@ interface HeaderProps {
   rewardPoints?:          number;
 }
 
+// Hex "#RRGGBB" -> "rgba(r,g,b,alpha)" — used to derive a muted/secondary
+// shade of a single CMS textColor for subtitle/placeholder text, the same
+// way the existing theme tokens pair a strong color with a muted one.
+const withOpacity = (hex: string, alpha: number): string => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return hex;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 const HeaderComponent: React.FC<HeaderProps> = ({
   userName = 'User',
   userImageUri,
   surface = 'solid',
+  textColor,
   dismissSignal = 0,
   onNotificationPress,
   onSearchSubmit,
@@ -88,17 +108,21 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
   const tk = useMemo(() => ({
     headerBg:         surface === 'transparent' ? 'transparent' : isDark ? '#09090B' : '#FFFFFF',
-    helloColor:       isDark ? '#94A3B8' : '#64748B',
-    nameColor:        isDark ? '#F8FAFC' : '#0F172A',
+    helloColor:       textColor ? withOpacity(textColor, 0.78) : isDark ? '#94A3B8' : '#64748B',
+    nameColor:        textColor ?? (isDark ? '#F8FAFC' : '#0F172A'),
     avatarRingBg:     isDark ? 'rgba(15,23,42,0.88)' : '#FFFFFF',
     dateColor:        isDark ? '#94A3B8' : '#64748B',
     iconBg:           isDark ? 'rgba(15,23,42,0.72)' : '#FFFFFF',
-    iconTint:         isDark ? '#F8FAFC' : '#111827',
+    iconTint:         textColor ?? (isDark ? '#F8FAFC' : '#111827'),
     searchBg:         isDark ? 'rgba(15,23,42,0.88)' : '#F1F5F9',
     searchBorder:     'transparent',
+    // Search pill keeps its own fixed light/dark background regardless of
+    // the header's dynamic textColor, so its text must stay theme-based too
+    // — following textColor here would make it unreadable (e.g. white text
+    // on the pill's light gray background) whenever a CMS text_color is set.
     searchTextColor:  isDark ? '#F8FAFC' : '#0F172A',
     placeholderColor: isDark ? '#94A3B8' : '#64748B',
-  }), [isDark, surface]);
+  }), [isDark, surface, textColor]);
 
   // ── Layout measurement — drives dropdown top position ─────────────────────
 
@@ -222,10 +246,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
           <TouchableOpacity
             onPress={onNotificationPress}
-            style={[styles.notificationBtn, { backgroundColor: tk.iconBg }]}
+            style={styles.notificationBtn}
             activeOpacity={0.75}
           >
-            <MaterialCommunityIcons name="bell-outline" size={24} color={tk.iconTint} />
+            <MaterialCommunityIcons name="bell-outline" size={24} color={tk.nameColor} />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
@@ -282,13 +306,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 style={[styles.searchInput, { color: tk.searchTextColor }]}
                 returnKeyType="search"
               />
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() => navigation.navigate('GlobalSearchScreen')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.scanIcon}
               >
                 <MaterialCommunityIcons name="line-scan" size={20} color={tk.placeholderColor} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   onPress={() => { setSearchQuery(''); reset(); }}
