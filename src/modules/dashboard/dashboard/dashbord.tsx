@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Platform,
@@ -18,7 +17,7 @@ import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
 import ModuleBanner from '../explore/ModuleBanner';
-import { rs, fs } from '../../../utils/responsive';
+import { rs } from '../../../utils/responsive';
 import ServicesModule, { type ExploreServiceTab } from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
 // import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
@@ -62,13 +61,6 @@ const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Services: 'ServicesModule',
   Payments: 'PaymentsModule',
   DineOut: 'DineOutModule',
-};
-
-const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
-  Product: '#5F341A',
-  Services: '#4F6BFF',
-  Payments: '#7C3AED',
-  DineOut: '#DC2626',
 };
 
 type DashboardHeaderCache = {
@@ -480,35 +472,27 @@ function Dashbord() {
         <View
           style={[
             styles.moduleLaunchOverlay,
-            { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
+            { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
           ]}
         >
-          <Text style={styles.moduleLaunchTitle}>{openingModule}</Text>
           <View
             style={[
-              styles.moduleLaunchContent,
-              { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
+              styles.moduleLaunchLineWide,
+              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
             ]}
-          >
-            <View
-              style={[
-                styles.moduleLaunchLineWide,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchLine,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchCard,
-                { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
-              ]}
-            />
-          </View>
+          />
+          <View
+            style={[
+              styles.moduleLaunchLine,
+              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+            ]}
+          />
+          <View
+            style={[
+              styles.moduleLaunchCard,
+              { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
+            ]}
+          />
         </View>
       )}
       {/* <FloatingBottomBar/> */}
@@ -578,20 +562,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 500,
     elevation: 50,
-    paddingTop: rs(72),
-  },
-  moduleLaunchTitle: {
-    color: '#FFFFFF',
-    fontSize: fs(22),
-    fontWeight: '800',
-    paddingHorizontal: rs(20),
-    paddingBottom: rs(20),
-  },
-  moduleLaunchContent: {
-    flex: 1,
     padding: rs(18),
-    borderTopLeftRadius: rs(28),
-    borderTopRightRadius: rs(28),
+    paddingTop: rs(90),
   },
   moduleLaunchLineWide: {
     width: '58%',

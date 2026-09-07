@@ -1,19 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
   Image,
   TouchableOpacity,
   StyleSheet,
-  useWindowDimensions,
-  type ViewStyle,
   type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import { useModuleIcons } from '../../../navbar/hooks/useModuleIcons';
+import { TOP_TAB_BY_MODULE, type CmsModuleKey } from '../../common/cms/moduleMapping';
+import type { CmsModule } from '../../common/cms/cmsContentApi';
+
+import ProductIcon from '../../../assets/sampleImages/Product.svg';
+import ServiceIcon from '../../../assets/sampleImages/Service.svg';
+import PaymentIcon from '../../../assets/sampleImages/Payment.svg';
+import DineOutIcon from '../../../assets/sampleImages/DineOut.svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -22,28 +29,15 @@ type ServicesModuleProps = {
   onModulePress?: (tab: ExploreServiceTab) => void;
 };
 
-const Categories1 = require('../../../assets/sampleImages/Categories(1).png');
-const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
-const Categories3 = require('../../../assets/sampleImages/Categories(3).png');
-// const Categories4 = require('../../../assets/sampleImages/Categories(4).png');
-// const Categories5 = require('../../../assets/sampleImages/Categories(5).png');
-// const Categories6 = require('../../../assets/sampleImages/Categories(6).png');
-// const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
-
-type CategoryItem = {
-  image: ReturnType<typeof require>;
-  tab: TopTab;
+// Purpose-built transparent icon glyphs — unlike the bundled Categories(N).png
+// tile photos these replaced, these have no baked-in white canvas, so a
+// module without a published dashboard/nav icon yet still renders cleanly.
+const FALLBACK_ICON_BY_TAB: Record<TopTab, React.ComponentType<{ width: number; height: number }>> = {
+  Product: ProductIcon,
+  Services: ServiceIcon,
+  Payments: PaymentIcon,
+  DineOut: DineOutIcon,
 };
-
-const categoriesData: CategoryItem[] = [
-  { image: Categories1, tab: 'Product' },
-  { image: Categories2, tab: 'Services' },
-  { image: Categories3, tab: 'Payments' },
-  // { image: Categories4, tab: 'Product' },
-  // { image: Categories5, tab: 'Product' },
-  // { image: Categories6, tab: 'Product' },
-  // { image: Categories7, tab: 'DineOut' },
-];
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
   Product: { screen: 'ProductModule', moduleName: 'Product' },
@@ -52,40 +46,108 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
   DineOut: { screen: 'DineOutModule', moduleName: 'DineOut' },
 };
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
+const CARD_WIDTH = rs(68);
+const CARD_GAP = rs(10);
+const ICON_CONTAINER_SIZE = rs(52);
+const ICON_SIZE = rs(40);
+
+type ServiceCardProps = {
+  tab: TopTab | null;
+  label: string;
+  iconUrl: string | null;
+  onPress: () => void;
+};
+
+const ServiceCard = React.memo(({ tab, label, iconUrl, onPress }: ServiceCardProps) => {
+  const { isDark } = useAppTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+  }, [scale]);
+
+  const t = useMemo(
+    () => ({
+      cardLabel: { color: isDark ? '#E5E7EB' : '#374151' } as TextStyle,
+    }),
+    [isDark],
+  );
+
+  const FallbackIcon = tab ? FALLBACK_ICON_BY_TAB[tab] : null;
+
+  return (
+    <AnimatedTouchableOpacity
+      activeOpacity={0.9}
+      accessibilityRole="button"
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.card, { transform: [{ scale }] }]}
+    >
+      <View style={styles.iconContainer}>
+        {iconUrl ? (
+          <Image source={{ uri: iconUrl }} style={styles.icon} resizeMode="contain" />
+        ) : FallbackIcon ? (
+          <FallbackIcon width={ICON_SIZE} height={ICON_SIZE} />
+        ) : null}
+      </View>
+      <Text
+        style={[styles.cardLabel, t.cardLabel]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </AnimatedTouchableOpacity>
+  );
+});
+ServiceCard.displayName = 'ServiceCard';
+
 function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
+  const { modules } = useModuleIcons();
   const isNavigatingRef = useRef(false);
   const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
-  const CARD_WIDTH = (width - rs(52)) / 3.3;
-  const CARD_HEIGHT = CARD_WIDTH * 1.08;
-
   const t = useMemo(
     () => ({
-      // wrapper:     { backgroundColor: 'transparent' } as ViewStyle,
       wrapper: { backgroundColor: 'transparent' } as ViewStyle,
       headerTitle: { color: isDark ? '#FFFFFF' : '#0F172A' } as TextStyle,
     }),
     [isDark],
   );
 
-  const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
+  const navigateToModule = useCallback(
+    (tab: TopTab | null, module: CmsModule) => {
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      const target = TAB_TO_MODULE[tab];
-      if (onModulePress) {
-        onModulePress(tab);
-      } else {
+      if (tab) {
+        const target = TAB_TO_MODULE[tab];
+        if (onModulePress) {
+          onModulePress(tab);
+        } else {
+          navigation.navigate('Home', {
+            screen: target.screen,
+            params: { moduleName: target.moduleName },
+            moduleName: target.moduleName,
+          });
+        }
+      } else if (module.route_key) {
+        // A module the 4 known bottom tabs don't cover — navigate generically
+        // by its CMS route_key, same fallback Navbar.tsx uses.
         navigation.navigate('Home', {
-          screen: target.screen,
-          params: { moduleName: target.moduleName },
-          moduleName: target.moduleName,
+          screen: module.route_key,
+          params: { moduleName: module.module_key },
+          moduleName: module.module_key,
         });
       }
 
@@ -129,37 +191,23 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
         decelerationRate="fast"
+        snapToInterval={CARD_WIDTH + CARD_GAP}
+        snapToAlignment="start"
       >
-        {categoriesData.map((item, i) => (
-          <TouchableOpacity
-            key={i}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            onPress={() => handleCategoryPress(item.tab)}
-          >
-            <Image
-              source={item.image}
-              style={[
-                styles.cardImage,
-                { width: CARD_WIDTH, height: CARD_HEIGHT },
-              ]}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-        ))}
+        {modules.map((module) => {
+          const tab = TOP_TAB_BY_MODULE[module.module_key as CmsModuleKey] ?? null;
+          const iconUrl = module.dashboard_icon_url || module.icon_url || null;
 
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={handleViewAll}
-          style={[styles.standaloneArrowButton, { height: CARD_HEIGHT }]}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <MaterialCommunityIcons
-            name="arrow-right"
-            size={rs(22)}
-            color={isDark ? '#FFFFFF' : '#111111'}
-          />
-        </TouchableOpacity>
+          return (
+            <ServiceCard
+              key={module.module_key}
+              tab={tab}
+              label={module.label}
+              iconUrl={iconUrl}
+              onPress={() => navigateToModule(tab, module)}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -169,42 +217,52 @@ export default React.memo(ServicesModule);
 
 const styles = StyleSheet.create({
   wrapper: {
-    // backgroundColor via t.wrapper
-    paddingTop: rs(16),
-    paddingBottom: rs(16),
+    paddingTop: rs(14),
+    paddingBottom: rs(12),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: rs(16),
-    marginBottom: rs(12),
+    marginBottom: rs(10),
   },
   headerTitle: {
-    fontSize: fs(18),
+    fontSize: fs(17),
     fontWeight: '700',
-    // color via t.headerTitle
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   viewAll: {
-    fontSize: fs(14),
+    fontSize: fs(12.5),
     fontWeight: '600',
     color: '#4A6CF7',
   },
   scrollContainer: {
     paddingHorizontal: rs(16),
-    gap: rs(10),
+    gap: CARD_GAP,
     alignItems: 'flex-start',
   },
-  cardImage: {
-    borderRadius: rs(16),
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.16)',
-  },
-  standaloneArrowButton: {
-    alignItems: 'flex-start',
+  card: {
+    width: CARD_WIDTH,
+    alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: rs(39),
-    marginLeft: -rs(5),
+  },
+  iconContainer: {
+    width: ICON_CONTAINER_SIZE,
+    height: ICON_CONTAINER_SIZE,
+    borderRadius: rs(15),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+  },
+  cardLabel: {
+    marginTop: rs(6),
+    fontSize: fs(10.5),
+    fontWeight: '600',
+    maxWidth: CARD_WIDTH,
+    textAlign: 'center',
   },
 });

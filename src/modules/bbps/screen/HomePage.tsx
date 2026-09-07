@@ -4,15 +4,19 @@ import RechargeBill from '../component/home/ReachargeBill';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import PromotionalBanner from '../../ecommerce/components/home/PromotionalBanner';
 import OffersBanner from '../../ecommerce/components/home/OffersBanner';
+import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
 
 function HomePageComponent() {
   const { colors } = useBbpsTheme();
+  const { onScroll } = useNavbarScroll();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         {/* Payment-module CMS content (fetchResolvedZones("payment")) — both
             components render null when their CMS entry is null/absent. */}

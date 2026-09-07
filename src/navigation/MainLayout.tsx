@@ -10,6 +10,7 @@ import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
 import { useAppTheme } from "../theme/ThemeContext";
+import { NavbarScrollProvider, useNavbarScroll } from "../navbar/NavbarScrollContext";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -142,11 +143,20 @@ const shouldShowBottomTabs = (activeMode: AppMode): boolean => {
 };
 
 function MainLayout() {
+  return (
+    <NavbarScrollProvider>
+      <MainLayoutContent />
+    </NavbarScrollProvider>
+  );
+}
+
+function MainLayoutContent() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const navigationState = useNavigationState((state) => state);
   const insets = useSafeAreaInsets();
   const moduleNavigationRef = React.useRef<any>(null);
+  const { resetScroll } = useNavbarScroll();
 
   const routeChain = React.useMemo(
     () => getActiveRouteChain(navigationState as unknown as RouteStateLike),
@@ -165,6 +175,13 @@ function MainLayout() {
   React.useLayoutEffect(() => {
     if (requestedMode) setActiveMode(requestedMode);
   }, [requestedMode]);
+
+  // A module frozen mid-scroll (freezeOnBlur) doesn't refire onScroll on
+  // return, so the shared scrollY would otherwise keep Navbar collapsed
+  // when switching into a module screen that hasn't scrolled at all yet.
+  React.useEffect(() => {
+    resetScroll();
+  }, [activeMode, resetScroll]);
 
   const moduleScreenListeners = React.useCallback(
     ({

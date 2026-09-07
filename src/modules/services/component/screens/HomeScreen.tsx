@@ -11,6 +11,7 @@ import ExclusiveOffers from '../home/ExclusiveOffers';
 import PromotionalBanner from '../../../ecommerce/components/home/PromotionalBanner';
 import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 import { useServicesTheme } from '../../utils/useServicesTheme';
+import { useNavbarScroll } from '../../../../navbar/NavbarScrollContext';
 
 type ServiceSectionKey =
   | 'promotionalBanner'
@@ -75,6 +76,7 @@ ServiceSection.displayName = 'ServiceHomeSection';
 
 function HomeScreen() {
   const { colors } = useServicesTheme();
+  const { onScroll } = useNavbarScroll();
   const [readySections, setReadySections] = useState<Set<ServiceSectionKey>>(
     () => new Set(READY_SERVICE_SECTIONS),
   );
@@ -129,6 +131,8 @@ function HomeScreen() {
         updateCellsBatchingPeriod={32}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
       />

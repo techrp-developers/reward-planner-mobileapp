@@ -27,15 +27,17 @@ import { getNotificationBadge } from "../modules/dashboard/notification/Notifica
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import Navbar_Background from "./Navbar_Background";
+import Navbar_Background, { NAVBAR_COLLAPSE_DISTANCE } from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
 import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
 import { useModuleIcons } from "./hooks/useModuleIcons";
 import type { ApiModuleIcon } from "./api/ModuleIconsApi";
+import { useNavbarScroll } from "./NavbarScrollContext";
 
 import WalletSvg from "../assets/homepage/navwallet.svg";
 import Reward from "../assets/product/rewards.svg";
 import { useAppTheme } from "../theme/ThemeContext";
+import { hitSlop, rs } from "../utils/responsive";
 
 import type { RootStackParamList } from "@/navigation/types";
 
@@ -188,8 +190,8 @@ const MODULE_KEY_BY_TOP_TAB = Object.entries(TAB_MODULE_MAP).reduce(
 );
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-const ACTIVE_TAB_SCALE = 1.08;
-const PRESSED_SCALE_DELTA = 0.08;
+const ACTIVE_TAB_SCALE = 1.04;
+const PRESSED_SCALE_DELTA = 0.06;
 
 // --- Sub-component (icon-forward, no card background — dot indicator marks active) ---
 const TopIconWithLabel = React.memo(
@@ -259,6 +261,7 @@ const TopIconWithLabel = React.memo(
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[styles.tabItem, { transform: [{ scale }] }]}
+        hitSlop={hitSlop(8)}
       >
         {iconUrl ? (
           hasGradient ? (
@@ -304,16 +307,20 @@ const TopIconWithLabel = React.memo(
         ) : null}
 
         <Text
-          style={[styles.topTabLabel, { color: tint, opacity: active ? 1 : 0.75 }]}
+          style={[
+            styles.topTabLabel,
+            active ? styles.topTabLabelActive : styles.topTabLabelInactive,
+            { color: tint },
+          ]}
           numberOfLines={1}
         >
           {label}
         </Text>
 
         {active ? (
-          <View style={[styles.activeDot, { backgroundColor: tint }]} />
+          <View style={[styles.activeIndicator, { backgroundColor: tint }]} />
         ) : (
-          <View style={styles.activeDotSpacer} />
+          <View style={styles.activeIndicatorSpacer} />
         )}
       </AnimatedTouchableOpacity>
     );
@@ -327,6 +334,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const { isAuthenticated } = useAuth();
   const { isDark, theme } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY } = useNavbarScroll();
   const [rewardPoints, setRewardPoints] = React.useState(0);
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
@@ -392,8 +400,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   }, [modules]);
 
   const activeThemeColor = React.useMemo(
-    () => banners[activeTab]?.bgColor ?? "transparent",
-    [activeTab, banners]
+    () => banners[activeTab]?.bgColor ?? theme.card,
+    [activeTab, banners, theme]
   );
   const walletBadgeColor = React.useMemo(
     () => activeThemeColor,
@@ -401,11 +409,105 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   );
   // Search bar + wallet button float over the campaign banner, so they read
   // as translucent glass cards rather than solid boxes on top of it.
-  const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.9)";
-  const navbarBorder = isDark ? theme.border : "rgba(0,0,0,0.10)";
+  const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.88)";
+  const navbarBorder = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
   const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
   const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
+
+  // Profile content collapses away as the active module's Home screen
+  // scrolls (scrollY comes from NavbarScrollContext, fed by that screen's
+  // onScroll — see MainLayout.tsx) — height is measured once via onLayout
+  // since it depends on text/notification-badge content, not a fixed value.
+  const [profileHeight, setProfileHeight] = React.useState(0);
+  const [compactActionsEnabled, setCompactActionsEnabled] = React.useState(false);
+  const compactActionsEnabledRef = React.useRef(false);
+  const handleCollapsibleLayout = React.useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      const measured = event.nativeEvent.layout.height;
+      setProfileHeight((prev) => (prev ? prev : measured));
+    },
+    [],
+  );
+  const collapsibleAnimatedStyle = React.useMemo(
+    () => ({
+      height: profileHeight
+        ? scrollY.interpolate({
+            inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+            outputRange: [profileHeight, 0],
+            extrapolate: "clamp" as const,
+          })
+        : undefined,
+      opacity: scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.6],
+        outputRange: [1, 0],
+        extrapolate: "clamp" as const,
+      }),
+      transform: [
+        {
+          translateY: scrollY.interpolate({
+            inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+            outputRange: [0, -rs(8)],
+            extrapolate: "clamp" as const,
+          }),
+        },
+      ],
+    }),
+    [profileHeight, scrollY],
+  );
+  const searchHeight = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [rs(42), rs(38)],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const compactScale = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [1, 0.96],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const searchRightGap = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.65, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [0, rs(48), rs(92)],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const compactActionsOpacity = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [NAVBAR_COLLAPSE_DISTANCE * 0.35, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [0, 1],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const modulesAnimatedStyle = React.useMemo(
+    () => ({
+      transform: [{ scale: compactScale }],
+    }),
+    [compactScale],
+  );
+
+  React.useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      const nextEnabled = value > NAVBAR_COLLAPSE_DISTANCE * 0.45;
+      if (compactActionsEnabledRef.current !== nextEnabled) {
+        compactActionsEnabledRef.current = nextEnabled;
+        setCompactActionsEnabled(nextEnabled);
+      }
+    });
+    return () => scrollY.removeListener(listenerId);
+  }, [scrollY]);
 
   const [displayName, setDisplayName] = React.useState("User");
   const [displayAddress, setDisplayAddress] =
@@ -663,16 +765,19 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         banners={banners}
         insetsTop={insets.top}
         isDark={isDark}
+        scrollY={scrollY}
       />
 
+      <Animated.View style={[styles.collapsible, collapsibleAnimatedStyle]} onLayout={handleCollapsibleLayout}>
       {/* PROFILE: avatar + greeting/address, wallet + notifications */}
       <View style={styles.profileRow}>
         <TouchableOpacity
           activeOpacity={0.85}
           style={[styles.avatarWrap, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
           onPress={() => navigateToScreen("Profile")}
+          hitSlop={hitSlop(8)}
         >
-          <MaterialCommunityIcons name="account-circle" size={40} color={navbarIconColor} />
+          <MaterialCommunityIcons name="account-circle" size={38} color={navbarIconColor} />
         </TouchableOpacity>
 
         <View style={styles.greetColumn}>
@@ -702,9 +807,9 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             activeOpacity={0.85}
             style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
             onPress={() => navigateToScreen("WalletHistory")}
-            hitSlop={{ top: 6, bottom: 10, left: 6, right: 6 }}
+            hitSlop={hitSlop(8)}
           >
-            <WalletSvg width={26} height={26} />
+            <WalletSvg width={24} height={24} />
             <View
               style={[
                 styles.walletTag,
@@ -724,23 +829,27 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             activeOpacity={0.85}
             style={[styles.bellBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
             onPress={() => navigateToScreen("Notification")}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            hitSlop={hitSlop(8)}
           >
-            <MaterialCommunityIcons name="bell-outline" size={20} color={navbarIconColor} />
+            <MaterialCommunityIcons name="bell-outline" size={19} color={navbarIconColor} />
             {hasUnreadNotifications ? <View style={styles.bellDot} /> : null}
           </TouchableOpacity>
         </View>
       </View>
+      </Animated.View>
 
       {/* SEARCH */}
       <View style={styles.searchRow}>
-        <TouchableOpacity
+        <AnimatedTouchableOpacity
           activeOpacity={0.9}
           style={[
             styles.searchContainer,
             {
               backgroundColor: frostedSurface,
               borderColor: navbarBorder,
+              height: searchHeight,
+              marginRight: searchRightGap,
+              transform: [{ scale: compactScale }],
             },
           ]}
           onPress={() => {
@@ -756,60 +865,98 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             }
           }}
         >
-          <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
-          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]}>Search products, services & more</Text>
-        </TouchableOpacity>
+          <MaterialCommunityIcons name="magnify" size={19} color={navbarIconColor} />
+          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
+            Search products, services & more
+          </Text>
+        </AnimatedTouchableOpacity>
+
+        <Animated.View
+          pointerEvents={compactActionsEnabled ? "auto" : "none"}
+          style={[
+            styles.compactActionsRow,
+            {
+              opacity: compactActionsOpacity,
+              transform: [{ scale: compactScale }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.compactActionBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+            onPress={() => navigateToScreen("WalletHistory")}
+            hitSlop={hitSlop(8)}
+          >
+            <WalletSvg width={22} height={22} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.compactActionBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+            onPress={() => navigateToScreen("Notification")}
+            hitSlop={hitSlop(8)}
+          >
+            <MaterialCommunityIcons name="bell-outline" size={18} color={navbarIconColor} />
+            {hasUnreadNotifications ? <View style={styles.compactBellDot} /> : null}
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       {/* MODULE TABS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.topIconsRow}
-      >
-        {modules.map((module) => {
-          const active = module.module_key === selectedModuleKey;
-          const iconUrl = active
-            ? module.active_icon_url || module.icon_url
-            : module.icon_url;
+      <Animated.View style={modulesAnimatedStyle}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.topIconsRow}
+        >
+          {modules.map((module) => {
+            const active = module.module_key === selectedModuleKey;
+            const iconUrl = active
+              ? module.active_icon_url || module.icon_url
+              : module.icon_url;
 
-          return (
-            <TopIconWithLabel
-              key={module.module_key}
-              active={active}
-              onPress={() => handleModulePress(module)}
-              iconUrl={iconUrl}
-              moduleKey={module.module_key}
-              label={module.label}
-              activeTint={module.active_color || activeThemeColor}
-              inactiveTint={module.normal_color || navbarIconColor}
-              gradientStart={module.gradient_start_color}
-              gradientEnd={module.gradient_end_color}
-            />
-          );
-        })}
-      </ScrollView>
+            return (
+              <TopIconWithLabel
+                key={module.module_key}
+                active={active}
+                onPress={() => handleModulePress(module)}
+                iconUrl={iconUrl}
+                moduleKey={module.module_key}
+                label={module.label}
+                activeTint={module.active_color || activeThemeColor}
+                inactiveTint={module.normal_color || navbarIconColor}
+                gradientStart={module.gradient_start_color}
+                gradientEnd={module.gradient_end_color}
+              />
+            );
+          })}
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingTop: 18,
+    paddingTop: rs(14),
+  },
+
+  collapsible: {
+    overflow: "hidden",
   },
 
   profileRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    gap: 10,
-    marginTop: 4,
+    paddingHorizontal: rs(16),
+    gap: rs(8),
+    marginTop: rs(2),
+    paddingBottom: rs(12),
   },
 
   avatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: rs(40),
+    height: rs(40),
+    borderRadius: rs(20),
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -823,7 +970,7 @@ const styles = StyleSheet.create({
 
   helloText: {
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#FFFFFF",
     textShadowColor: "rgba(0,0,0,0.45)",
     textShadowOffset: { width: 0, height: 1 },
@@ -833,13 +980,13 @@ const styles = StyleSheet.create({
   miniLocationRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 3,
-    gap: 4,
+    marginTop: rs(2),
+    gap: rs(4),
   },
 
   miniLocationText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "500",
     flexShrink: 1,
     color: "rgba(255,255,255,0.9)",
     textShadowColor: "rgba(0,0,0,0.45)",
@@ -850,7 +997,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: rs(8),
   },
 
   bellBtn: {
@@ -858,18 +1005,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 999,
-    width: 46,
-    height: 46,
+    width: rs(42),
+    height: rs(42),
     borderWidth: 1,
   },
 
   bellDot: {
     position: "absolute",
-    top: 9,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: rs(8),
+    right: rs(9),
+    width: rs(8),
+    height: rs(8),
+    borderRadius: rs(4),
     backgroundColor: "#EF4444",
     borderWidth: 1.5,
     borderColor: "#fff",
@@ -878,25 +1025,24 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    gap: 12,
-    marginTop: 14,
+    paddingHorizontal: rs(16),
+    marginTop: rs(2),
+    position: "relative",
   },
 
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 46,
+    borderRadius: rs(14),
+    paddingHorizontal: rs(13),
     borderWidth: 1,
   },
 
   fakePlaceholder: {
     flex: 1,
-    marginLeft: 9,
-    fontSize: 13.5,
+    marginLeft: rs(8),
+    fontSize: 13,
     fontWeight: "500",
   },
 
@@ -905,22 +1051,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 999,
-    width: 46,
-    height: 46,
+    width: rs(42),
+    height: rs(42),
     borderWidth: 1,
     overflow: "visible",
   },
 
   walletTag: {
     position: "absolute",
-    bottom: -7,
-    right: -6,
-    minWidth: 28,
-    height: 18,
+    bottom: -rs(6),
+    right: -rs(5),
+    minWidth: rs(26),
+    height: rs(17),
     borderRadius: 999,
     borderWidth: 1.25,
     borderColor: "#fff",
-    paddingHorizontal: 5,
+    paddingHorizontal: rs(5),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -929,15 +1075,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: rs(2),
   },
 
   walletTagText: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 10,
-    lineHeight: 12,
-    maxWidth: 34,
+    fontSize: 9,
+    lineHeight: 11,
+    maxWidth: rs(34),
   },
 
   locationRowHidden: {
@@ -947,56 +1093,96 @@ const styles = StyleSheet.create({
   // --- Module tabs: no box, icon-forward, bottom of navbar ---
   topIconsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
     minWidth: "100%",
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 14,
-    gap: 22,
+    paddingHorizontal: rs(16),
+    paddingTop: rs(10),
+    paddingBottom: rs(10),
+    gap: rs(10),
   },
 
   tabItem: {
     alignItems: "center",
-    justifyContent: "flex-start",
-    minWidth: 56,
+    justifyContent: "center",
+    minWidth: rs(58),
   },
 
   moduleIcon: {
-    width: 64,
-    height: 64,
+    width: rs(42),
+    height: rs(42),
   },
 
   // Only used when a module has both gradient_start_color and
   // gradient_end_color from the CMS — keeps the same 64x64 footprint as the
   // plain icon so layout never shifts, just shows a colored backdrop.
   moduleIconGradientWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+    width: rs(44),
+    height: rs(44),
+    borderRadius: rs(13),
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
 
   moduleIconInGradient: {
-    width: 40,
-    height: 40,
+    width: rs(28),
+    height: rs(28),
   },
 
   topTabLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "600",
-    letterSpacing: 0.1,
+    letterSpacing: 0,
+    marginTop: rs(2),
   },
 
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 4,
+  topTabLabelActive: {
+    opacity: 1,
   },
 
-  activeDotSpacer: {
-    height: 8,
+  topTabLabelInactive: {
+    opacity: 0.65,
+  },
+
+  activeIndicator: {
+    width: rs(18),
+    height: rs(3),
+    borderRadius: 999,
+    marginTop: rs(4),
+  },
+
+  activeIndicatorSpacer: {
+    height: rs(7),
+    marginTop: rs(4),
+  },
+
+  compactActionsRow: {
+    position: "absolute",
+    right: rs(16),
+    top: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rs(8),
+  },
+
+  compactActionBtn: {
+    width: rs(38),
+    height: rs(38),
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  compactBellDot: {
+    position: "absolute",
+    top: rs(7),
+    right: rs(8),
+    width: rs(7),
+    height: rs(7),
+    borderRadius: rs(3.5),
+    backgroundColor: "#EF4444",
+    borderWidth: 1.25,
+    borderColor: "#fff",
   },
 });

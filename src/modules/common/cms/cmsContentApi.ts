@@ -9,6 +9,7 @@ export interface CmsModule {
   label: string;
   icon_url: string | null;
   active_icon_url: string | null;
+  dashboard_icon_url: string | null;
   normal_color: string | null;
   active_color: string | null;
   gradient_start_color: string | null;
@@ -72,6 +73,7 @@ const normalizeModule = (module: CmsModule): CmsModule => ({
   ...module,
   icon_url: normalizeLocalCmsImageUrl(module.icon_url),
   active_icon_url: normalizeLocalCmsImageUrl(module.active_icon_url),
+  dashboard_icon_url: normalizeLocalCmsImageUrl(module.dashboard_icon_url),
 });
 
 const normalizeOfferImage = (image: CmsOfferImage): CmsOfferImage => ({

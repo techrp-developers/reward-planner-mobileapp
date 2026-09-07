@@ -14,6 +14,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { EcommerceDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
 
 // Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -230,6 +231,7 @@ const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
 
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
+  const { onScroll } = useNavbarScroll();
   const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
   const homeSections = useMemo<HomeSection[]>(
     () => layout.sections.map(({ key }) => ({ key: key as SectionKey })),
@@ -386,6 +388,8 @@ function HomeScreen() {
         updateCellsBatchingPeriod={48}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={getItemLayout}
