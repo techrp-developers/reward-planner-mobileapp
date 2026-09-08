@@ -8,6 +8,7 @@ import {
   Animated,
   Image as RNImage,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -30,7 +31,7 @@ import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecomme
 import Navbar_Background, { NAVBAR_COLLAPSE_DISTANCE } from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
 import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
-import { useModuleIcons } from "./hooks/useModuleIcons";
+import { DEFAULT_MODULE_NORMAL_COLOR, useModuleIcons } from "./hooks/useModuleIcons";
 import type { ApiModuleIcon } from "./api/ModuleIconsApi";
 import { useNavbarScroll } from "./NavbarScrollContext";
 
@@ -192,6 +193,8 @@ const MODULE_KEY_BY_TOP_TAB = Object.entries(TAB_MODULE_MAP).reduce(
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 const ACTIVE_TAB_SCALE = 1.04;
 const PRESSED_SCALE_DELTA = 0.06;
+const NAV_TABS_H_PADDING = rs(16);
+const NAV_TAB_GAP = rs(10);
 
 // --- Sub-component (icon-forward, no card background — dot indicator marks active) ---
 const TopIconWithLabel = React.memo(
@@ -205,6 +208,10 @@ const TopIconWithLabel = React.memo(
     inactiveTint,
     gradientStart,
     gradientEnd,
+    itemWidth,
+    iconSize,
+    gradientWrapSize,
+    gradientInnerSize,
   }: {
     active: boolean;
     onPress: () => void;
@@ -215,6 +222,10 @@ const TopIconWithLabel = React.memo(
     inactiveTint: string;
     gradientStart?: string | null;
     gradientEnd?: string | null;
+    itemWidth: number;
+    iconSize: number;
+    gradientWrapSize: number;
+    gradientInnerSize: number;
   }) => {
     const hasGradient = Boolean(gradientStart && gradientEnd);
     const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
@@ -260,7 +271,7 @@ const TopIconWithLabel = React.memo(
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.tabItem, { transform: [{ scale }] }]}
+        style={[styles.tabItem, { width: itemWidth, transform: [{ scale }] }]}
         hitSlop={hitSlop(8)}
       >
         {iconUrl ? (
@@ -269,11 +280,18 @@ const TopIconWithLabel = React.memo(
               colors={[gradientStart as string, gradientEnd as string]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.moduleIconGradientWrap}
+              style={[
+                styles.moduleIconGradientWrap,
+                {
+                  width: gradientWrapSize,
+                  height: gradientWrapSize,
+                  borderRadius: Math.round(gradientWrapSize * 0.3),
+                },
+              ]}
             >
               <RNImage
                 source={{ uri: iconUrl }}
-                style={styles.moduleIconInGradient}
+                style={{ width: gradientInnerSize, height: gradientInnerSize }}
                 resizeMode="contain"
                 onLoad={() => {
                   if (__DEV__) {
@@ -290,7 +308,7 @@ const TopIconWithLabel = React.memo(
           ) : (
             <RNImage
               source={{ uri: iconUrl }}
-              style={styles.moduleIcon}
+              style={{ width: iconSize, height: iconSize }}
               resizeMode="contain"
               onLoad={() => {
                 if (__DEV__) {
@@ -377,7 +395,25 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   // API failure/empty response just yields an empty list — no hardcoded
   // Product/Services/Payments/etc. fallback, per the CMS-only requirement.
   const { modules } = useModuleIcons();
+  const { width: screenWidth } = useWindowDimensions();
+  // Evenly size tab items so the module row fills the navbar width instead
+  // of a fixed minWidth left-packing 4 icons into less than half the bar —
+  // clamped so it doesn't blow up with 1-2 modules or shrink too far with many.
+  const tabItemWidth = React.useMemo(() => {
+    const count = Math.max(modules.length, 1);
+    const raw = (screenWidth - NAV_TABS_H_PADDING * 2 - NAV_TAB_GAP * (count - 1)) / count;
+    return Math.max(rs(64), Math.min(Math.floor(raw), rs(96)));
+  }, [screenWidth, modules.length]);
+  const moduleIconSize = Math.round(Math.min(tabItemWidth * 0.62, rs(52)));
+  const moduleGradientWrapSize = moduleIconSize + rs(4);
+  const moduleGradientInnerSize = Math.round(moduleIconSize * 0.68);
   const activeModuleKeyFromRoute = MODULE_KEY_BY_TOP_TAB[activeTab];
+  const activeModuleConfig = React.useMemo(
+    () => modules.find((module) => module.module_key === activeModuleKeyFromRoute),
+    [activeModuleKeyFromRoute, modules]
+  );
+  const activeModuleNormalColor =
+    activeModuleConfig?.normal_color || DEFAULT_MODULE_NORMAL_COLOR;
   const [selectedModuleKey, setSelectedModuleKey] = React.useState(activeModuleKeyFromRoute);
 
   React.useEffect(() => {
@@ -412,6 +448,21 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.88)";
   const navbarBorder = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
   const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
+  const hasNavbarImage = Boolean(banners[activeTab]?.imageUrl);
+  const greetingTextColor = hasNavbarImage ? "#FFFFFF" : activeModuleNormalColor;
+  const greetingMutedColor = hasNavbarImage
+    ? "rgba(255,255,255,0.9)"
+    : activeModuleNormalColor;
+  const greetingChevronColor = hasNavbarImage
+    ? "rgba(255,255,255,0.85)"
+    : activeModuleNormalColor;
+  const greetingTextShadow = hasNavbarImage
+    ? {
+        textShadowColor: "rgba(0,0,0,0.45)",
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+      }
+    : null;
   const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
 
@@ -752,7 +803,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   }, [loadNavbarUser]);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { paddingTop: insets.top + rs(14) }]}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         translucent
@@ -781,7 +832,10 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         </TouchableOpacity>
 
         <View style={styles.greetColumn}>
-          <Text style={styles.helloText} numberOfLines={1}>
+          <Text
+            style={[styles.helloText, { color: greetingTextColor }, greetingTextShadow]}
+            numberOfLines={1}
+          >
             Hello, {displayName}!
           </Text>
 
@@ -791,14 +845,14 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           >
             <MaterialCommunityIcons name="map-marker" size={13} color="#4ADE80" />
             <Text
-              style={styles.miniLocationText}
+              style={[styles.miniLocationText, { color: greetingMutedColor }, greetingTextShadow]}
               numberOfLines={1}
               ellipsizeMode="tail"
               onPress={hasAddress ? navigateToChangeAddress : navigateToAddAddress}
             >
               {hasAddress ? displayAddress : "Add address"}
             </Text>
-            <MaterialCommunityIcons name="chevron-down" size={13} color="rgba(255,255,255,0.85)" />
+            <MaterialCommunityIcons name="chevron-down" size={13} color={greetingChevronColor} />
           </View>
         </View>
 
@@ -926,6 +980,10 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
                 inactiveTint={module.normal_color || navbarIconColor}
                 gradientStart={module.gradient_start_color}
                 gradientEnd={module.gradient_end_color}
+                itemWidth={tabItemWidth}
+                iconSize={moduleIconSize}
+                gradientWrapSize={moduleGradientWrapSize}
+                gradientInnerSize={moduleGradientInnerSize}
               />
             );
           })}
@@ -937,7 +995,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingTop: rs(14),
+    // paddingTop set inline: insets.top (safe area / status bar height,
+    // needed since StatusBar is translucent) + rs(14) breathing room.
   },
 
   collapsible: {
@@ -971,10 +1030,7 @@ const styles = StyleSheet.create({
   helloText: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0,0,0,0.45)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    // color set inline (theme-aware unless a CMS banner is active)
   },
 
   miniLocationRow: {
@@ -988,10 +1044,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "500",
     flexShrink: 1,
-    color: "rgba(255,255,255,0.9)",
-    textShadowColor: "rgba(0,0,0,0.45)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    // color set inline (theme-aware unless a CMS banner is active)
   },
 
   actionsRow: {
@@ -1091,42 +1144,31 @@ const styles = StyleSheet.create({
   },
 
   // --- Module tabs: no box, icon-forward, bottom of navbar ---
+  // Item width and icon sizes are computed at runtime (see tabItemWidth /
+  // moduleIconSize in Navbar) so exactly `modules.length` tabs evenly fill
+  // the bar instead of a fixed minWidth left-packing them into part of it.
   topIconsRow: {
     flexDirection: "row",
     alignItems: "center",
     minWidth: "100%",
-    paddingHorizontal: rs(16),
+    paddingHorizontal: NAV_TABS_H_PADDING,
     paddingTop: rs(10),
     paddingBottom: rs(10),
-    gap: rs(10),
+    gap: NAV_TAB_GAP,
   },
 
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: rs(58),
-  },
-
-  moduleIcon: {
-    width: rs(42),
-    height: rs(42),
   },
 
   // Only used when a module has both gradient_start_color and
-  // gradient_end_color from the CMS — keeps the same 64x64 footprint as the
-  // plain icon so layout never shifts, just shows a colored backdrop.
+  // gradient_end_color from the CMS — keeps the same footprint as the plain
+  // icon so layout never shifts, just shows a colored backdrop.
   moduleIconGradientWrap: {
-    width: rs(44),
-    height: rs(44),
-    borderRadius: rs(13),
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-  },
-
-  moduleIconInGradient: {
-    width: rs(28),
-    height: rs(28),
   },
 
   topTabLabel: {

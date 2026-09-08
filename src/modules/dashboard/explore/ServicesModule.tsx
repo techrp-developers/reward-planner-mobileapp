@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  useWindowDimensions,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
@@ -48,74 +49,103 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-const CARD_WIDTH = rs(68);
+const CARD_H_PADDING = rs(16);
 const CARD_GAP = rs(10);
-const ICON_CONTAINER_SIZE = rs(52);
-const ICON_SIZE = rs(40);
+const VISIBLE_CARD_COUNT = 4;
+// Icon container / icon / radius stay proportional to the card width so
+// they scale together instead of the icon looking small inside a bigger card.
+const ICON_CONTAINER_RATIO = 52 / 68;
+const ICON_RATIO = 40 / 68;
+const ICON_RADIUS_RATIO = 15 / 52;
 
 type ServiceCardProps = {
   tab: TopTab | null;
   label: string;
   iconUrl: string | null;
+  cardWidth: number;
+  iconContainerSize: number;
+  iconRadius: number;
+  iconSize: number;
   onPress: () => void;
 };
 
-const ServiceCard = React.memo(({ tab, label, iconUrl, onPress }: ServiceCardProps) => {
-  const { isDark } = useAppTheme();
-  const scale = useRef(new Animated.Value(1)).current;
+const ServiceCard = React.memo(
+  ({ tab, label, iconUrl, cardWidth, iconContainerSize, iconRadius, iconSize, onPress }: ServiceCardProps) => {
+    const { isDark } = useAppTheme();
+    const scale = useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
-  }, [scale]);
+    const handlePressIn = useCallback(() => {
+      Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+    }, [scale]);
 
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
-  }, [scale]);
+    const handlePressOut = useCallback(() => {
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+    }, [scale]);
 
-  const t = useMemo(
-    () => ({
-      cardLabel: { color: isDark ? '#E5E7EB' : '#374151' } as TextStyle,
-    }),
-    [isDark],
-  );
+    const t = useMemo(
+      () => ({
+        cardLabel: { color: isDark ? '#E5E7EB' : '#374151' } as TextStyle,
+      }),
+      [isDark],
+    );
 
-  const FallbackIcon = tab ? FALLBACK_ICON_BY_TAB[tab] : null;
+    const FallbackIcon = tab ? FALLBACK_ICON_BY_TAB[tab] : null;
 
-  return (
-    <AnimatedTouchableOpacity
-      activeOpacity={0.9}
-      accessibilityRole="button"
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[styles.card, { transform: [{ scale }] }]}
-    >
-      <View style={styles.iconContainer}>
-        {iconUrl ? (
-          <Image source={{ uri: iconUrl }} style={styles.icon} resizeMode="contain" />
-        ) : FallbackIcon ? (
-          <FallbackIcon width={ICON_SIZE} height={ICON_SIZE} />
-        ) : null}
-      </View>
-      <Text
-        style={[styles.cardLabel, t.cardLabel]}
-        numberOfLines={1}
+    return (
+      <AnimatedTouchableOpacity
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[styles.card, { width: cardWidth, transform: [{ scale }] }]}
       >
-        {label}
-      </Text>
-    </AnimatedTouchableOpacity>
-  );
-});
+        <View
+          style={[
+            styles.iconContainer,
+            { width: iconContainerSize, height: iconContainerSize, borderRadius: iconRadius },
+          ]}
+        >
+          {iconUrl ? (
+            <Image source={{ uri: iconUrl }} style={{ width: iconSize, height: iconSize }} resizeMode="contain" />
+          ) : FallbackIcon ? (
+            <FallbackIcon width={iconSize} height={iconSize} />
+          ) : null}
+        </View>
+        <Text
+          style={[styles.cardLabel, t.cardLabel, { maxWidth: cardWidth }]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </AnimatedTouchableOpacity>
+    );
+  },
+);
 ServiceCard.displayName = 'ServiceCard';
 
 function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
   const { modules } = useModuleIcons();
   const isNavigatingRef = useRef(false);
   const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  // Size cards so exactly VISIBLE_CARD_COUNT fill the row width — previously
+  // a fixed rs(68) card left the 4th module cut off/cramped on most screens.
+  const cardWidth = useMemo(
+    () =>
+      Math.floor(
+        (width - CARD_H_PADDING * 2 - CARD_GAP * (VISIBLE_CARD_COUNT - 1)) / VISIBLE_CARD_COUNT,
+      ),
+    [width],
+  );
+  const iconContainerSize = Math.round(cardWidth * ICON_CONTAINER_RATIO);
+  const iconRadius = Math.round(iconContainerSize * ICON_RADIUS_RATIO);
+  const iconSize = Math.round(cardWidth * ICON_RATIO);
 
   const t = useMemo(
     () => ({
@@ -191,7 +221,7 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
         decelerationRate="fast"
-        snapToInterval={CARD_WIDTH + CARD_GAP}
+        snapToInterval={cardWidth + CARD_GAP}
         snapToAlignment="start"
       >
         {modules.map((module) => {
@@ -202,6 +232,10 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
             <ServiceCard
               key={module.module_key}
               tab={tab}
+              cardWidth={cardWidth}
+              iconContainerSize={iconContainerSize}
+              iconRadius={iconRadius}
+              iconSize={iconSize}
               label={module.label}
               iconUrl={iconUrl}
               onPress={() => navigateToModule(tab, module)}
@@ -238,31 +272,22 @@ const styles = StyleSheet.create({
     color: '#4A6CF7',
   },
   scrollContainer: {
-    paddingHorizontal: rs(16),
+    paddingHorizontal: CARD_H_PADDING,
     gap: CARD_GAP,
     alignItems: 'flex-start',
   },
   card: {
-    width: CARD_WIDTH,
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
   iconContainer: {
-    width: ICON_CONTAINER_SIZE,
-    height: ICON_CONTAINER_SIZE,
-    borderRadius: rs(15),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
   },
   cardLabel: {
     marginTop: rs(6),
     fontSize: fs(10.5),
     fontWeight: '600',
-    maxWidth: CARD_WIDTH,
     textAlign: 'center',
   },
 });

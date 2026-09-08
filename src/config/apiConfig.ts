@@ -34,7 +34,11 @@ const resolveLocalHost = (): string => {
   const isEmulator = DeviceInfo.isEmulatorSync();
 
   if (Platform.OS === 'android') {
-    return isEmulator ? '10.0.2.2' : LOCAL_API_HOST;
+    if (isEmulator) {
+      return '10.0.2.2';
+    }
+
+    return USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL ? '127.0.0.1' : LOCAL_API_HOST;
   }
 
   if (Platform.OS === 'ios') {

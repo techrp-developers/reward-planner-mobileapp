@@ -3,6 +3,8 @@ import { useCmsAppShell } from "../../modules/common/cms/CmsAppShellContext";
 import { ApiModuleIcon } from "../api/ModuleIconsApi";
 import { TAB_MODULE_MAP } from "../navbarConstants";
 
+export const DEFAULT_MODULE_NORMAL_COLOR = "#28282B";
+
 const fallbackModules: ApiModuleIcon[] = [
   {
     module_key: TAB_MODULE_MAP.Product,
@@ -10,7 +12,7 @@ const fallbackModules: ApiModuleIcon[] = [
     icon_url: null,
     active_icon_url: null,
     dashboard_icon_url: null,
-    normal_color: null,
+    normal_color: DEFAULT_MODULE_NORMAL_COLOR,
     active_color: null,
     gradient_start_color: null,
     gradient_end_color: null,
@@ -24,7 +26,7 @@ const fallbackModules: ApiModuleIcon[] = [
     icon_url: null,
     active_icon_url: null,
     dashboard_icon_url: null,
-    normal_color: null,
+    normal_color: DEFAULT_MODULE_NORMAL_COLOR,
     active_color: null,
     gradient_start_color: null,
     gradient_end_color: null,
@@ -38,7 +40,7 @@ const fallbackModules: ApiModuleIcon[] = [
     icon_url: null,
     active_icon_url: null,
     dashboard_icon_url: null,
-    normal_color: null,
+    normal_color: DEFAULT_MODULE_NORMAL_COLOR,
     active_color: null,
     gradient_start_color: null,
     gradient_end_color: null,
@@ -52,7 +54,7 @@ const fallbackModules: ApiModuleIcon[] = [
     icon_url: null,
     active_icon_url: null,
     dashboard_icon_url: null,
-    normal_color: null,
+    normal_color: DEFAULT_MODULE_NORMAL_COLOR,
     active_color: null,
     gradient_start_color: null,
     gradient_end_color: null,

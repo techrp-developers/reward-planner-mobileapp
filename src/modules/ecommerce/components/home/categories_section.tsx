@@ -18,13 +18,15 @@ import { HomeStackParamList } from "../../navigation/types";
 import { fetchAllCategories, getProductImageUrl } from "../../api/ProductApi";
 import { queryClient } from "../../../../query/queryClient";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import { fs, rs } from "../../../../utils/responsive";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 const CATEGORIES_QUERY_KEY = ["ecommerce", "home", "categories-section"] as const;
 const CATEGORIES_STALE_TIME = 10 * 60 * 1000;
 
-const HORIZONTAL_PADDING = 16;
-const CARD_GAP = 14;
+const HORIZONTAL_PADDING = rs(16);
+const CARD_GAP = rs(10);
+const VISIBLE_CATEGORY_COUNT = 5;
 const SKELETON_CARD_COUNT = 5;
 
 type Category = {
@@ -201,13 +203,15 @@ export default function CategoriesSection() {
   });
 
   const layout = React.useMemo(() => {
-    const visibleColumns = width < 380 ? 3.5 : width < 430 ? 4 : 4.5;
+    // Keep exactly five category tiles visible so the row feels balanced
+    // across small and large phones.
     const cardWidth =
-      (width - HORIZONTAL_PADDING * 2 - CARD_GAP * (visibleColumns - 1)) / visibleColumns;
+      (width - HORIZONTAL_PADDING * 2 - CARD_GAP * (VISIBLE_CATEGORY_COUNT - 1)) /
+      VISIBLE_CATEGORY_COUNT;
 
     return {
       cardWidth,
-      imageHeight: cardWidth * 1.05,
+      imageHeight: cardWidth,
       snapInterval: cardWidth + CARD_GAP,
     };
   }, [width]);
@@ -303,18 +307,18 @@ export default function CategoriesSection() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: rs(12),
+    paddingBottom: rs(14),
   },
   headerRow: {
     paddingHorizontal: HORIZONTAL_PADDING,
-    marginBottom: 12,
+    marginBottom: rs(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   heading: {
-    fontSize: 18,
+    fontSize: fs(16.5),
     fontWeight: "700",
   },
   exploreBtn: {
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   exploreText: {
-    fontSize: 13,
+    fontSize: fs(12),
     fontWeight: "600",
   },
   listContent: {
@@ -339,24 +343,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderRadius: rs(15),
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
     elevation: 1,
   },
   image: {
-    width: "88%",
-    height: "88%",
+    width: "84%",
+    height: "84%",
   },
   label: {
-    marginTop: 8,
+    marginTop: rs(6),
     width: "100%",
-    fontSize: 12,
+    fontSize: fs(10),
     fontWeight: "600",
     textAlign: "center",
-    lineHeight: 16,
-    minHeight: 32,
+    lineHeight: fs(13),
+    minHeight: rs(26),
   },
   skeletonRow: {
     flexDirection: "row",

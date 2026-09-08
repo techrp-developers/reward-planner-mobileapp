@@ -400,6 +400,10 @@ function Dashbord() {
       end={{ x: 0, y: 1 }}
       style={styles.root}
     >
+      {/* Fixed — stays pinned above the scrollable sections below, rather
+          than scrolling away with the rest of the dashboard content. */}
+      {renderHeaderSection('header')}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
@@ -413,7 +417,8 @@ function Dashbord() {
         {dashboardLayout.sections.map(({ key }) => {
           switch (key as MainDashboardSectionKey) {
             case 'header':
-              return renderHeaderSection(key);
+              // Rendered fixed above the ScrollView instead — skip here.
+              return null;
             case 'birthdays':
               return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
             case 'stepProgress':
