@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../../constatnt/BBPSHead';
 import SkeletonBox from '../../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../../common/auth/context/AuthContext';
@@ -302,6 +301,7 @@ function RechargeSection({ navigation, route }: any) {
       formValues,
       circleId: selectedLocation.operator_location_id,
       circleName: selectedLocation.operator_location_name,
+      planGroupLabel: activeGroupLabel || 'Plan details',
       plan,
     });
   };
@@ -488,29 +488,30 @@ function RechargeSection({ navigation, route }: any) {
                         <Text style={styles.planPriceText}>{getPlanAmount(plan)}</Text>
                       </View>
 
-                      <View style={[styles.planDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
-
-                      <View style={styles.planTagsCol}>
-                        <View style={styles.planTagsRow}>
-                          <View style={styles.planTag}>
-                            <Icon name="calendar-clock-outline" size={13} color="#8665FF" />
-                            <Text style={styles.planTagText}>{getPlanValidity(plan)}</Text>
+                      <View style={styles.planFacts}>
+                        {getPlanData(plan) !== '-' && (
+                          <View style={styles.planFactRow}>
+                            <Text style={[styles.planFactLabel, { color: bbpsTheme.colors.text }]}>Data</Text>
+                            <Text style={[styles.planFactValue, { color: bbpsTheme.colors.text }]}>{getPlanData(plan)}</Text>
                           </View>
-                          {/* <View style={styles.planTag}>
-                            <Icon name="wifi" size={13} color="#8665FF" />
-                            <Text style={styles.planTagText}>{getPlanData(plan)}</Text>
-                          </View> */}
+                        )}
+                        <View style={styles.planFactRow}>
+                          <Text style={[styles.planFactLabel, { color: bbpsTheme.colors.text }]}>Validity</Text>
+                          <Text style={[styles.planFactValue, { color: bbpsTheme.colors.text }]}>{getPlanValidity(plan)}</Text>
                         </View>
-                        {getPlanDescription(plan) ? (
-                          <Text style={styles.planDescription} numberOfLines={2}>
-                            {getPlanDescription(plan)}
-                          </Text>
-                        ) : null}
                       </View>
                       <View style={[styles.planArrowButton, { backgroundColor: bbpsTheme.colors.iconBg }]}>
                         <MaterialIcons name="chevron-right" size={24} color={bbpsTheme.colors.primary} />
                       </View>
                     </View>
+                    {getPlanDescription(plan) ? (
+                      <View style={[styles.planDescriptionRow, { backgroundColor: bbpsTheme.colors.surfaceAlt, borderTopColor: bbpsTheme.colors.divider }]}>
+                        <Text style={[styles.planDescription, { color: bbpsTheme.colors.muted }]} numberOfLines={2}>
+                          {getPlanDescription(plan)}
+                        </Text>
+                        <MaterialIcons name="chevron-right" size={20} color={bbpsTheme.colors.muted} />
+                      </View>
+                    ) : null}
                   </TouchableOpacity>
                 ))
               )}
@@ -754,14 +755,17 @@ const styles = StyleSheet.create({
   },
   planCardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
-  planPriceBlock: { flexDirection: 'row', alignItems: 'flex-start', width: '26%' },
-  planCurrency: { fontSize: 14, fontWeight: '700', color: '#5B47A3', marginTop: 3, marginRight: 1 },
-  planPriceText: { fontSize: 24, fontWeight: '800', color: '#5B47A3' },
-  planDivider: { width: 1, height: 40, backgroundColor: '#F0EDFB', marginRight: 16 },
-  planTagsCol: { flex: 1 },
+  planPriceBlock: { flexDirection: 'row', alignItems: 'flex-start', width: '30%' },
+  planCurrency: { fontSize: 16, fontWeight: '700', color: '#5B47A3', marginTop: 2, marginRight: 2 },
+  planPriceText: { fontSize: 26, fontWeight: '800', color: '#5B47A3' },
+  planFacts: { flex: 1, gap: 8 },
+  planFactRow: { flexDirection: 'row', alignItems: 'center' },
+  planFactLabel: { width: 72, fontSize: 14, fontWeight: '700' },
+  planFactValue: { flex: 1, fontSize: 14, fontWeight: '500' },
   planArrowButton: {
     width: 40,
     height: 40,
@@ -781,7 +785,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   planTagText: { fontSize: 12, fontWeight: '700', color: '#5B47A3' },
-  planDescription: { fontSize: 12, color: '#6B7280', marginTop: 8, lineHeight: 16 },
+  planDescriptionRow: {
+    minHeight: 56,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planDescription: { flex: 1, fontSize: 13, lineHeight: 18 },
   emptyState: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
   loadingPlans: { padding: 24, alignItems: 'center' },
