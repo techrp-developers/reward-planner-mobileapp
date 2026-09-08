@@ -276,7 +276,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           <View style={styles.providerSection}>
             {detailsLoading ? (
               <>
-                <SkeletonBox pulse={pulse} width={45} height={45} borderRadius={25} />
+                <SkeletonBox pulse={pulse} width={56} height={56} borderRadius={28} />
                 <View style={styles.providerSkeletonText}>
                   <SkeletonBox pulse={pulse} width="85%" height={15} borderRadius={8} />
                 </View>
@@ -406,12 +406,12 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7FF' },
-  content: { padding: 16 },
+  content: { padding: 16, gap: 8 },
   card: {
     backgroundColor: '#FFF',
     borderRadius: 16,
     paddingVertical: 16,
-    marginBottom: 16,
+    marginBottom: 0,
     overflow: 'hidden',
     shadowColor: '#5B47A3',
     shadowOffset: { width: 0, height: 6 },
@@ -446,11 +446,13 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: '#6B7280', marginBottom: 8, fontWeight: '500' },
   mobileLabel: { marginTop: 16 },
   input: {
+    height: 56,
     borderWidth: 1,
     borderColor: '#E5E0FA',
     backgroundColor: '#FAF9FF',
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 0,
     fontSize: 16,
     color: '#111827',
   },
