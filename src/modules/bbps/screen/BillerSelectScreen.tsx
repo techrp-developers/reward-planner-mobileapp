@@ -25,8 +25,6 @@ import {
 } from '../api/BillsAPI';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 
-const BRAND_START = '#8665FF';
-const BRAND_END = '#5B47A3';
 const FIVE_MINUTES = 5 * 60 * 1000;
 const SKELETON_GROUPS = [0, 1];
 const SKELETON_ROWS = [0, 1, 2];

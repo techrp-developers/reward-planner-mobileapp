@@ -11,7 +11,6 @@ import {
   Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
 import BBPSHead from '../constatnt/BBPSHead';
 import {
@@ -25,7 +24,6 @@ import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 
-const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
 const FIVE_MINUTES = 5 * 60 * 1000;
 const FIELD_SKELETON_GROUPS = [0, 1];
