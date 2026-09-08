@@ -55,6 +55,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
   const paymentFlowInProgress = useRef(false);
+  const automaticPaymentStarted = useRef(false);
   const [orderFailure, setOrderFailure] = useState<OrderFailure | null>(null);
   const params = useMemo(() => route?.params ?? {}, [route?.params]);
 
@@ -215,6 +216,15 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       paymentFlowInProgress.current = false;
     }
   }, [params.operatorId, params.circleId, params.operatorName, mobile, planId, user, alert, navigation]);
+
+  useEffect(() => {
+    if (!params.startPaymentImmediately || automaticPaymentStarted.current) {
+      return;
+    }
+
+    automaticPaymentStarted.current = true;
+    handleCreateOrder();
+  }, [params.startPaymentImmediately, handleCreateOrder]);
 
   const handleCopyErrorDetails = useCallback(async () => {
     if (!orderFailure) return;

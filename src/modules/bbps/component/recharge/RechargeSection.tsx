@@ -287,7 +287,7 @@ function RechargeSection({ navigation, route }: any) {
     };
   }, [operatorId, primaryValue, selectedLocation]);
 
-  const handlePlanPress = (plan: RechargePlan) => {
+  const handlePlanPress = (plan: RechargePlan, startPaymentImmediately = false) => {
     if (!selectedLocation) {
       alert.warning('Select Circle', 'Please select a circle first.');
       return;
@@ -302,6 +302,7 @@ function RechargeSection({ navigation, route }: any) {
       circleId: selectedLocation.operator_location_id,
       circleName: selectedLocation.operator_location_name,
       planGroupLabel: activeGroupLabel || 'Plan details',
+      startPaymentImmediately,
       plan,
     });
   };
@@ -500,9 +501,18 @@ function RechargeSection({ navigation, route }: any) {
                           <Text style={[styles.planFactValue, { color: bbpsTheme.colors.text }]}>{getPlanValidity(plan)}</Text>
                         </View>
                       </View>
-                      <View style={[styles.planArrowButton, { backgroundColor: bbpsTheme.colors.iconBg }]}>
+                      <TouchableOpacity
+                        style={[styles.planArrowButton, { backgroundColor: bbpsTheme.colors.iconBg }]}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Recharge with ₹${getPlanAmount(plan)} plan`}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          handlePlanPress(plan, true);
+                        }}
+                      >
                         <MaterialIcons name="chevron-right" size={24} color={bbpsTheme.colors.primary} />
-                      </View>
+                      </TouchableOpacity>
                     </View>
                     {getPlanDescription(plan) ? (
                       <View style={[styles.planDescriptionRow, { backgroundColor: bbpsTheme.colors.surfaceAlt, borderTopColor: bbpsTheme.colors.divider }]}>
