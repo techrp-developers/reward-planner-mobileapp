@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -36,6 +37,8 @@ type BillDetailsRouteParams = {
   };
   operatorId?: string | number;
   operatorName?: string;
+  operatorLogoUrl?: string;
+  operatorLogoAlt?: string;
   categoryName?: string;
 };
 
@@ -83,6 +86,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const hasValidOperatorId = Number.isFinite(operatorId) && operatorId > 0;
 
   const [formValues, setFormValues] = useState<FormValues>({});
+  const [logoFailed, setLogoFailed] = useState(false);
   // const [selectedCategory, setSelectedCategory] = useState('Home');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -103,6 +107,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   );
   const providerName =
     operatorDetails?.operator_name || operatorData?.name || routeParams.operatorName || 'Biller';
+  const operatorLogoUrl = routeParams.operatorLogoUrl;
   const loggedInUserName = user?.name || 'Customer';
   const isBillFetchSupported = operatorDetails?.fetchBill === 1;
   const isContinueDisabled =
@@ -128,6 +133,10 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   useEffect(() => {
     alertRef.current = alert;
   }, [alert]);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [operatorLogoUrl]);
 
   useEffect(() => {
     if (!hasValidOperatorId) {
@@ -272,14 +281,26 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
               </>
             ) : (
               <>
-                <LinearGradient
-                  colors={bbpsTheme.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.logoCircle}
-                >
-                  <Icon name="flash" size={22} color="#FFFFFF" />
-                </LinearGradient>
+                <View style={[styles.logoCircle, { borderColor: bbpsTheme.colors.border }]}> 
+                  {operatorLogoUrl && !logoFailed ? (
+                    <Image
+                      source={{ uri: operatorLogoUrl }}
+                      style={styles.operatorLogo}
+                      resizeMode="contain"
+                      accessibilityLabel={routeParams.operatorLogoAlt || `${providerName} logo`}
+                      onError={() => setLogoFailed(true)}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={bbpsTheme.gradients.primary}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.logoFallback}
+                    >
+                      <Text style={styles.logoInitial}>{providerName.charAt(0).toUpperCase()}</Text>
+                    </LinearGradient>
+                  )}
+                </View>
                 <Text style={[styles.providerName, { color: bbpsTheme.colors.textStrong }]}>{providerName}</Text>
               </>
             )}
@@ -386,9 +407,9 @@ const styles = StyleSheet.create({
   content: { padding: 16 },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    paddingVertical: 20,
-    marginBottom: 20,
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#5B47A3',
     shadowOffset: { width: 0, height: 6 },
@@ -399,32 +420,39 @@ const styles = StyleSheet.create({
   providerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   logoCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
+  operatorLogo: { width: '100%', height: '100%', borderRadius: 28 },
+  logoFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  logoInitial: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
   providerName: { fontSize: 15, fontWeight: '700', color: '#1F2937', flex: 1 },
-  providerSkeletonText: { flex: 1, marginLeft: 12 },
-  inputWrapper: { paddingHorizontal: 20, marginBottom: 15 },
-  label: { fontSize: 13, color: '#6B7280', marginBottom: 6, fontWeight: '500' },
-  mobileLabel: { marginTop: 14 },
+  providerSkeletonText: { flex: 1, marginLeft: 16 },
+  inputWrapper: { paddingHorizontal: 16, marginBottom: 16 },
+  label: { fontSize: 13, color: '#6B7280', marginBottom: 8, fontWeight: '500' },
+  mobileLabel: { marginTop: 16 },
   input: {
     borderWidth: 1,
     borderColor: '#E5E0FA',
     backgroundColor: '#FAF9FF',
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
     fontSize: 16,
     color: '#111827',
   },
-  helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 5 },
+  helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 8 },
   skeletonInputGap: { marginTop: 8 },
   nicknameWrapper: {
     backgroundColor: '#F3EFFF',
@@ -479,7 +507,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   button: {
-    height: 55,
+    height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',

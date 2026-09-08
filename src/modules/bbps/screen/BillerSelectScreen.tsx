@@ -214,6 +214,8 @@ const BillerSelectScreenComponent = () => {
       navigation.navigate('BillDetailsScreen', {
         operatorId: item.operator_id,
         operatorName: item.name,
+        operatorLogoUrl: item.logoUrl,
+        operatorLogoAlt: item.logoAlt,
         categoryId: categoryId,
         categoryName: categoryName,
       });
@@ -389,7 +391,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 16,
     paddingBottom: 8,
   },
   searchBar: {
@@ -421,8 +423,8 @@ const styles = StyleSheet.create({
   },
   operatorListCard: {
     marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 28,
+    marginTop: 8,
+    marginBottom: 24,
     borderWidth: 1,
     borderRadius: 20,
     shadowOpacity: 0.06,
@@ -456,8 +458,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 2,
-    paddingTop: 18,
-    paddingBottom: 13,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   stateHeaderText: {
     fontSize: 18,
@@ -468,10 +470,10 @@ const styles = StyleSheet.create({
   billerItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 2,
-    paddingVertical: 12,
-    gap: 13,
-    marginBottom: 4,
+    paddingHorizontal: 0,
+    paddingVertical: 8,
+    gap: 16,
+    marginBottom: 16,
   },
   logoPlaceholder: {
     width: 56,
