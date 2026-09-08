@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -49,6 +50,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   const alert = useAlert();
   const bbpsTheme = useBbpsTheme();
   const [loading, setLoading] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const paymentFlowInProgress = useRef(false);
   const [orderFailure, setOrderFailure] = useState<OrderFailure | null>(null);
   const params = useMemo(() => route?.params ?? {}, [route?.params]);
@@ -69,6 +71,10 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
     '';
   const planId = getPlanId(plan);
   const amount = getPlanAmount(plan);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [params.operatorLogoUrl]);
 
   const handleCreateOrder = useCallback(async () => {
     if (paymentFlowInProgress.current) return;
@@ -298,7 +304,17 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
               style={styles.cardHeader}
             >
               <View style={styles.avatarCircle}>
-                <MaterialIcons name="sim-card" size={24} color="#FFFFFF" />
+                {params.operatorLogoUrl && !logoFailed ? (
+                  <Image
+                    source={{ uri: params.operatorLogoUrl }}
+                    style={styles.operatorLogo}
+                    resizeMode="contain"
+                    accessibilityLabel={params.operatorLogoAlt || `${params.operatorName || 'Operator'} logo`}
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  <MaterialIcons name="sim-card" size={24} color="#FFFFFF" />
+                )}
               </View>
               <View style={styles.headerTextWrap}>
                 <Text style={styles.operatorName}>{params.operatorName || 'Operator'}</Text>
@@ -431,13 +447,6 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             </Text>
           </View>
 
-          <View style={styles.securityCard}>
-            <MaterialIcons name="shield" size={22} color="#22C55E" />
-            <View style={styles.securityTextWrap}>
-              <Text style={styles.securityTitle}>100% Secure Payment</Text>
-              <Text style={styles.securitySubTitle}>Powered by Razorpay</Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -454,7 +463,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: '#5B47A3',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
@@ -464,9 +473,9 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
   },
   avatarCircle: {
     width: 48,
@@ -477,33 +486,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
+    overflow: 'hidden',
   },
+  operatorLogo: { width: '100%', height: '100%', borderRadius: 24, backgroundColor: '#FFFFFF' },
   headerTextWrap: { flex: 1 },
   operatorName: { fontSize: 17, fontWeight: '700', color: '#FFFFFF' },
-  mobileText: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 3, fontWeight: '500' },
-  cardBody: { padding: 18 },
-  divider: { height: 1, backgroundColor: '#F0EDFB', marginVertical: 4 },
+  mobileText: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 8, fontWeight: '500' },
+  cardBody: { padding: 16 },
+  divider: { height: 1, backgroundColor: '#F0EDFB', marginVertical: 8 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
-  labelWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  labelWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   value: { fontSize: 14, color: '#1F2937', fontWeight: '700' },
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 14,
+    paddingTop: 16,
   },
   amountLabel: { fontSize: 14, color: '#374151', fontWeight: '700' },
   amountPill: {
     backgroundColor: '#F3EFFF',
     borderRadius: 999,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E4DBFF',
   },
@@ -531,9 +542,9 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   buttonIcon: { marginLeft: 8 },
   planBenefitsCard: {
-    marginTop: 20,
+    marginTop: 16,
     backgroundColor: '#FAFAFF',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: '#EEE8FF',
@@ -543,9 +554,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   errorCardHeader: {
     flexDirection: 'row',
@@ -566,40 +577,40 @@ const styles = StyleSheet.create({
   errorCardMeta: {
     fontSize: 11,
     color: '#B91C1C',
-    marginTop: 6,
+    marginTop: 8,
     fontWeight: '600',
   },
   errorCardActions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: 16,
   },
   errorRetryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#DC2626',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   errorRetryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   errorCopyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E4DBFF',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   errorCopyText: { color: '#5B47A3', fontSize: 13, fontWeight: '700' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   sectionTitle: {
@@ -612,7 +623,7 @@ const styles = StyleSheet.create({
   benefitsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 15,
+    marginBottom: 16,
   },
 
   benefitChip: {
@@ -632,7 +643,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#5B47A3',
-    marginLeft: 6,
+    marginLeft: 8,
   },
 
   descriptionTitle: {
@@ -648,29 +659,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 
-  securityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 20,
-  },
-
-  securityTextWrap: { marginLeft: 10, flex: 1 },
-  securityTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#166534',
-  },
-
-  securitySubTitle: {
-    fontSize: 12,
-    color: '#15803D',
-    marginTop: 2,
-  },
 });
 
 const RechargeConfirmationScreen = React.memo(RechargeConfirmationScreenComponent);
