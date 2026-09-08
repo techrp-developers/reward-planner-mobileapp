@@ -228,11 +228,6 @@ const BillerSelectScreenComponent = () => {
         activeOpacity={0.78}
         style={[
           styles.billerItemRow,
-          {
-            backgroundColor: bbpsTheme.colors.surface,
-            borderColor: bbpsTheme.colors.border,
-            shadowColor: bbpsTheme.colors.shadow,
-          },
         ]}
         onPress={() => handleBillerPress(item)}
       >
@@ -246,7 +241,6 @@ const BillerSelectScreenComponent = () => {
           <Text style={[styles.billerNameText, { color: bbpsTheme.colors.text }]} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={[styles.billerHintText, { color: bbpsTheme.colors.muted }]}>Select to view bill details</Text>
         </View>
       </TouchableOpacity>
     ),
@@ -259,7 +253,7 @@ const BillerSelectScreenComponent = () => {
       <View
         style={[
           styles.stateHeaderContainer,
-          { backgroundColor: bbpsTheme.colors.background },
+          { backgroundColor: bbpsTheme.colors.surface },
         ]}
       >
         <View>
@@ -363,11 +357,19 @@ const BillerSelectScreenComponent = () => {
         </View>
       ) : (
         <SectionList
+          style={[
+            styles.operatorListCard,
+            {
+              backgroundColor: bbpsTheme.colors.surface,
+              borderColor: bbpsTheme.colors.border,
+              shadowColor: bbpsTheme.colors.shadow,
+            },
+          ]}
           sections={filteredData}
           keyExtractor={keyExtractor}
           renderItem={renderBillerItem}
           renderSectionHeader={renderSectionHeader}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.operatorListContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           removeClippedSubviews
@@ -417,6 +419,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 28,
   },
+  operatorListCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderRadius: 20,
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 7,
+    elevation: 2,
+  },
+  operatorListContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
   skeletonRow: {
     backgroundColor: '#FFF',
     borderLeftWidth: 1,
@@ -451,18 +468,10 @@ const styles = StyleSheet.create({
   billerItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 13,
+    paddingHorizontal: 2,
     paddingVertical: 12,
     gap: 13,
-    borderWidth: 1,
-    borderRadius: 17,
-    marginBottom: 10,
-    shadowColor: '#5B47A3',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 7,
-    elevation: 2,
+    marginBottom: 4,
   },
   logoPlaceholder: {
     width: 56,
@@ -491,7 +500,6 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     lineHeight: 19,
   },
-  billerHintText: { fontSize: 10.5, fontWeight: '500', marginTop: 4 },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
