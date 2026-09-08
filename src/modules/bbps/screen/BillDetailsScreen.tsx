@@ -212,6 +212,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
         navigation.navigate('RechargePlanScreen', {
           operatorId,
           operatorName: providerName,
+          operatorLogoUrl,
+          operatorLogoAlt: routeParams.operatorLogoAlt,
           categoryName,
           formValues,
         });
@@ -248,6 +250,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     isBillFetchSupported,
     navigation,
     providerName,
+    operatorLogoUrl,
+    routeParams.operatorLogoAlt,
     categoryName,
     alert,
   ]);

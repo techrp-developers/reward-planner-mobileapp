@@ -297,6 +297,8 @@ function RechargeSection({ navigation, route }: any) {
     navigation.navigate('RechargeConfirmationScreen', {
       operatorId,
       operatorName,
+      operatorLogoUrl: params.operatorLogoUrl,
+      operatorLogoAlt: params.operatorLogoAlt,
       formValues,
       circleId: selectedLocation.operator_location_id,
       circleName: selectedLocation.operator_location_name,
@@ -311,6 +313,7 @@ function RechargeSection({ navigation, route }: any) {
         user={{
           name: user?.name || 'User',
           number: String(primaryValue),
+          operatorLogo: params.operatorLogoUrl ? { uri: params.operatorLogoUrl } : undefined,
           operatorInitial: operatorName,
           type: operatorName,
         }}
