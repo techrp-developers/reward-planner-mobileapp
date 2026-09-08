@@ -1,28 +1,32 @@
 import React, { useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  FlatList,
+  ImageSourcePropType,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+
 import { useServiceHome } from '../../hooks/useServiceHome';
 import type { ServiceItem } from '../../navigation/type';
-import Card from '../constant/Card';
 import { useServicesTheme } from '../../utils/useServicesTheme';
+import ServiceGridCard from '../constant/ServiceGridCard';
 
 const HORIZONTAL_PADDING = 16;
+const GRID_COLUMNS = 3;
+const GRID_GAP = 12;
 
-// Fixed typo from 'assete' to 'assets'
 const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
 
 export default function QuickServices() {
   const navigation = useNavigation<any>();
   const servicesTheme = useServicesTheme();
   const { data: homeData, isLoading, error } = useServiceHome();
+  const { width } = useWindowDimensions();
 
-  // Extract the Quick Services section
   const quickServicesSection = useMemo(() => {
     if (!homeData?.data || !Array.isArray(homeData.data)) return null;
     return homeData.data.find(
@@ -31,11 +35,18 @@ export default function QuickServices() {
   }, [homeData]);
 
   const items = (quickServicesSection?.items as ServiceItem[]) || [];
+  const visibleItems = items.slice(0, GRID_COLUMNS * 2);
+  const cardWidth = Math.floor(
+    (width - HORIZONTAL_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) /
+    GRID_COLUMNS,
+  );
 
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Quick & Easy Services</Text>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>
+          Quick Picks
+        </Text>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
         </View>
@@ -48,106 +59,93 @@ export default function QuickServices() {
     return null;
   }
 
-  if (!items || items.length === 0) {
+  if (visibleItems.length === 0) {
     return null;
   }
 
-  const getImageSource = (item: ServiceItem) => {
+  const getImageSource = (item: ServiceItem): ImageSourcePropType => {
     const imageUrl = item.variant_image || item.service_image || item.image;
-    if (imageUrl) {
-      return { uri: imageUrl };
-    }
-    return fallbackImg;
+    return imageUrl ? { uri: imageUrl } : fallbackImg;
   };
 
-  const renderItem = ({ item }: { item: ServiceItem; index: number }) => {
-    const coinsText = item.coins ? `${item.coins}` : '0';
-    const reviews = String(item.review_count ?? 0);
-    const discount =
-      item.discount_percent && item.discount_percent > 0
-        ? `${item.discount_percent}%`
-        : undefined;
-
-    return (
-      <View style={[styles.cardWrapper]}>
-        <Card
-          title={item.title || item.name}
-          image={getImageSource(item)}
-          price={Number(item.price) > 0 ? `₹${item.price}` : 'Get Quote'}
-          oldPrice={item.mrp ? `${item.mrp}` : `${item.price}`}
-          rating={item.rating}
-          users={reviews}
-          coins={coinsText}
-          discount={discount}
-          onPress={() =>
-            navigation.navigate('ServiceDescription', {
-              serviceId: item.service_id,
-              title: item.name,
-            })
-          }
-        />
-      </View>
-    );
+  const openService = (item: ServiceItem) => {
+    navigation.navigate('ServiceDescription', {
+      serviceId: item.service_id,
+      title: item.name,
+    });
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>
-            {quickServicesSection?.title || 'Quick & Easy Services'}
-          </Text>
-          <Text style={[styles.subheading, { color: servicesTheme.colors.muted }]}>Quick and easy</Text>
-        </View>
+        <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>
+          {quickServicesSection?.title || 'Quick Picks'}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() => navigation.navigate('ServiceSearch')}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Text style={[styles.viewAll, { color: servicesTheme.colors.primary }]}>View All</Text>
+        </TouchableOpacity>
       </View>
 
-      <FlatList<ServiceItem>
-        data={items}
-        keyExtractor={item => `${item.service_id}-${item.variant_id}`}
-        renderItem={renderItem}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        // Manual sliding snapping configurations
-        decelerationRate="fast"
-        disableIntervalMomentum={true}
-        contentContainerStyle={styles.horizontalContent}
-      />
+      <View style={styles.grid}>
+        {visibleItems.map((item, index) => (
+          <View
+            key={`${item.service_id}-${item.variant_id}`}
+            style={[
+              styles.cardSlot,
+              {
+                marginRight: (index + 1) % GRID_COLUMNS === 0 ? 0 : GRID_GAP,
+                marginBottom: index < GRID_COLUMNS ? GRID_GAP : 0,
+              },
+            ]}
+          >
+            <ServiceGridCard
+              item={item}
+              image={getImageSource(item)}
+              cardWidth={cardWidth}
+              onPress={openService}
+            />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 20,
-    marginTop: 16,
+    paddingTop: 18,
+    marginTop: 12,
+    paddingHorizontal: HORIZONTAL_PADDING,
   },
   headerRow: {
-    paddingHorizontal: HORIZONTAL_PADDING,
-    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
   },
   heading: {
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#1F2937', // Deeper contrast typography
-    letterSpacing: -0.2,
+    color: '#111827',
   },
-  subheading: {
-    fontSize: 12.5,
-    color: '#8B93A1',
-    marginTop: 3,
-    fontWeight: '500',
+  viewAll: {
+    fontSize: 18,
+    fontWeight: '600',
   },
   loadingContainer: {
     paddingVertical: 60,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  horizontalContent: {
-    paddingLeft: HORIZONTAL_PADDING,
-    paddingRight: 4,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  cardWrapper: {
-    justifyContent: 'flex-start',
-    paddingBottom: 4, // Prevents Android card shadow clipping
+  cardSlot: {
+    width: 'auto',
   },
 });

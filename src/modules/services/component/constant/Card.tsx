@@ -1,6 +1,5 @@
 import React, { memo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../navigation/type';
@@ -52,68 +51,85 @@ function Card({
   };
 
   return (
-    <TouchableOpacity activeOpacity={0.88} onPress={handlePress} style={styles.touchable}>
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={handlePress}
+      style={[
+        styles.card,
+        {
+          backgroundColor: servicesTheme.isDark ? servicesTheme.appTheme.card : '#FFFFFF',
+          borderColor: servicesTheme.isDark ? servicesTheme.appTheme.border : '#EEF0F4',
+        },
+      ]}
+    >
+      {/* IMAGE */}
       <View
         style={[
-          styles.card,
+          styles.imageWrap,
           {
-            backgroundColor: servicesTheme.colors.surface,
-            shadowColor: servicesTheme.colors.shadow,
+            backgroundColor: servicesTheme.isDark ? '#303038' : '#F9FAFB',
           },
         ]}
       >
-        {/* IMAGE */}
-        <View style={[styles.imageBox, { backgroundColor: servicesTheme.colors.surfaceAlt }]}>
-          {discount && (
+        {discount ? (
+          <View style={styles.discountBadgeWrap}>
             <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{discount} OFF</Text>
+              <Text style={styles.discountArrow}>{'\u2193'}</Text>
+              <Text style={styles.discountText} numberOfLines={1}>
+                {discount}
+              </Text>
             </View>
-          )}
-          <Image
-            source={imgError || !image ? fallbackImage : image}
-            style={styles.cardImage}
-            resizeMode="contain"
-            onError={() => setImgError(true)}
-          />
-        </View>
-
-        <View style={styles.infoContainer}>
-          <Text style={[styles.title, { color: servicesTheme.colors.textStrong }]} numberOfLines={1} ellipsizeMode="tail">
-            {title}
-          </Text>
-
-          {/* PRICE */}
-          <View style={styles.priceRow}>
-            <Text style={[styles.price, { color: servicesTheme.colors.success }]}>{price}</Text>
-            {!!oldPrice && (
-              <Text style={[styles.oldPrice, { color: servicesTheme.colors.subtle }]}>{oldPrice}</Text>
-            )}
           </View>
+        ) : null}
+        <Image
+          source={imgError || !image ? fallbackImage : image}
+          style={styles.cardImage}
+          resizeMode="contain"
+          onError={() => setImgError(true)}
+        />
+      </View>
 
-          {/* RATING & ORDERS */}
-          {(hasRating || !!users) && (
-            <View style={styles.ratingRow}>
-              {hasRating && (
-                <>
-                  <MaterialIcons name="star" size={14} color="#F59E0B" />
-                  <Text style={[styles.ratingText, { color: servicesTheme.isDark ? '#FBBF24' : '#92400E' }]}>{parsedRating.toFixed(1)}</Text>
-                </>
-              )}
-              {!!users && <Text style={[styles.users, { color: servicesTheme.colors.muted }]}>({users})</Text>}
-            </View>
-          )}
+      <View style={styles.details}>
+        <Text
+          style={[styles.title, { color: servicesTheme.appTheme.text }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Text>
 
-          {/* CTA */}
-          <LinearGradient
-            colors={servicesTheme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.cta}
+        {(hasRating || !!users) && (
+          <View style={styles.ratingRow}>
+            {hasRating && <MaterialIcons name="star" size={11} color="#FFC514" />}
+            <Text
+              style={[styles.ratingText, { color: servicesTheme.appTheme.secondaryText }]}
+              numberOfLines={1}
+            >
+              {hasRating ? `${parsedRating.toFixed(1)}` : ''}
+              {!!users ? `(${users})` : ''}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.priceRow}>
+          <Text
+            style={[
+              styles.price,
+              { color: servicesTheme.appTheme.text },
+            ]}
+            numberOfLines={1}
           >
-          <Text style={styles.ctaText}>
-            {offerPrice || price}
+            <Text style={styles.rpPrefix}>RP </Text>
+            {`\u20B9${offerPrice || price}`}
           </Text>
-          </LinearGradient>
+          {!!oldPrice && (
+            <Text
+              style={[styles.oldPrice, { color: servicesTheme.appTheme.secondaryText }]}
+              numberOfLines={1}
+            >
+              {`\u20B9${oldPrice}`}
+            </Text>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -124,110 +140,100 @@ function Card({
 export default memo(Card);
 
 const styles = StyleSheet.create({
-  touchable: {
-    marginRight: 14,
-  },
   card: {
     width: 172,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 12,
-    shadowColor: '#1F2937',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
+    padding: 7,
+    borderWidth: 1,
+    borderRadius: 14,
+    marginRight: 14,
+    justifyContent: 'space-between',
     elevation: 5,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
-  imageBox: {
-    backgroundColor: '#F4F5FA',
-    borderRadius: 16,
+  imageWrap: {
+    width: '100%',
     height: 118,
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden',
     position: 'relative',
-  },
-  discountBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    zIndex: 10,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  discountText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F2F5',
+    borderRadius: 14,
   },
   cardImage: {
     width: '82%',
     height: '82%',
   },
-  infoContainer: {
-    paddingTop: 10,
+  discountBadgeWrap: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    zIndex: 10,
   },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1C1E',
-    letterSpacing: -0.2,
-  },
-  priceRow: {
+  discountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    backgroundColor: '#EAF8EF',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
-  price: {
-    color: '#10B981',
-    fontSize: 16,
+  discountArrow: {
+    color: '#16A34A',
+    fontWeight: '900',
+    marginRight: 1,
+    fontSize: 10,
+  },
+  discountText: {
+    color: '#16A34A',
+    fontWeight: '700',
+    fontSize: 10,
+  },
+  details: {
+    flex: 1,
+    marginTop: 9,
+  },
+  title: {
+    flexShrink: 1,
+    minHeight: 34,
+    fontSize: 14,
     fontWeight: '800',
-    marginRight: 8,
-  },
-  oldPrice: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    textDecorationLine: 'line-through',
+    lineHeight: 17,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 10,
+    minHeight: 18,
+    marginTop: 3,
   },
   ratingText: {
-    fontSize: 12,
-    color: '#92400E',
+    marginLeft: 3,
+    fontSize: 11,
     fontWeight: '700',
-    marginLeft: 2,
   },
-  users: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  cta: {
+  priceRow: {
     flexDirection: 'row',
-    borderRadius: 12,
-    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#5B47A3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    flexWrap: 'wrap',
+    width: '100%',
+    marginTop: 4,
+    columnGap: 6,
+    rowGap: 3,
   },
-  ctaText: {
-    color: '#fff',
-    fontWeight: '700',
+  price: {
     fontSize: 14,
+    fontWeight: '800',
+  },
+  rpPrefix: {
+    fontWeight: '800',
+  },
+  oldPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    textDecorationLine: 'line-through',
   },
 });
