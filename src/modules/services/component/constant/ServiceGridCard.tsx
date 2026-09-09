@@ -13,10 +13,11 @@ import type { ServiceItem } from '../../navigation/type';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 
 const RP_PRICE_COLOR = '#F2811D';
+const fallbackImage = require('../../assete/gov_documet/aadhar card.png');
 
 type Props = {
   item: ServiceItem;
-  image: ImageSourcePropType;
+  image?: ImageSourcePropType | null;
   cardWidth: number;
   onPress: (item: ServiceItem) => void;
 };
@@ -87,7 +88,7 @@ function ServiceGridCard({ item, image, cardWidth, onPress }: Props) {
         ) : null}
 
         <Image
-          source={image}
+          source={image || fallbackImage}
           style={[
             styles.image,
             {

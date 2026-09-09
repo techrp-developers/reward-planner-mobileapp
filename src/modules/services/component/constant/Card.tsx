@@ -1,10 +1,12 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../navigation/type';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 const fallbackImage = require('../../assete/gov_documet/aadhar card.png');
+
+const DEFAULT_CARD_WIDTH = 172;
 
 type Props = {
   title: string;
@@ -16,6 +18,7 @@ type Props = {
   offerPrice?: string;
   coins?: string;
   discount?: string;
+  cardWidth?: number;
   onPress?: () => void;
 };
 
@@ -29,6 +32,7 @@ function Card({
   offerPrice,
   coins,
   discount,
+  cardWidth = DEFAULT_CARD_WIDTH,
   onPress,
 }: Props) {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
@@ -36,6 +40,18 @@ function Card({
   const [imgError, setImgError] = useState(false);
   const parsedRating = Number(rating);
   const hasRating = rating !== undefined && rating !== null && Number.isFinite(parsedRating);
+
+  // Same proportional formulas as ServiceGridCard so both card designs stay
+  // visually consistent across the app instead of drifting on fixed pixels.
+  const calculations = useMemo(() => ({
+    imageDynamicSize: Math.round(Math.min(Math.max(cardWidth * 0.88, 56), 104)),
+    borderRadius: Math.round(cardWidth * 0.06),
+    imageWrapHeight: Math.round(Math.min(Math.max(cardWidth * 1.02, 104), 132)),
+    fontSizeLabel: Math.max(11, Math.round(cardWidth * 0.07)),
+    fontSizeReview: Math.max(9, Math.round(cardWidth * 0.066)),
+    fontSizePrice: Math.max(12, Math.round(cardWidth * 0.096)),
+    fontSizeDiscount: Math.max(9, Math.round(cardWidth * 0.07)),
+  }), [cardWidth]);
 
   const handlePress = () => {
     if (onPress) {
@@ -57,6 +73,8 @@ function Card({
       style={[
         styles.card,
         {
+          width: cardWidth,
+          borderRadius: calculations.borderRadius,
           backgroundColor: servicesTheme.isDark ? servicesTheme.appTheme.card : '#FFFFFF',
           borderColor: servicesTheme.isDark ? servicesTheme.appTheme.border : '#EEF0F4',
         },
@@ -67,6 +85,8 @@ function Card({
         style={[
           styles.imageWrap,
           {
+            height: calculations.imageWrapHeight,
+            borderRadius: calculations.borderRadius,
             backgroundColor: servicesTheme.isDark ? '#303038' : '#F9FAFB',
           },
         ]}
@@ -74,8 +94,13 @@ function Card({
         {discount ? (
           <View style={styles.discountBadgeWrap}>
             <View style={styles.discountBadge}>
-              <Text style={styles.discountArrow}>{'\u2193'}</Text>
-              <Text style={styles.discountText} numberOfLines={1}>
+              <Text style={[styles.discountArrow, { fontSize: calculations.fontSizeDiscount }]}>
+                {'\u2193'}
+              </Text>
+              <Text
+                style={[styles.discountText, { fontSize: calculations.fontSizeDiscount }]}
+                numberOfLines={1}
+              >
                 {discount}
               </Text>
             </View>
@@ -83,7 +108,10 @@ function Card({
         ) : null}
         <Image
           source={imgError || !image ? fallbackImage : image}
-          style={styles.cardImage}
+          style={[
+            styles.cardImage,
+            { width: calculations.imageDynamicSize, height: calculations.imageDynamicSize },
+          ]}
           resizeMode="contain"
           onError={() => setImgError(true)}
         />
@@ -91,7 +119,10 @@ function Card({
 
       <View style={styles.details}>
         <Text
-          style={[styles.title, { color: servicesTheme.appTheme.text }]}
+          style={[
+            styles.title,
+            { fontSize: calculations.fontSizeLabel, color: servicesTheme.appTheme.text },
+          ]}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
@@ -102,7 +133,10 @@ function Card({
           <View style={styles.ratingRow}>
             {hasRating && <MaterialIcons name="star" size={11} color="#FFC514" />}
             <Text
-              style={[styles.ratingText, { color: servicesTheme.appTheme.secondaryText }]}
+              style={[
+                styles.ratingText,
+                { fontSize: calculations.fontSizeReview, color: servicesTheme.appTheme.secondaryText },
+              ]}
               numberOfLines={1}
             >
               {hasRating ? `${parsedRating.toFixed(1)}` : ''}
@@ -115,7 +149,7 @@ function Card({
           <Text
             style={[
               styles.price,
-              { color: servicesTheme.appTheme.text },
+              { fontSize: calculations.fontSizePrice, color: servicesTheme.appTheme.text },
             ]}
             numberOfLines={1}
           >
@@ -124,7 +158,10 @@ function Card({
           </Text>
           {!!oldPrice && (
             <Text
-              style={[styles.oldPrice, { color: servicesTheme.appTheme.secondaryText }]}
+              style={[
+                styles.oldPrice,
+                { fontSize: calculations.fontSizePrice, color: servicesTheme.appTheme.secondaryText },
+              ]}
               numberOfLines={1}
             >
               {`\u20B9${oldPrice}`}
@@ -141,10 +178,8 @@ export default memo(Card);
 
 const styles = StyleSheet.create({
   card: {
-    width: 172,
     padding: 7,
     borderWidth: 1,
-    borderRadius: 14,
     marginRight: 14,
     justifyContent: 'space-between',
     elevation: 5,
@@ -155,18 +190,15 @@ const styles = StyleSheet.create({
   },
   imageWrap: {
     width: '100%',
-    height: 118,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F1F2F5',
-    borderRadius: 14,
   },
   cardImage: {
-    width: '82%',
-    height: '82%',
+    alignSelf: 'center',
   },
   discountBadgeWrap: {
     position: 'absolute',
@@ -186,12 +218,10 @@ const styles = StyleSheet.create({
     color: '#16A34A',
     fontWeight: '900',
     marginRight: 1,
-    fontSize: 10,
   },
   discountText: {
     color: '#16A34A',
     fontWeight: '700',
-    fontSize: 10,
   },
   details: {
     flex: 1,
@@ -200,7 +230,6 @@ const styles = StyleSheet.create({
   title: {
     flexShrink: 1,
     minHeight: 34,
-    fontSize: 14,
     fontWeight: '800',
     lineHeight: 17,
   },
@@ -212,7 +241,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     marginLeft: 3,
-    fontSize: 11,
     fontWeight: '700',
   },
   priceRow: {
@@ -225,14 +253,12 @@ const styles = StyleSheet.create({
     rowGap: 3,
   },
   price: {
-    fontSize: 14,
     fontWeight: '800',
   },
   rpPrefix: {
     fontWeight: '800',
   },
   oldPrice: {
-    fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'line-through',
   },

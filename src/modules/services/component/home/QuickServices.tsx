@@ -34,8 +34,7 @@ export default function QuickServices() {
     );
   }, [homeData]);
 
-  const items = (quickServicesSection?.items as ServiceItem[]) || [];
-  const visibleItems = items.slice(0, GRID_COLUMNS * 2);
+  const visibleItems = (quickServicesSection?.items as ServiceItem[]) || [];
   const cardWidth = Math.floor(
     (width - HORIZONTAL_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) /
     GRID_COLUMNS,
@@ -91,24 +90,14 @@ export default function QuickServices() {
       </View>
 
       <View style={styles.grid}>
-        {visibleItems.map((item, index) => (
-          <View
+        {visibleItems.map((item) => (
+          <ServiceGridCard
             key={`${item.service_id}-${item.variant_id}`}
-            style={[
-              styles.cardSlot,
-              {
-                marginRight: (index + 1) % GRID_COLUMNS === 0 ? 0 : GRID_GAP,
-                marginBottom: index < GRID_COLUMNS ? GRID_GAP : 0,
-              },
-            ]}
-          >
-            <ServiceGridCard
-              item={item}
-              image={getImageSource(item)}
-              cardWidth={cardWidth}
-              onPress={openService}
-            />
-          </View>
+            item={item}
+            image={getImageSource(item)}
+            cardWidth={cardWidth}
+            onPress={openService}
+          />
         ))}
       </View>
     </View>
@@ -144,8 +133,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-  },
-  cardSlot: {
-    width: 'auto',
+    rowGap: GRID_GAP,
+    columnGap: GRID_GAP,
   },
 });
