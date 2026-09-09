@@ -7,7 +7,7 @@ type Props = {
   title: string;
   planTitle?: string;
   price: string;
-  oldPrice: string;
+  oldPrice?: string;
   selected?: boolean;
   onPress?: () => void;
 };
@@ -69,7 +69,7 @@ function CardContent({
   title: string;
   planTitle?: string;
   price: string;
-  oldPrice: string;
+  oldPrice?: string;
 }) {
   const servicesTheme = useServicesTheme();
 
@@ -81,7 +81,7 @@ function CardContent({
       )}
       <View style={styles.priceRow}>
         <Text style={[styles.price, { color: servicesTheme.colors.textStrong }]}>{price}</Text>
-        <Text style={styles.oldPrice}>{oldPrice}</Text>
+        {!!oldPrice && <Text style={styles.oldPrice}>{oldPrice}</Text>}
       </View>
     </>
   );

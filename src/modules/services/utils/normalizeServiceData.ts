@@ -60,7 +60,7 @@ function normalizeVariant(raw: ServiceVariantRaw): NormalizedVariant {
     title: String(raw.title || raw.variant_name || ''),
     short_description: String(raw.short_description || ''),
     price: String(raw.price || '0'),
-    mrp: String(raw.mrp || ''),
+    mrp: String(raw.original_price || raw.mrp || ''),
     mergedFeatures: mergedFeatures.length > 0 ? mergedFeatures : FALLBACK_FEATURES,
     trust_stats: Array.isArray(raw.trust_stats) ? raw.trust_stats.filter(Boolean).map(String) : [],
     paragraphs: Array.isArray(raw.paragraphs) ? raw.paragraphs : [],
