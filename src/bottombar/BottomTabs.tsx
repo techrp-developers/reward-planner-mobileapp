@@ -259,6 +259,11 @@ function BottomTabs({
   const barBorderColor = isDark ? theme.border : "rgba(17,24,39,0.08)";
   const homeIndicatorColor = isDark ? "rgba(255,255,255,0.24)" : "#D1D5DB";
   const activeLabelColor = isDark ? tabTheme.activeIcon : tabTheme.activeLabel;
+  const dashboardPillBackground = isDark ? "rgba(11,0,24,0.82)" : "rgba(255,255,255,0.82)";
+  const dashboardPillBorder = isDark ? "rgba(255,255,255,0.12)" : "rgba(75,0,130,0.1)";
+  const dashboardActiveColor = isDark ? "#FFFFFF" : "#18002E";
+  const dashboardInactiveColor = isDark ? "#D8CBE5" : "#625A6B";
+  const dashboardIndicatorBackground = isDark ? "rgba(106,0,255,0.45)" : "rgba(255,255,255,0.96)";
 
   const animateDashboardIndicator = useCallback((index: number) => {
     Animated.spring(dashboardIndicatorX, {
@@ -313,12 +318,24 @@ function BottomTabs({
   if (isDashboard) {
     return (
       <View style={[styles.dashboardWrap, { paddingBottom: bottomInset }]}>
-        <View style={styles.dashboardPill}>
+        <View
+          style={[
+            styles.dashboardPill,
+            {
+              backgroundColor: dashboardPillBackground,
+              borderColor: dashboardPillBorder,
+              shadowColor: isDark ? "#6A00FF" : "#4B0082",
+            },
+          ]}
+        >
           <Animated.View
             pointerEvents="none"
             style={[
               styles.dashboardIndicator,
-              { transform: [{ translateX: dashboardIndicatorX }] },
+              {
+                backgroundColor: dashboardIndicatorBackground,
+                transform: [{ translateX: dashboardIndicatorX }],
+              },
             ]}
           />
           <TouchableOpacity
@@ -330,7 +347,7 @@ function BottomTabs({
             <MaterialCommunityIcons
               name="note-text-outline"
               size={23}
-              color={activeTab === "Notes" ? "#111827" : "#E5E7EB"}
+              color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor}
             />
           </TouchableOpacity>
 
@@ -343,7 +360,7 @@ function BottomTabs({
             <MaterialCommunityIcons
               name="home"
               size={24}
-              color={activeTab === "Home" ? "#111827" : "#E5E7EB"}
+              color={activeTab === "Home" ? dashboardActiveColor : dashboardInactiveColor}
             />
           </TouchableOpacity>
 
@@ -356,7 +373,7 @@ function BottomTabs({
             <MaterialCommunityIcons
               name="account-circle-outline"
               size={24}
-              color={activeTab === "Profile" ? "#111827" : "#E5E7EB"}
+              color={activeTab === "Profile" ? dashboardActiveColor : dashboardInactiveColor}
             />
           </TouchableOpacity>
         </View>
