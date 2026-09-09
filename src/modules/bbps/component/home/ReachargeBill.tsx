@@ -494,8 +494,8 @@ function RechargeBill() {
               </LinearGradient>
             </View>
             <View style={styles.benefitContent}>
-              <Text style={[styles.benefitTitle, { color: bbpsTheme.isDark ? '#FFFFFF' : '#33213F' }]}>Earn reward points</Text>
-              <Text style={[styles.benefitDescription, { color: bbpsTheme.isDark ? '#CDBED5' : '#725E7D' }]}>Points are credited after every successful transaction.</Text>
+              <Text style={[styles.benefitTitle, { color: bbpsTheme.isDark ? '#FFFFFF' : '#33213F' }]}>Earn RP points</Text>
+              <Text style={[styles.benefitDescription, { color: bbpsTheme.isDark ? '#CDBED5' : '#725E7D' }]}>RP points are credited after every successful transaction.</Text>
             </View>
           </View>
           <View style={[styles.benefitDivider, { backgroundColor: bbpsTheme.isDark ? 'rgba(255,255,255,0.10)' : 'rgba(112,64,150,0.12)' }]} />

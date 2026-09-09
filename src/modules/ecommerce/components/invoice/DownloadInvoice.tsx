@@ -56,7 +56,7 @@ const InvoiceScreen = () => {
           </div>
           <div class="rewards">
             <small>REWARDS EARNED</small>
-            <h2>+${invoiceData.rewardPointsEarned} Points</h2>
+            <h2>+${invoiceData.rewardPointsEarned} RP points</h2>
           </div>
           <p><strong>Billed To:</strong><br/>${invoiceData.customerName}<br/>${invoiceData.customerAddress}</p>
           <table>
@@ -114,7 +114,7 @@ const InvoiceScreen = () => {
 
         <View style={styles.rewardsCard}>
             <Text style={styles.rewardsTitle}>Rewards Planner</Text>
-            <Text style={styles.rewardsPoints}>+{invoiceData.rewardPointsEarned} Points</Text>
+            <Text style={styles.rewardsPoints}>+{invoiceData.rewardPointsEarned} RP points</Text>
         </View>
 
         <View style={styles.card}>

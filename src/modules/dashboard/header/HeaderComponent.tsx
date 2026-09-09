@@ -354,7 +354,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   <Text style={styles.rewardPointsValue} numberOfLines={1}>
                     {rewardPoints.toLocaleString('en-IN')}
                   </Text>
-                  <Text style={styles.rewardPointsLabel}>Reward points</Text>
+                  <Text style={styles.rewardPointsLabel}>RP points</Text>
                 </View>
               </TouchableOpacity>
             ) : (

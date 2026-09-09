@@ -415,7 +415,7 @@ const ProfileScreen: React.FC = () => {
                     <Text style={styles.heroMetricValue} numberOfLines={1}>
                       {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
                     </Text>
-                    <Text style={styles.heroMetricLabel}>Points</Text>
+                    <Text style={styles.heroMetricLabel}>RP Points</Text>
                   </View>
                 </View>
 
