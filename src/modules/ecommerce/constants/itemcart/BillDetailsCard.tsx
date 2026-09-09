@@ -72,11 +72,11 @@ export default function BillDetailsCard({
 
       <View style={styles.rewardToggleRow}>
         <View>
-          <Text style={[styles.label, { color: theme.secondaryText }]}>Use Reward Coins</Text>
+          <Text style={[styles.label, { color: theme.secondaryText }]}>Use RP Points</Text>
           <Text style={[styles.helperText, { color: theme.secondaryText }]}>Available savings on this order</Text>
           {showRedeemableCoins && (
             <Text style={[styles.redeemableText, { color: theme.primary }]}>
-              {safeAvailableRewards.toLocaleString('en-IN')} coins redeemable
+              {safeAvailableRewards.toLocaleString('en-IN')} RP Points redeemable
             </Text>
           )}
         </View>

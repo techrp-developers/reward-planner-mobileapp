@@ -156,7 +156,7 @@ export default function MyOrder() {
                 {/* Stats */}
                 <View style={styles.statsRow}>
                     <LinearGradient colors={isDark ? ["#102016", "#12351F"] : ["#EFFFF4", "#DDFFE8"]} style={[styles.statCard, { borderColor: theme.border }]}>
-                        <Text style={styles.statLabel}>Coins Earned Till Date:</Text>
+                        <Text style={styles.statLabel}>RP Points Earned Till Date:</Text>
                         <View style={styles.statValueRow}>
                             <Coin width={22} height={22} />
                             <Text style={styles.statValue}>{summary?.totalCoinsEarned || 0}</Text>

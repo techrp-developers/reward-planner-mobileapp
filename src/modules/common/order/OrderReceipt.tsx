@@ -140,7 +140,7 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
             <View style={[styles.billBox, { borderColor: theme.border }]}>
               <View style={[styles.rewardBanner, { backgroundColor: isDark ? "#2D2148" : "#EEF2FF" }]}>
                 <MaterialCommunityIcons name="star-four-points" size={18} color={theme.primary} />
-                <Text style={[styles.rewardBannerText, { color: theme.primary }]}>You earned {rewardsEarned} reward coins</Text>
+                <Text style={[styles.rewardBannerText, { color: theme.primary }]}>You earned {rewardsEarned} RP Points</Text>
                 <MaterialCommunityIcons name="star-four-points" size={18} color={theme.primary} />
               </View>
 
@@ -167,7 +167,7 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
             </View>
 
             <Text style={[styles.noteText, { color: theme.secondaryText }]}>
-              <Text style={[styles.noteBold, { color: theme.text }]}>Note:</Text> Reward coins will be credited to your wallet
+              <Text style={[styles.noteBold, { color: theme.text }]}>Note:</Text> RP Points will be credited to your wallet
               within 24 hours after your order is delivered.
             </Text>
           </ScrollView>

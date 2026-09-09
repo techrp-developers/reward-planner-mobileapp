@@ -118,7 +118,10 @@ export default function OrderConfirmScreen() {
 
             {/* Reward Section */}
             <View style={styles.rewardContainer}>
-              <Text style={styles.rewardHeader}>🎉 You earned Reward Coins</Text>
+              <View style={styles.rewardHeaderRow}>
+                <MaterialCommunityIcons name="gift-outline" size={18} color="#8665FF" />
+                <Text style={styles.rewardHeader}>You earned RP Points</Text>
+              </View>
 
               <Pressable
                 onPress={() => navigation.navigate("Home" as never)}
@@ -130,9 +133,9 @@ export default function OrderConfirmScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.rewardBtn}
                 >
-                  <Text style={styles.coinIcon}>🪙</Text>
+                  <MaterialCommunityIcons name="star-four-points" size={18} color="#FFFFFF" />
                   <Text style={styles.rewardBtnText}>
-                    +{Number(receipt?.rewards?.earned ?? 0)} Coins earned on this order
+                    +{Number(receipt?.rewards?.earned ?? 0)} RP Points earned on this order
                   </Text>
                 </LinearGradient>
               </Pressable>
@@ -243,6 +246,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     fontWeight: "600",
+  },
+  rewardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     marginBottom: 12,
   },
   rewardBtnOuter: {
@@ -257,11 +265,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
-  coinIcon: { fontSize: 16, marginRight: 8 },
   rewardBtnText: {
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
+    marginLeft: 8,
   },
   receiptWrap: {
     position: "absolute",

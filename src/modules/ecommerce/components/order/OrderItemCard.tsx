@@ -143,7 +143,7 @@ export default function OrderItemCard({
           <View style={styles.pointsRow}>
             <Text style={styles.points}>₹{price}</Text>
             {rewardEarned && rewardEarned > 0 ? (
-              <Text style={styles.rewardText}>+{rewardEarned} Coins</Text>
+              <Text style={styles.rewardText}>+{rewardEarned} RP Points</Text>
             ) : null}
           </View>
 
