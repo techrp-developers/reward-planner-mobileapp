@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchUserInfo } from "../modules/common/auth/api/AuthAPI";
+import { fetchWalletBalance } from "../modules/ecommerce/api/WalleteAPI";
 import { getNotificationBadge } from "../modules/dashboard/notification/NotificationAPI";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
@@ -60,6 +61,8 @@ type NavStateLike = {
 
 type NavbarUserSnapshot = {
   rewardPoints: number;
+  displayName: string;
+  locationLabel: string;
   ts: number;
 };
 
@@ -88,6 +91,55 @@ const PAYMENT_ROUTES = new Set([
   "BBPSCategory",
   "BBPSBillers",
 ]);
+
+const getReadableTextColor = (backgroundColor: string): string => {
+  const color = backgroundColor.trim();
+  let r = 139;
+  let g = 92;
+  let b = 246;
+
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+    const normalized =
+      hex.length === 3
+        ? hex
+            .split("")
+            .map((char) => char + char)
+            .join("")
+        : hex.slice(0, 6);
+
+    if (normalized.length === 6) {
+      r = parseInt(normalized.slice(0, 2), 16);
+      g = parseInt(normalized.slice(2, 4), 16);
+      b = parseInt(normalized.slice(4, 6), 16);
+    }
+  } else {
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (match) {
+      r = Number(match[1]);
+      g = Number(match[2]);
+      b = Number(match[3]);
+    }
+  }
+
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.66 ? "#1F2937" : "#FFFFFF";
+};
+
+const compactAddressLine = (user: any): string => {
+  const address = user?.defaultAddress || {};
+  const parts = [
+    address?.address1,
+    address?.address2,
+    address?.city || user?.city,
+    address?.state || user?.state,
+    address?.zipcode || user?.pincode,
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+
+  return parts.join(", ");
+};
 
 // --- Helpers ---
 
@@ -340,6 +392,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const insets = useSafeAreaInsets();
   const { scrollY } = useNavbarScroll();
   const [rewardPoints, setRewardPoints] = React.useState(0);
+  const [customerName, setCustomerName] = React.useState("Guest");
+  const [customerLocation, setCustomerLocation] = React.useState("Set delivery location");
   const rewardPointsLabel = React.useMemo(() => {
     const points = Number(rewardPoints || 0);
     if (points >= 100000) return `${Math.floor(points / 1000)}k`;
@@ -421,6 +475,10 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const walletBadgeColor = React.useMemo(
     () => activeThemeColor,
     [activeThemeColor]
+  );
+  const walletBadgeTextColor = React.useMemo(
+    () => getReadableTextColor(walletBadgeColor),
+    [walletBadgeColor]
   );
   // Search bar + wallet button float over the campaign banner, so they read
   // as translucent glass cards rather than solid boxes on top of it.
@@ -523,6 +581,12 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     setRewardPoints((prev) =>
       prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
     );
+    setCustomerName((prev) =>
+      prev === snapshot.displayName ? prev : snapshot.displayName
+    );
+    setCustomerLocation((prev) =>
+      prev === snapshot.locationLabel ? prev : snapshot.locationLabel
+    );
   }, []);
 
   const navigateToScreen = React.useCallback(
@@ -552,6 +616,23 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     },
     [navigation]
   );
+
+  const handleSearchPress = React.useCallback(() => {
+    if (activeTab === "Services") {
+      navigateToScreen("ServiceSearch");
+    } else if (activeTab === "Payments") {
+      (navigation as any).navigate("Home", {
+        screen: "PaymentsModule",
+        params: { screen: "Search" },
+      });
+    } else {
+      navigateToScreen("SearchScreen");
+    }
+  }, [activeTab, navigateToScreen, navigation]);
+
+  const handleAddressPress = React.useCallback(() => {
+    navigateToScreen("AddressSelect", { manageOnly: true });
+  }, [navigateToScreen]);
 
   const handleTab = React.useCallback(
     (tab: TopTab) => {
@@ -622,6 +703,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     if (!isAuthenticated) {
       applyUserSnapshot({
         rewardPoints: 0,
+        displayName: "Guest",
+        locationLabel: "Set delivery location",
         ts: Date.now(),
       });
       return;
@@ -646,14 +729,36 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
 
     navbarUserInFlight = (async () => {
       try {
-        const userInfo = await fetchUserInfo();
+        const [userInfo, walletBalance] = await Promise.all([
+          fetchUserInfo(),
+          fetchWalletBalance().catch((walletError) => {
+            if (__DEV__) {
+              console.warn("Failed to load navbar wallet balance:", walletError);
+            }
+            return null;
+          }),
+        ]);
         const user = userInfo?.user || null;
+        const walletData = walletBalance?.data || null;
         const fetchedRewardPoints = Number(
-          user?.rewardPoints || userInfo?.data?.rewardPoints || 0
+          walletData?.balance ??
+            user?.rewardPoints ??
+            userInfo?.data?.rewardPoints ??
+            0
         );
+        const fetchedName = String(
+          userInfo?.name ||
+            user?.name ||
+            user?.full_name ||
+            user?.username ||
+            "Guest"
+        ).trim();
+        const fetchedLocation = compactAddressLine(user);
 
         const snapshot: NavbarUserSnapshot = {
           rewardPoints: fetchedRewardPoints,
+          displayName: fetchedName || "Guest",
+          locationLabel: fetchedLocation || "Set delivery location",
           ts: Date.now(),
         };
 
@@ -663,6 +768,8 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         console.warn("Failed to load navbar user info:", error);
         return {
           rewardPoints: navbarUserCache?.rewardPoints || 0,
+          displayName: navbarUserCache?.displayName || "Guest",
+          locationLabel: navbarUserCache?.locationLabel || "Set delivery location",
           ts: Date.now(),
         } as NavbarUserSnapshot;
       } finally {
@@ -707,42 +814,56 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           },
         ]}
       >
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={[styles.avatarWrap, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
-          onPress={() => navigateToScreen("Profile")}
-          hitSlop={hitSlop(8)}
-        >
-          <MaterialCommunityIcons name="account-circle" size={38} color={navbarIconColor} />
-        </TouchableOpacity>
-
+        
         <AnimatedTouchableOpacity
           activeOpacity={0.9}
           style={[
-            styles.searchContainer,
+            styles.deliveryContainer,
             {
               backgroundColor: frostedSurface,
               borderColor: navbarBorder,
               height: searchHeight,
             },
           ]}
-          onPress={() => {
-            if (activeTab === "Services") {
-              navigateToScreen("ServiceSearch");
-            } else if (activeTab === "Payments") {
-              (navigation as any).navigate("Home", {
-                screen: "PaymentsModule",
-                params: { screen: "Search" },
-              });
-            } else {
-              navigateToScreen("SearchScreen");
-            }
-          }}
+          onPress={handleAddressPress}
         >
-          <MaterialCommunityIcons name="magnify" size={19} color={navbarIconColor} />
-          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
-            Search products, services & more
-          </Text>
+          <View style={[styles.deliveryIconWrap, { backgroundColor: activeThemeColor }]}>
+            <MaterialCommunityIcons
+              name="map-marker-radius-outline"
+              size={17}
+              color={walletBadgeTextColor}
+            />
+          </View>
+          <View style={styles.deliveryTextBlock}>
+            <View style={styles.deliveryTitleRow}>
+              <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
+                Deliver to {customerName}
+              </Text>
+              <Text style={[styles.deliveryChangeText, { color: activeThemeColor }]}>
+                Change
+              </Text>
+            </View>
+            <Text style={[styles.deliveryAddress, { color: navbarMutedColor }]} numberOfLines={1}>
+              {customerLocation}
+            </Text>
+          </View>
+        </AnimatedTouchableOpacity>
+
+        <AnimatedTouchableOpacity
+          activeOpacity={0.86}
+          style={[
+            styles.searchIconButton,
+            {
+              backgroundColor: frostedSurface,
+              borderColor: navbarBorder,
+              height: searchHeight,
+              width: searchHeight,
+            },
+          ]}
+          onPress={handleSearchPress}
+          hitSlop={hitSlop(8)}
+        >
+          <MaterialCommunityIcons name="magnify" size={21} color={navbarIconColor} />
         </AnimatedTouchableOpacity>
 
         <View style={styles.actionsRow}>
@@ -752,7 +873,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             onPress={() => navigateToScreen("WalletHistory")}
             hitSlop={hitSlop(8)}
           >
-            <WalletSvg width={24} height={24} />
+            <WalletSvg width={21} height={21} />
             <View
               style={[
                 styles.walletTag,
@@ -760,8 +881,13 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
               ]}
             >
               <View style={styles.walletTagInner}>
-                <Reward width={11} height={11} />
-                <Text style={styles.walletTagText} numberOfLines={1}>
+                <Reward width={12} height={12} />
+                <Text
+                  style={[styles.walletTagText, { color: walletBadgeTextColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.78}
+                >
                   {rewardPointsLabel}
                 </Text>
               </View>
@@ -845,7 +971,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: rs(7),
+    gap: rs(6),
     flexShrink: 0,
   },
 
@@ -871,46 +997,102 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
 
-  searchContainer: {
+  deliveryContainer: {
     flex: 1,
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     borderRadius: rs(16),
-    paddingHorizontal: rs(13),
+    paddingLeft: rs(7),
+    paddingRight: rs(10),
     borderWidth: 1,
   },
 
-  fakePlaceholder: {
+  deliveryIconWrap: {
+    width: rs(30),
+    height: rs(30),
+    borderRadius: rs(15),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: rs(8),
+    flexShrink: 0,
+  },
+
+  deliveryTextBlock: {
     flex: 1,
-    marginLeft: rs(8),
-    fontSize: 13,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+
+  deliveryTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+  },
+
+  deliveryTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "800",
+    includeFontPadding: false,
+  },
+
+  deliveryChangeText: {
+    marginLeft: rs(6),
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "900",
+    includeFontPadding: false,
+    flexShrink: 0,
+  },
+
+  deliveryAddress: {
+    marginTop: rs(2),
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "500",
+    includeFontPadding: false,
+  },
+
+  searchIconButton: {
+    borderRadius: rs(16),
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 
   walletBox: {
-    position: "relative",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     borderRadius: 999,
-    width: rs(40),
+    width: rs(78),
     height: rs(40),
     borderWidth: 1,
-    overflow: "visible",
+    paddingLeft: rs(9),
+    paddingRight: rs(6),
+    gap: rs(5),
+    overflow: "hidden",
   },
 
   walletTag: {
-    position: "absolute",
-    bottom: -rs(6),
-    right: -rs(5),
-    minWidth: rs(26),
-    height: rs(17),
+    flex: 1,
+    minWidth: 0,
+    height: rs(24),
     borderRadius: 999,
-    borderWidth: 1.25,
-    borderColor: "#fff",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.72)",
     paddingHorizontal: rs(5),
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   walletTagInner: {
@@ -918,14 +1100,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: rs(2),
+    maxWidth: "100%",
   },
 
   walletTagText: {
-    color: "#fff",
+    flex: 1,
+    minWidth: 0,
     fontWeight: "900",
-    fontSize: 9,
-    lineHeight: 11,
-    maxWidth: rs(34),
+    fontSize: 11,
+    lineHeight: 13,
+    flexShrink: 1,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+    textAlign: "center",
   },
 
   // --- Module tabs: no box, icon-forward, bottom of navbar ---
