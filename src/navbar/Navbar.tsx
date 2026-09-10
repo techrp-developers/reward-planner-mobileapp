@@ -22,16 +22,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchUserInfo, getStoredUserName } from "../modules/common/auth/api/AuthAPI";
-import { fetchAllAddress } from "../modules/ecommerce/api/AddressApi";
+import { fetchUserInfo } from "../modules/common/auth/api/AuthAPI";
 import { getNotificationBadge } from "../modules/dashboard/notification/NotificationAPI";
 import { useAuth } from "../modules/common/auth/context/AuthContext";
-import { addressesQueryKey, handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
+import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
 import Navbar_Background, { NAVBAR_COLLAPSE_DISTANCE } from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
 import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
-import { DEFAULT_MODULE_NORMAL_COLOR, useModuleIcons } from "./hooks/useModuleIcons";
+import { useModuleIcons } from "./hooks/useModuleIcons";
 import type { ApiModuleIcon } from "./api/ModuleIconsApi";
 import { useNavbarScroll } from "./NavbarScrollContext";
 
@@ -50,16 +49,6 @@ type NavbarProps = {
   onModuleChange?: (tab: TopTab) => void;
 };
 
-type ApiAddress = {
-  address_type?: string;
-  is_default?: number;
-  address1?: string;
-  address2?: string | null;
-  city?: string;
-  state?: string;
-  zipcode?: string;
-};
-
 type NavStateLike = {
   index: number;
   routes: Array<{
@@ -70,14 +59,11 @@ type NavStateLike = {
 };
 
 type NavbarUserSnapshot = {
-  displayName: string;
-  displayAddress: string;
   rewardPoints: number;
   ts: number;
 };
 
 const NAVBAR_USER_TTL_MS = 60_000;
-const EMPTY_ADDRESS_LABEL = "Address not set";
 let navbarUserCache: NavbarUserSnapshot | null = null;
 let navbarUserInFlight: Promise<NavbarUserSnapshot> | null = null;
 
@@ -380,7 +366,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     [deepestRoute.routeName, route.name, moduleName, activeModuleTab]
   );
   const activeTab = activeModule ?? detectedActiveTab;
-  const showLocation = activeTab === "Product";
 
   // Campaign-driven banner config per tab (falls back to the bundled static
   // images/colors in navbarConstants when the API has no data for a tab).
@@ -408,12 +393,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const moduleGradientWrapSize = moduleIconSize + rs(4);
   const moduleGradientInnerSize = Math.round(moduleIconSize * 0.68);
   const activeModuleKeyFromRoute = MODULE_KEY_BY_TOP_TAB[activeTab];
-  const activeModuleConfig = React.useMemo(
-    () => modules.find((module) => module.module_key === activeModuleKeyFromRoute),
-    [activeModuleKeyFromRoute, modules]
-  );
-  const activeModuleNormalColor =
-    activeModuleConfig?.normal_color || DEFAULT_MODULE_NORMAL_COLOR;
   const [selectedModuleKey, setSelectedModuleKey] = React.useState(activeModuleKeyFromRoute);
 
   React.useEffect(() => {
@@ -448,69 +427,61 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.88)";
   const navbarBorder = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
   const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
-  const hasNavbarImage = Boolean(banners[activeTab]?.imageUrl);
-  const greetingTextColor = hasNavbarImage ? "#FFFFFF" : activeModuleNormalColor;
-  const greetingMutedColor = hasNavbarImage
-    ? "rgba(255,255,255,0.9)"
-    : activeModuleNormalColor;
-  const greetingChevronColor = hasNavbarImage
-    ? "rgba(255,255,255,0.85)"
-    : activeModuleNormalColor;
-  const greetingTextShadow = hasNavbarImage
-    ? {
-        textShadowColor: "rgba(0,0,0,0.45)",
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 3,
-      }
-    : null;
   const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
   const isNavigatingRef = React.useRef(false);
 
-  // Profile content collapses away as the active module's Home screen
-  // scrolls (scrollY comes from NavbarScrollContext, fed by that screen's
-  // onScroll — see MainLayout.tsx) — height is measured once via onLayout
-  // since it depends on text/notification-badge content, not a fixed value.
-  const [profileHeight, setProfileHeight] = React.useState(0);
-  const [compactActionsEnabled, setCompactActionsEnabled] = React.useState(false);
-  const compactActionsEnabledRef = React.useRef(false);
-  const handleCollapsibleLayout = React.useCallback(
-    (event: { nativeEvent: { layout: { height: number } } }) => {
-      const measured = event.nativeEvent.layout.height;
-      setProfileHeight((prev) => (prev ? prev : measured));
-    },
-    [],
-  );
-  const collapsibleAnimatedStyle = React.useMemo(
-    () => ({
-      height: profileHeight
-        ? scrollY.interpolate({
-            inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-            outputRange: [profileHeight, 0],
-            extrapolate: "clamp" as const,
-          })
-        : undefined,
-      opacity: scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.6],
-        outputRange: [1, 0],
-        extrapolate: "clamp" as const,
+  // Collapse the marketplace-style search/action strip so the module row
+  // becomes the only pinned navbar content while browsing.
+  const headerOpacity = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.45, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [1, 0.35, 0],
+        extrapolate: "clamp",
       }),
-      transform: [
-        {
-          translateY: scrollY.interpolate({
-            inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-            outputRange: [0, -rs(8)],
-            extrapolate: "clamp" as const,
-          }),
-        },
-      ],
-    }),
-    [profileHeight, scrollY],
+    [scrollY],
+  );
+  const headerTranslateY = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [0, -rs(14)],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const headerHeight = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [rs(54), 0],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const headerMarginTop = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [rs(2), 0],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
+  );
+  const headerPaddingBottom = React.useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [rs(12), 0],
+        extrapolate: "clamp",
+      }),
+    [scrollY],
   );
   const searchHeight = React.useMemo(
     () =>
       scrollY.interpolate({
         inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [rs(42), rs(38)],
+        outputRange: [rs(42), rs(36)],
         extrapolate: "clamp",
       }),
     [scrollY],
@@ -519,61 +490,26 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     () =>
       scrollY.interpolate({
         inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [1, 0.96],
+        outputRange: [1, 0.985],
         extrapolate: "clamp",
       }),
     [scrollY],
   );
-  const searchRightGap = React.useMemo(
+  const modulesTranslateY = React.useMemo(
     () =>
       scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.65, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [0, rs(48), rs(92)],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const compactActionsOpacity = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [NAVBAR_COLLAPSE_DISTANCE * 0.35, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [0, 1],
+        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+        outputRange: [0, -rs(3)],
         extrapolate: "clamp",
       }),
     [scrollY],
   );
   const modulesAnimatedStyle = React.useMemo(
     () => ({
-      transform: [{ scale: compactScale }],
+      transform: [{ translateY: modulesTranslateY }, { scale: compactScale }] as any,
     }),
-    [compactScale],
+    [compactScale, modulesTranslateY],
   );
-
-  React.useEffect(() => {
-    const listenerId = scrollY.addListener(({ value }) => {
-      const nextEnabled = value > NAVBAR_COLLAPSE_DISTANCE * 0.45;
-      if (compactActionsEnabledRef.current !== nextEnabled) {
-        compactActionsEnabledRef.current = nextEnabled;
-        setCompactActionsEnabled(nextEnabled);
-      }
-    });
-    return () => scrollY.removeListener(listenerId);
-  }, [scrollY]);
-
-  const [displayName, setDisplayName] = React.useState("User");
-  const [displayAddress, setDisplayAddress] =
-    React.useState(EMPTY_ADDRESS_LABEL);
-  const hasAddress = String(displayAddress || "").trim() !== EMPTY_ADDRESS_LABEL;
-
-  // Shares the same query cache the address screens invalidate after add/edit/
-  // delete/set-default, so the navbar address updates immediately instead of
-  // only refreshing once per 60s cache window on mount.
-  const { data: liveAddressData } = useQuery({
-    queryKey: addressesQueryKey,
-    queryFn: fetchAllAddress,
-    enabled: isAuthenticated,
-    staleTime: 10 * 60 * 1000,
-  });
 
   const { data: notificationBadge } = useQuery({
     queryKey: ["notification", "badge"],
@@ -583,42 +519,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   });
   const hasUnreadNotifications = Boolean(notificationBadge?.success && notificationBadge.count > 0);
 
-  React.useEffect(() => {
-    if (!isAuthenticated || !liveAddressData) return;
-
-    const list: ApiAddress[] = Array.isArray(liveAddressData?.data) ? liveAddressData.data : [];
-    const selectedAddress =
-      list.find((item) => Number(item?.is_default) === 1) || list[0];
-
-    const addressText = [
-      selectedAddress?.address1,
-      selectedAddress?.address2,
-      selectedAddress?.city,
-      selectedAddress?.state,
-      selectedAddress?.zipcode,
-    ]
-      .map((part) => String(part || "").trim())
-      .filter(Boolean)
-      .join(", ");
-
-    const nextDisplayAddress = addressText || EMPTY_ADDRESS_LABEL;
-    setDisplayAddress(nextDisplayAddress);
-    if (navbarUserCache) {
-      navbarUserCache = {
-        ...navbarUserCache,
-        displayAddress: nextDisplayAddress,
-      };
-    }
-  }, [isAuthenticated, liveAddressData]);
-
   const applyUserSnapshot = React.useCallback((snapshot: NavbarUserSnapshot) => {
-    setDisplayName((prev) => (prev === snapshot.displayName ? prev : snapshot.displayName));
-    setDisplayAddress((prev) => {
-      if (prev !== EMPTY_ADDRESS_LABEL && snapshot.displayAddress === EMPTY_ADDRESS_LABEL) {
-        return prev;
-      }
-      return prev === snapshot.displayAddress ? prev : snapshot.displayAddress;
-    });
     setRewardPoints((prev) =>
       prev === snapshot.rewardPoints ? prev : snapshot.rewardPoints
     );
@@ -717,19 +618,9 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     [handleTab, navigation, selectedModuleKey]
   );
 
-  const navigateToAddAddress = React.useCallback(() => {
-    navigateToScreen("AddressSelect", { manageOnly: true });
-  }, [navigateToScreen]);
-
-  const navigateToChangeAddress = React.useCallback(() => {
-    navigateToScreen("AddressSelect", { manageOnly: true });
-  }, [navigateToScreen]);
-
   const loadNavbarUser = React.useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated) {
       applyUserSnapshot({
-        displayName: "Guest",
-        displayAddress: EMPTY_ADDRESS_LABEL,
         rewardPoints: 0,
         ts: Date.now(),
       });
@@ -755,26 +646,13 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
 
     navbarUserInFlight = (async () => {
       try {
-        const storedName = await getStoredUserName();
         const userInfo = await fetchUserInfo();
         const user = userInfo?.user || null;
         const fetchedRewardPoints = Number(
           user?.rewardPoints || userInfo?.data?.rewardPoints || 0
         );
-        const userName =
-          userInfo?.name ||
-          user?.name ||
-          user?.full_name ||
-          user?.username ||
-          storedName ||
-          "User";
 
-        // Address is now sourced reactively from the shared addresses query
-        // (see liveAddressData above), which updates instantly whenever an
-        // address is added/edited/deleted/set-default anywhere in the app.
         const snapshot: NavbarUserSnapshot = {
-          displayName: String(userName),
-          displayAddress: navbarUserCache?.displayAddress || EMPTY_ADDRESS_LABEL,
           rewardPoints: fetchedRewardPoints,
           ts: Date.now(),
         };
@@ -784,8 +662,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
       } catch (error) {
         console.warn("Failed to load navbar user info:", error);
         return {
-          displayName: navbarUserCache?.displayName || "User",
-          displayAddress: navbarUserCache?.displayAddress || EMPTY_ADDRESS_LABEL,
           rewardPoints: navbarUserCache?.rewardPoints || 0,
           ts: Date.now(),
         } as NavbarUserSnapshot;
@@ -819,9 +695,18 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         scrollY={scrollY}
       />
 
-      <Animated.View style={[styles.collapsible, collapsibleAnimatedStyle]} onLayout={handleCollapsibleLayout}>
-      {/* PROFILE: avatar + greeting/address, wallet + notifications */}
-      <View style={styles.profileRow}>
+      <Animated.View
+        style={[
+          styles.searchActionsRow,
+          {
+            height: headerHeight,
+            marginTop: headerMarginTop,
+            paddingBottom: headerPaddingBottom,
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
         <TouchableOpacity
           activeOpacity={0.85}
           style={[styles.avatarWrap, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
@@ -831,30 +716,34 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
           <MaterialCommunityIcons name="account-circle" size={38} color={navbarIconColor} />
         </TouchableOpacity>
 
-        <View style={styles.greetColumn}>
-          <Text
-            style={[styles.helloText, { color: greetingTextColor }, greetingTextShadow]}
-            numberOfLines={1}
-          >
-            Hello, {displayName}!
+        <AnimatedTouchableOpacity
+          activeOpacity={0.9}
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: frostedSurface,
+              borderColor: navbarBorder,
+              height: searchHeight,
+            },
+          ]}
+          onPress={() => {
+            if (activeTab === "Services") {
+              navigateToScreen("ServiceSearch");
+            } else if (activeTab === "Payments") {
+              (navigation as any).navigate("Home", {
+                screen: "PaymentsModule",
+                params: { screen: "Search" },
+              });
+            } else {
+              navigateToScreen("SearchScreen");
+            }
+          }}
+        >
+          <MaterialCommunityIcons name="magnify" size={19} color={navbarIconColor} />
+          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
+            Search products, services & more
           </Text>
-
-          <View
-            style={[styles.miniLocationRow, !showLocation && styles.locationRowHidden]}
-            pointerEvents={showLocation ? "auto" : "none"}
-          >
-            <MaterialCommunityIcons name="map-marker" size={13} color="#4ADE80" />
-            <Text
-              style={[styles.miniLocationText, { color: greetingMutedColor }, greetingTextShadow]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              onPress={hasAddress ? navigateToChangeAddress : navigateToAddAddress}
-            >
-              {hasAddress ? displayAddress : "Add address"}
-            </Text>
-            <MaterialCommunityIcons name="chevron-down" size={13} color={greetingChevronColor} />
-          </View>
-        </View>
+        </AnimatedTouchableOpacity>
 
         <View style={styles.actionsRow}>
           <TouchableOpacity
@@ -889,71 +778,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             {hasUnreadNotifications ? <View style={styles.bellDot} /> : null}
           </TouchableOpacity>
         </View>
-      </View>
       </Animated.View>
-
-      {/* SEARCH */}
-      <View style={styles.searchRow}>
-        <AnimatedTouchableOpacity
-          activeOpacity={0.9}
-          style={[
-            styles.searchContainer,
-            {
-              backgroundColor: frostedSurface,
-              borderColor: navbarBorder,
-              height: searchHeight,
-              marginRight: searchRightGap,
-              transform: [{ scale: compactScale }],
-            },
-          ]}
-          onPress={() => {
-            if (activeTab === "Services") {
-              navigateToScreen("ServiceSearch");
-            } else if (activeTab === "Payments") {
-              (navigation as any).navigate("Home", {
-                screen: "PaymentsModule",
-                params: { screen: "Search" },
-              });
-            } else {
-              navigateToScreen("SearchScreen");
-            }
-          }}
-        >
-          <MaterialCommunityIcons name="magnify" size={19} color={navbarIconColor} />
-          <Text style={[styles.fakePlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
-            Search products, services & more
-          </Text>
-        </AnimatedTouchableOpacity>
-
-        <Animated.View
-          pointerEvents={compactActionsEnabled ? "auto" : "none"}
-          style={[
-            styles.compactActionsRow,
-            {
-              opacity: compactActionsOpacity,
-              transform: [{ scale: compactScale }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.compactActionBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
-            onPress={() => navigateToScreen("WalletHistory")}
-            hitSlop={hitSlop(8)}
-          >
-            <WalletSvg width={22} height={22} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.compactActionBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
-            onPress={() => navigateToScreen("Notification")}
-            hitSlop={hitSlop(8)}
-          >
-            <MaterialCommunityIcons name="bell-outline" size={18} color={navbarIconColor} />
-            {hasUnreadNotifications ? <View style={styles.compactBellDot} /> : null}
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
 
       {/* MODULE TABS */}
       <Animated.View style={modulesAnimatedStyle}>
@@ -999,17 +824,12 @@ const styles = StyleSheet.create({
     // needed since StatusBar is translucent) + rs(14) breathing room.
   },
 
-  collapsible: {
-    overflow: "hidden",
-  },
-
-  profileRow: {
+  searchActionsRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: rs(16),
-    gap: rs(8),
-    marginTop: rs(2),
-    paddingBottom: rs(12),
+    gap: rs(10),
+    overflow: "hidden",
   },
 
   avatarWrap: {
@@ -1022,35 +842,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  greetColumn: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  helloText: {
-    fontSize: 15,
-    fontWeight: "700",
-    // color set inline (theme-aware unless a CMS banner is active)
-  },
-
-  miniLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: rs(2),
-    gap: rs(4),
-  },
-
-  miniLocationText: {
-    fontSize: 11,
-    fontWeight: "500",
-    flexShrink: 1,
-    // color set inline (theme-aware unless a CMS banner is active)
-  },
-
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: rs(8),
+    gap: rs(7),
+    flexShrink: 0,
   },
 
   bellBtn: {
@@ -1058,8 +854,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 999,
-    width: rs(42),
-    height: rs(42),
+    width: rs(40),
+    height: rs(40),
     borderWidth: 1,
   },
 
@@ -1075,19 +871,12 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
 
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: rs(16),
-    marginTop: rs(2),
-    position: "relative",
-  },
-
   searchContainer: {
     flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: rs(14),
+    borderRadius: rs(16),
     paddingHorizontal: rs(13),
     borderWidth: 1,
   },
@@ -1104,8 +893,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 999,
-    width: rs(42),
-    height: rs(42),
+    width: rs(40),
+    height: rs(40),
     borderWidth: 1,
     overflow: "visible",
   },
@@ -1139,10 +928,6 @@ const styles = StyleSheet.create({
     maxWidth: rs(34),
   },
 
-  locationRowHidden: {
-    opacity: 0,
-  },
-
   // --- Module tabs: no box, icon-forward, bottom of navbar ---
   // Item width and icon sizes are computed at runtime (see tabItemWidth /
   // moduleIconSize in Navbar) so exactly `modules.length` tabs evenly fill
@@ -1152,7 +937,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minWidth: "100%",
     paddingHorizontal: NAV_TABS_H_PADDING,
-    paddingTop: rs(10),
+    paddingTop: rs(8),
     paddingBottom: rs(10),
     gap: NAV_TAB_GAP,
   },
@@ -1198,33 +983,4 @@ const styles = StyleSheet.create({
     marginTop: rs(4),
   },
 
-  compactActionsRow: {
-    position: "absolute",
-    right: rs(16),
-    top: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: rs(8),
-  },
-
-  compactActionBtn: {
-    width: rs(38),
-    height: rs(38),
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  compactBellDot: {
-    position: "absolute",
-    top: rs(7),
-    right: rs(8),
-    width: rs(7),
-    height: rs(7),
-    borderRadius: rs(3.5),
-    backgroundColor: "#EF4444",
-    borderWidth: 1.25,
-    borderColor: "#fff",
-  },
 });

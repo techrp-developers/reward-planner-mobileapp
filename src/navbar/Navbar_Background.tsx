@@ -9,7 +9,6 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import { NavbarBannerMap } from "./api/NavbarContentApi";
 import { TopTab } from "./navbarConstants";
-import { DarkTheme, LightTheme } from "../theme/colors";
 import { rs } from "../utils/responsive";
 
 type Props = {
@@ -74,7 +73,7 @@ export default function Navbar_Background({
   // no color/image has been published for a module at all, fall back to a
   // theme-aware surface instead of "transparent", which let whatever sits
   // behind Navbar show through and read as a stuck-white bar in dark mode.
-  const defaultBgColor = isDark ? DarkTheme.background : LightTheme.background;
+  const defaultBgColor = "transparent";
 
   const renderLayer = (tab: TopTab, opacity?: Animated.Value | number) => {
     const banner = banners[tab];
@@ -92,7 +91,9 @@ export default function Navbar_Background({
 
     return (
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
+        {bgColor !== "transparent" ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
+        ) : null}
         {showImage ? (
           <Image
             source={{ uri: imageUrl as string }}
@@ -115,6 +116,18 @@ export default function Navbar_Background({
 
   const resolvedBgColor =
     currentBanner?.bgColor ?? previousBanner?.bgColor ?? defaultBgColor;
+  const hasDynamicBackground =
+    resolvedBgColor !== "transparent" || showOverlay;
+  const backgroundFrameStyle = React.useMemo(
+    () => ({
+      width,
+      height: animatedHeight,
+      backgroundColor: resolvedBgColor,
+      shadowOpacity: hasDynamicBackground ? 0.12 : 0,
+      elevation: hasDynamicBackground ? 6 : 0,
+    }),
+    [animatedHeight, hasDynamicBackground, resolvedBgColor, width],
+  );
 
   return (
     // Shadow lives on this outer view (no overflow:hidden — iOS clips away
@@ -124,7 +137,7 @@ export default function Navbar_Background({
       pointerEvents="none"
       style={[
         styles.shadowWrap,
-        { width, height: animatedHeight, backgroundColor: resolvedBgColor },
+        backgroundFrameStyle,
       ]}
     >
       <View style={styles.root}>

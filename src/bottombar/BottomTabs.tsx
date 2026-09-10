@@ -12,7 +12,10 @@ import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
 import { useAppTheme } from "../theme/ThemeContext";
 
-export const TAB_BAR_HEIGHT = 68;
+const FLOATING_BOTTOM_GAP = 10;
+const FLOATING_BAR_HEIGHT = 64;
+const CENTER_BUTTON_SIZE = 58;
+export const TAB_BAR_HEIGHT = FLOATING_BAR_HEIGHT + FLOATING_BOTTOM_GAP + 24;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
@@ -85,7 +88,7 @@ const DASHBOARD_TABS: TabConfig[] = [
 const INACTIVE_COLOR = "#9CA3AF";
 const TAB_ICON_THEME: Record<AppMode, { activeIcon: string; activeLabel: string }> = {
   Product: {
-    activeIcon: "#D69A33",
+    activeIcon: "#FF8A00",
     activeLabel: "#111827",
   },
   Services: {
@@ -103,28 +106,28 @@ const TAB_ICON_THEME: Record<AppMode, { activeIcon: string; activeLabel: string 
 };
 const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; icon: string; shadow: string }> = {
   Product: {
-    background: "#111827",
-    border: "#FACC15",
-    icon: "#FACC15",
-    shadow: "#FACC15",
+    background: "#FF8A00",
+    border: "#FFFFFF",
+    icon: "#FFFFFF",
+    shadow: "#FF8A00",
   },
   Services: {
-    background: "#06111F",
-    border: "#1D4ED8",
-    icon: "#BFDBFE",
-    shadow: "#1D4ED8",
+    background: "#FF8A00",
+    border: "#FFFFFF",
+    icon: "#FFFFFF",
+    shadow: "#FF8A00",
   },
   Payments: {
-    background: "#120A24",
-    border: "#7C3AED",
-    icon: "#DDD6FE",
-    shadow: "#7C3AED",
+    background: "#FF8A00",
+    border: "#FFFFFF",
+    icon: "#FFFFFF",
+    shadow: "#FF8A00",
   },
   DineOut: {
-    background: "#1F0A0A",
-    border: "#DC2626",
-    icon: "#FECACA",
-    shadow: "#DC2626",
+    background: "#FF8A00",
+    border: "#FFFFFF",
+    icon: "#FFFFFF",
+    shadow: "#FF8A00",
   },
 };
 
@@ -207,8 +210,8 @@ const CenterButton = React.memo(function CenterButton({
         ]}
       >
         <MaterialCommunityIcons
-          name="view-dashboard"
-          size={27}
+          name="shopping-outline"
+          size={28}
           color={centerTheme.icon}
           style={styles.centerDashboardIcon}
         />
@@ -231,7 +234,7 @@ function BottomTabs({
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { isDark, theme } = useAppTheme();
-  const bottomInset = Math.max(insets.bottom, 8);
+  const bottomInset = Math.max(insets.bottom, 0);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
   // Without this, every tab press invalidates handlePress → pressHandlers → all TabItem memos.
@@ -395,10 +398,10 @@ function BottomTabs({
         style={[
           styles.bar,
           {
-            height: TAB_BAR_HEIGHT + bottomInset,
-            paddingBottom: bottomInset,
+            height: FLOATING_BAR_HEIGHT,
+            bottom: bottomInset + FLOATING_BOTTOM_GAP,
             backgroundColor: barBackgroundColor,
-            borderTopColor: barBorderColor,
+            borderColor: barBorderColor,
             shadowColor: isDark ? "#000000" : "#000000",
           },
         ]}
@@ -444,7 +447,7 @@ function BottomTabs({
           onPress={onCenterPress ?? NOOP}
         />
       </View>
-      <View style={[styles.homeIndicator, { backgroundColor: homeIndicatorColor }]} />
+      <View style={[styles.homeIndicator, { bottom: bottomInset + 3, backgroundColor: homeIndicatorColor }]} />
     </View>
   );
 }
@@ -505,35 +508,41 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    alignItems: "center",
   },
   navigatorWrap: {
     width: "100%",
     backgroundColor: "#FFFFFF",
+    alignItems: "center",
   },
   bar: {
+    position: "absolute",
+    left: 24,
+    right: 24,
     backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingHorizontal: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 10,
+    paddingHorizontal: 14,
+    borderRadius: 32,
+    borderWidth: 1,
+    elevation: 16,
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   item: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    height: 56,
   },
   label: {
-    marginTop: 4,
-    fontSize: 11,
+    marginTop: 3,
+    fontSize: 10.5,
     color: INACTIVE_COLOR,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   labelActive: {
     fontWeight: "700",
@@ -549,32 +558,33 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   centerSpacer: {
-    width: 60,
+    width: 64,
   },
   fabWrap: {
     position: "absolute",
     alignSelf: "center",
-    top: -25,
-    width: 60,
-    height: 60,
+    top: -23,
+    width: CENTER_BUTTON_SIZE + 8,
+    height: CENTER_BUTTON_SIZE + 8,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
   },
   centerDiamondButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 2,
+    width: CENTER_BUTTON_SIZE,
+    height: CENTER_BUTTON_SIZE,
+    borderRadius: CENTER_BUTTON_SIZE / 2,
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    transform: [{ rotate: "45deg" }],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.26,
     shadowRadius: 12,
-    elevation: 10,
+    elevation: 14,
   },
   centerDashboardIcon: {
-    transform: [{ rotate: "-45deg" }],
+    transform: [{ rotate: "0deg" }],
   },
   badge: {
     position: "absolute",

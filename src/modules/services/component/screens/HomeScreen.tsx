@@ -30,22 +30,23 @@ type ServiceSectionKey =
 // their CMS entry is null/absent — no placeholder is shown for either.
 const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
   { key: 'promotionalBanner' },
-  { key: 'offersBanner' },
   { key: 'banner' },
   { key: 'services' },
   { key: 'slider' },
   { key: 'mostBooked' },
   { key: 'quickServices' },
+  { key: 'offersBanner' },
   { key: 'exclusiveOffers' },
   { key: 'bundles' },
 ];
 
 const INITIAL_SERVICE_SECTIONS = new Set<ServiceSectionKey>([
   'promotionalBanner',
-  'offersBanner',
   'banner',
   'services',
   'slider',
+  'quickServices',
+  'offersBanner',
 ]);
 const READY_SERVICE_SECTIONS = new Set<ServiceSectionKey>(INITIAL_SERVICE_SECTIONS);
 
@@ -146,7 +147,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#FAFAFC',
-    paddingTop: 15,
   },
   listContent: {
     paddingBottom: 32,

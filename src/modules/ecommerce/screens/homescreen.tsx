@@ -135,6 +135,20 @@ const buildRecentPrefetcher = (userId?: number | string) => {
 
 const MemoCategoriesSection = React.memo(CategoriesSection);
 
+const placeHomeBannerAboveCategories = (sections: HomeSection[]): HomeSection[] => {
+  const withoutBanner = sections.filter((section) => section.key !== 'homeBanner');
+  const banner = sections.find((section) => section.key === 'homeBanner') ?? { key: 'homeBanner' as const };
+  const categoriesIndex = withoutBanner.findIndex((section) => section.key === 'categories');
+
+  if (categoriesIndex < 0) {
+    return [banner, ...withoutBanner];
+  }
+
+  const nextSections = [...withoutBanner];
+  nextSections.splice(categoriesIndex, 0, banner);
+  return nextSections;
+};
+
 const SectionSkeleton = React.memo(function SectionSkeleton({
   sectionKey,
 }: {
@@ -234,7 +248,10 @@ function HomeScreen() {
   const { onScroll } = useNavbarScroll();
   const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
   const homeSections = useMemo<HomeSection[]>(
-    () => layout.sections.map(({ key }) => ({ key: key as SectionKey })),
+    () =>
+      placeHomeBannerAboveCategories(
+        layout.sections.map(({ key }) => ({ key: key as SectionKey })),
+      ),
     [layout.sections],
   );
   const homeSectionKeys = useMemo(() => homeSections.map(({ key }) => key), [homeSections]);
