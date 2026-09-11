@@ -267,7 +267,7 @@ function MainLayoutContent() {
     [navigation],
   );
 
-  const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
+  const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT : 0;
   const handleBottomTabPress = React.useCallback(
     (tab: "Home" | "Search" | "Notes" | "Cart" | "History" | "Profile") => {
       if (tab === "History") {

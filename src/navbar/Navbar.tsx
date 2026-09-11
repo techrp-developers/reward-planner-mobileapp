@@ -28,7 +28,7 @@ import { getNotificationBadge } from "../modules/dashboard/notification/Notifica
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import Navbar_Background, { NAVBAR_COLLAPSE_DISTANCE } from "./Navbar_Background";
+import Navbar_Background from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
 import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
 import { useModuleIcons } from "./hooks/useModuleIcons";
@@ -267,6 +267,11 @@ const TopIconWithLabel = React.memo(
   }) => {
     const hasGradient = Boolean(gradientStart && gradientEnd);
     const tint = active ? activeTint ?? "#FFFFFF" : inactiveTint;
+    const [imageUrl, setImageUrl] = React.useState(iconUrl);
+
+    React.useEffect(() => {
+      setImageUrl(iconUrl);
+    }, [iconUrl]);
     // Base scale grows with a spring when the tab becomes active (visual
     // weight), and presses shrink from whatever the current base is —
     // never fighting an in-flight active/inactive transition.
@@ -312,7 +317,7 @@ const TopIconWithLabel = React.memo(
         style={[styles.tabItem, { width: itemWidth, transform: [{ scale }] }]}
         hitSlop={hitSlop(8)}
       >
-        {iconUrl ? (
+        {imageUrl ? (
           hasGradient ? (
             <LinearGradient
               colors={[gradientStart as string, gradientEnd as string]}
@@ -328,7 +333,7 @@ const TopIconWithLabel = React.memo(
               ]}
             >
               <RNImage
-                source={{ uri: iconUrl }}
+                source={{ uri: imageUrl }}
                 style={{ width: gradientInnerSize, height: gradientInnerSize }}
                 resizeMode="contain"
                 onLoad={() => {
@@ -338,14 +343,16 @@ const TopIconWithLabel = React.memo(
                 }}
                 onError={() => {
                   if (__DEV__) {
-                    console.log("[CMS] Module icon failed:", moduleKey, iconUrl);
+                    console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
                   }
+                  if (imageUrl !== iconUrl) return;
+                  setImageUrl(null);
                 }}
               />
             </LinearGradient>
           ) : (
             <RNImage
-              source={{ uri: iconUrl }}
+              source={{ uri: imageUrl }}
               style={{ width: iconSize, height: iconSize }}
               resizeMode="contain"
               onLoad={() => {
@@ -355,8 +362,9 @@ const TopIconWithLabel = React.memo(
               }}
               onError={() => {
                 if (__DEV__) {
-                  console.log("[CMS] Module icon failed:", moduleKey, iconUrl);
+                  console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
                 }
+                setImageUrl(null);
               }}
             />
           )
@@ -388,7 +396,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { isAuthenticated } = useAuth();
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { scrollY } = useNavbarScroll();
   const [rewardPoints, setRewardPoints] = React.useState(0);
@@ -448,6 +456,10 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const moduleGradientInnerSize = Math.round(moduleIconSize * 0.68);
   const activeModuleKeyFromRoute = MODULE_KEY_BY_TOP_TAB[activeTab];
   const [selectedModuleKey, setSelectedModuleKey] = React.useState(activeModuleKeyFromRoute);
+  const selectedModule = React.useMemo(
+    () => modules.find((module) => module.module_key === selectedModuleKey),
+    [modules, selectedModuleKey],
+  );
 
   React.useEffect(() => {
     setSelectedModuleKey(activeModuleKeyFromRoute);
@@ -468,9 +480,17 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     });
   }, [modules]);
 
+  const moduleNormalColor = React.useMemo(
+    () => selectedModule?.normal_color || (isDark ? "#FFFFFF" : "#111827"),
+    [isDark, selectedModule?.normal_color],
+  );
   const activeThemeColor = React.useMemo(
-    () => banners[activeTab]?.bgColor ?? theme.card,
-    [activeTab, banners, theme]
+    () => {
+      const bannerColor = banners[activeTab]?.bgColor;
+      return selectedModule?.active_color ||
+        (bannerColor && bannerColor !== "transparent" ? bannerColor : "#FFC83D");
+    },
+    [activeTab, banners, selectedModule?.active_color],
   );
   const walletBadgeColor = React.useMemo(
     () => activeThemeColor,
@@ -484,84 +504,18 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   // as translucent glass cards rather than solid boxes on top of it.
   const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.88)";
   const navbarBorder = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
-  const navbarIconColor = isDark ? "#FFFFFF" : "#111827";
-  const navbarMutedColor = isDark ? theme.secondaryText : "#6B7280";
+  const navbarIconColor = moduleNormalColor;
+  const navbarMutedColor = moduleNormalColor;
   const isNavigatingRef = React.useRef(false);
 
-  // Collapse the marketplace-style search/action strip so the module row
-  // becomes the only pinned navbar content while browsing.
-  const headerOpacity = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE * 0.45, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [1, 0.35, 0],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const headerTranslateY = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [0, -rs(14)],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const headerHeight = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [rs(54), 0],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const headerMarginTop = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [rs(2), 0],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const headerPaddingBottom = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [rs(12), 0],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const searchHeight = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [rs(42), rs(36)],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const compactScale = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [1, 0.985],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
-  const modulesTranslateY = React.useMemo(
-    () =>
-      scrollY.interpolate({
-        inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
-        outputRange: [0, -rs(3)],
-        extrapolate: "clamp",
-      }),
-    [scrollY],
-  );
+  const headerOpacity = 1;
+  const headerTranslateY = 0;
+  const headerHeight = rs(78);
+  const headerMarginTop = 0;
+  const headerPaddingBottom = rs(2);
+  const searchHeight = rs(34);
+  const compactScale = 1;
+  const modulesTranslateY = 0;
   const modulesAnimatedStyle = React.useMemo(
     () => ({
       transform: [{ translateY: modulesTranslateY }, { scale: compactScale }] as any,
@@ -741,19 +695,13 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         const user = userInfo?.user || null;
         const walletData = walletBalance?.data || null;
         const fetchedRewardPoints = Number(
-          walletData?.balance ??
-            user?.rewardPoints ??
-            userInfo?.data?.rewardPoints ??
-            0
+          walletData?.balance ?? user?.rewardPoints ?? userInfo?.data?.rewardPoints ?? 0
         );
         const fetchedName = String(
-          userInfo?.name ||
-            user?.name ||
-            user?.full_name ||
-            user?.username ||
-            "Guest"
+          userInfo?.name || user?.name || user?.full_name || user?.username || "Guest"
         ).trim();
         const fetchedLocation = compactAddressLine(user);
+
 
         const snapshot: NavbarUserSnapshot = {
           rewardPoints: fetchedRewardPoints,
@@ -815,65 +763,46 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         ]}
       >
         
-        <AnimatedTouchableOpacity
-          activeOpacity={0.9}
-          style={[
-            styles.deliveryContainer,
-            {
-              backgroundColor: frostedSurface,
-              borderColor: navbarBorder,
-              height: searchHeight,
-            },
-          ]}
-          onPress={handleAddressPress}
-        >
-          <View style={[styles.deliveryIconWrap, { backgroundColor: activeThemeColor }]}>
+        <View style={styles.topRow}>
+          <AnimatedTouchableOpacity
+            activeOpacity={0.9}
+            style={styles.deliveryContainer}
+            onPress={handleAddressPress}
+          >
             <MaterialCommunityIcons
-              name="map-marker-radius-outline"
-              size={17}
-              color={walletBadgeTextColor}
+              name="map-marker"
+              size={21}
+              color={navbarIconColor}
+              style={styles.deliveryPin}
             />
-          </View>
-          <View style={styles.deliveryTextBlock}>
-            <View style={styles.deliveryTitleRow}>
-              <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
-                Deliver to {customerName}
-              </Text>
-              <Text style={[styles.deliveryChangeText, { color: activeThemeColor }]}>
-                Change
+            <View style={styles.deliveryTextBlock}>
+              <View style={styles.deliveryTitleRow}>
+                <Text style={[styles.deliveryPrefix, { color: navbarMutedColor }]} numberOfLines={1}>
+                  Deliver to
+                </Text>
+                <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
+                  {customerName}
+                </Text>
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={18}
+                  color={navbarIconColor}
+                  style={styles.deliveryChevron}
+                />
+              </View>
+              <Text style={[styles.deliveryAddress, { color: navbarMutedColor }]} numberOfLines={1}>
+                {customerLocation}
               </Text>
             </View>
-            <Text style={[styles.deliveryAddress, { color: navbarMutedColor }]} numberOfLines={1}>
-              {customerLocation}
-            </Text>
-          </View>
-        </AnimatedTouchableOpacity>
+          </AnimatedTouchableOpacity>
 
-        <AnimatedTouchableOpacity
-          activeOpacity={0.86}
-          style={[
-            styles.searchIconButton,
-            {
-              backgroundColor: frostedSurface,
-              borderColor: navbarBorder,
-              height: searchHeight,
-              width: searchHeight,
-            },
-          ]}
-          onPress={handleSearchPress}
-          hitSlop={hitSlop(8)}
-        >
-          <MaterialCommunityIcons name="magnify" size={21} color={navbarIconColor} />
-        </AnimatedTouchableOpacity>
-
-        <View style={styles.actionsRow}>
           <TouchableOpacity
             activeOpacity={0.85}
             style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
             onPress={() => navigateToScreen("WalletHistory")}
             hitSlop={hitSlop(8)}
           >
-            <WalletSvg width={21} height={21} />
+            <WalletSvg width={19} height={19} />
             <View
               style={[
                 styles.walletTag,
@@ -881,7 +810,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
               ]}
             >
               <View style={styles.walletTagInner}>
-                <Reward width={12} height={12} />
+                <Reward width={11} height={11} />
                 <Text
                   style={[styles.walletTagText, { color: walletBadgeTextColor }]}
                   numberOfLines={1}
@@ -893,7 +822,20 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
               </View>
             </View>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.searchRow}>
+          <AnimatedTouchableOpacity
+            activeOpacity={0.86}
+            style={[styles.searchBar, { backgroundColor: frostedSurface, borderColor: navbarBorder, height: searchHeight }]}
+            onPress={handleSearchPress}
+            hitSlop={hitSlop(6)}
+          >
+            <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
+            <Text style={[styles.searchPlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
+              Search products and services
+            </Text>
+          </AnimatedTouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}
             style={[styles.bellBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
@@ -951,11 +893,25 @@ const styles = StyleSheet.create({
   },
 
   searchActionsRow: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    paddingHorizontal: rs(14),
+    gap: rs(6),
+    overflow: "visible",
+  },
+
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: rs(16),
+    gap: rs(8),
+    minWidth: 0,
+  },
+
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: rs(10),
-    overflow: "hidden",
+    minWidth: 0,
   },
 
   avatarWrap: {
@@ -980,9 +936,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 999,
-    width: rs(40),
-    height: rs(40),
-    borderWidth: 1,
+    width: rs(34),
+    height: rs(34),
+    borderWidth: 0,
   },
 
   bellDot: {
@@ -1002,19 +958,41 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
+    minHeight: rs(32),
+    paddingRight: rs(2),
+  },
+
+  searchBar: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: rs(16),
-    paddingLeft: rs(7),
-    paddingRight: rs(10),
     borderWidth: 1,
+    paddingHorizontal: rs(12),
+    gap: rs(8),
+  },
+
+  searchPlaceholder: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11.5,
+    fontWeight: "600",
+    includeFontPadding: false,
   },
 
   deliveryIconWrap: {
-    width: rs(30),
-    height: rs(30),
-    borderRadius: rs(15),
+    width: rs(26),
+    height: rs(26),
+    borderRadius: rs(13),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: rs(8),
+    marginRight: rs(6),
+    flexShrink: 0,
+  },
+
+  deliveryPin: {
+    marginRight: rs(5),
     flexShrink: 0,
   },
 
@@ -1030,13 +1008,27 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
 
+  deliveryPrefix: {
+    flexShrink: 0,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "500",
+    includeFontPadding: false,
+    marginRight: rs(3),
+  },
+
   deliveryTitle: {
     flex: 1,
     minWidth: 0,
-    fontSize: 12,
-    lineHeight: 15,
-    fontWeight: "800",
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: "900",
     includeFontPadding: false,
+  },
+
+  deliveryChevron: {
+    marginLeft: rs(4),
+    flexShrink: 0,
   },
 
   deliveryChangeText: {
@@ -1049,10 +1041,10 @@ const styles = StyleSheet.create({
   },
 
   deliveryAddress: {
-    marginTop: rs(2),
+    marginTop: rs(1),
     fontSize: 11,
-    lineHeight: 14,
-    fontWeight: "500",
+    lineHeight: 13,
+    fontWeight: "600",
     includeFontPadding: false,
   },
 
@@ -1069,20 +1061,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    minWidth: rs(78),
-    height: rs(40),
-    borderWidth: 1,
-    paddingLeft: rs(9),
-    paddingRight: rs(8),
-    gap: rs(6),
+    minWidth: rs(82),
+    height: rs(34),
+    borderWidth: 0,
+    paddingLeft: rs(7),
+    paddingRight: rs(5),
+    gap: rs(4),
   },
 
   walletTag: {
-    height: rs(24),
+    height: rs(22),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.72)",
-    paddingHorizontal: rs(8),
+    paddingHorizontal: rs(6),
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#111827",
@@ -1101,8 +1093,8 @@ const styles = StyleSheet.create({
 
   walletTagText: {
     fontWeight: "900",
-    fontSize: 11,
-    lineHeight: 13,
+    fontSize: 10.5,
+    lineHeight: 12,
     includeFontPadding: false,
     textAlignVertical: "center",
     textAlign: "center",
@@ -1117,8 +1109,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minWidth: "100%",
     paddingHorizontal: NAV_TABS_H_PADDING,
-    paddingTop: rs(8),
-    paddingBottom: rs(10),
+    paddingTop: rs(6),
+    paddingBottom: 0,
     gap: NAV_TAB_GAP,
   },
 

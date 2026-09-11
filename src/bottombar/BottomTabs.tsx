@@ -267,7 +267,6 @@ function BottomTabs({
   const inactiveColor = isDark ? theme.secondaryText : INACTIVE_COLOR;
   const barBackgroundColor = isDark ? theme.card : "rgba(255,255,255,0.78)";
   const barBorderColor = isDark ? theme.border : "rgba(17,24,39,0.08)";
-  const homeIndicatorColor = isDark ? "rgba(255,255,255,0.24)" : "#D1D5DB";
   const activeLabelColor = isDark ? tabTheme.activeIcon : tabTheme.activeLabel;
   const dashboardPillBackground = isDark ? "rgba(11,0,24,0.82)" : "rgba(255,255,255,0.82)";
   const dashboardPillBorder = isDark ? "rgba(255,255,255,0.12)" : "rgba(75,0,130,0.1)";
@@ -454,7 +453,6 @@ function BottomTabs({
           onPress={onCenterPress ?? NOOP}
         />
       </View>
-      <View style={[styles.homeIndicator, { bottom: bottomInset + 3, backgroundColor: homeIndicatorColor }]} />
     </View>
   );
 }
@@ -503,7 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
-    // backgroundColor: "#F3F4F6",
+    backgroundColor: "#F3F4F6",
     shadowColor: "#FFFFFF",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.22,
@@ -553,16 +551,6 @@ const styles = StyleSheet.create({
   },
   labelActive: {
     fontWeight: "700",
-  },
-  homeIndicator: {
-    position: "absolute",
-    bottom: 8,
-    alignSelf: "center",
-    width: 120,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    opacity: 0.9,
   },
   centerSpacer: {
     width: 64,
