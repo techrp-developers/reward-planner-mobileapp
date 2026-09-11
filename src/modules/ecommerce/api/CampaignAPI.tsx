@@ -1,6 +1,9 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
-import { API_V1_URL as BASE_API_URL } from '../../../config/apiConfig';
+import {
+  API_V1_URL as BASE_API_URL,
+  normalizeLocalCmsImageUrl,
+} from '../../../config/apiConfig';
 
 /* =========================================================
    TYPES
@@ -47,7 +50,26 @@ export const getCampaignHome = async (): Promise<CampaignHomeResponse> => {
       { headers }
     );
 
-    return res.data;
+    const data = res.data as CampaignHomeResponse;
+
+    return {
+      ...data,
+      data: {
+        ...data.data,
+        posters: (data.data?.posters || []).map((poster) => ({
+          ...poster,
+          banner_image: normalizeLocalCmsImageUrl(poster.banner_image) || '',
+        })),
+        dashboard_posters: (data.data?.dashboard_posters || []).map((poster) => ({
+          ...poster,
+          banner_image: normalizeLocalCmsImageUrl(poster.banner_image) || '',
+        })),
+        flash_sales: (data.data?.flash_sales || []).map((campaign) => ({
+          ...campaign,
+          banner_image: normalizeLocalCmsImageUrl(campaign.banner_image) || '',
+        })),
+      },
+    };
   } catch (error: any) {
     if (Number(error?.response?.status) === 401) {
       await clearAuthToken();

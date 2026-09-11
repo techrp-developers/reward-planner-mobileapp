@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Animated, Image, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIsFocused } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -11,6 +11,7 @@ import ExploreIcon from "../assets/menu/Explore.svg";
 import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
 import { useAppTheme } from "../theme/ThemeContext";
+import RewardIcon from "../assets/homepage/RewardPlannersLogo.png";
 
 const FLOATING_BOTTOM_GAP = 10;
 const FLOATING_BAR_HEIGHT = 64;
@@ -88,46 +89,42 @@ const DASHBOARD_TABS: TabConfig[] = [
 const INACTIVE_COLOR = "#9CA3AF";
 const TAB_ICON_THEME: Record<AppMode, { activeIcon: string; activeLabel: string }> = {
   Product: {
-    activeIcon: "#FF8A00",
+    activeIcon: "#C58A16",
     activeLabel: "#111827",
   },
   Services: {
-    activeIcon: "#1D4ED8",
+    activeIcon: "#2563EB",
     activeLabel: "#06111F",
   },
   Payments: {
-    activeIcon: "#7C3AED",
+    activeIcon: "#9333EA",
     activeLabel: "#120A24",
   },
   DineOut: {
-    activeIcon: "#DC2626",
-    activeLabel: "#1F0A0A",
+    activeIcon: "#E91E63",
+    activeLabel: "#1F0A13",
   },
 };
-const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; icon: string; shadow: string }> = {
+const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; shadow: string }> = {
   Product: {
-    background: "#FF8A00",
-    border: "#FFFFFF",
-    icon: "#FFFFFF",
-    shadow: "#FF8A00",
+    background: "#C58A16",
+    border: "#FFF4C2",
+    shadow: "#C58A16",
   },
   Services: {
-    background: "#FF8A00",
-    border: "#FFFFFF",
-    icon: "#FFFFFF",
-    shadow: "#FF8A00",
+    background: "#2563EB",
+    border: "#DBEAFE",
+    shadow: "#2563EB",
   },
   Payments: {
-    background: "#FF8A00",
-    border: "#FFFFFF",
-    icon: "#FFFFFF",
-    shadow: "#FF8A00",
+    background: "#9333EA",
+    border: "#F3E8FF",
+    shadow: "#9333EA",
   },
   DineOut: {
-    background: "#FF8A00",
-    border: "#FFFFFF",
-    icon: "#FFFFFF",
-    shadow: "#FF8A00",
+    background: "#E91E63",
+    border: "#FFE4F0",
+    shadow: "#E91E63",
   },
 };
 
@@ -201,6 +198,15 @@ const CenterButton = React.memo(function CenterButton({
     >
       <View
         style={[
+          styles.centerGlow,
+          {
+            backgroundColor: centerTheme.background,
+            shadowColor: centerTheme.shadow,
+          },
+        ]}
+      />
+      <View
+        style={[
           styles.centerDiamondButton,
           {
             backgroundColor: centerTheme.background,
@@ -209,12 +215,13 @@ const CenterButton = React.memo(function CenterButton({
           },
         ]}
       >
-        <MaterialCommunityIcons
-          name="shopping-outline"
-          size={28}
-          color={centerTheme.icon}
-          style={styles.centerDashboardIcon}
-        />
+        <View style={styles.centerLogoPlate}>
+          <Image
+            source={RewardIcon}
+            style={styles.centerLogo}
+            resizeMode="contain"
+          />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -258,7 +265,7 @@ function BottomTabs({
       : TABS;
   const tabTheme = TAB_ICON_THEME[activeMode] ?? TAB_ICON_THEME.Product;
   const inactiveColor = isDark ? theme.secondaryText : INACTIVE_COLOR;
-  const barBackgroundColor = isDark ? theme.card : "#FFFFFF";
+  const barBackgroundColor = isDark ? theme.card : "rgba(255,255,255,0.78)";
   const barBorderColor = isDark ? theme.border : "rgba(17,24,39,0.08)";
   const homeIndicatorColor = isDark ? "rgba(255,255,255,0.24)" : "#D1D5DB";
   const activeLabelColor = isDark ? tabTheme.activeIcon : tabTheme.activeLabel;
@@ -390,7 +397,7 @@ function BottomTabs({
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
         {
           height: TAB_BAR_HEIGHT + bottomInset,
-          backgroundColor: layoutMode === "navigator" ? barBackgroundColor : "transparent",
+          backgroundColor: layoutMode === "navigator" ? theme.background : "transparent",
         },
       ]}
     >
@@ -496,7 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F4F6",
+    // backgroundColor: "#F3F4F6",
     shadowColor: "#FFFFFF",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.22,
@@ -512,7 +519,7 @@ const styles = StyleSheet.create({
   },
   navigatorWrap: {
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     alignItems: "center",
   },
   bar: {
@@ -569,22 +576,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
+  },
+  centerGlow: {
+    position: "absolute",
+    width: CENTER_BUTTON_SIZE + 10,
+    height: CENTER_BUTTON_SIZE + 10,
+    borderRadius: (CENTER_BUTTON_SIZE + 10) / 2,
+    opacity: 0.18,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+    elevation: 8,
   },
   centerDiamondButton: {
     width: CENTER_BUTTON_SIZE,
     height: CENTER_BUTTON_SIZE,
     borderRadius: CENTER_BUTTON_SIZE / 2,
-    borderWidth: 0,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.26,
-    shadowRadius: 12,
-    elevation: 14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 15,
+    elevation: 16,
   },
-  centerDashboardIcon: {
-    transform: [{ rotate: "0deg" }],
+  centerLogoPlate: {
+    width: CENTER_BUTTON_SIZE - 12,
+    height: CENTER_BUTTON_SIZE - 12,
+    borderRadius: (CENTER_BUTTON_SIZE - 12) / 2,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.84)",
+    overflow: "hidden",
+  },
+  centerLogo: {
+    width: CENTER_BUTTON_SIZE - 22,
+    height: CENTER_BUTTON_SIZE - 22,
   },
   badge: {
     position: "absolute",

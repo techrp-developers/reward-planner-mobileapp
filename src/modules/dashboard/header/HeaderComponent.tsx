@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { useGlobalSearch } from './useGlobalSearch';
 import type { SearchData } from '../api/GlobalSearchAPI';
+import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
@@ -74,6 +75,7 @@ const withOpacity = (hex: string, alpha: number): string => {
 const HeaderComponent: React.FC<HeaderProps> = ({
   userName = 'User',
   userImageUri,
+  companyLogoUri,
   surface = 'solid',
   textColor,
   dismissSignal = 0,
@@ -88,6 +90,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery,  setSearchQuery]  = useState('');
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [companyLogoFailed, setCompanyLogoFailed] = useState(false);
 
   // All animations use native driver (opacity + transform only)
   const searchSweep = useRef(new Animated.Value(0)).current;
@@ -98,6 +102,22 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const safeTop = insets.top > 0
     ? insets.top
     : Platform.OS === 'android' ? ANDROID_STATUS_BAR : IOS_FALLBACK_TOP;
+  const normalizedUserImageUri = useMemo(
+    () => normalizeLocalCmsImageUrl(userImageUri),
+    [userImageUri],
+  );
+  const normalizedCompanyLogoUri = useMemo(
+    () => normalizeLocalCmsImageUrl(companyLogoUri),
+    [companyLogoUri],
+  );
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [normalizedUserImageUri]);
+
+  useEffect(() => {
+    setCompanyLogoFailed(false);
+  }, [normalizedCompanyLogoUri]);
 
   // ── Global search hook ────────────────────────────────────────────────────
 
@@ -223,11 +243,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             activeOpacity={0.8}
           >
             <View style={[styles.avatarRing, { backgroundColor: tk.avatarRingBg }]}>
-              {userImageUri ? (
+              {normalizedUserImageUri && !avatarFailed ? (
                 <Image
-                  source={{ uri: userImageUri }}
+                  source={{ uri: normalizedUserImageUri as string }}
                   style={styles.avatarImg as ImageStyle}
                   resizeMode="cover"
+                  onError={() => setAvatarFailed(true)}
                 />
               ) : (
                 <MaterialCommunityIcons name="account-circle" size={32} color="#FFFFFF" />
@@ -243,6 +264,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               Welcome back to Reward Planner
             </Text>
           </View>
+
+          {normalizedCompanyLogoUri && !companyLogoFailed ? (
+            <View style={[styles.logoPill, { backgroundColor: tk.avatarRingBg }]}>
+              <View style={styles.logoImageWrap}>
+                <Image
+                  source={{ uri: normalizedCompanyLogoUri }}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                  onError={() => setCompanyLogoFailed(true)}
+                />
+              </View>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             onPress={onNotificationPress}

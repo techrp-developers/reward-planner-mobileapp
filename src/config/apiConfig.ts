@@ -7,7 +7,7 @@ export type ApiEnvironment = 'local' | 'live';
 // - debug/development builds use the local API
 // - production/release builds use the live API
 // Set to 'live' or 'local' only when you need to force a target while testing.
-const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = null;
+const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = 'live';
 
 export const API_ENVIRONMENT: ApiEnvironment =
   API_ENVIRONMENT_OVERRIDE ?? (__DEV__ ? 'local' : 'live');
@@ -20,10 +20,10 @@ const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 // renewal, new Wi-Fi network, etc). Run `ipconfig` (Windows) / `ifconfig`
 // (Mac/Linux) to find it — physical devices need this because 'localhost'
 // on-device points back at the device itself, not your PC.
-export const LOCAL_API_HOST = '192.168.1.245';
+export const LOCAL_API_HOST = '192.168.1.111';
 
-// Physical Android devices must use the dev machine's LAN IP. Android
-// resolves "localhost" to the device itself, not this computer.
+// Physical Android devices can use adb reverse to reach the dev machine at
+// 127.0.0.1 when the local Wi-Fi cannot route to LOCAL_API_HOST.
 export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = true;
 
 // Resolve the right local host per target automatically:
@@ -52,18 +52,19 @@ export const LOCAL_SERVER_HOST = IS_LOCAL_ENVIRONMENT ? resolveLocalHost() : '';
 const LOCAL_SERVER_URL = `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`;
 
 const LIVE_SERVER_URL = 'https://rewardplanners.com';
+const LIVE_IMAGE_CDN_URL = 'https://cdn.rewardplanners.com';
 
 export const SERVER_URL = IS_LOCAL_ENVIRONMENT ? LOCAL_SERVER_URL : LIVE_SERVER_URL;
+export const IMAGE_CDN_URL = IS_LOCAL_ENVIRONMENT ? SERVER_URL : LIVE_IMAGE_CDN_URL;
 
 // Live traffic uses the reverse-proxy prefix; the local Express server does not.
 export const API_BASE_URL =
   IS_LOCAL_ENVIRONMENT ? SERVER_URL : `${SERVER_URL}/api/crm`;
 export const API_V1_URL = `${API_BASE_URL}/v1`;
 export const API_V1_URL_WITH_SLASH = `${API_V1_URL}/`;
-export const UPLOADS_URL =
-  IS_LOCAL_ENVIRONMENT
-    ? `${SERVER_URL}/uploads/`
-    : `${API_BASE_URL}/uploads/`;
+export const UPLOADS_URL = IS_LOCAL_ENVIRONMENT
+  ? `${SERVER_URL}/uploads/`
+  : `${IMAGE_CDN_URL}/public/`;
 
 const LOCAL_BACKEND_HOSTS = new Set([
   'localhost',
@@ -92,9 +93,15 @@ export const normalizeLocalCmsImageUrl = (
     return null;
   }
 
-  if (/^https:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
+  const stripImageTrailingSlash = (value: string) =>
+    value.replace(/(\.(?:png|jpe?g|webp|gif|svg|avif))\/(?=([?#]|$))/i, '$1');
+
+  const normalizeUploadsPath = (path: string) =>
+    stripImageTrailingSlash(
+      path
+        .replace(/^\/api\/crm\/uploads\//i, '/uploads/')
+        .replace(/^\/uploads\//i, IS_LOCAL_ENVIRONMENT ? '/uploads/' : '/public/'),
+    );
 
   if (/^https?:\/\//i.test(trimmed)) {
     try {
@@ -111,16 +118,39 @@ export const normalizeLocalCmsImageUrl = (
         // string instead of trusting url.pathname/search/hash.
         const originMatch = trimmed.match(/^https?:\/\/[^/]+/i);
         const pathAndQuery = originMatch ? trimmed.slice(originMatch[0].length) : '';
-        return `${SERVER_URL}${pathAndQuery}`;
+        return encodeURI(`${SERVER_URL}${pathAndQuery}`);
       }
+
+      const isRewardPlannersHost =
+        url.hostname === 'rewardplanners.com' ||
+        url.hostname.endsWith('.rewardplanners.com');
+      const normalizedProtocol = isRewardPlannersHost ? 'https:' : url.protocol;
+      const normalizedPath = normalizeUploadsPath(url.pathname);
+      const origin =
+        isRewardPlannersHost &&
+        (normalizedPath.startsWith('/uploads/') || normalizedPath.startsWith('/public/'))
+          ? IMAGE_CDN_URL
+          : `${normalizedProtocol}//${url.host}`;
+
+      return encodeURI(
+        `${origin}${normalizedPath}${url.search}${url.hash}`,
+      );
     } catch {
-      return trimmed;
+      return encodeURI(stripImageTrailingSlash(trimmed));
     }
   }
 
-  if (trimmed.startsWith('/uploads/')) {
-    return `${UPLOADS_URL}${trimmed.replace(/^\/uploads\//, '')}`;
+  if (/^\/?api\/crm\/uploads\//i.test(trimmed)) {
+    return encodeURI(
+      `${UPLOADS_URL}${stripImageTrailingSlash(trimmed).replace(/^\/?api\/crm\/uploads\//i, '')}`,
+    );
   }
 
-  return trimmed;
+  if (/^\/?uploads\//i.test(trimmed)) {
+    return encodeURI(
+      `${UPLOADS_URL}${stripImageTrailingSlash(trimmed).replace(/^\/?uploads\//i, '')}`,
+    );
+  }
+
+  return encodeURI(stripImageTrailingSlash(trimmed));
 };

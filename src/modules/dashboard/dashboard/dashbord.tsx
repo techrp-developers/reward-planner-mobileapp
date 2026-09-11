@@ -33,7 +33,7 @@ import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
 import { fetchResolvedZones } from '../../common/cms/cmsContentApi';
 import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
-import { API_V1_URL } from '../../../config/apiConfig';
+import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import OffersBanner from '../../ecommerce/components/home/OffersBanner';
 import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
 
@@ -171,9 +171,11 @@ function Dashbord() {
 
       if (userRes.data?.success) {
         const d = userRes.data.data;
+        const nextUserImage = normalizeLocalCmsImageUrl(d.userImage);
+        const nextCompanyLogo = normalizeLocalCmsImageUrl(d.company?.logo);
         if (d.name)          setHeaderUserName((prev) => (prev === d.name ? prev : d.name));
-        if (d.userImage)     setHeaderUserImage((prev) => (prev === d.userImage ? prev : d.userImage));
-        if (d.company?.logo) setHeaderCompanyLogo((prev) => (prev === d.company.logo ? prev : d.company.logo));
+        if (nextUserImage)   setHeaderUserImage((prev) => (prev === nextUserImage ? prev : nextUserImage));
+        if (nextCompanyLogo) setHeaderCompanyLogo((prev) => (prev === nextCompanyLogo ? prev : nextCompanyLogo));
         if (d.thought)       setThought((prev) => (prev === d.thought ? prev : d.thought));
 
         const apiStepGoal = Number(d.steps?.goal_steps);
@@ -187,7 +189,7 @@ function Dashbord() {
           name:        b.name,
           designation: b.role,
           department:  b.department,
-          photo:       b.image ?? null,
+          photo:       normalizeLocalCmsImageUrl(b.image) ?? null,
         }));
         setBirthdays((prev) => (
           JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays
@@ -195,8 +197,8 @@ function Dashbord() {
 
         dashboardHeaderCache = {
           userName: d.name || headerUserName,
-          userImage: d.userImage ?? headerUserImage,
-          companyLogo: d.company?.logo ?? headerCompanyLogo,
+          userImage: nextUserImage ?? headerUserImage,
+          companyLogo: nextCompanyLogo ?? headerCompanyLogo,
           thought: d.thought ?? thought,
           stepGoal:
             Number.isFinite(Number(d.steps?.goal_steps)) && Number(d.steps?.goal_steps) > 0

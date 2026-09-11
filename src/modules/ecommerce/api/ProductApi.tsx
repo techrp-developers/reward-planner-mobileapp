@@ -1,7 +1,11 @@
 // src/api/ProductApi.ts
 import axios from 'axios';
 import api from '../../common/auth/api/axios';
-import { API_BASE_URL, SERVER_URL as IMAGE_BASE_URL } from '../../../config/apiConfig';
+import {
+  API_BASE_URL,
+  SERVER_URL as IMAGE_BASE_URL,
+  normalizeLocalCmsImageUrl,
+} from '../../../config/apiConfig';
 
 export type ImageSizePreset =
   | 'thumbnail'
@@ -185,8 +189,11 @@ export const fetchAllOfferPosters = async () => {
 };
 export const getOfferPosterUrl = (path?: string) => {
   if (!path) return '';
-  const base = encodeURI(`${API_BASE_URL}/uploads${path}`);
-  return appendImageOptimizationParams(base, 480, 60);
+  const normalizedPath = /^https?:\/\//i.test(path) || /^\/?uploads\//i.test(path)
+    ? path
+    : `/uploads/${path.replace(/^\/+/, '')}`;
+  const base = normalizeLocalCmsImageUrl(normalizedPath);
+  return base ? appendImageOptimizationParams(base, 480, 60) : '';
 };
 
 export const fetchSearchSuggestions = async (query: string) => {
