@@ -38,10 +38,14 @@ export const checkoutPreviewQueryKey = (params?: {
   return ["ecommerce", "checkout-preview", "cart", useRewards] as const;
 };
 
-export const productDetailsQueryKey = (productId: number | string) => [
+export const productDetailsQueryKey = (
+  productId: number | string,
+  campaignId?: number | string,
+) => [
   "ecommerce",
   "product-details",
   String(productId),
+  String(campaignId ?? ""),
 ] as const;
 
 type NavigateWithPrefetchOptions = {
@@ -74,10 +78,13 @@ export const handleNavigateWithPrefetch = ({
   navigate();
 };
 
-export const prefetchProductDetails = (productId: number | string) => {
+export const prefetchProductDetails = (
+  productId: number | string,
+  campaignId?: number | string,
+) => {
   return queryClient.prefetchQuery({
-    queryKey: productDetailsQueryKey(productId),
-    queryFn: () => fetchProductDetailsByID(productId),
+    queryKey: productDetailsQueryKey(productId, campaignId),
+    queryFn: () => fetchProductDetailsByID(productId, campaignId),
     staleTime: PRODUCT_DETAILS_STALE_TIME,
   });
 };

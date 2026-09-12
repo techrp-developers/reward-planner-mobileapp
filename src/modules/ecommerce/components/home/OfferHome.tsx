@@ -220,10 +220,11 @@ const FlashOfferProductCard = React.memo(({
       navigate: () =>
         navigation.navigate("ProductDescription", {
           productId: String(productId),
+          variantId: variantId == null ? undefined : String(variantId),
           campaignId: item.campaign_id,
         }),
-      queryKey: productDetailsQueryKey(String(productId)),
-      queryFn: () => fetchProductDetailsByID(String(productId)),
+        queryKey: productDetailsQueryKey(String(productId), item.campaign_id),
+        queryFn: () => fetchProductDetailsByID(String(productId), item.campaign_id),
     });
   };
 

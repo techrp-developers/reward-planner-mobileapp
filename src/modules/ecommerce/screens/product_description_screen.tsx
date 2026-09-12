@@ -177,7 +177,8 @@ export default function
       });
     };
 
-    const cachedProduct = queryClient.getQueryData<any>(productDetailsQueryKey(productId));
+    const detailsQueryKey = productDetailsQueryKey(productId, campaignId);
+    const cachedProduct = queryClient.getQueryData<any>(detailsQueryKey);
     if (cachedProduct) {
       applyProductState(cachedProduct);
       setLoading(false);
@@ -187,7 +188,7 @@ export default function
 
     // Start the network request immediately. Rendering the heavier product
     // content still waits for the native screen transition to finish below.
-    const productRequest = fetchProductDetailsByID(productId)
+    const productRequest = fetchProductDetailsByID(productId, campaignId)
       .then((raw) => ({ raw, error: null }))
       .catch((error) => ({ raw: null, error }));
 
@@ -215,7 +216,7 @@ export default function
           ...raw,
           variants: Array.isArray(raw?.variants) ? raw.variants.map(normalizeVariant) : [],
         };
-        queryClient.setQueryData(productDetailsQueryKey(productId), p);
+        queryClient.setQueryData(detailsQueryKey, p);
 
         if (!isMounted) return;
         applyProductState(p);
@@ -235,7 +236,7 @@ export default function
       isMounted = false;
       interactionTask.cancel();
     };
-  }, [productId, queryClient, requestedVariantId]);
+  }, [campaignId, productId, queryClient, requestedVariantId]);
 
 
 
@@ -444,6 +445,7 @@ export default function
     }
   }, [
     adding,
+    campaignId,
     isAuthenticated,
     product?.product_id,
     selectedVariant?.variant_id,
@@ -510,12 +512,15 @@ export default function
   if (!product) return <Text style={[styles.notFoundText, { color: theme.text, backgroundColor: theme.background }]}>Product not found</Text>;
   const variant = selectedVariant;
 
-  const salePrice = variant ? `₹${variant.sale_price}` : "₹0";
-  const mrp = variant ? `₹${variant.mrp}` : "";
+  const parseVariantPrice = (value: unknown) => Number(String(value ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const salePriceValue = variant ? parseVariantPrice(variant.price ?? variant.sale_price) : 0;
+  const mrpValue = variant ? parseVariantPrice(variant.mrp) : 0;
+  const salePrice = variant ? `₹${salePriceValue}` : "₹0";
+  const mrp = variant ? `₹${mrpValue}` : "";
 
   const offPercent =
-    variant && +variant.mrp > +variant.sale_price
-      ? `${Math.round(((+variant.mrp - +variant.sale_price) / +variant.mrp) * 100)}%`
+    variant && mrpValue > salePriceValue
+      ? `${Math.round(((mrpValue - salePriceValue) / mrpValue) * 100)}%`
       : "";
 
   const normalizeDescription = (value: unknown) => {

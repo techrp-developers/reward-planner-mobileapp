@@ -30,7 +30,8 @@ const normalizeCampaignProducts = (response: any) => {
 
   return products.map((product: any) => normalizeProduct({
     ...product,
-    id: product.id ?? product.product_id,
+    id: product.product_id ?? product.id,
+    campaign_item_id: product.id,
     title: product.product_name,
     brand: product.brand_name,
     price: product.price ?? product.final_price,
@@ -86,7 +87,16 @@ export default function CampaignProductsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <ProductCard item={item} cardWidth={cardWidth} shouldLoadImage />
+            <ProductCard
+              item={item}
+              cardWidth={cardWidth}
+              shouldLoadImage
+              onProductPress={(productId, product) => navigation.navigate('ProductDescription', {
+                productId,
+                variantId: product.variant_id,
+                campaignId,
+              })}
+            />
           )}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
