@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { FlatList, InteractionManager, Platform, StyleSheet, View, ViewToken } from 'react-native';
+import { FlatList, InteractionManager, Platform, RefreshControl, StyleSheet, View, ViewToken } from 'react-native';
 
 import Banner from '../constant/Banner';
 import ServicesHome from '../home/ServicesHome';
@@ -9,6 +9,7 @@ import QuickServices from '../home/QuickServices';
 import BundleService from '../home/BundleService';
 import ExclusiveOffers from '../home/ExclusiveOffers';
 import { useServicesTheme } from '../../utils/useServicesTheme';
+import { queryClient } from '../../../../query/queryClient';
 
 type ServiceSectionKey =
   | 'banner'
@@ -57,6 +58,7 @@ ServiceSection.displayName = 'ServiceHomeSection';
 
 function HomeScreen() {
   const { colors } = useServicesTheme();
+  const [refreshing, setRefreshing] = useState(false);
   const [readySections, setReadySections] = useState<Set<ServiceSectionKey>>(
     () => new Set(READY_SERVICE_SECTIONS),
   );
@@ -98,6 +100,15 @@ function HomeScreen() {
     [readySections],
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
@@ -113,6 +124,7 @@ function HomeScreen() {
         removeClippedSubviews={Platform.OS === 'android'}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </View>
   );

@@ -3,6 +3,7 @@ import {
   FlatList,
   InteractionManager,
   Platform,
+  RefreshControl,
   StyleSheet,
   View,
   ViewToken,
@@ -14,6 +15,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { EcommerceDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { queryClient } from '../../../query/queryClient';
 
 // Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -220,6 +222,7 @@ const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
 
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
   const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
   const homeSections = useMemo<HomeSection[]>(
     () => layout.sections.map(({ key }) => ({ key: key as SectionKey })),
@@ -351,6 +354,14 @@ function HomeScreen() {
     [readySections]
   );
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['ecommerce'] });
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
   const getItemLayout = useCallback(
     (_: ArrayLike<HomeSection> | null | undefined, index: number) => {
       const key = homeSections[index].key;
@@ -380,6 +391,7 @@ function HomeScreen() {
         viewabilityConfig={viewabilityConfig}
         getItemLayout={getItemLayout}
         ListFooterComponent={ListFooterSpacer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </ThemedHomeSurface>
   );

@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   Platform,
   Pressable,
 } from 'react-native';
@@ -33,6 +34,7 @@ import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
 import { API_V1_URL } from '../../../config/apiConfig';
+import { queryClient } from '../../../query/queryClient';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
@@ -101,6 +103,7 @@ function Dashbord() {
     () => dashboardHeaderCache?.birthdays ?? [],
   );
   const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const hasBirthdays = birthdays.length > 0;
   const { data: walletBalanceResponse } = useQuery({
     queryKey: ['dashboard', 'header-wallet-balance'],
@@ -111,10 +114,11 @@ function Dashbord() {
   });
   const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
 
-  const loadHeaderInfo = useCallback(async () => {
+  const loadHeaderInfo = useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated) return;
 
     if (
+      !forceRefresh &&
       dashboardHeaderCache &&
       Date.now() - dashboardHeaderCache.fetchedAt < DASHBOARD_HEADER_CACHE_TTL_MS
     ) {
@@ -218,6 +222,19 @@ function Dashbord() {
     loadHeaderInfo();
   }, [loadHeaderInfo]));
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    dashboardHeaderCache = null;
+    try {
+      await Promise.all([
+        loadHeaderInfo(true),
+        queryClient.invalidateQueries(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadHeaderInfo]);
+
   const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
     setOpeningModule(tab);
 
@@ -294,6 +311,7 @@ function Dashbord() {
         scrollEnabled={!isSearchOpen}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         removeClippedSubviews={Platform.OS === 'android'}
         bounces
       >
