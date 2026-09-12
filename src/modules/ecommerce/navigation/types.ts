@@ -18,7 +18,11 @@ export type HomeStackParamList = {
     subcategoryId?: number | string;
     subcategoryTitle?: string;
   };
-  ProductDescription: { productId: number | string; variantId?: number | string };
+  ProductDescription: {
+    productId: number | string;
+    variantId?: number | string;
+    campaignId?: number | string;
+  };
   Cart: undefined;
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   WithAddress: undefined;
@@ -43,6 +47,7 @@ export type HomeStackParamList = {
     product_id?: number;
     variant_id?: number;
     qty?: number;
+    campaign_id?: number;
   };
 
   OrderConfirm: { order_id?: number; items?: any[]; total?: number };
@@ -107,6 +112,7 @@ export type OrderStepParams = {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
 };
 
 // Extend HomeStackParamList OrderStepUI to accept params

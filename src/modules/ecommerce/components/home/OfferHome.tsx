@@ -217,7 +217,11 @@ const FlashOfferProductCard = React.memo(({
   const handlePress = () => {
     if (!productId) return;
     handleNavigateWithPrefetch({
-      navigate: () => navigation.navigate("ProductDescription", { productId: String(productId) }),
+      navigate: () =>
+        navigation.navigate("ProductDescription", {
+          productId: String(productId),
+          campaignId: item.campaign_id,
+        }),
       queryKey: productDetailsQueryKey(String(productId)),
       queryFn: () => fetchProductDetailsByID(String(productId)),
     });
@@ -357,6 +361,7 @@ export default function OfferHome() {
         id: p.id,
         product_id: p.product_id,
         variant_id: p.variant_id,
+        campaign_id: flashCampaignId,
         product_name: p.product_name,
         title: p.product_name,
         brand: p.brand_name || '',

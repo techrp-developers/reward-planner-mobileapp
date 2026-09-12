@@ -17,6 +17,7 @@ export const checkoutPreviewQueryKey = (params?: {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const useRewards = params?.use_rewards ?? true;
@@ -29,6 +30,7 @@ export const checkoutPreviewQueryKey = (params?: {
       String(params?.product_id ?? ""),
       String(params?.variant_id ?? ""),
       String(params?.qty ?? 1),
+      String(params?.campaign_id ?? ""),
       useRewards,
     ] as const;
   }
@@ -105,6 +107,7 @@ export const prefetchCheckoutPreview = (params?: {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const mode = params?.mode === "buy_now" ? "buy_now" : "cart";
@@ -125,9 +128,18 @@ export const prefetchCheckoutPreview = (params?: {
         product_id: productId,
         variant_id: variantId,
         qty,
+        campaign_id: params?.campaign_id,
         use_rewards: useRewards,
       }),
-      queryFn: () => fetchBuyNowCheckout(productId, variantId, qty, useRewards),
+      queryFn: () =>
+        fetchBuyNowCheckout(
+          productId,
+          variantId,
+          qty,
+          useRewards,
+          undefined,
+          params?.campaign_id == null ? null : Number(params.campaign_id),
+        ),
       staleTime: CART_STALE_TIME,
     });
   }
@@ -144,6 +156,7 @@ export const prefetchCheckoutScreenData = async (params?: {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
   use_rewards?: boolean;
 }) => {
   await Promise.allSettled([

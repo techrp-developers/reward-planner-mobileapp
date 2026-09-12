@@ -5,12 +5,13 @@ export type AddToCartPayload = {
   product_id: number;
   variant_id: number;
   quantity: number;
+  campaign_id?: number | null;
 };
 
 export const addToCart = async (payload: AddToCartPayload) => {
   __DEV__ && console.log("📦 Sending AddToCart payload:", payload);
 
-  const candidates: Array<{ endpoint: string; body: Record<string, number> }> = [
+  const candidates: Array<{ endpoint: string; body: Record<string, number | null> }> = [
     {
       endpoint: "/v1/cart/cart-item",
       body: payload,
@@ -25,6 +26,7 @@ export const addToCart = async (payload: AddToCartPayload) => {
         product_id: payload.product_id,
         variant_id: payload.variant_id,
         qty: payload.quantity,
+        campaign_id: payload.campaign_id ?? null,
       },
     },
     {
@@ -33,6 +35,7 @@ export const addToCart = async (payload: AddToCartPayload) => {
         product_id: payload.product_id,
         variant_id: payload.variant_id,
         qty: payload.quantity,
+        campaign_id: payload.campaign_id ?? null,
       },
     },
   ];

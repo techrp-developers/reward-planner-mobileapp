@@ -58,7 +58,11 @@ const isVariantAvailable = (variant: any) =>
 export default function
   ProductDescriptionScreen() {
   const route = useRoute<RouteT>();
-  const { productId, variantId: requestedVariantId } = route.params;
+  const {
+    productId,
+    variantId: requestedVariantId,
+    campaignId,
+  } = route.params;
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
   const { addItem, updateQuantity, totalQuantity, items: cartItems } = useCart();
@@ -131,6 +135,7 @@ export default function
       product_id: Number(product.product_id),
       variant_id: Number(selectedVariant.variant_id),
       qty: Math.max(1, Number(qty) || 1),
+      campaign_id: campaignId == null ? undefined : Number(campaignId),
     };
 
     __DEV__ && console.log("➡️ Buy Now params:", buyNowParams);
@@ -140,12 +145,13 @@ export default function
       product_id: buyNowParams.product_id,
       variant_id: buyNowParams.variant_id,
       qty: buyNowParams.qty,
+      campaign_id: buyNowParams.campaign_id,
     }).catch(() => {
       // Ignore prefetch errors and continue navigation.
     });
 
     navigation.navigate("OrderStepUI", buyNowParams);
-  }, [isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
+  }, [campaignId, isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
 
 
 
@@ -413,7 +419,7 @@ export default function
         return;
       }
 
-      await addItem(product.product_id, selectedVariant.variant_id, qty);
+      await addItem(product.product_id, selectedVariant.variant_id, qty, campaignId);
 
       // Open sheet first so it isn't blocked by alert overlays.
       setSheetVisible(true);

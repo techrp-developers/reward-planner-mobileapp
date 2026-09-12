@@ -218,6 +218,7 @@ export default function OrderStepUI() {
   const product_id = Number(route?.params?.product_id);
   const variant_id = Number(route?.params?.variant_id);
   const qty = Math.max(1, Number(route?.params?.qty ?? 1));
+  const campaign_id = route?.params?.campaign_id;
   const [buyNowQty, setBuyNowQty] = useState(qty);
   const [cartSummary, setCartSummary] =
     useState<CheckoutSummary>(emptyCheckoutSummary);
@@ -345,9 +346,10 @@ export default function OrderStepUI() {
         product_id,
         variant_id,
         qty: buyNowQty,
+        campaign_id,
         use_rewards: useRewards,
       }),
-    [mode, product_id, variant_id, buyNowQty, useRewards],
+    [mode, product_id, variant_id, buyNowQty, campaign_id, useRewards],
   );
 
   const {
@@ -376,6 +378,8 @@ export default function OrderStepUI() {
           variant_id,
           buyNowQty,
           useRewards,
+          undefined,
+          campaign_id == null ? null : Number(campaign_id),
         );
       }
       return fetchCheckoutCart(useRewards);
@@ -770,6 +774,7 @@ export default function OrderStepUI() {
               buyNowQty,
               useRewards,
               safeToNumber(selectedAddressId),
+              campaign_id == null ? null : Number(campaign_id),
             );
           }
           return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
@@ -794,6 +799,7 @@ export default function OrderStepUI() {
           product_id: safeToNumber(product_id),
           variant_id: safeToNumber(variant_id),
           quantity: buyNowQty,
+          campaign_id: campaign_id == null ? null : Number(campaign_id),
           address_id: safeToNumber(selectedAddressId),
           expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards
