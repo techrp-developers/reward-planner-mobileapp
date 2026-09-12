@@ -31,7 +31,7 @@ function OTPScreen() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(true);
-  const otpRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
+  const otpRefs = useRef<Array<TextInput | null>>(Array(6).fill(null));
 
   useEffect(() => {
     if (timer === 0) {
@@ -47,11 +47,31 @@ function OTPScreen() {
   }, [timer]);
 
   const handleOtpChange = (text: string, index: number) => {
+    const digits = text.replace(/\D/g, "");
+
+    // SMS autofill and clipboard paste can deliver the complete OTP to one
+    // input. Distribute it across the six visible boxes.
+    if (digits.length > 1) {
+      const nextOtp = [...otpValues];
+      const startIndex = digits.length >= 6 ? 0 : index;
+
+      digits.slice(0, 6 - startIndex).split("").forEach((digit, offset) => {
+        nextOtp[startIndex + offset] = digit;
+      });
+
+      setOtpValues(nextOtp);
+
+      const nextEmptyIndex = nextOtp.findIndex((digit) => !digit);
+      const focusIndex = nextEmptyIndex >= 0 ? nextEmptyIndex : 5;
+      otpRefs.current[focusIndex]?.focus();
+      return;
+    }
+
     const newOtp = [...otpValues];
-    newOtp[index] = text;
+    newOtp[index] = digits;
     setOtpValues(newOtp);
 
-    if (text && index < 5) {
+    if (digits && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -128,8 +148,12 @@ function OTPScreen() {
               ref={(ref) => {
                 otpRefs.current[i] = ref;
               }}
-              maxLength={1}
+              maxLength={6}
               keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+              importantForAutofill="yes"
+              selectTextOnFocus
               style={[
                 styles.otpInput,
                 {
