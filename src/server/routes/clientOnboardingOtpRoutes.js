@@ -1,0 +1,186 @@
+const crypto = require("crypto");
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const { onboardingOtpLimiter, onboardingStatusLimiter, onboardingSubmitLimiter } = require("../app/common/middlewares/rateLimiter");
+const { sendOtpEmail, sendAdminOnboardedEmail } = require("../config/mail");
+const { enqueueWhatsApp } = require("../services/whatsapp/waEnqueueService");
+const { normalizeIndianMobile } = require("../services/whatsapp/phone");
+const { createSigningSession, verifySigningSession, downloadSigningArtifacts } = require("../services/zohoSignService");
+const { createClientOnboarding } = require("../services/clientOnboardingService");
+
+const router = express.Router();
+const sessions = new Map();
+const OTP_TTL_MS = 10 * 60 * 1000;
+const VERIFICATION_PROOF_TTL_SECONDS = 24 * 60 * 60;
+const RESEND_COOLDOWN_MS = 30 * 1000;
+const MAX_ATTEMPTS = 5;
+const REQUIRE_ZOHO_SIGNING = String(process.env.REQUIRE_ZOHO_SIGNING ?? "true").toLowerCase() !== "false";
+
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+const otpHash = (sessionId, otp) => crypto.createHash("sha256").update(`${sessionId}:${otp}`).digest();
+const verificationSecret = () => process.env.CLIENT_ONBOARDING_PROOF_SECRET || process.env.JWT_SECRET;
+
+function createVerificationProof(session) {
+  const secret = verificationSecret();
+  if (!secret) throw new Error("Client onboarding verification secret is not configured");
+  return jwt.sign({ type: "client_onboarding_verification", channel: session.channel, destination: session.destination }, secret, { algorithm: "HS256", expiresIn: VERIFICATION_PROOF_TTL_SECONDS });
+}
+
+function readVerificationProof(token) {
+  const secret = verificationSecret();
+  if (!secret) throw new Error("Client onboarding verification secret is not configured");
+  const proof = jwt.verify(token, secret, { algorithms: ["HS256"] });
+  if (proof?.type !== "client_onboarding_verification") throw new Error("Invalid verification proof");
+  return proof;
+}
+
+function destinationFor(channel, destination) {
+  if (channel === "email") {
+    const email = normalizeEmail(destination);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : null;
+  }
+  if (channel === "whatsapp") return normalizeIndianMobile(destination);
+  return null;
+}
+
+router.post("/send", onboardingOtpLimiter, async (req, res) => {
+  const channel = String(req.body?.channel || "").toLowerCase();
+  const destination = destinationFor(channel, req.body?.destination);
+  if (!destination) return res.status(400).json({ success: false, message: `Enter a valid ${channel === "email" ? "email address" : "WhatsApp number"}.` });
+
+  const cooldownKey = `${channel}:${destination}`;
+  const latest = [...sessions.values()].find((session) => session.cooldownKey === cooldownKey && Date.now() - session.sentAt < RESEND_COOLDOWN_MS);
+  if (latest) return res.status(429).json({ success: false, message: "Please wait 30 seconds before requesting another OTP.", retryAfterSeconds: Math.ceil((RESEND_COOLDOWN_MS - (Date.now() - latest.sentAt)) / 1000) });
+
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const sessionId = crypto.randomUUID();
+  const session = { sessionId, channel, destination, cooldownKey, hash: otpHash(sessionId, otp), sentAt: Date.now(), expiresAt: Date.now() + OTP_TTL_MS, attempts: 0 };
+
+  try {
+    if (channel === "email") {
+      await sendOtpEmail(destination, otp);
+    } else {
+      const queued = await enqueueWhatsApp({ eventName: "onbord_verify", ctx: { phone: destination, otp, company_id: null, order_id: sessionId } });
+      if (!queued.ok) throw new Error(`WhatsApp OTP could not be queued (${queued.reason || "unknown"})`);
+    }
+    sessions.set(sessionId, session);
+    return res.json({ success: true, message: `OTP sent via ${channel === "email" ? "email" : "WhatsApp"}.`, data: { sessionId, expiresInSeconds: OTP_TTL_MS / 1000 } });
+  } catch (error) {
+    console.error("[CLIENT_ONBOARDING_OTP] Send failed:", error);
+    return res.status(503).json({ success: false, message: `Unable to send the ${channel === "email" ? "email" : "WhatsApp"} OTP right now.` });
+  }
+});
+
+router.post("/verify", onboardingOtpLimiter, (req, res) => {
+  const sessionId = String(req.body?.sessionId || "");
+  const otp = String(req.body?.otp || "").trim();
+  const session = sessions.get(sessionId);
+  if (!session) return res.status(400).json({ success: false, message: "Request a new OTP first." });
+  if (Date.now() > session.expiresAt) { sessions.delete(sessionId); return res.status(400).json({ success: false, message: "OTP expired. Request a new one." }); }
+  if (session.attempts >= MAX_ATTEMPTS) { sessions.delete(sessionId); return res.status(423).json({ success: false, message: "Too many incorrect attempts. Request a new OTP." }); }
+  if (!/^\d{6}$/.test(otp)) return res.status(400).json({ success: false, message: "Enter the 6-digit OTP." });
+
+  session.attempts += 1;
+  const suppliedHash = otpHash(sessionId, otp);
+  if (!crypto.timingSafeEqual(session.hash, suppliedHash)) {
+    return res.status(400).json({ success: false, message: "Incorrect OTP.", attemptsRemaining: MAX_ATTEMPTS - session.attempts });
+  }
+  sessions.delete(sessionId);
+  const verificationToken = createVerificationProof(session);
+  return res.json({ success: true, message: `${session.channel === "email" ? "Email" : "WhatsApp"} verified successfully.`, data: { verificationToken, expiresInSeconds: VERIFICATION_PROOF_TTL_SECONDS } });
+});
+
+router.post("/notify-admin", onboardingSubmitLimiter, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const adminName = String(req.body?.adminName || "").trim();
+  const companyName = String(req.body?.companyName || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !adminName || !companyName) {
+    return res.status(400).json({ success: false, message: "Valid admin and organization details are required." });
+  }
+  try {
+    await sendAdminOnboardedEmail({ email, adminName, companyName });
+    return res.json({ success: true, message: "The administrator welcome email has been sent." });
+  } catch (error) {
+    console.error("[CLIENT_ONBOARDING] Admin welcome email failed:", error);
+    return res.status(503).json({ success: false, message: "Unable to send the administrator welcome email right now." });
+  }
+});
+
+router.post("/sign/start", onboardingSubmitLimiter, async (req, res) => {
+  const recipientName = String(req.body?.recipientName || "").trim();
+  const recipientEmail = normalizeEmail(req.body?.recipientEmail);
+  const companyName = String(req.body?.companyName || "").trim();
+  const returnUrl = String(req.body?.returnUrl || "");
+  if (!recipientName || !companyName || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(recipientEmail)) return res.status(400).json({ success: false, message: "Valid representative and organization details are required." });
+  try {
+    const data = await createSigningSession({ recipientName, recipientEmail, companyName, returnUrl });
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error("[CLIENT_ONBOARDING] Zoho signing start failed:", error);
+    return res.status(error.status || (error.code === "ZOHO_NOT_CONFIGURED" ? 503 : 502)).json({ success: false, message: error.code === "ZOHO_NOT_CONFIGURED" ? "Zoho Sign has not been configured on the server yet." : error.message || "Unable to start Zoho Sign." });
+  }
+});
+
+router.post("/sign/status", onboardingStatusLimiter, async (req, res) => {
+  try {
+    const data = await verifySigningSession(req.body?.state);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(error.status || 502).json({ success: false, message: error.message || "Unable to confirm the Zoho Sign status." });
+  }
+});
+
+router.post("/submit", onboardingSubmitLimiter, async (req, res) => {
+  const emailProofToken = String(req.body?.emailVerificationToken || "");
+  const representativeEmail = normalizeEmail(req.body?.onboarding?.repEmail);
+  try {
+    const proof = readVerificationProof(emailProofToken);
+    if (proof.channel !== "email" || proof.destination !== representativeEmail) throw new Error("Verification proof does not match representative");
+  } catch {
+    return res.status(400).json({ success: false, code: "EMAIL_VERIFICATION_REQUIRED", message: "Representative email verification expired. Verify the email again." });
+  }
+
+  try {
+    let signing = null;
+    let signingArtifacts = [];
+    const signingState = String(req.body?.signingState || "").trim();
+    if (signingState) {
+      const verifiedSigning = await verifySigningSession(signingState);
+      if (verifiedSigning.signed) {
+        if (verifiedSigning.consumed) return res.status(409).json({ success: false, message: "This signed agreement has already been used." });
+        signing = verifiedSigning;
+        signingArtifacts = await downloadSigningArtifacts(signing.requestId);
+      } else if (REQUIRE_ZOHO_SIGNING) {
+        return res.status(400).json({ success: false, message: "Complete the Zoho Sign agreement before submitting onboarding." });
+      }
+    } else if (REQUIRE_ZOHO_SIGNING) {
+      return res.status(400).json({ success: false, message: "Complete the Zoho Sign agreement before submitting onboarding." });
+    }
+    const result = await createClientOnboarding(req.body?.onboarding, { signing, signingState, signingArtifacts });
+    try {
+      await sendAdminOnboardedEmail({
+        email: normalizeEmail(req.body?.onboarding?.adminEmail),
+        adminName: String(req.body?.onboarding?.adminName || "").trim(),
+        companyName: String(req.body?.onboarding?.companyName || "").trim(),
+      });
+    } catch (mailError) {
+      console.error("[CLIENT_ONBOARDING] Welcome email failed after successful onboarding:", mailError);
+    }
+    return res.status(201).json({ success: true, message: "Organization onboarded successfully.", data: result });
+  } catch (error) {
+    console.error("[CLIENT_ONBOARDING] Submission failed:", error);
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.status ? error.message : "Unable to complete onboarding right now.",
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.data ? { data: error.data } : {}),
+    });
+  }
+});
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) if (now > session.expiresAt) sessions.delete(id);
+}, OTP_TTL_MS).unref();
+
+module.exports = router;

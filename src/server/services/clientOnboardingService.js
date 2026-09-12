@@ -1,0 +1,193 @@
+const bcrypt = require("bcryptjs");
+const db = require("../config/database");
+const { uploadToR2 } = require("../utils/r2upload");
+const { deleteFromR2 } = require("../utils/r2delete");
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const phonePattern = /^[6-9]\d{9}$/;
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+const clean = (value, max = 255) => String(value ?? "").trim().slice(0, max);
+const email = (value) => clean(value, 190).toLowerCase();
+const phone = (value) => clean(value, 20).replace(/\D/g, "").slice(-10);
+const bool = (value) => value === true || value === 1 || value === "1" || value === "true";
+
+function normalize(body = {}) {
+  return {
+    companyName: clean(body.companyName), legalName: clean(body.legalName), companyType: clean(body.companyType, 100),
+    industry: clean(body.industry, 150), employeeCount: clean(body.employeeCount, 50), website: clean(body.website, 500),
+    officialEmail: email(body.officialEmail), officialPhone: phone(body.officialPhone), pan: clean(body.pan, 10).toUpperCase(), gst: clean(body.gst, 15).toUpperCase(),
+    address1: clean(body.address1), address2: clean(body.address2), country: clean(body.country, 100), state: Number(body.state), city: clean(body.city, 100), pincode: clean(body.pincode, 10), officeSame: bool(body.officeSame),
+    repName: clean(body.repName, 150), designation: clean(body.designation, 100), repEmail: email(body.repEmail), repPhone: phone(body.repPhone), repPan: clean(body.repPan, 10).toUpperCase(),
+    aadhaarLast4: clean(body.aadhaarLast4, 4), identityConsent: bool(body.identityConsent), terms: bool(body.terms), privacy: bool(body.privacy), dataConsent: bool(body.dataConsent), communicationConsent: bool(body.communicationConsent),
+    adminName: clean(body.adminName, 150), adminEmail: email(body.adminEmail), password: String(body.password ?? ""), confirmPassword: String(body.confirmPassword ?? ""),
+  };
+}
+
+function validate(data) {
+  const required = ["companyName", "companyType", "industry", "employeeCount", "officialEmail", "officialPhone", "address1", "country", "city", "pincode", "repName", "designation", "repEmail", "repPhone", "adminName", "adminEmail", "password"];
+  if (required.some((field) => !data[field]) || !Number.isInteger(data.state) || data.state <= 0) return "Complete all required onboarding fields.";
+  if (![data.officialEmail, data.repEmail, data.adminEmail].every((value) => emailPattern.test(value))) return "Enter valid company, representative, and administrator email addresses.";
+  if (![data.officialPhone, data.repPhone].every((value) => phonePattern.test(value))) return "Enter valid 10-digit Indian mobile numbers.";
+  if (!/^\d{6}$/.test(data.pincode)) return "Enter a valid PIN code.";
+  if (!passwordPattern.test(data.password) || data.password !== data.confirmPassword) return "The administrator password is invalid or does not match.";
+  if (![data.terms, data.privacy, data.dataConsent, data.communicationConsent].every(Boolean)) return "Accept all mandatory legal agreements.";
+  return null;
+}
+
+async function createClientOnboarding(rawData, { signing = null, signingState = null, signingArtifacts = [] } = {}) {
+  const data = normalize(rawData);
+  const validationError = validate(data);
+  if (validationError) throw Object.assign(new Error(validationError), { status: 400 });
+
+  const connection = await db.getConnection();
+  const uploadedR2Keys = [];
+  try {
+    await connection.beginTransaction();
+    if (signing?.requestId) {
+      const [[session]] = await connection.execute(
+        `SELECT request_id, consumed_at FROM zoho_signing_sessions WHERE state = ? FOR UPDATE`,
+        [signingState],
+      );
+      if (!session || session.request_id !== String(signing.requestId) || session.consumed_at) {
+        throw Object.assign(new Error("This signing session is invalid or has already been used."), { status: 409 });
+      }
+    }
+    const [[state]] = await connection.execute("SELECT state_id FROM states WHERE state_id = ? AND status = 1 LIMIT 1", [data.state]);
+    if (!state) throw Object.assign(new Error("Select a valid active state."), { status: 400 });
+
+    const [[existingOnboarding]] = await connection.execute(
+      `SELECT a.status, a.review_due_at
+         FROM eusers u
+         INNER JOIN hr_account_approvals a ON a.user_id = u.user_id
+         INNER JOIN companies c ON c.company_id = a.company_id
+        WHERE LOWER(TRIM(u.email)) = ?
+          AND LOWER(TRIM(c.company_email)) = ?
+          AND EXISTS (
+            SELECT 1 FROM company_users cu
+             WHERE cu.company_id = a.company_id AND LOWER(TRIM(cu.email)) = ?
+          )
+        LIMIT 1`,
+      [data.adminEmail, data.officialEmail, data.repEmail],
+    );
+    if (existingOnboarding) {
+      throw Object.assign(new Error("This organization onboarding application has already been submitted."), {
+        status: 409,
+        code: "CLIENT_ONBOARDING_EXISTS",
+        data: { status: existingOnboarding.status, reviewDueAt: existingOnboarding.review_due_at },
+      });
+    }
+
+    const [duplicates] = await connection.execute(
+      `SELECT 'company_email' AS source, LOWER(TRIM(company_email)) AS duplicate_email
+         FROM companies WHERE LOWER(TRIM(company_email)) = ?
+       UNION ALL
+       SELECT 'admin_login', LOWER(TRIM(email)) FROM eusers WHERE LOWER(TRIM(email)) = ?
+       UNION ALL
+       SELECT CASE WHEN LOWER(TRIM(email)) = ? THEN 'representative_email' ELSE 'admin_directory_email' END,
+              LOWER(TRIM(email))
+         FROM company_users WHERE LOWER(TRIM(email)) IN (?, ?)`,
+      [data.officialEmail, data.adminEmail, data.repEmail, data.repEmail, data.adminEmail],
+    );
+    if (duplicates.length) {
+      const labels = {
+        company_email: "company email",
+        admin_login: "HR administrator email",
+        representative_email: "representative email",
+        admin_directory_email: "HR administrator email",
+      };
+      const conflicts = [...new Set(duplicates.map((item) => labels[item.source] || "email"))];
+      const conflictingEmails = [...new Set(duplicates.map((item) => String(item.duplicate_email || "").trim()).filter(Boolean))];
+      throw Object.assign(new Error(`The ${conflicts.join(" and ")} ${conflicts.length === 1 ? "already exists" : "already exist"}${conflictingEmails.length ? ` (${conflictingEmails.join(", ")})` : ""}. Use a different email or contact an administrator to recover the existing account.`), {
+        status: 409,
+        code: "CLIENT_ONBOARDING_EMAIL_CONFLICT",
+        data: { conflicts: duplicates.map((item) => ({ source: item.source, email: item.duplicate_email })) },
+      });
+    }
+
+    const [companyResult] = await connection.execute(
+      `INSERT INTO companies (company_name, company_email, company_phone, status) VALUES (?, ?, ?, 1)`,
+      [data.companyName, data.officialEmail, data.officialPhone],
+    );
+    const companyId = companyResult.insertId;
+
+    const [representativeResult] = await connection.execute(
+      `INSERT INTO company_users (company_id, name, email, contact, address1, address2, role, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      [companyId, data.repName, data.repEmail, data.repPhone, data.address1, data.address2 || null, data.designation],
+    );
+
+    let adminCompanyUserId = representativeResult.insertId;
+    if (data.adminEmail !== data.repEmail) {
+      const [adminResult] = await connection.execute(
+        `INSERT INTO company_users (company_id, name, email, contact, address1, address2, role, department, status)
+         VALUES (?, ?, ?, NULL, ?, ?, 'Primary HR Administrator', 'Human Resources', 1)`,
+        [companyId, data.adminName, data.adminEmail, data.address1, data.address2 || null],
+      );
+      adminCompanyUserId = adminResult.insertId;
+    } else {
+      await connection.execute(
+        `UPDATE company_users SET name = ?, role = 'Primary HR Administrator', department = 'Human Resources' WHERE id = ?`,
+        [data.adminName, adminCompanyUserId],
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const adminEmailWasVerified = data.adminEmail === data.repEmail;
+    const [userResult] = await connection.execute(
+      `INSERT INTO eusers (name, role, email, password, phone, is_verified) VALUES (?, 'hr', ?, ?, ?, ?)`,
+      [data.adminName, data.adminEmail, passwordHash, adminEmailWasVerified ? data.repPhone : null, adminEmailWasVerified ? 1 : 0],
+    );
+
+    await connection.execute(
+      `INSERT INTO hr_account_approvals (user_id, company_id, status, review_due_at)
+       VALUES (?, ?, 'pending', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))`,
+      [userResult.insertId, companyId],
+    );
+
+    await connection.execute(`INSERT INTO company_wallet (company_id, balance) VALUES (?, 0)`, [companyId]);
+    await connection.execute(
+      `INSERT INTO client_onboarding_details (
+        company_id, legal_name, company_type, industry, employee_count, website, pan, gst,
+        address1, address2, country, state_id, city, pincode, office_same,
+        representative_name, representative_designation, representative_email, representative_phone,
+        representative_pan, aadhaar_last4, identity_consent, terms_accepted, privacy_accepted,
+        data_consent, communication_consent, zoho_request_id, signed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, 1, ?, ?)`,
+      [companyId, data.legalName || null, data.companyType, data.industry, data.employeeCount, data.website || null, data.pan || null, data.gst || null,
+        data.address1, data.address2 || null, data.country, data.state, data.city, data.pincode, data.officeSame ? 1 : 0,
+        data.repName, data.designation, data.repEmail, data.repPhone, data.repPan || null, data.aadhaarLast4 || null, data.identityConsent ? 1 : 0, signing?.requestId ? String(signing.requestId) : null, signing?.signedAt || null],
+    );
+
+    for (const artifact of signingArtifacts) {
+      const safeFilename = artifact.filename.replace(/[^A-Za-z0-9._-]/g, "_");
+      const r2Path = `private/client-onboarding-agreements/${signing.requestId}/${artifact.kind}-${safeFilename}`;
+      await uploadToR2(artifact.content, r2Path, artifact.mimeType);
+      uploadedR2Keys.push(r2Path);
+      await connection.execute(
+        `INSERT INTO client_onboarding_signed_documents
+          (company_id, zoho_request_id, document_kind, filename, file_path, mime_type, byte_size, sha256)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [companyId, String(signing.requestId), artifact.kind, artifact.filename, r2Path, artifact.mimeType, artifact.content.length, artifact.sha256],
+      );
+    }
+    if (signing?.requestId) {
+      await connection.execute(
+        `UPDATE zoho_signing_sessions SET company_id = ?, consumed_at = CURRENT_TIMESTAMP WHERE state = ?`,
+        [companyId, signingState],
+      );
+    }
+
+    await connection.commit();
+    return { companyId, companyUserId: adminCompanyUserId, userId: userResult.insertId };
+  } catch (error) {
+    await connection.rollback();
+    await Promise.allSettled(uploadedR2Keys.map((key) => deleteFromR2(key)));
+    if (error.code === "ER_DUP_ENTRY") throw Object.assign(new Error("This company or administrator has already been onboarded."), { status: 409 });
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+module.exports = { createClientOnboarding };
