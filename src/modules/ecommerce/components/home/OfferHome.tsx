@@ -394,9 +394,9 @@ export default function OfferHome() {
   }, [campaignHome]);
 
   const handleBannerPress = (offer: typeof banner[number]) => {
-    if (offer.redirectType === 'category' && offer.redirectId != null) {
-      navigation.navigate('Category', {
-        categoryId: offer.redirectId,
+    if (offer.id != null) {
+      navigation.navigate('CampaignProducts', {
+        campaignId: offer.id,
         title: offer.title,
       });
     } else if (offer.redirectType === 'url' && offer.redirectUrl) {

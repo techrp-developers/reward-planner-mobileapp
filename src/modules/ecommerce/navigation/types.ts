@@ -32,6 +32,7 @@ export type HomeStackParamList = {
   OrderReceipt:  undefined;
   Explore : undefined;
   ProductScreen: { source: ProductCollectionSource } | undefined;
+  CampaignProducts: { campaignId: number | string; title: string };
   ReviewScreen: {
     product_id: number;
     variant_id: number;
