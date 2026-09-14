@@ -147,10 +147,11 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
   const [viewers, setViewers] = useState<StatusViewer[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
   const status = group?.statuses[index];
 
-  useEffect(() => { setIndex(0); setViewers(null); setVideoError(false); }, [group, visible]);
-  useEffect(() => { setVideoError(false); }, [status?.id]);
+  useEffect(() => { setIndex(0); setViewers(null); setVideoError(false); setVideoPaused(false); }, [group, visible]);
+  useEffect(() => { setVideoError(false); setVideoPaused(false); }, [status?.id]);
   useEffect(() => {
     if (!visible || !status || own) return;
     markStatusViewed(status.id).catch(() => {});
@@ -196,16 +197,18 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
             {status.type === 'text' && <Text style={[styles.viewerText, status.font_style === 'italic' && { fontStyle: 'italic' }]}>{status.text}</Text>}
             {status.type === 'image' && status.media_url && <Image source={{ uri: status.media_url }} style={styles.viewerMedia} resizeMode="contain" />}
             {status.type === 'video' && status.media_url && !videoError && (
-              <Video
-                source={{ uri: status.media_url }}
-                style={styles.viewerMedia}
-                resizeMode="contain"
-                controls
-                paused={!visible}
-                playInBackground={false}
-                playWhenInactive={false}
-                onError={() => setVideoError(true)}
-              />
+              <Pressable style={styles.viewerMedia} onPress={() => setVideoPaused(value => !value)}>
+                <Video
+                  key={status.id}
+                  source={{ uri: status.media_url }}
+                  style={styles.viewerMedia}
+                  resizeMode="contain"
+                  paused={!visible || videoPaused}
+                  playInBackground={false}
+                  playWhenInactive={false}
+                  onError={() => setVideoError(true)}
+                />
+              </Pressable>
             )}
             {status.type === 'video' && (!status.media_url || videoError) && (
               <View style={styles.videoOpen}>
