@@ -309,9 +309,9 @@ const MODAL_HIDDEN: VersionModalState = {
   updateUrl: "",
 };
 
-// Temporary local-development switch. This skips the startup login screen and
-// opens the app in guest mode without pretending that an auth token exists.
-const BYPASS_LOGIN_SCREEN = true;
+// // Temporary local-development switch. This skips the startup login screen and
+// // opens the app in guest mode without pretending that an auth token exists.
+// const BYPASS_LOGIN_SCREEN = true;
 
 export default function RootNavigator() {
   const { isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
@@ -345,10 +345,11 @@ export default function RootNavigator() {
 
   // Show Splash while: (a) session is hydrating, OR (b) authenticated but
   // terms status API call hasn't resolved yet (termsAccepted is still null).
-  const isCheckingTerms =
-    !BYPASS_LOGIN_SCREEN && isAuthenticated && termsAccepted === null;
+  const isCheckingTerms = isAuthenticated && termsAccepted === null;
+  // const isCheckingTerms =
+  //   !BYPASS_LOGIN_SCREEN && isAuthenticated && termsAccepted === null;
   const showSplash = isInitializing || isCheckingTerms;
-  const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
+  // const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
 
   // Only surface the first-login reward popup once the user has actually
   // reached the authenticated app (past Splash/TermsGate/biometric lock),
@@ -362,8 +363,10 @@ export default function RootNavigator() {
     </RootStack.Navigator>
   ) : (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
-      {showMainApp ? (
-        BYPASS_LOGIN_SCREEN || termsAccepted ? (
+      {/* {showMainApp ? (
+        BYPASS_LOGIN_SCREEN || termsAccepted ? ( */}
+         {isAuthenticated ? (
+        termsAccepted ? (
           // ── Normal app — terms already accepted ─────────────────
           <RootStack.Screen
             name="App"
