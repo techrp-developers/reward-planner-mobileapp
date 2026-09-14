@@ -1,4 +1,13 @@
 export type StatusType = 'text' | 'image' | 'video';
+export type StatusVisibility = 'same_company' | 'all_companies' | 'all_except_companies' | 'custom_people';
+
+export type StatusAudienceCompany = { id: number; name: string; logo_url?: string | null };
+export type StatusAudiencePerson = {
+  id: number;
+  name: string;
+  image_url?: string | null;
+  company: { id: number; name: string };
+};
 
 export type StatusUser = {
   id: number;
@@ -16,6 +25,7 @@ export type UserStatus = {
   media_url?: string | null;
   media_mime_type?: string | null;
   duration_seconds?: number | null;
+  visibility?: StatusVisibility;
   viewed?: boolean;
   view_count?: number;
   created_at: string;

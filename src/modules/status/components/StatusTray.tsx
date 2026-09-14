@@ -23,14 +23,21 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import {
   createStatus,
   deleteStatus,
+  fetchStatusAudienceOptions,
   fetchMyStatuses,
   fetchStatusFeed,
   fetchStatusViewers,
   markStatusViewed,
 } from '../api/statusApi';
-import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer } from '../types';
+import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, StatusVisibility } from '../types';
 
 const STATUS_COLORS = ['#202C33', '#6D28D9', '#BE123C', '#0369A1', '#047857', '#B45309'];
+const AUDIENCES: Array<{ value: StatusVisibility; label: string }> = [
+  { value: 'same_company', label: 'My company' },
+  { value: 'all_companies', label: 'All companies' },
+  { value: 'all_except_companies', label: 'All except selected companies' },
+  { value: 'custom_people', label: 'Selected people only' },
+];
 
 function initials(name?: string | null) {
   return (name || 'U').trim().slice(0, 1).toUpperCase();
@@ -60,9 +67,20 @@ function StatusComposer({ visible, onClose, onCreated }: {
   const [media, setMedia] = useState<StatusMediaInput | null>(null);
   const [type, setType] = useState<StatusType>('text');
   const [submitting, setSubmitting] = useState(false);
+  const [audienceVisible, setAudienceVisible] = useState(false);
+  const [visibility, setVisibility] = useState<StatusVisibility>('same_company');
+  const [excludedCompanyIds, setExcludedCompanyIds] = useState<number[]>([]);
+  const [allowedUserIds, setAllowedUserIds] = useState<number[]>([]);
+  const audienceQuery = useQuery({
+    queryKey: ['statuses', 'audience-options'],
+    queryFn: () => fetchStatusAudienceOptions(),
+    enabled: visible && audienceVisible,
+    staleTime: 60000,
+  });
 
   const reset = useCallback(() => {
     setText(''); setMedia(null); setType('text'); setBackgroundColor(STATUS_COLORS[0]);
+    setVisibility('same_company'); setExcludedCompanyIds([]); setAllowedUserIds([]); setAudienceVisible(false);
   }, []);
 
   const close = useCallback(() => { if (!submitting) { reset(); onClose(); } }, [onClose, reset, submitting]);
@@ -81,16 +99,22 @@ function StatusComposer({ visible, onClose, onCreated }: {
   const publish = useCallback(async () => {
     if (type === 'text' && !text.trim()) return Alert.alert('Add some text', 'Write something before publishing.');
     if (type !== 'text' && !media) return Alert.alert('Select media', 'Choose a photo or video first.');
+    if (visibility === 'all_except_companies' && !excludedCompanyIds.length) return Alert.alert('Choose companies', 'Select at least one company to exclude.');
+    if (visibility === 'custom_people' && !allowedUserIds.length) return Alert.alert('Choose people', 'Select at least one person.');
     setSubmitting(true);
     try {
-      await createStatus({ type, text, backgroundColor: type === 'text' ? backgroundColor : undefined, media: media || undefined });
+      await createStatus({ type, text, backgroundColor: type === 'text' ? backgroundColor : undefined, media: media || undefined, visibility, excludedCompanyIds, allowedUserIds });
       reset(); onCreated(); onClose();
     } catch (error) {
       Alert.alert('Could not publish status', messageFrom(error));
     } finally {
       setSubmitting(false);
     }
-  }, [backgroundColor, media, onClose, onCreated, reset, text, type]);
+  }, [allowedUserIds, backgroundColor, excludedCompanyIds, media, onClose, onCreated, reset, text, type, visibility]);
+
+  const toggleId = useCallback((id: number, values: number[], update: React.Dispatch<React.SetStateAction<number[]>>) => {
+    update(values.includes(id) ? values.filter(value => value !== id) : [...values, id]);
+  }, []);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
@@ -124,9 +148,32 @@ function StatusComposer({ visible, onClose, onCreated }: {
           </ScrollView>
         )}
         {media && <TextInput value={text} onChangeText={setText} maxLength={700} placeholder="Add a caption…" placeholderTextColor="#A1A1AA" style={styles.captionInput} />}
+        <Pressable onPress={() => setAudienceVisible(true)} style={styles.audienceButton}>
+          <MaterialCommunityIcons name="shield-account-outline" color="#FFF" size={20} />
+          <Text style={styles.audienceButtonText}>{AUDIENCES.find(item => item.value === visibility)?.label}</Text>
+          <MaterialCommunityIcons name="chevron-up" color="#FFF" size={20} />
+        </Pressable>
         <Pressable onPress={publish} disabled={submitting} style={styles.publishButton}>
           {submitting ? <ActivityIndicator color="#FFF" /> : <><Text style={styles.publishText}>Publish</Text><MaterialCommunityIcons name="send" color="#FFF" size={20} /></>}
         </Pressable>
+        <Modal visible={audienceVisible} transparent animationType="slide" onRequestClose={() => setAudienceVisible(false)}>
+          <View style={styles.audienceBackdrop}>
+            <SafeAreaView style={styles.audienceSheet}>
+              <View style={styles.audienceHeader}>
+                <Text style={styles.audienceTitle}>Who can see this?</Text>
+                <Pressable onPress={() => setAudienceVisible(false)}><MaterialCommunityIcons name="close" size={26} color="#18181B" /></Pressable>
+              </View>
+              {AUDIENCES.map(item => <Pressable key={item.value} onPress={() => setVisibility(item.value)} style={styles.audienceOption}><Text style={styles.audienceOptionText}>{item.label}</Text><MaterialCommunityIcons name={visibility === item.value ? 'radiobox-marked' : 'radiobox-blank'} size={23} color="#7C3AED" /></Pressable>)}
+              {(visibility === 'all_except_companies' || visibility === 'custom_people') && <ScrollView style={styles.audienceList}>
+                {audienceQuery.isLoading && <ActivityIndicator color="#7C3AED" />}
+                {audienceQuery.isError && <Text style={styles.audienceError}>Could not load audience options</Text>}
+                {visibility === 'all_except_companies' && audienceQuery.data?.companies.map(company => <Pressable key={company.id} onPress={() => toggleId(company.id, excludedCompanyIds, setExcludedCompanyIds)} style={styles.audienceRow}><Text style={styles.audienceRowText}>{company.name}</Text><MaterialCommunityIcons name={excludedCompanyIds.includes(company.id) ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color="#7C3AED" /></Pressable>)}
+                {visibility === 'custom_people' && audienceQuery.data?.people.map(person => <Pressable key={person.id} onPress={() => toggleId(person.id, allowedUserIds, setAllowedUserIds)} style={styles.audienceRow}><Avatar uri={person.image_url} name={person.name} size={36} /><View style={styles.audiencePerson}><Text style={styles.audienceRowText}>{person.name}</Text><Text style={styles.audienceCompanyText}>{person.company.name}</Text></View><MaterialCommunityIcons name={allowedUserIds.includes(person.id) ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color="#7C3AED" /></Pressable>)}
+              </ScrollView>}
+              <Pressable onPress={() => setAudienceVisible(false)} style={styles.audienceDone}><Text style={styles.audienceDoneText}>Done</Text></Pressable>
+            </SafeAreaView>
+          </View>
+        </Modal>
       </SafeAreaView>
     </Modal>
   );
@@ -283,6 +330,8 @@ const styles = StyleSheet.create({
   composer: { flex: 1 }, composerHeader: { height: 62, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, composerTitle: { color: '#FFF', fontSize: 18, fontWeight: '700' }, composerBody: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusInput: { width: '88%', color: '#FFF', fontSize: 30, lineHeight: 40, fontWeight: '700', maxHeight: '70%' }, composerImage: { width: '100%', height: '100%' }, videoSelected: { alignItems: 'center', padding: 24 }, videoSelectedText: { color: '#FFF', marginTop: 14, fontSize: 16, fontWeight: '600', textAlign: 'center' }, videoHint: { color: '#A1A1AA', marginTop: 7 },
   colorRow: { paddingHorizontal: 18, gap: 12, paddingVertical: 12 }, colorDot: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: 'rgba(255,255,255,.5)' }, colorDotSelected: { borderWidth: 4, borderColor: '#FFF' }, captionInput: { marginHorizontal: 18, marginBottom: 10, borderRadius: 20, paddingHorizontal: 16, color: '#FFF', backgroundColor: '#27272A' }, publishButton: { alignSelf: 'flex-end', margin: 18, borderRadius: 24, minWidth: 116, height: 48, paddingHorizontal: 20, backgroundColor: '#7C3AED', flexDirection: 'row', gap: 9, alignItems: 'center', justifyContent: 'center' }, publishText: { color: '#FFF', fontWeight: '800', fontSize: 15 },
+  audienceButton: { position: 'absolute', left: 18, bottom: 18, minHeight: 48, maxWidth: '58%', paddingHorizontal: 14, borderRadius: 24, backgroundColor: 'rgba(39,39,42,.92)', flexDirection: 'row', alignItems: 'center', gap: 7 }, audienceButtonText: { color: '#FFF', fontWeight: '700', flexShrink: 1 },
+  audienceBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,.55)' }, audienceSheet: { maxHeight: '82%', padding: 18, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFF' }, audienceHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, audienceTitle: { color: '#18181B', fontSize: 20, fontWeight: '800' }, audienceOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4E4E7' }, audienceOptionText: { color: '#27272A', fontSize: 15, fontWeight: '600' }, audienceList: { maxHeight: 270, marginTop: 8, borderRadius: 12, backgroundColor: '#F4F4F5' }, audienceRow: { minHeight: 52, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D4D4D8' }, audienceRowText: { color: '#18181B', fontWeight: '600' }, audiencePerson: { flex: 1 }, audienceCompanyText: { color: '#71717A', fontSize: 11, marginTop: 2 }, audienceError: { color: '#B91C1C', padding: 14, textAlign: 'center' }, audienceDone: { height: 48, marginTop: 14, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' }, audienceDoneText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   viewer: { flex: 1 }, viewerSafe: { flex: 1 }, progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 8 }, progressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.35)', overflow: 'hidden' }, progressFill: { height: 3, backgroundColor: '#FFF' }, viewerHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 }, viewerIdentity: { flex: 1 }, viewerHeaderName: { color: '#FFF', fontWeight: '700', fontSize: 15 }, viewerHeaderTime: { color: 'rgba(255,255,255,.72)', fontSize: 11, marginTop: 2 },
   statusStage: { flex: 1, alignItems: 'center', justifyContent: 'center' }, viewerText: { color: '#FFF', fontSize: 32, lineHeight: 42, fontWeight: '700', paddingHorizontal: 30, textAlign: 'center' }, viewerMedia: { width: '100%', height: '100%' }, viewerCaption: { position: 'absolute', bottom: 24, left: 18, right: 18, color: '#FFF', textAlign: 'center', fontSize: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,.55)' }, videoOpen: { alignItems: 'center' }, videoOpenText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 8 }, previousArea: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '32%' }, nextArea: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '32%' },
   viewsButton: { height: 52, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }, viewsText: { color: '#FFF', fontWeight: '600' }, viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },

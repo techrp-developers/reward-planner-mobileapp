@@ -3,6 +3,9 @@ import type {
   StatusFeedGroup,
   StatusMediaInput,
   StatusType,
+  StatusVisibility,
+  StatusAudienceCompany,
+  StatusAudiencePerson,
   StatusViewer,
   UserStatus,
 } from '../types';
@@ -27,12 +30,18 @@ export async function createStatus(input: {
   backgroundColor?: string;
   fontStyle?: string;
   media?: StatusMediaInput;
+  visibility: StatusVisibility;
+  excludedCompanyIds?: number[];
+  allowedUserIds?: number[];
 }) {
   const form = new FormData();
   form.append('type', input.type);
   if (input.text?.trim()) form.append('text', input.text.trim());
   if (input.backgroundColor) form.append('background_color', input.backgroundColor);
   if (input.fontStyle) form.append('font_style', input.fontStyle);
+  form.append('visibility', input.visibility);
+  form.append('excluded_company_ids', JSON.stringify(input.excludedCompanyIds ?? []));
+  form.append('allowed_user_ids', JSON.stringify(input.allowedUserIds ?? []));
   if (input.media) {
     // React Native's multipart implementation expects uploaded files to use
     // `name`. ImagePicker calls the same value `fileName`; appending its asset
@@ -48,6 +57,14 @@ export async function createStatus(input: {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   });
+  return response.data.data;
+}
+
+export async function fetchStatusAudienceOptions(search?: string) {
+  const response = await api.get<DataResponse<{
+    companies: StatusAudienceCompany[];
+    people: StatusAudiencePerson[];
+  }>>('/v1/status/audience-options', { params: search ? { q: search } : undefined });
   return response.data.data;
 }
 
