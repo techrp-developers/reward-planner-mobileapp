@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Linking,
   Modal,
   Pressable,
   SafeAreaView,
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import Video from 'react-native-video';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../query/queryClient';
 import { useAuth } from '../../common/auth/context/AuthContext';
@@ -146,9 +146,11 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
   const [index, setIndex] = useState(0);
   const [viewers, setViewers] = useState<StatusViewer[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const status = group?.statuses[index];
 
-  useEffect(() => { setIndex(0); setViewers(null); }, [group, visible]);
+  useEffect(() => { setIndex(0); setViewers(null); setVideoError(false); }, [group, visible]);
+  useEffect(() => { setVideoError(false); }, [status?.id]);
   useEffect(() => {
     if (!visible || !status || own) return;
     markStatusViewed(status.id).catch(() => {});
@@ -193,9 +195,26 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
           <View style={styles.statusStage}>
             {status.type === 'text' && <Text style={[styles.viewerText, status.font_style === 'italic' && { fontStyle: 'italic' }]}>{status.text}</Text>}
             {status.type === 'image' && status.media_url && <Image source={{ uri: status.media_url }} style={styles.viewerMedia} resizeMode="contain" />}
-            {status.type === 'video' && <Pressable style={styles.videoOpen} onPress={() => status.media_url && Linking.openURL(status.media_url)}><MaterialCommunityIcons name="play-circle" color="#FFF" size={78} /><Text style={styles.videoOpenText}>Play video</Text></Pressable>}
+            {status.type === 'video' && status.media_url && !videoError && (
+              <Video
+                source={{ uri: status.media_url }}
+                style={styles.viewerMedia}
+                resizeMode="contain"
+                controls
+                paused={!visible}
+                playInBackground={false}
+                playWhenInactive={false}
+                onError={() => setVideoError(true)}
+              />
+            )}
+            {status.type === 'video' && (!status.media_url || videoError) && (
+              <View style={styles.videoOpen}>
+                <MaterialCommunityIcons name="alert-circle-outline" color="#FFF" size={54} />
+                <Text style={styles.videoOpenText}>Unable to play this video</Text>
+              </View>
+            )}
             {status.type !== 'text' && !!status.text && <Text style={styles.viewerCaption}>{status.text}</Text>}
-            <Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} />
+            {status.type !== 'video' && <><Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} /></>}
           </View>
           {own && <Pressable onPress={showViewers} style={styles.viewsButton}>{busy ? <ActivityIndicator color="#FFF" /> : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{status.view_count || 0} views</Text></>}</Pressable>}
           {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
