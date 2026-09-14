@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
+import { ViewType } from 'react-native-video';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../query/queryClient';
 import { useAuth } from '../../common/auth/context/AuthContext';
@@ -183,11 +184,12 @@ function ViewerList({ viewers }: { viewers: StatusViewer[] }) {
   return <FlatList data={viewers} keyExtractor={item => String(item.user_id)} ListEmptyComponent={<Text style={styles.emptyViewers}>No views yet</Text>} renderItem={({ item }) => <View style={styles.viewerRow}><Avatar uri={item.image_url} name={item.name} size={42} /><View><Text style={styles.viewerName}>{item.name || 'User'}</Text><Text style={styles.viewerTime}>{new Date(item.viewed_at).toLocaleString()}</Text></View></View>} />;
 }
 
-function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
+function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged }: {
   group: StatusFeedGroup | null;
   own: boolean;
   visible: boolean;
   onClose: () => void;
+  onFinished: () => void;
   onChanged: () => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -195,6 +197,8 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
+  const videoTouchStart = useRef({ x: 0, y: 0 });
+  const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
 
   useEffect(() => { setIndex(0); setViewers(null); setVideoError(false); setVideoPaused(false); }, [group, visible]);
@@ -207,10 +211,23 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
   const next = useCallback(() => {
     if (!group) return;
     if (index < group.statuses.length - 1) { setIndex(value => value + 1); setViewers(null); }
-    else onClose();
-  }, [group, index, onClose]);
+    else onFinished();
+  }, [group, index, onFinished]);
 
   const previous = useCallback(() => { if (index > 0) { setIndex(value => value - 1); setViewers(null); } }, [index]);
+
+  const finishVideoGesture = useCallback((x: number, y: number, localX: number) => {
+    const deltaX = x - videoTouchStart.current.x;
+    const deltaY = y - videoTouchStart.current.y;
+    if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) next();
+      else previous();
+      return;
+    }
+    if (localX >= videoTouchWidth.current * 0.7) { next(); return; }
+    if (localX <= videoTouchWidth.current * 0.3) { previous(); return; }
+    setVideoPaused(value => !value);
+  }, [next, previous]);
 
   const showViewers = useCallback(async () => {
     if (!status) return;
@@ -244,18 +261,32 @@ function StatusViewerModal({ group, own, visible, onClose, onChanged }: {
             {status.type === 'text' && <Text style={[styles.viewerText, status.font_style === 'italic' && { fontStyle: 'italic' }]}>{status.text}</Text>}
             {status.type === 'image' && status.media_url && <Image source={{ uri: status.media_url }} style={styles.viewerMedia} resizeMode="contain" />}
             {status.type === 'video' && status.media_url && !videoError && (
-              <Pressable style={styles.viewerMedia} onPress={() => setVideoPaused(value => !value)}>
+              <View
+                style={styles.viewerMedia}
+              >
                 <Video
                   key={status.id}
                   source={{ uri: status.media_url }}
                   style={styles.viewerMedia}
                   resizeMode="contain"
+                  viewType={ViewType.TEXTURE}
                   paused={!visible || videoPaused}
                   playInBackground={false}
                   playWhenInactive={false}
+                  onEnd={next}
                   onError={() => setVideoError(true)}
+                  pointerEvents="none"
                 />
-              </Pressable>
+                <View
+                  style={styles.videoTouchLayer}
+                  onLayout={event => { videoTouchWidth.current = event.nativeEvent.layout.width; }}
+                  onStartShouldSetResponder={() => true}
+                  onMoveShouldSetResponder={() => true}
+                  onResponderTerminationRequest={() => false}
+                  onResponderGrant={event => { videoTouchStart.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }; }}
+                  onResponderRelease={event => finishVideoGesture(event.nativeEvent.pageX, event.nativeEvent.pageY, event.nativeEvent.locationX)}
+                />
+              </View>
             )}
             {status.type === 'video' && (!status.media_url || videoError) && (
               <View style={styles.videoOpen}>
@@ -284,6 +315,7 @@ function StatusTray() {
   const mineQuery = useQuery({ queryKey: ['statuses', 'mine'], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
   const feedQuery = useQuery({ queryKey: ['statuses', 'feed'], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
   const feed = feedQuery.data ?? [];
+  const visibleFeed = useMemo(() => feed.filter(group => Number(group.user.id) !== Number(user?.user_id)), [feed, user?.user_id]);
 
   const myGroup = useMemo<StatusFeedGroup | null>(() => {
     const mine = mineQuery.data ?? [];
@@ -292,6 +324,18 @@ function StatusTray() {
       : null;
   }, [mineQuery.data]);
   const refresh = useCallback(() => { queryClient.invalidateQueries({ queryKey: ['statuses'] }); }, []);
+  const finishViewer = useCallback(() => {
+    if (!activeGroup) { setActiveGroup(null); refresh(); return; }
+    if (viewingOwn) {
+      if (visibleFeed[0]) { setViewingOwn(false); setActiveGroup(visibleFeed[0]); }
+      else { setActiveGroup(null); refresh(); }
+      return;
+    }
+    const currentIndex = visibleFeed.findIndex(group => Number(group.user.id) === Number(activeGroup.user.id));
+    const followingGroup = visibleFeed[currentIndex + 1];
+    if (followingGroup) setActiveGroup(followingGroup);
+    else { setActiveGroup(null); refresh(); }
+  }, [activeGroup, refresh, viewingOwn, visibleFeed]);
 
   if (!isAuthenticated) return null;
   return (
@@ -305,7 +349,7 @@ function StatusTray() {
           </Pressable>
           <Text numberOfLines={1} style={[styles.storyName, { color: isDark ? '#E4E4E7' : '#27272A' }]}>My status</Text>
         </View>
-        {feed.filter(group => Number(group.user.id) !== Number(user?.user_id)).map(group => (
+        {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
             <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} /></View>
             <Text numberOfLines={1} style={[styles.storyName, { color: isDark ? '#E4E4E7' : '#27272A' }]}>{group.user.name || 'User'}</Text>
@@ -313,7 +357,7 @@ function StatusTray() {
         ))}
       </ScrollView>
       <StatusComposer visible={composerVisible} onClose={() => setComposerVisible(false)} onCreated={refresh} />
-      <StatusViewerModal group={activeGroup} own={viewingOwn} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onChanged={refresh} />
+      <StatusViewerModal group={activeGroup} own={viewingOwn} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
     </View>
   );
 }
@@ -334,5 +378,6 @@ const styles = StyleSheet.create({
   audienceBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,.55)' }, audienceSheet: { maxHeight: '82%', padding: 18, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFF' }, audienceHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, audienceTitle: { color: '#18181B', fontSize: 20, fontWeight: '800' }, audienceOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4E4E7' }, audienceOptionText: { color: '#27272A', fontSize: 15, fontWeight: '600' }, audienceList: { maxHeight: 270, marginTop: 8, borderRadius: 12, backgroundColor: '#F4F4F5' }, audienceRow: { minHeight: 52, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D4D4D8' }, audienceRowText: { color: '#18181B', fontWeight: '600' }, audiencePerson: { flex: 1 }, audienceCompanyText: { color: '#71717A', fontSize: 11, marginTop: 2 }, audienceError: { color: '#B91C1C', padding: 14, textAlign: 'center' }, audienceDone: { height: 48, marginTop: 14, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' }, audienceDoneText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   viewer: { flex: 1 }, viewerSafe: { flex: 1 }, progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 8 }, progressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.35)', overflow: 'hidden' }, progressFill: { height: 3, backgroundColor: '#FFF' }, viewerHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 }, viewerIdentity: { flex: 1 }, viewerHeaderName: { color: '#FFF', fontWeight: '700', fontSize: 15 }, viewerHeaderTime: { color: 'rgba(255,255,255,.72)', fontSize: 11, marginTop: 2 },
   statusStage: { flex: 1, alignItems: 'center', justifyContent: 'center' }, viewerText: { color: '#FFF', fontSize: 32, lineHeight: 42, fontWeight: '700', paddingHorizontal: 30, textAlign: 'center' }, viewerMedia: { width: '100%', height: '100%' }, viewerCaption: { position: 'absolute', bottom: 24, left: 18, right: 18, color: '#FFF', textAlign: 'center', fontSize: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,.55)' }, videoOpen: { alignItems: 'center' }, videoOpenText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 8 }, previousArea: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '32%' }, nextArea: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '32%' },
+  videoTouchLayer: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
   viewsButton: { height: 52, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }, viewsText: { color: '#FFF', fontWeight: '600' }, viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
 });
