@@ -18,6 +18,7 @@ function LivePollCard() {
   const [now, setNow] = useState(Date.now());
   const [selected, setSelected] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const pollsQuery = useQuery({
     queryKey: ['dashboard', 'live-polls'],
@@ -35,6 +36,10 @@ function LivePollCard() {
   useEffect(() => {
     setSelected(poll?.selected_option_ids ?? []);
   }, [poll?.poll_id, poll?.selected_option_ids]);
+
+  useEffect(() => {
+    setExpanded(!poll?.has_voted);
+  }, [poll?.poll_id, poll?.has_voted]);
 
   useEffect(() => {
     if (!poll?.closes_at) return;
@@ -74,7 +79,12 @@ function LivePollCard() {
   return (
     <View style={[styles.outer, { backgroundColor: isDark ? '#111B21' : '#E7F7EF' }]}>
       <View style={[styles.bubble, { backgroundColor: isDark ? '#202C33' : '#FFFFFF' }]}>
-        <View style={styles.titleRow}><MaterialCommunityIcons name="poll" size={21} color="#25A866" /><Text style={[styles.question, { color: isDark ? '#F1F5F7' : '#111B21' }]}>{poll.question}</Text></View>
+        <Pressable disabled={!poll.has_voted} onPress={() => setExpanded(value => !value)} style={styles.titleRow}>
+          <MaterialCommunityIcons name="poll" size={21} color="#25A866" />
+          <View style={styles.questionWrap}><Text numberOfLines={expanded ? undefined : 1} style={[styles.question, { color: isDark ? '#F1F5F7' : '#111B21' }]}>{poll.question}</Text>{poll.has_voted && !expanded && <Text style={styles.votedLabel}>Voted · {poll.participant_count} {poll.participant_count === 1 ? 'vote' : 'votes'}</Text>}</View>
+          {poll.has_voted && <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={23} color="#8696A0" />}
+        </Pressable>
+        {expanded && <>
         <Text style={styles.hint}>{poll.allow_multiple ? 'Select one or more options' : 'Select one option'}</Text>
         {poll.options.map(option => {
           const checked = selected.includes(option.option_id);
@@ -89,6 +99,7 @@ function LivePollCard() {
         {poll.allow_multiple && <Pressable disabled={!selected.length || submitting} onPress={() => vote(selected)} style={[styles.voteButton, (!selected.length || submitting) && styles.voteButtonDisabled]}>{submitting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.voteText}>Vote</Text>}</Pressable>}
         {!poll.allow_multiple && submitting && <ActivityIndicator style={styles.loader} size="small" color="#25A866" />}
         <View style={styles.footer}><Text style={styles.footerText}>{poll.participant_count} {poll.participant_count === 1 ? 'vote' : 'votes'}</Text>{poll.closes_at && <Text style={styles.footerText}>Closes {new Date(poll.closes_at).toLocaleString()}</Text>}</View>
+        </>}
       </View>
     </View>
   );
@@ -99,7 +110,7 @@ export default memo(LivePollCard);
 const styles = StyleSheet.create({
   outer: { marginHorizontal: 16, marginTop: 12, borderRadius: 18, padding: 7 },
   bubble: { borderRadius: 14, padding: 14, elevation: 2, shadowColor: '#000', shadowOpacity: .08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 }, question: { flex: 1, fontSize: 16, lineHeight: 22, fontWeight: '700' }, hint: { color: '#8696A0', fontSize: 12, marginTop: 4, marginBottom: 8, marginLeft: 30 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 }, questionWrap: { flex: 1 }, question: { fontSize: 16, lineHeight: 22, fontWeight: '700' }, votedLabel: { color: '#25A866', fontSize: 11, fontWeight: '700', marginTop: 2 }, hint: { color: '#8696A0', fontSize: 12, marginTop: 4, marginBottom: 8, marginLeft: 30 },
   option: { paddingVertical: 8 }, optionTop: { flexDirection: 'row', alignItems: 'center', gap: 9 }, optionText: { flex: 1, fontSize: 14 }, percent: { color: '#667781', fontSize: 12, fontWeight: '600' }, track: { height: 4, marginTop: 7, marginLeft: 31, borderRadius: 2, overflow: 'hidden' }, fill: { height: '100%', borderRadius: 2, backgroundColor: '#25D366' },
   voteButton: { alignSelf: 'flex-end', minWidth: 88, height: 38, marginTop: 8, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#25A866' }, voteButtonDisabled: { opacity: .45 }, voteText: { color: '#FFF', fontWeight: '700' }, loader: { marginTop: 8 },
   footer: { marginTop: 10, paddingTop: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#8696A066', flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, footerText: { color: '#8696A0', fontSize: 10, flexShrink: 1 },
