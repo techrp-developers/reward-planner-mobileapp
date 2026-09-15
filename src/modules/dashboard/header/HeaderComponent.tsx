@@ -50,6 +50,7 @@ interface HeaderProps {
   onSearchOverlayChange?: (state: SearchOverlayState) => void;
   showRewardPoints?:      boolean;
   rewardPoints?:          number;
+  middleContent?:         React.ReactNode;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onSearchOverlayChange,
   showRewardPoints = false,
   rewardPoints = 0,
+  middleContent,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -75,7 +77,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const [headerHeight, setHeaderHeight] = useState(0);
 
   // All animations use native driver (opacity + transform only)
-  const dateFade    = useRef(new Animated.Value(1)).current;
   const searchFade  = useRef(new Animated.Value(0)).current;
   const searchSlide = useRef(new Animated.Value(28)).current;
   const searchScale = useRef(new Animated.Value(0.94)).current;
@@ -111,10 +112,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   }), [isDark, surface]);
 
   const formattedDate = useMemo(() => {
-    const n = new Date();
-    const D = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${D[n.getDay()]}, ${n.getDate()} ${M[n.getMonth()]}`;
+    const now = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
   }, []);
 
   // ── Layout measurement — drives dropdown top position ─────────────────────
@@ -137,12 +138,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       useNativeDriver: true,
     }).start();
     Animated.parallel([
-      Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
       Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 10 }),
     ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide, searchScale, searchSweep, onSearchActiveChange]);
+  }, [searchFade, searchSlide, searchScale, searchSweep, onSearchActiveChange]);
 
   const closeSearch = useCallback(() => {
     if (!searchActive) return;
@@ -150,7 +150,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     searchSweep.stopAnimation();
     onSearchActiveChange?.(false);
     Animated.parallel([
-      Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
       Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
       Animated.timing(searchSlide, { toValue: 28, duration: 200, useNativeDriver: true }),
       Animated.timing(searchScale, { toValue: 0.94, duration: 180, useNativeDriver: true }),
@@ -159,7 +158,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       setSearchQuery('');
       reset();
     });
-  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, searchSweep, reset, onSearchActiveChange]);
+  }, [searchActive, searchFade, searchSlide, searchScale, searchSweep, reset, onSearchActiveChange]);
 
   useEffect(() => {
     onSearchDropdownChange?.(showDropdown);
@@ -260,21 +259,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
         </View>
 
-        {/* ── Row 2 : Date ←→ Search | Actions ── */}
+        {/* ── Row 2 : Search | Points and notification actions ── */}
         <View style={styles.bottomRow}>
 
           {/*
            * flexZone: two absolutely-stacked children
-           *   1. Date label — fades out when search opens
-           *   2. Search pill — slides in from the right
+           * Search pill slides in from the right when search opens.
            */}
           <View style={styles.flexZone}>
 
-            {/* Date */}
-            <Animated.View
-              style={[StyleSheet.absoluteFill, styles.dateCentered, { opacity: dateFade }]}
-              pointerEvents={searchActive ? 'none' : 'auto'}
-            >
+            <View style={styles.dateCentered}>
               <MaterialCommunityIcons
                 name="calendar-month-outline"
                 size={13}
@@ -284,7 +278,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               <Text style={[styles.dateText, { color: tk.dateColor }]} numberOfLines={1}>
                 {formattedDate}
               </Text>
-            </Animated.View>
+            </View>
 
             {/* Search pill */}
             <Animated.View
@@ -383,6 +377,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           </View>
 
         </View>
+
+        {middleContent}
       </View>
 
       {/* ── Search Dropdown ─────────────────────────────────────────────────
@@ -492,8 +488,8 @@ const styles = StyleSheet.create({
     height: 50,
   },
 
-  // Date
   dateCentered: {
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
   },

@@ -48,7 +48,7 @@ function messageFrom(error: any) {
   return error?.response?.data?.message || error?.message || 'Something went wrong';
 }
 
-function Avatar({ uri, name, size = 58 }: { uri?: string | null; name?: string | null; size?: number }) {
+function Avatar({ uri, name, size = 54 }: { uri?: string | null; name?: string | null; size?: number }) {
   return uri ? (
     <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />
   ) : (
@@ -307,7 +307,6 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
 
 function StatusTray() {
   const { isAuthenticated, user } = useAuth();
-  const { isDark } = useAppTheme();
   const [composerVisible, setComposerVisible] = useState(false);
   const [activeGroup, setActiveGroup] = useState<StatusFeedGroup | null>(null);
   const [viewingOwn, setViewingOwn] = useState(false);
@@ -339,22 +338,22 @@ function StatusTray() {
 
   if (!isAuthenticated) return null;
   return (
-    <View style={[styles.tray, { backgroundColor: isDark ? '#18181B' : '#FFFFFF' }]}>
-      <View style={styles.trayHeader}><Text style={[styles.trayTitle, { color: isDark ? '#FAFAFA' : '#18181B' }]}>Updates</Text>{(mineQuery.isFetching || feedQuery.isFetching) && <ActivityIndicator size="small" color="#7C3AED" />}</View>
+    <View style={styles.tray}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trayContent}>
         <View style={styles.storyItem}>
           <Pressable onPress={() => myGroup ? (setViewingOwn(true), setActiveGroup(myGroup)) : setComposerVisible(true)} onLongPress={() => setComposerVisible(true)} style={[styles.storyRing, myGroup && styles.storyRingActive]}>
             <Avatar uri={myGroup?.user.image_url} name={user?.name} />
             <Pressable onPress={() => setComposerVisible(true)} style={styles.addBadge}><MaterialCommunityIcons name="plus" color="#FFF" size={16} /></Pressable>
           </Pressable>
-          <Text numberOfLines={1} style={[styles.storyName, { color: isDark ? '#E4E4E7' : '#27272A' }]}>My status</Text>
+          <Text numberOfLines={1} style={[styles.storyName, { color: '#FFFFFF' }]}>My status</Text>
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
             <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} /></View>
-            <Text numberOfLines={1} style={[styles.storyName, { color: isDark ? '#E4E4E7' : '#27272A' }]}>{group.user.name || 'User'}</Text>
+            <Text numberOfLines={1} style={[styles.storyName, { color: '#FFFFFF' }]}>{group.user.name || 'User'}</Text>
           </Pressable>
         ))}
+        {(mineQuery.isFetching || feedQuery.isFetching) && <ActivityIndicator size="small" color="#A5B4FC" />}
       </ScrollView>
       <StatusComposer visible={composerVisible} onClose={() => setComposerVisible(false)} onCreated={refresh} />
       <StatusViewerModal group={activeGroup} own={viewingOwn} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
@@ -365,11 +364,10 @@ function StatusTray() {
 export default memo(StatusTray);
 
 const styles = StyleSheet.create({
-  tray: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingVertical: 13, elevation: 5, shadowColor: '#000', shadowOpacity: .12, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
-  trayHeader: { paddingHorizontal: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
-  trayTitle: { fontSize: 16, fontWeight: '800' }, trayContent: { paddingHorizontal: 12, gap: 12 }, storyItem: { width: 70, alignItems: 'center' },
-  storyRing: { width: 66, height: 66, borderRadius: 33, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
-  storyName: { fontSize: 11, marginTop: 5, width: 70, textAlign: 'center' }, addBadge: { position: 'absolute', right: -2, bottom: -2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#7C3AED', borderWidth: 2, borderColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  tray: { marginTop: 8, marginBottom: 6 },
+  trayContent: { paddingHorizontal: 0, gap: 16, alignItems: 'center' }, storyItem: { width: 64, alignItems: 'center' },
+  storyRing: { width: 64, height: 64, borderRadius: 32, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
+  storyName: { fontSize: 11, marginTop: 5, width: 64, textAlign: 'center' }, addBadge: { position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: '#7C3AED', borderWidth: 2, borderColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   avatarFallback: { backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' }, avatarInitial: { color: '#FFF', fontWeight: '800' },
   composer: { flex: 1 }, composerHeader: { height: 62, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, composerTitle: { color: '#FFF', fontSize: 18, fontWeight: '700' }, composerBody: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusInput: { width: '88%', color: '#FFF', fontSize: 30, lineHeight: 40, fontWeight: '700', maxHeight: '70%' }, composerImage: { width: '100%', height: '100%' }, videoSelected: { alignItems: 'center', padding: 24 }, videoSelectedText: { color: '#FFF', marginTop: 14, fontSize: 16, fontWeight: '600', textAlign: 'center' }, videoHint: { color: '#A1A1AA', marginTop: 7 },
