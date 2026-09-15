@@ -62,6 +62,7 @@ export default function
     productId,
     variantId: requestedVariantId,
     campaignId,
+    contentId,
   } = route.params;
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
@@ -136,6 +137,7 @@ export default function
       variant_id: Number(selectedVariant.variant_id),
       qty: Math.max(1, Number(qty) || 1),
       campaign_id: campaignId == null ? undefined : Number(campaignId),
+      content_id: contentId == null ? undefined : Number(contentId),
     };
 
     __DEV__ && console.log("➡️ Buy Now params:", buyNowParams);
@@ -146,12 +148,13 @@ export default function
       variant_id: buyNowParams.variant_id,
       qty: buyNowParams.qty,
       campaign_id: buyNowParams.campaign_id,
+      content_id: buyNowParams.content_id,
     }).catch(() => {
       // Ignore prefetch errors and continue navigation.
     });
 
     navigation.navigate("OrderStepUI", buyNowParams);
-  }, [campaignId, isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
+  }, [campaignId, contentId, isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
 
 
 
@@ -177,7 +180,7 @@ export default function
       });
     };
 
-    const detailsQueryKey = productDetailsQueryKey(productId, campaignId);
+    const detailsQueryKey = productDetailsQueryKey(productId, campaignId, contentId);
     const cachedProduct = queryClient.getQueryData<any>(detailsQueryKey);
     if (cachedProduct) {
       applyProductState(cachedProduct);
@@ -188,7 +191,7 @@ export default function
 
     // Start the network request immediately. Rendering the heavier product
     // content still waits for the native screen transition to finish below.
-    const productRequest = fetchProductDetailsByID(productId, campaignId)
+    const productRequest = fetchProductDetailsByID(productId, campaignId, contentId)
       .then((raw) => ({ raw, error: null }))
       .catch((error) => ({ raw: null, error }));
 
@@ -236,7 +239,7 @@ export default function
       isMounted = false;
       interactionTask.cancel();
     };
-  }, [campaignId, productId, queryClient, requestedVariantId]);
+  }, [campaignId, contentId, productId, queryClient, requestedVariantId]);
 
 
 
@@ -420,7 +423,7 @@ export default function
         return;
       }
 
-      await addItem(product.product_id, selectedVariant.variant_id, qty, campaignId);
+      await addItem(product.product_id, selectedVariant.variant_id, qty, campaignId, contentId);
 
       // Open sheet first so it isn't blocked by alert overlays.
       setSheetVisible(true);
@@ -446,6 +449,7 @@ export default function
   }, [
     adding,
     campaignId,
+    contentId,
     isAuthenticated,
     product?.product_id,
     selectedVariant?.variant_id,

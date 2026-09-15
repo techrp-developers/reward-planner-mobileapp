@@ -18,6 +18,7 @@ export const checkoutPreviewQueryKey = (params?: {
   variant_id?: number | string;
   qty?: number;
   campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const useRewards = params?.use_rewards ?? true;
@@ -31,6 +32,7 @@ export const checkoutPreviewQueryKey = (params?: {
       String(params?.variant_id ?? ""),
       String(params?.qty ?? 1),
       String(params?.campaign_id ?? ""),
+      String(params?.content_id ?? ""),
       useRewards,
     ] as const;
   }
@@ -41,11 +43,13 @@ export const checkoutPreviewQueryKey = (params?: {
 export const productDetailsQueryKey = (
   productId: number | string,
   campaignId?: number | string,
+  contentId?: number | string,
 ) => [
   "ecommerce",
   "product-details",
   String(productId),
   String(campaignId ?? ""),
+  String(contentId ?? ""),
 ] as const;
 
 type NavigateWithPrefetchOptions = {
@@ -81,10 +85,11 @@ export const handleNavigateWithPrefetch = ({
 export const prefetchProductDetails = (
   productId: number | string,
   campaignId?: number | string,
+  contentId?: number | string,
 ) => {
   return queryClient.prefetchQuery({
-    queryKey: productDetailsQueryKey(productId, campaignId),
-    queryFn: () => fetchProductDetailsByID(productId, campaignId),
+    queryKey: productDetailsQueryKey(productId, campaignId, contentId),
+    queryFn: () => fetchProductDetailsByID(productId, campaignId, contentId),
     staleTime: PRODUCT_DETAILS_STALE_TIME,
   });
 };
@@ -115,6 +120,7 @@ export const prefetchCheckoutPreview = (params?: {
   variant_id?: number | string;
   qty?: number;
   campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const mode = params?.mode === "buy_now" ? "buy_now" : "cart";
@@ -136,6 +142,7 @@ export const prefetchCheckoutPreview = (params?: {
         variant_id: variantId,
         qty,
         campaign_id: params?.campaign_id,
+        content_id: params?.content_id,
         use_rewards: useRewards,
       }),
       queryFn: () =>
@@ -146,6 +153,7 @@ export const prefetchCheckoutPreview = (params?: {
           useRewards,
           undefined,
           params?.campaign_id == null ? null : Number(params.campaign_id),
+          params?.content_id == null ? null : Number(params.content_id),
         ),
       staleTime: CART_STALE_TIME,
     });
@@ -164,6 +172,7 @@ export const prefetchCheckoutScreenData = async (params?: {
   variant_id?: number | string;
   qty?: number;
   campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   await Promise.allSettled([

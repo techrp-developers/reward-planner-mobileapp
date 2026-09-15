@@ -93,13 +93,17 @@ export const getProductImageUrl = (
 export const fetchProductDetailsByID = async (
   productId: string | number,
   campaignId?: string | number,
+  contentId?: string | number,
 ) => {
   if (!productId) {
     throw new Error('Missing product id');
   }
 
   const res = await api.get(`/v1/product/product-details/${productId}`, {
-    params: campaignId == null ? undefined : { campaign_id: campaignId },
+    params: {
+      ...(campaignId == null ? {} : { campaign_id: campaignId }),
+      ...(contentId == null ? {} : { content_id: contentId }),
+    },
   });
   const payload = res?.data;
   return payload?.product ?? payload?.data?.product ?? payload?.data ?? null;

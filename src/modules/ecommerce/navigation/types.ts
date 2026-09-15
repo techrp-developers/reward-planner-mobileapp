@@ -22,6 +22,7 @@ export type HomeStackParamList = {
     productId: number | string;
     variantId?: number | string;
     campaignId?: number | string;
+    contentId?: number | string;
   };
   Cart: undefined;
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
@@ -32,7 +33,7 @@ export type HomeStackParamList = {
   OrderReceipt:  undefined;
   Explore : undefined;
   ProductScreen: { source: ProductCollectionSource } | undefined;
-  CampaignProducts: { campaignId: number | string; title: string };
+  CampaignProducts: { campaignId?: number | string; contentId?: number | string; title: string };
   ReviewScreen: {
     product_id: number;
     variant_id: number;
@@ -49,6 +50,7 @@ export type HomeStackParamList = {
     variant_id?: number;
     qty?: number;
     campaign_id?: number;
+    content_id?: number;
   };
 
   OrderConfirm: { order_id?: number; items?: any[]; total?: number };
@@ -114,6 +116,7 @@ export type OrderStepParams = {
   variant_id?: number | string;
   qty?: number;
   campaign_id?: number | string;
+  content_id?: number | string;
 };
 
 // Extend HomeStackParamList OrderStepUI to accept params

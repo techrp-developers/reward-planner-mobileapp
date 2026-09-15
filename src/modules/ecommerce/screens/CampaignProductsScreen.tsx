@@ -15,6 +15,7 @@ import ProductHeadColor from '../constants/heading/Poduct_Head_Color';
 import ProductCard from '../constants/product_cart/ProductCard';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { getCampaignProducts } from '../api/CampaignAPI';
+import { getContentOfferProducts } from '../api/ContentOfferAPI';
 import { normalizeProduct } from '../utils/normalizeProduct';
 import type { HomeStackParamList } from '../navigation/types';
 import { useAppTheme } from '../../../theme/ThemeContext';
@@ -22,11 +23,13 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 type CampaignRoute = RouteProp<HomeStackParamList, 'CampaignProducts'>;
 type Navigation = NativeStackNavigationProp<HomeStackParamList>;
 
-const campaignProductsQueryKey = (campaignId: number | string) =>
-  ['ecommerce', 'campaign-products', String(campaignId)] as const;
+const offerProductsQueryKey = (campaignId?: number | string, contentId?: number | string) =>
+  ['ecommerce', 'offer-products', String(campaignId ?? ''), String(contentId ?? '')] as const;
 
 const normalizeCampaignProducts = (response: any) => {
-  const products = Array.isArray(response?.data) ? response.data : [];
+  const products = Array.isArray(response?.data)
+    ? response.data
+    : Array.isArray(response?.data?.products) ? response.data.products : [];
 
   return products.map((product: any) => normalizeProduct({
     ...product,
@@ -34,8 +37,8 @@ const normalizeCampaignProducts = (response: any) => {
     campaign_item_id: product.id,
     title: product.product_name,
     brand: product.brand_name,
-    price: product.price ?? product.final_price,
-    originalPrice: product.original_price ?? product.mrp,
+    price: product.offer_price ?? product.price ?? product.final_price,
+    originalPrice: product.originalPrice ?? product.original_sale_price ?? product.original_price ?? product.mrp,
     image: product.image,
   }));
 };
@@ -48,13 +51,14 @@ export default function CampaignProductsScreen() {
   const pulse = useRef(new Animated.Value(0)).current;
   const cardWidth = (width - 44) / 2;
   const campaignId = route.params.campaignId;
+  const contentId = route.params.contentId;
   const title = route.params.title || 'Campaign Products';
 
   const { data: products = [], isLoading, error } = useQuery({
-    queryKey: campaignProductsQueryKey(campaignId),
-    queryFn: () => getCampaignProducts(Number(campaignId)),
+    queryKey: offerProductsQueryKey(campaignId, contentId),
+    queryFn: () => contentId != null ? getContentOfferProducts(Number(contentId)) : getCampaignProducts(Number(campaignId)),
     select: normalizeCampaignProducts,
-    enabled: Number.isFinite(Number(campaignId)) && Number(campaignId) > 0,
+    enabled: (Number.isFinite(Number(campaignId)) && Number(campaignId) > 0) || (Number.isFinite(Number(contentId)) && Number(contentId) > 0),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -95,6 +99,7 @@ export default function CampaignProductsScreen() {
                 productId,
                 variantId: product.variant_id,
                 campaignId,
+                contentId,
               })}
             />
           )}

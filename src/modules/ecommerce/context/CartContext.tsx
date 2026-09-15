@@ -16,6 +16,7 @@ export type CartItem = {
   product_id: string | number;
   variant_id: string | number;
   flash_sale_campaign_id?: string | number | null;
+  promotional_content_id?: string | number | null;
   name: string;
   price: number;
   quantity: number;
@@ -33,6 +34,7 @@ type CartContextType = {
     variantId: string | number,
     quantity: number,
     campaignId?: string | number | null,
+    contentId?: string | number | null,
   ) => Promise<void>;
   removeItem: (itemId: string | number) => Promise<void>;
   updateQuantity: (itemId: string | number, quantity: number) => Promise<void>;
@@ -67,6 +69,7 @@ const toCartItems = (rawItems: any[]): CartItem[] => {
       item.variant?.variant_id ??
       item.variant?.id,
     flash_sale_campaign_id: item.flash_sale_campaign_id ?? null,
+    promotional_content_id: item.promotional_content_id ?? null,
     name: item.product_name || item.name,
     price: Number(item.sale_price || item.price || 0),
     quantity: Number(item.quantity || 1),
@@ -123,15 +126,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     await syncProductCartQueries();
   }, [isAuthenticated, queryClient, syncProductCartQueries]);
 
-  // 🔄 BACKGROUND SYNC
+  //  BACKGROUND SYNC
   // ➕ ADD PRODUCT
   const addMutation = useMutation({
-    mutationFn: ({ productId, variantId, quantity, campaignId }: any) =>
+    mutationFn: ({ productId, variantId, quantity, campaignId, contentId }: any) =>
       addToCart({
         product_id: productId,
         variant_id: variantId,
         quantity,
         campaign_id: campaignId ?? null,
+        content_id: contentId ?? null,
       }),
     onSuccess: () => {
       syncProductCartQueries();
@@ -161,6 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       variantId: string | number,
       quantity: number,
       campaignId?: string | number | null,
+      contentId?: string | number | null,
     ) => {
       if (!isAuthenticated) return;
       await addMutation.mutateAsync({
@@ -168,6 +173,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         variantId: Number(variantId),
         quantity,
         campaignId: campaignId == null ? null : Number(campaignId),
+        contentId: contentId == null ? null : Number(contentId),
       });
     },
     [addMutation, isAuthenticated]

@@ -219,6 +219,7 @@ export default function OrderStepUI() {
   const variant_id = Number(route?.params?.variant_id);
   const qty = Math.max(1, Number(route?.params?.qty ?? 1));
   const campaign_id = route?.params?.campaign_id;
+  const content_id = route?.params?.content_id;
   const [buyNowQty, setBuyNowQty] = useState(qty);
   const [cartSummary, setCartSummary] =
     useState<CheckoutSummary>(emptyCheckoutSummary);
@@ -347,9 +348,10 @@ export default function OrderStepUI() {
         variant_id,
         qty: buyNowQty,
         campaign_id,
+        content_id,
         use_rewards: useRewards,
       }),
-    [mode, product_id, variant_id, buyNowQty, campaign_id, useRewards],
+    [mode, product_id, variant_id, buyNowQty, campaign_id, content_id, useRewards],
   );
 
   const {
@@ -380,6 +382,7 @@ export default function OrderStepUI() {
           useRewards,
           undefined,
           campaign_id == null ? null : Number(campaign_id),
+          content_id == null ? null : Number(content_id),
         );
       }
       return fetchCheckoutCart(useRewards);
@@ -664,6 +667,8 @@ export default function OrderStepUI() {
               product_id: Number(item.product_id),
               variant_id: Number(item.variant_id),
               quantity: Number(item.quantity ?? 1),
+              campaign_id: item.flash_sale_campaign_id == null ? null : Number(item.flash_sale_campaign_id),
+              content_id: item.promotional_content_id == null ? null : Number(item.promotional_content_id),
             }))
             .filter(
               item =>
@@ -775,6 +780,7 @@ export default function OrderStepUI() {
               useRewards,
               safeToNumber(selectedAddressId),
               campaign_id == null ? null : Number(campaign_id),
+              content_id == null ? null : Number(content_id),
             );
           }
           return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
@@ -800,6 +806,7 @@ export default function OrderStepUI() {
           variant_id: safeToNumber(variant_id),
           quantity: buyNowQty,
           campaign_id: campaign_id == null ? null : Number(campaign_id),
+          content_id: content_id == null ? null : Number(content_id),
           address_id: safeToNumber(selectedAddressId),
           expected_total: safeToNumber(expectedPrice),
           expected_redeemable: useRewards

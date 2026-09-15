@@ -15,6 +15,7 @@ export type BuyNowPayload = {
   variant_id: number;
   quantity: number;
   campaign_id?: number | null;
+  content_id?: number | null;
   address_id: number;
 
   expected_total: number;
@@ -77,6 +78,7 @@ export const fetchBuyNowCheckout = async (
   useRewards = true,
   addressId?: number,
   campaignId?: number | null,
+  contentId?: number | null,
 ) => {
   const res = await api.get("/v1/checkout/get-buy-now", {
     params: {
@@ -84,6 +86,7 @@ export const fetchBuyNowCheckout = async (
       variant_id,
       qty,
       campaign_id: campaignId ?? undefined,
+      content_id: contentId ?? undefined,
       use_rewards: useRewards,
       address_id: addressId,
     },

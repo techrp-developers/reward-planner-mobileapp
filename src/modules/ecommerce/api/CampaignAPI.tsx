@@ -85,6 +85,9 @@ export interface CampaignProduct {
   mrp: string;
   original_price: string;
   final_price: string;
+  sale_price?: string | number;
+  original_sale_price?: string | number;
+  offer_price?: string | number | null;
   image?: string;
   price?: string;
   originalPrice?: string;

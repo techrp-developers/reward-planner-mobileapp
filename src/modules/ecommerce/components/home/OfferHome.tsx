@@ -23,6 +23,7 @@ import {
   fetchProductDetailsByID,
 } from "../../api/ProductApi";
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
+import { getPromotionalContent } from "../../api/ContentOfferAPI";
 import { queryClient } from "../../../../query/queryClient";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
@@ -41,6 +42,7 @@ const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170))
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
 const CAMPAIGN_HOME_QUERY_KEY = ["ecommerce", "home", "campaign-home"] as const;
+const PROMOTIONAL_CONTENT_QUERY_KEY = ["ecommerce", "home", "promotional-content"] as const;
 const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
   ["ecommerce", "home", "flash-products", campaignId] as const;
 // The campaign-home endpoint can omit flash_sales even while the dedicated
@@ -348,6 +350,11 @@ export default function OfferHome() {
     queryFn: getCampaignHome,
     staleTime: 10 * 60 * 1000,
   });
+  const { data: promotionalContent } = useQuery({
+    queryKey: PROMOTIONAL_CONTENT_QUERY_KEY,
+    queryFn: getPromotionalContent,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const flashCampaignId =
     campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
@@ -366,9 +373,9 @@ export default function OfferHome() {
         product_name: p.product_name,
         title: p.product_name,
         brand: p.brand_name || '',
-        price: p.price ?? p.final_price,
+        price: p.offer_price ?? p.price ?? p.final_price,
         mrp: p.mrp,
-        originalPrice: p.originalPrice ?? p.mrp,
+        originalPrice: p.original_sale_price ?? p.originalPrice ?? p.mrp,
         discount: p.discount,
         rp_price: p.rp_price,
         image: p.image || null,
@@ -377,17 +384,29 @@ export default function OfferHome() {
       })),
   });
 
-  const banner = useMemo(() =>
-    (campaignHome?.data?.posters ?? []).map(p => ({
-      id: p.campaign_id,
+  const banner = useMemo(() => {
+    const campaignBanners = (campaignHome?.data?.posters ?? []).map(p => ({
+      id: `campaign-${p.campaign_id}`,
+      campaignId: p.campaign_id,
+      contentId: undefined as number | undefined,
       title: p.title,
       image: p.banner_image,
       redirectType: p.redirect_type,
       redirectId: p.redirect_id,
       redirectUrl: p.redirect_url,
-    })),
-    [campaignHome]
-  );
+    }));
+    if (!promotionalContent?.contentId || !promotionalContent.imageUrl) return campaignBanners;
+    return [...campaignBanners, {
+      id: `content-${promotionalContent.contentId}`,
+      campaignId: undefined,
+      contentId: promotionalContent.contentId,
+      title: promotionalContent.title || 'Special offer',
+      image: promotionalContent.imageUrl,
+      redirectType: null,
+      redirectId: null,
+      redirectUrl: null,
+    }];
+  }, [campaignHome, promotionalContent]);
 
   const flashSalesPoster = useMemo(() => {
     const flash = campaignHome?.data?.flash_sales?.[0];
@@ -395,9 +414,10 @@ export default function OfferHome() {
   }, [campaignHome]);
 
   const handleBannerPress = (offer: typeof banner[number]) => {
-    if (offer.id != null) {
+    if (offer.campaignId != null || offer.contentId != null) {
       navigation.navigate('CampaignProducts', {
-        campaignId: offer.id,
+        campaignId: offer.campaignId,
+        contentId: offer.contentId,
         title: offer.title,
       });
     } else if (offer.redirectType === 'url' && offer.redirectUrl) {
