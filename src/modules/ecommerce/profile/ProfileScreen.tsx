@@ -638,8 +638,15 @@ const ProfileScreen: React.FC = () => {
             <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard}>
               <View style={styles.businessCardHeader}>
                 <View style={styles.businessBrand}>
-                  <View style={styles.businessBrandIcon}><MaterialCommunityIcons name="card-account-details-outline" size={17} color="#FFFFFF" /></View>
-                  <Text style={styles.businessBrandText}>RewardPlanners</Text>
+                  {userInfo?.company?.logo ? (
+                    <Image
+                      source={{ uri: userInfo.company.logo }}
+                      style={styles.businessCompanyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.businessBrandIcon}><MaterialCommunityIcons name="office-building-outline" size={19} color="#FFFFFF" /></View>
+                  )}
                 </View>
               </View>
               <View style={styles.businessCardBody}>
@@ -997,7 +1004,7 @@ const styles = StyleSheet.create({
   businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: rs(16), zIndex: 2 },
   businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
   businessBrandIcon: { width: rs(29), height: rs(29), borderRadius: rs(9), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
-  businessBrandText: { color: '#FFFFFF', fontSize: fs(11), fontWeight: '800' },
+  businessCompanyLogo: { width: rs(112), height: rs(42) },
   businessCardBody: { flex: 1, alignItems: 'center', zIndex: 2 },
   businessDetails: { width: '100%', minWidth: 0, alignItems: 'center' },
   businessIdentityRow: { width: '100%', flexDirection: 'column', alignItems: 'center', gap: rs(8) },
