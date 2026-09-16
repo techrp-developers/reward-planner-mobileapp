@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Alert, Animated, Easing, Modal, Platform, Linking, Share, Switch,
+  Image, ActivityIndicator, Alert, Animated, Easing, Modal, Platform, Linking, PermissionsAndroid, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,6 +24,9 @@ import { rs, fs } from '../../../utils/responsive';
 import axios from 'axios';
 import Reward from '../../../assets/product/rewards.svg';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+import Share from 'react-native-share';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -125,6 +128,9 @@ const ProfileScreen: React.FC = () => {
   const [, setVisitCardLoading] = useState(false);
   const [visitCardRequested, setVisitCardRequested] = useState(false);
   const [visitCardModalVisible, setVisitCardModalVisible] = useState(false);
+  const [visitCardExporting, setVisitCardExporting] = useState(false);
+  const [visitCardActionsHidden, setVisitCardActionsHidden] = useState(false);
+  const visitCardCaptureRef = useRef<ViewShotRef>(null);
   const cardFlipAnimation = useRef(new Animated.Value(0)).current;
 
   const topPadding =
@@ -291,13 +297,82 @@ const ProfileScreen: React.FC = () => {
     }
   }, [visitCardQr]);
 
-  const handleShareVisitCard = useCallback(async () => {
-    await Share.share({
-      title: `${displayName}'s visiting card`,
-      message: [displayName, userInfo?.employeeInfo?.role, userInfo?.company?.name,
-        userInfo?.phone, userInfo?.email].filter(Boolean).join('\n'),
+  const captureVisitCard = useCallback(async () => {
+    if (!visitCardCaptureRef.current) {
+      throw new Error('The visiting card is not ready yet.');
+    }
+
+    setVisitCardActionsHidden(true);
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-  }, [displayName, userInfo]);
+
+    try {
+      return await visitCardCaptureRef.current.capture();
+    } finally {
+      setVisitCardActionsHidden(false);
+    }
+  }, []);
+
+  const visitCardShareMessage = [
+    displayName,
+    userInfo?.employeeInfo?.role,
+    userInfo?.company?.name,
+    userInfo?.phone,
+    userInfo?.email,
+  ].filter(Boolean).join('\n');
+
+  const handleDownloadVisitCard = useCallback(async () => {
+    try {
+      setVisitCardExporting(true);
+
+      if (Platform.OS === 'android' && Number(Platform.Version) <= 28) {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: 'Save visiting card',
+            message: 'Allow Reward Planners to save your visiting card to Photos.',
+            buttonPositive: 'Allow',
+            buttonNegative: 'Cancel',
+          },
+        );
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission required', 'Storage access is needed to save the card on this Android version.');
+          return;
+        }
+      }
+
+      const uri = await captureVisitCard();
+      await CameraRoll.save(uri, {
+        type: 'photo',
+        album: Platform.OS === 'android' ? 'Reward Planners' : undefined,
+      });
+      Alert.alert('Card saved', 'Your visiting card JPG has been saved to Photos.');
+    } catch (error: any) {
+      Alert.alert('Could not save card', error?.message || 'Please try again.');
+    } finally {
+      setVisitCardExporting(false);
+    }
+  }, [captureVisitCard]);
+
+  const handleShareVisitCard = useCallback(async () => {
+    try {
+      setVisitCardExporting(true);
+      const uri = await captureVisitCard();
+      await Share.open({
+        title: `${displayName}'s visiting card`,
+        subject: `${displayName}'s visiting card`,
+        message: visitCardShareMessage,
+        url: uri,
+        type: 'image/jpeg',
+        failOnCancel: false,
+      });
+    } catch (error: any) {
+      Alert.alert('Could not share card', error?.message || 'Please try again.');
+    } finally {
+      setVisitCardExporting(false);
+    }
+  }, [captureVisitCard, displayName, visitCardShareMessage]);
 
   const handleOpenVisitCard = useCallback(() => {
     cardFlipAnimation.setValue(0);
@@ -635,7 +710,8 @@ const ProfileScreen: React.FC = () => {
             </View>
 
             <Animated.View style={[styles.businessCardFlipWrap, { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnimation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
-            <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard}>
+            <ViewShot ref={visitCardCaptureRef} options={{ format: 'jpg', quality: 0.95, result: 'tmpfile', fileName: 'reward-planners-visiting-card' }} style={styles.businessCardCapture}>
+            <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard} collapsable={false}>
               <View style={styles.businessCardHeader}>
                 <View style={styles.businessBrand}>
                   {userInfo?.company?.logo ? (
@@ -672,12 +748,19 @@ const ProfileScreen: React.FC = () => {
                   </View>
                   <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
                 </View>
-                <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8}>
-                  <MaterialCommunityIcons name="share-variant-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.businessShareText}>Share card</Text>
-                </TouchableOpacity>
+                <View style={[styles.businessCardActions, visitCardActionsHidden && styles.businessCardActionsHidden]}>
+                  <TouchableOpacity style={styles.businessDownloadButton} onPress={handleDownloadVisitCard} activeOpacity={0.8} disabled={visitCardExporting}>
+                    {visitCardExporting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="download-outline" size={17} color="#FFFFFF" />}
+                    <Text style={styles.businessShareText}>Download</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8} disabled={visitCardExporting}>
+                    <MaterialCommunityIcons name="share-variant-outline" size={17} color="#FFFFFF" />
+                    <Text style={styles.businessShareText}>Share</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </LinearGradient>
+            </ViewShot>
             </Animated.View>
           </View>
         </View>
@@ -1000,6 +1083,7 @@ const styles = StyleSheet.create({
   cardModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: rs(8) },
   cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center' },
   businessCardFlipWrap: { width: '100%', flex: 1, backfaceVisibility: 'hidden' },
+  businessCardCapture: { width: '100%', flex: 1, borderRadius: rs(24), overflow: 'hidden', backgroundColor: '#09090B' },
   businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)', elevation: 5, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
   businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: rs(16), zIndex: 2 },
   businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
@@ -1023,7 +1107,10 @@ const styles = StyleSheet.create({
   businessQrBox: { width: rs(132), height: rs(132), padding: rs(8), borderRadius: rs(17), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   businessQr: { width: '100%', height: '100%' },
   businessScanText: { color: '#C4B5FD', fontSize: fs(7), fontWeight: '900', letterSpacing: 0.6 },
-  businessShareButton: { alignSelf: 'center', minWidth: '56%', minHeight: rs(48), marginTop: rs(24), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(8), paddingHorizontal: rs(20), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', zIndex: 3 },
+  businessCardActions: { width: '100%', flexDirection: 'row', gap: rs(10), marginTop: rs(24) },
+  businessCardActionsHidden: { opacity: 0 },
+  businessDownloadButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), paddingHorizontal: rs(12), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#27272A', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  businessShareButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), paddingHorizontal: rs(12), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   businessShareText: { color: '#FFFFFF', fontSize: fs(13), fontWeight: '900' },
 
   card: {

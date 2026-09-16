@@ -44,6 +44,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need location access for address selection.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Reward Planners saves your visiting card image to your photo library.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	
