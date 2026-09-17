@@ -183,9 +183,10 @@ function ViewerList({ viewers }: { viewers: StatusViewer[] }) {
   return <FlatList data={viewers} keyExtractor={item => String(item.user_id)} ListEmptyComponent={<Text style={styles.emptyViewers}>No views yet</Text>} renderItem={({ item }) => <View style={styles.viewerRow}><Avatar uri={item.image_url} name={item.name} size={42} /><View><Text style={styles.viewerName}>{item.name || 'User'}</Text><Text style={styles.viewerTime}>{new Date(item.viewed_at).toLocaleString()}</Text></View></View>} />;
 }
 
-function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged }: {
+function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFinished, onChanged }: {
   group: StatusFeedGroup | null;
   own: boolean;
+  currentUserId?: number | null;
   visible: boolean;
   onClose: () => void;
   onFinished: () => void;
@@ -200,6 +201,13 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
   const videoTouchStart = useRef({ x: 0, y: 0 });
   const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
+  // Derive ownership from the API data too. This keeps owner actions available
+  // when a user's own status is opened from a refreshed/cached feed rather than
+  // exclusively through the local "My status" navigation flag.
+  const isOwner = own || (
+    currentUserId != null &&
+    Number(group?.user.id) === Number(currentUserId)
+  );
 
   useEffect(() => {
     setIndex(0);
@@ -213,7 +221,7 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
     setViewerCount(Number(status?.view_count ?? 0));
   }, [status?.id, status?.view_count]);
   useEffect(() => {
-    if (!visible || !status || own) return;
+    if (!visible || !status || isOwner) return;
     markStatusViewed(status.id).then(result => {
       queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current => {
         if (!current) return current;
@@ -231,7 +239,7 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
         });
       });
     }).catch(() => {});
-  }, [own, status?.id, visible]);
+  }, [isOwner, status?.id, visible]);
 
   const next = useCallback(() => {
     if (!group) return;
@@ -290,7 +298,7 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
       <View style={[styles.viewer, { backgroundColor: status.background_color || '#050505' }]}>
         <SafeAreaView style={styles.viewerSafe}>
           <View style={styles.progressRow}>{group.statuses.map((item, position) => <View key={item.id} style={styles.progressTrack}><View style={[styles.progressFill, { width: position <= index ? '100%' : '0%' }]} /></View>)}</View>
-          <View style={styles.viewerHeader}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /><View style={styles.viewerIdentity}><Text style={styles.viewerHeaderName}>{own ? 'My status' : group.user.name || 'Status'}</Text><Text style={styles.viewerHeaderTime}>{new Date(status.created_at).toLocaleString()}</Text></View>{own && <Pressable onPress={remove} hitSlop={10}><MaterialCommunityIcons name="delete-outline" color="#FFF" size={25} /></Pressable>}<Pressable onPress={onClose} hitSlop={10}><MaterialCommunityIcons name="close" color="#FFF" size={27} /></Pressable></View>
+          <View style={styles.viewerHeader}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /><View style={styles.viewerIdentity}><Text style={styles.viewerHeaderName}>{isOwner ? 'My status' : group.user.name || 'Status'}</Text><Text style={styles.viewerHeaderTime}>{new Date(status.created_at).toLocaleString()}</Text></View>{isOwner && <Pressable onPress={remove} hitSlop={10}><MaterialCommunityIcons name="delete-outline" color="#FFF" size={25} /></Pressable>}<Pressable onPress={onClose} hitSlop={10}><MaterialCommunityIcons name="close" color="#FFF" size={27} /></Pressable></View>
           <View style={styles.statusStage}>
             {status.type === 'text' && <Text style={[styles.viewerText, status.font_style === 'italic' && { fontStyle: 'italic' }]}>{status.text}</Text>}
             {status.type === 'image' && status.media_url && <Image source={{ uri: status.media_url }} style={styles.viewerMedia} resizeMode="contain" />}
@@ -331,7 +339,27 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
             {status.type !== 'text' && !!status.text && <Text style={styles.viewerCaption}>{status.text}</Text>}
             {status.type !== 'video' && <><Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} /></>}
           </View>
-          {own && <Pressable onPress={showViewers} style={styles.viewsButton}>{busy ? <ActivityIndicator color="#FFF" /> : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{viewerCount} views</Text></>}</Pressable>}
+          {isOwner && (
+            <View style={styles.ownerActions}>
+              <Pressable
+                onPress={showViewers}
+                disabled={busy}
+                style={styles.viewsButton}
+              >
+                {busy
+                  ? <ActivityIndicator color="#FFF" />
+                  : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{viewerCount} views</Text></>}
+              </Pressable>
+              <Pressable
+                onPress={remove}
+                disabled={busy}
+                style={styles.deleteButton}
+              >
+                <MaterialCommunityIcons name="delete-outline" color="#FFF" size={20} />
+                <Text style={styles.deleteText}>Delete</Text>
+              </Pressable>
+            </View>
+          )}
           {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
         </SafeAreaView>
       </View>
@@ -390,7 +418,7 @@ function StatusTray() {
         {(mineQuery.isFetching || feedQuery.isFetching) && <ActivityIndicator size="small" color="#A5B4FC" />}
       </ScrollView>
       <StatusComposer visible={composerVisible} onClose={() => setComposerVisible(false)} onCreated={refresh} />
-      <StatusViewerModal group={activeGroup} own={viewingOwn} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
+      <StatusViewerModal group={activeGroup} own={viewingOwn} currentUserId={user?.user_id} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
     </View>
   );
 }
@@ -411,5 +439,10 @@ const styles = StyleSheet.create({
   viewer: { flex: 1 }, viewerSafe: { flex: 1 }, progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 8 }, progressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.35)', overflow: 'hidden' }, progressFill: { height: 3, backgroundColor: '#FFF' }, viewerHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 }, viewerIdentity: { flex: 1 }, viewerHeaderName: { color: '#FFF', fontWeight: '700', fontSize: 15 }, viewerHeaderTime: { color: 'rgba(255,255,255,.72)', fontSize: 11, marginTop: 2 },
   statusStage: { flex: 1, alignItems: 'center', justifyContent: 'center' }, viewerText: { color: '#FFF', fontSize: 32, lineHeight: 42, fontWeight: '700', paddingHorizontal: 30, textAlign: 'center' }, viewerMedia: { width: '100%', height: '100%' }, viewerCaption: { position: 'absolute', bottom: 24, left: 18, right: 18, color: '#FFF', textAlign: 'center', fontSize: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,.55)' }, videoOpen: { alignItems: 'center' }, videoOpenText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 8 }, previousArea: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '32%' }, nextArea: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '32%' },
   videoTouchLayer: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
-  viewsButton: { height: 52, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }, viewsText: { color: '#FFF', fontWeight: '600' }, viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
+  ownerActions: { minHeight: 58, paddingHorizontal: 18, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  viewsButton: { height: 46, flex: 1, borderRadius: 23, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
+  viewsText: { color: '#FFF', fontWeight: '700' },
+  deleteButton: { height: 46, paddingHorizontal: 18, borderRadius: 23, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(220,38,38,.92)' },
+  deleteText: { color: '#FFF', fontWeight: '800' },
+  viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
 });
