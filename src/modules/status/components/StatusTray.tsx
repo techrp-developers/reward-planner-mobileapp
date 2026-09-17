@@ -35,7 +35,6 @@ import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, Statu
 const STATUS_COLORS = ['#202C33', '#6D28D9', '#BE123C', '#0369A1', '#047857', '#B45309'];
 const AUDIENCES: Array<{ value: StatusVisibility; label: string }> = [
   { value: 'same_company', label: 'My company' },
-  { value: 'all_companies', label: 'All companies' },
   { value: 'all_except_companies', label: 'All except selected companies' },
   { value: 'custom_people', label: 'Selected people only' },
 ];
