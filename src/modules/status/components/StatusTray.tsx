@@ -30,7 +30,7 @@ import {
   fetchStatusViewers,
   markStatusViewed,
 } from '../api/statusApi';
-import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, StatusVisibility } from '../types';
+import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, StatusVisibility, UserStatus } from '../types';
 
 const STATUS_COLORS = ['#202C33', '#6D28D9', '#BE123C', '#0369A1', '#047857', '#B45309'];
 const AUDIENCES: Array<{ value: StatusVisibility; label: string }> = [
@@ -193,6 +193,7 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
 }) {
   const [index, setIndex] = useState(0);
   const [viewers, setViewers] = useState<StatusViewer[] | null>(null);
+  const [viewerCount, setViewerCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
@@ -200,12 +201,37 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
   const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
 
-  useEffect(() => { setIndex(0); setViewers(null); setVideoError(false); setVideoPaused(false); }, [group, visible]);
+  useEffect(() => {
+    setIndex(0);
+    setViewers(null);
+    setViewerCount(Number(group?.statuses[0]?.view_count ?? 0));
+    setVideoError(false);
+    setVideoPaused(false);
+  }, [group, visible]);
   useEffect(() => { setVideoError(false); setVideoPaused(false); }, [status?.id]);
   useEffect(() => {
+    setViewerCount(Number(status?.view_count ?? 0));
+  }, [status?.id, status?.view_count]);
+  useEffect(() => {
     if (!visible || !status || own) return;
-    markStatusViewed(status.id).catch(() => {});
-  }, [own, status, visible]);
+    markStatusViewed(status.id).then(result => {
+      queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current => {
+        if (!current) return current;
+        return current.map(feedGroup => {
+          const statuses = feedGroup.statuses.map(item => (
+            item.id === result.id
+              ? { ...item, viewed: result.viewed, view_count: result.view_count }
+              : item
+          ));
+          return {
+            ...feedGroup,
+            statuses,
+            has_unviewed: statuses.some(item => !item.viewed),
+          };
+        });
+      });
+    }).catch(() => {});
+  }, [own, status?.id, visible]);
 
   const next = useCallback(() => {
     if (!group) return;
@@ -231,7 +257,16 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
   const showViewers = useCallback(async () => {
     if (!status) return;
     setBusy(true);
-    try { setViewers(await fetchStatusViewers(status.id)); }
+    try {
+      const result = await fetchStatusViewers(status.id);
+      setViewers(result.viewers);
+      setViewerCount(result.viewCount);
+      queryClient.setQueryData<UserStatus[]>(['statuses', 'mine'], current =>
+        current?.map(item => item.id === status.id
+          ? { ...item, view_count: result.viewCount }
+          : item),
+      );
+    }
     catch (error) { Alert.alert('Could not load views', messageFrom(error)); }
     finally { setBusy(false); }
   }, [status]);
@@ -296,7 +331,7 @@ function StatusViewerModal({ group, own, visible, onClose, onFinished, onChanged
             {status.type !== 'text' && !!status.text && <Text style={styles.viewerCaption}>{status.text}</Text>}
             {status.type !== 'video' && <><Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} /></>}
           </View>
-          {own && <Pressable onPress={showViewers} style={styles.viewsButton}>{busy ? <ActivityIndicator color="#FFF" /> : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{status.view_count || 0} views</Text></>}</Pressable>}
+          {own && <Pressable onPress={showViewers} style={styles.viewsButton}>{busy ? <ActivityIndicator color="#FFF" /> : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{viewerCount} views</Text></>}</Pressable>}
           {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
         </SafeAreaView>
       </View>

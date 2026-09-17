@@ -12,6 +12,17 @@ import type {
 
 type DataResponse<T> = { success: boolean; data: T; message?: string };
 
+export type StatusViewResult = {
+  id: number;
+  viewed: boolean;
+  view_count: number;
+};
+
+export type StatusViewersResult = {
+  viewers: StatusViewer[];
+  viewCount: number;
+};
+
 export async function fetchMyStatuses() {
   const response = await api.get<DataResponse<UserStatus[]>>('/v1/status/mine');
   return response.data.data ?? [];
@@ -69,12 +80,19 @@ export async function fetchStatusAudienceOptions(search?: string) {
 }
 
 export async function markStatusViewed(statusId: number) {
-  await api.post(`/v1/status/${statusId}/view`);
+  const response = await api.post<DataResponse<StatusViewResult>>(`/v1/status/${statusId}/view`);
+  return response.data.data;
 }
 
-export async function fetchStatusViewers(statusId: number) {
-  const response = await api.get<DataResponse<StatusViewer[]>>(`/v1/status/${statusId}/views`);
-  return response.data.data ?? [];
+export async function fetchStatusViewers(statusId: number): Promise<StatusViewersResult> {
+  const response = await api.get<DataResponse<StatusViewer[]> & { view_count?: number }>(
+    `/v1/status/${statusId}/views`,
+  );
+  const viewers = response.data.data ?? [];
+  return {
+    viewers,
+    viewCount: Number(response.data.view_count ?? viewers.length),
+  };
 }
 
 export async function deleteStatus(statusId: number) {
