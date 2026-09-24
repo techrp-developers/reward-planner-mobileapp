@@ -28,100 +28,31 @@ Starting dev server on http://localhost:8081
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
  BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (17/210)
  BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (70/360)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (119/451)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 10% (186/567)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (302/680)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (332/726)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 21% (333/726)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (124/475)
+ BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 13% (214/587)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (306/691)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (332/729)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (333/729)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\order_banner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (384/794)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (383/796)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\product\product(1).svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 25% (452/903)
- BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 31% (559/1011)
- BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 38% (693/1118)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 45% (801/1209)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (453/911)
+ BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 30% (563/1028)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 38% (705/1139)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 45% (814/1216)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\serviceBanner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 55% (927/1254)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 66% (1073/1311)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1245/1511)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1277/1532)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77% (1391/1584)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1537/1651)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1579/1963)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1700/2058)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1818/2098)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (2038/2173)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 93% (2166/2260)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2265/2334)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97% (2350/2384)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 55% (943/1264)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69% (1100/1321)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1245/1512)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1288/1543)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1392/1590)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1560/1672)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1588/1972)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1711/2067)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1759/2086)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (2030/2164)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 93% (2172/2263)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2284/2347)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96% (2336/2384)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2407/2408)
  BUNDLE  ./index.js 
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 5% (9/125)
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 5% (45/273)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 12% (140/398)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (307/686)
- BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 27% (398/764)
- BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 42% (735/1121)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 45% (770/1141)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 71% (1132/1343)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77% (1343/1580)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1579/1679)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (1678/2042)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (2040/2178)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 92% (2177/2266)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2264/2334)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97% (2356/2384)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2386/2398)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2398/2399)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
