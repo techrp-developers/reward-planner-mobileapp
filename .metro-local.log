@@ -22,45 +22,47 @@ Starting dev server on http://localhost:8081
               Fast - Scalable - Integrated
 
 
+ INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
  INFO  Dev server ready. Press Ctrl+C to exit.
  INFO  Interactive mode is not supported in this environment
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (18/213)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (75/407)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (136/495)
- BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 15% (230/593)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (317/708)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (332/729)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (333/729)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (19/215)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (74/397)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (136/497)
+ BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 15% (233/594)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (322/729)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (334/744)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (335/744)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\order_banner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (386/796)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 23% (388/816)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\sampleImages\Categories(8).svg as it exceeds the max of 500KB.
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\product\product(1).svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (460/923)
- BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 30% (561/1022)
- BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 37% (689/1133)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 43% (783/1181)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53% (916/1253)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (463/941)
+ BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 31% (600/1066)
+ BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 36% (707/1180)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\exclusiveofferbooking.svg as it exceeds the max of 500KB.
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe1.svg as it exceeds the max of 500KB.
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe2.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 43% (809/1227)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53% (951/1302)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\serviceBanner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 62% (1023/1296)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75% (1215/1412)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75% (1287/1541)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75% (1349/1561)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1536/1654)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1588/1972)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1706/2065)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86% (1928/2118)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 93% (2126/2203)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 93% (2244/2327)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 95% (2319/2373)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2399/2407)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65% (1110/1367)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1295/1558)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1334/1587)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 78% (1455/1638)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1602/1717)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1630/2015)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1756/2111)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1929/2159)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (2111/2241)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2301/2377)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96% (2375/2420)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2446/2453)
  BUNDLE  ./index.js 
- BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (1947/2136)
- BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
  INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91% (2267/2364)
  BUNDLE  ./index.js 
  INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.

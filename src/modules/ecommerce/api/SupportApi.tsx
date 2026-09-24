@@ -55,6 +55,15 @@ export type SupportRecentServiceOrder = {
 export type CreateSupportTicketPayload = {
   description: string;
   category_id: number;
+  support_module: 'general' | 'ecommerce' | 'services' | 'bbps' | 'step_counter';
+  reference_type?: 'order';
+  reference_id?: string;
+  reference_label?: string;
+  attachment?: {
+    uri: string;
+    name: string;
+    type: string;
+  };
 };
 
 type SupportCategoriesResponse = {
@@ -177,9 +186,21 @@ export const createSupportTicket = async (
   payload: CreateSupportTicketPayload
 ): Promise<CreateSupportTicketResponse> => {
   try {
+    const formData = new FormData();
+    formData.append('description', payload.description);
+    formData.append('category_id', String(payload.category_id));
+    formData.append('support_module', payload.support_module);
+    if (payload.reference_type) formData.append('reference_type', payload.reference_type);
+    if (payload.reference_id) formData.append('reference_id', payload.reference_id);
+    if (payload.reference_label) formData.append('reference_label', payload.reference_label);
+    if (payload.attachment) {
+      formData.append('attachment', payload.attachment as any);
+    }
+
     const res = await api.post(
       CREATE_SUPPORT_TICKET_ENDPOINT,
-      payload
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
 
     return {
