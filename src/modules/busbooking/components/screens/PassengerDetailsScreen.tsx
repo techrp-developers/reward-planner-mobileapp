@@ -62,6 +62,9 @@ const createPassengerForm = (): PassengerForm => ({
   whatsappUpdates: true,
 });
 
+const normalizePhoneNumber = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+const normalizeAge = (value: string) => value.replace(/\D/g, "").slice(0, 3);
+
 const splitPassengerName = (fullName: string) => {
   const parts = String(fullName)
     .trim()
@@ -164,10 +167,15 @@ export default function PassengerDetailsScreen() {
     traceId,
     srdvIndex,
     resultIndex,
+    isWomenBooking,
   } = route.params;
 
   const [passengers, setPassengers] = React.useState<PassengerForm[]>(
-    () => selectedSeats.map(() => createPassengerForm())
+    () => selectedSeats.map(() => ({
+      ...createPassengerForm(),
+      gender: isWomenBooking ? "F" : "M",
+      title: isWomenBooking ? "Miss" : "Mr"
+    }))
   );
   const [savedProfiles, setSavedProfiles] = React.useState<StoredPassengerProfile[]>([]);
   const [activePassengerIndex, setActivePassengerIndex] = React.useState(0);
@@ -303,6 +311,15 @@ export default function PassengerDetailsScreen() {
     for (let index = 0; index < passengers.length; index++) {
       const passenger = passengers[index];
 
+      if (isWomenBooking && passenger.gender !== "F") {
+        showPopup({
+          title: "Ladies Booking Preference",
+          message: `Passenger ${index + 1} must be Female when Ladies Booking is active.`,
+          variant: "warning",
+        });
+        return false;
+      }
+
       if (!passenger.fullName.trim()) {
         showPopup({
           title: "Passenger Details",
@@ -326,6 +343,16 @@ export default function PassengerDetailsScreen() {
         showPopup({
           title: "Passenger Details",
           message: `Please enter age for Passenger ${index + 1}.`,
+          variant: "warning",
+        });
+        return false;
+      }
+
+      const ageValue = Number(passenger.age.trim());
+      if (!Number.isFinite(ageValue) || ageValue < 1 || ageValue > 120) {
+        showPopup({
+          title: "Passenger Details",
+          message: `Please enter a valid age for Passenger ${index + 1}.`,
           variant: "warning",
         });
         return false;
@@ -389,7 +416,7 @@ export default function PassengerDetailsScreen() {
     }
 
     return true;
-  }, [idProofRequired, passengers]);
+  }, [idProofRequired, passengers, isWomenBooking, showPopup]);
 
   const buildBlockPassengers = React.useCallback((): BlockPassenger[] => {
     return selectedSeats.map((seat, index) => {
@@ -662,10 +689,11 @@ export default function PassengerDetailsScreen() {
                     <Text style={styles.fieldLabel}>*Age</Text>
                     <TextInput
                       value={passenger.age}
-                      onChangeText={(value) => updatePassenger(index, "age", value.replace(/\D/g, ""))}
+                      onChangeText={(value) => updatePassenger(index, "age", normalizeAge(value))}
                       placeholder="Enter your age"
                       placeholderTextColor="#B7B0B8"
                       keyboardType="number-pad"
+                      maxLength={3}
                       style={styles.inputSolo}
                     />
                   </View>
@@ -719,7 +747,9 @@ export default function PassengerDetailsScreen() {
                 <View style={styles.inputWrap}>
                   <TextInput
                     value={passenger.phone}
-                    onChangeText={(value) => updatePassenger(index, "phone", value.replace(/\D/g, ""))}
+                    onChangeText={(value) =>
+                      updatePassenger(index, "phone", normalizePhoneNumber(value))
+                    }
                     placeholder="Enter your phone number"
                     placeholderTextColor="#B7B0B8"
                     keyboardType="phone-pad"

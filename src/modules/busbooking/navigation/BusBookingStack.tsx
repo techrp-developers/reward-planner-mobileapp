@@ -31,12 +31,19 @@ export type BusBookingStackParamList = {
   journeyDate: string;
 
   journeyTime: string;
+
+  isWomenBooking?: boolean;
+
+  selectedFilters?: string[];
 };
-  AllFilterScreen: undefined;
+  AllFilterScreen: {
+    selectedOptions?: string[];
+  } | undefined;
   AboutBusScreen: { bus: any };
   SeatSelectionScreen: {
   bus: any;
   seatLayout: any;
+  isWomenBooking?: boolean;
 };
 PassengerDetailsScreen: {
   bus: any;
@@ -52,6 +59,8 @@ PassengerDetailsScreen: {
   srdvIndex?: string;
 
   resultIndex?: string;
+
+  isWomenBooking?: boolean;
 };
 BoardingDroppingSelectionScreen: {
   bus: any;
@@ -65,6 +74,8 @@ BoardingDroppingSelectionScreen: {
   srdvIndex?: string;
 
   resultIndex?: string;
+
+  isWomenBooking?: boolean;
 };
 BusSummaryScreen: {
   bus: any;

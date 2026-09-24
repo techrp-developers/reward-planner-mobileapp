@@ -688,6 +688,7 @@ const [
 const {
   bus,
   seatLayout,
+  isWomenBooking,
 } = route.params;
 
 
@@ -1182,6 +1183,9 @@ const handleContinue =
             String(
               resultIndex
             ),
+
+          isWomenBooking:
+            isWomenBooking,
         }
       );
     },
@@ -1191,6 +1195,7 @@ const handleContinue =
       navigation,
       seatLayout,
       selectedSeats,
+      isWomenBooking,
     ]
   );
 
@@ -1309,6 +1314,15 @@ switch (seat.status) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {isWomenBooking && (
+          <View style={styles.womenBookingBanner}>
+            <MaterialCommunityIcons name="gender-female" size={16} color="#CE1538" />
+            <Text style={styles.womenBookingBannerText}>
+              Ladies Booking preference active (female passenger details default)
+            </Text>
+          </View>
+        )}
+
         <View style={styles.routeCard}>
           <Text style={styles.routeLabel}>Route</Text>
           <View style={styles.routeRow}>
@@ -1735,6 +1749,23 @@ const styles = StyleSheet.create({
     color: "#CB1733",
     fontSize: 10,
     fontWeight: "800",
+  },
+  womenBookingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FCE7EA",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  womenBookingBannerText: {
+    color: "#CE1538",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 8,
+    flex: 1,
   },
   legendWrap: {
     flexDirection: "row",
