@@ -23,6 +23,11 @@ import BusBookingStatusPopup, {
 import type { BusBookingStackParamList } from "../../navigation/BusBookingStack";
 import { getSeatLayoutApi,
 } from "../../services/busBookingApi";
+import {
+  matchesQuickFilter,
+  matchesBusListingFilters,
+  createEmptyBusListingFilters,
+} from "../../utils/busListingFilters";
 
 type ListingRouteProp = RouteProp<
   BusBookingStackParamList,
@@ -435,6 +440,7 @@ export default function BusListingScreen() {
   destinationCityCode,
   journeyDate,
   journeyTime,
+  isWomenBooking,
 } = route.params;
 console.log(
   "[BusBooking][Listing] Route Params",
@@ -450,45 +456,100 @@ console.log(
 );
 
   const [selectedFilter, setSelectedFilter] = React.useState<string>("all");
+  const [selectedFiltersList, setSelectedFiltersList] = React.useState<string[]>([]);
   const [selectedBusId, setSelectedBusId] = React.useState<string | null>(null);
-const [
-  seatLayoutLoadingBusId,
-  setSeatLayoutLoadingBusId,
-] = React.useState<string | null>(null);
+  
+  React.useEffect(() => {
+    if (route.params?.selectedFilters) {
+      setSelectedFiltersList(route.params.selectedFilters);
+      setSelectedFilter("all");
+    }
+  }, [route.params?.selectedFilters]);
+
+  const [
+    seatLayoutLoadingBusId,
+    setSeatLayoutLoadingBusId,
+  ] = React.useState<string | null>(null);
 
   const listingBuses = React.useMemo(() => {
+    let filtered: BusCard[] = [];
+
     if (Array.isArray(buses) && buses.length > 0) {
-      const normalized = buses.map((bus, index) =>
+      filtered = buses.map((bus, index) =>
         normalizeBusCard(bus, index, sourceCity, destinationCity)
       );
-      console.log("[BusBooking][Listing] Using API buses", {
-        rawCount: buses.length,
-        normalizedCount: normalized.length,
+      console.log("[BusBooking][Listing] Normalized API buses", {
+        count: filtered.length,
         sourceCity,
         destinationCity,
         journeyDate,
-        normalized,
       });
-      return normalized;
-    }
-
-    if (Array.isArray(buses) && buses.length === 0) {
-      console.log("[BusBooking][Listing] Using empty API result", {
+    } else if (Array.isArray(buses) && buses.length === 0) {
+      filtered = [];
+    } else {
+      console.log("[BusBooking][Listing] Using fallback demo buses", {
         sourceCity,
         destinationCity,
         journeyDate,
-        emptyStateMessage,
       });
-      return [];
+      filtered = busCards;
     }
 
-    console.log("[BusBooking][Listing] Using fallback demo buses", {
-      sourceCity,
-      destinationCity,
-      journeyDate,
-    });
-    return busCards;
-  }, [buses, destinationCity, emptyStateMessage, journeyDate, sourceCity]);
+    // 1. Apply quick filter chips (AC, Sleeper, Seater)
+    if (selectedFilter && selectedFilter !== "all") {
+      filtered = filtered.filter((bus) => matchesQuickFilter(bus, selectedFilter));
+    }
+
+    // 2. Apply detailed filters from AllFilterScreen
+    if (selectedFiltersList.length > 0) {
+      const activeFilters = createEmptyBusListingFilters();
+
+      selectedFiltersList.forEach((id) => {
+        if (["volvo", "ac", "non-ac"].includes(id)) {
+          activeFilters.busTypes.push(id);
+        } else if (["seater", "sleeper"].includes(id)) {
+          activeFilters.seatTypes.push(id);
+        } else if (["before-6", "6-12", "12-6", "after-6"].includes(id)) {
+          activeFilters.departureTimeRanges.push(id);
+        } else if (["wifi", "water", "charging", "blanket"].includes(id)) {
+          activeFilters.amenities.push(id);
+        } else if (["greenline", "blue-diamond", "royal-heritage"].includes(id)) {
+          const operatorMap: Record<string, string> = {
+            greenline: "Greenline Express",
+            "blue-diamond": "Blue Diamond",
+            "royal-heritage": "Royal Heritage",
+          };
+          activeFilters.operators.push(operatorMap[id] || id);
+        } else if (id.startsWith("boarding-")) {
+          const boardingMap: Record<string, string> = {
+            "boarding-majestic": "Majestic",
+            "boarding-indiranagar": "Indiranagar",
+            "boarding-electronic": "Electronic City",
+            "boarding-marathahalli": "Marathahalli",
+            "boarding-hebbal": "Hebbal",
+            "boarding-silk-board": "Silk Board",
+            "boarding-koramangala": "Koramangala",
+          };
+          activeFilters.boardingPoints.push(boardingMap[id] || id);
+        } else if (id.startsWith("dropping-")) {
+          const droppingMap: Record<string, string> = {
+            "dropping-majestic": "Majestic",
+            "dropping-indiranagar": "Indiranagar",
+            "dropping-electronic": "Electronic City",
+            "dropping-marathahalli": "Marathahalli",
+            "dropping-hebbal": "Hebbal",
+            "dropping-silk-board": "Silk Board",
+            "dropping-koramangala": "Koramangala",
+          };
+          activeFilters.droppingPoints.push(droppingMap[id] || id);
+        }
+      });
+
+      filtered = filtered.filter((bus) => matchesBusListingFilters(bus, activeFilters));
+    }
+
+    return filtered;
+  }, [buses, destinationCity, journeyDate, sourceCity, selectedFilter, selectedFiltersList]);
 
   const routeTitle = `${sourceCity} -> ${destinationCity}`;
 
@@ -507,9 +568,15 @@ const [
 
   const handleFilterPress = React.useCallback(
     (item: FilterChip) => {
-      setSelectedFilter(item.id);
+      if (item.id === "all") {
+        navigation.navigate("AllFilterScreen", {
+          selectedOptions: selectedFiltersList,
+        });
+      } else {
+        setSelectedFilter(item.id);
+      }
     },
-    []
+    [navigation, selectedFiltersList]
   );
 
 const handleOpenSeatSelection =
@@ -700,6 +767,7 @@ const handleOpenSeatSelection =
             bus,
             seatLayout:
               response,
+            isWomenBooking,
           }
         );
 

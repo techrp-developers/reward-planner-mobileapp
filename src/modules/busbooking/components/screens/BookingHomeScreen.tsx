@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Switch,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -254,6 +255,8 @@ const [dateModalVisible, setDateModalVisible] =
 
 const [searchingBuses, setSearchingBuses] =
   React.useState(false);
+const [isWomenBooking, setIsWomenBooking] =
+  React.useState(false);
 const [recentSearches, setRecentSearches] =
   React.useState<StoredRecentSearch[]>([]);
 
@@ -456,11 +459,21 @@ const applyRecentSearch = React.useCallback(
 );
 
 const handleSearchBuses = async () => {
+  const now = new Date();
+  const todayId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  let computedJourneyTime = "00:00";
+  if (selectedDateId === todayId) {
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    computedJourneyTime = `${hours}:${minutes}`;
+  }
+
   console.log("[BusBooking][Home] Search button pressed", {
     fromCity,
     toCity,
     selectedDateId,
-    journeyTime,
+    journeyTime: computedJourneyTime,
   });
 
   /*
@@ -520,7 +533,7 @@ const handleSearchBuses = async () => {
   }
 
 
-  if (!journeyTime) {
+  if (!computedJourneyTime) {
 
     showPopup({
       title: "Select Time",
@@ -545,7 +558,7 @@ const handleSearchBuses = async () => {
   console.log("From code:", fromCity?.id);
   console.log("To code:", toCity?.id);
   console.log("Journey Date:", selectedDateId);
-  console.log("Journey Time:", journeyTime);
+  console.log("Journey Time:", computedJourneyTime);
   console.log("==================================");
   try {
 
@@ -570,7 +583,7 @@ const handleSearchBuses = async () => {
         selectedDateId,
 
       journeyTime:
-        journeyTime,
+        computedJourneyTime,
     };
 
 
@@ -600,7 +613,7 @@ const handleSearchBuses = async () => {
       toCityName: toCity.city_name,
       toStateName: toCity.state_name || "",
       journeyDate: selectedDateId,
-      journeyTime: journeyTime,
+      journeyTime: computedJourneyTime,
       updatedAt: new Date().toISOString(),
     };
 
@@ -649,7 +662,9 @@ const handleSearchBuses = async () => {
           journeyDate:
             selectedDateId,
           journeyTime:
-            journeyTime,
+            computedJourneyTime,
+          isWomenBooking:
+            isWomenBooking,
         }
       );
 
@@ -689,7 +704,10 @@ const handleSearchBuses = async () => {
           selectedDateId,
 
         journeyTime:
-          journeyTime,
+          computedJourneyTime,
+
+        isWomenBooking:
+          isWomenBooking,
       }
     );
 
@@ -699,7 +717,7 @@ const handleSearchBuses = async () => {
       sourceCity: fromCity.city_name,
       destinationCity: toCity.city_name,
       journeyDate: selectedDateId,
-      journeyTime,
+      journeyTime: computedJourneyTime,
     });
 
 
@@ -744,7 +762,9 @@ const handleSearchBuses = async () => {
           journeyDate:
             selectedDateId,
           journeyTime:
-            journeyTime,
+            computedJourneyTime,
+          isWomenBooking:
+            isWomenBooking,
         }
       );
 
@@ -934,6 +954,34 @@ const handleSearchBuses = async () => {
           </View>
         </TouchableOpacity>
       </View>
+      </View>
+
+      <View style={styles.womenBookingRow}>
+        <View style={styles.womenBookingLeft}>
+          <MaterialCommunityIcons
+            name="face-woman"
+            size={24}
+            color="#CE1538"
+          />
+          <View style={styles.womenBookingText}>
+            <Text style={styles.womenBookingTitle}>Booking for Women</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setIsWomenBooking(!isWomenBooking)}
+          style={[
+            styles.customSwitchTrack,
+            isWomenBooking ? styles.customSwitchTrackActive : styles.customSwitchTrackInactive
+          ]}
+        >
+          <View
+            style={[
+              styles.customSwitchThumb,
+              isWomenBooking ? styles.customSwitchThumbActive : styles.customSwitchThumbInactive
+            ]}
+          />
+        </TouchableOpacity>
       </View>
 
 <TouchableOpacity
@@ -1447,6 +1495,75 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  womenBookingRow: {
+    minHeight: 56,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1.2,
+    borderColor: "#D4D4D8",
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  customSwitchTrack: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    padding: 2,
+    justifyContent: "center",
+  },
+  customSwitchTrackActive: {
+    backgroundColor: "#CE1538",
+  },
+  customSwitchTrackInactive: {
+    backgroundColor: "#E4E4E7",
+  },
+  customSwitchThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1.5,
+  },
+  customSwitchThumbActive: {
+    alignSelf: "flex-end",
+  },
+  customSwitchThumbInactive: {
+    alignSelf: "flex-start",
+  },
+  womenBookingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  womenBookingText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  womenBookingTitle: {
+    color: "#222222",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  womenBookingSub: {
+    marginTop: 2,
+    color: "#71717A",
+    fontSize: 11,
+    fontWeight: "500",
   },
   dateJourneyInfo: {
     flexDirection: "row",

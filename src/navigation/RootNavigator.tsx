@@ -33,6 +33,7 @@ export type AppStackParamList = {
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   Profile: { context?: 'dashboard' } | undefined;
+  InssuranceStack: undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
@@ -132,6 +133,12 @@ function AppNavigator() {
         name="Profile"
         getComponent={() =>
           require("../modules/ecommerce/profile/ProfileScreen").default
+        }
+      />
+      <AppStack.Screen
+        name="InssuranceStack"
+        getComponent={() =>
+          require("../modules/inssurance/navigation/InssuranceStack").default
         }
       />
       <AppStack.Screen

@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -185,8 +185,11 @@ function SectionHeader({ title }: { title: string }) {
 
 export default function AllFilterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
+  const route = useRoute<RouteProp<BusBookingStackParamList, "AllFilterScreen">>();
   const [selectedCategory, setSelectedCategory] = React.useState<FilterCategoryId>("bus-type");
-  const [selectedOptions, setSelectedOptions] = React.useState<string[]>([]);
+  const [selectedOptions, setSelectedOptions] = React.useState<string[]>(
+    () => route.params?.selectedOptions || []
+  );
   const [operatorSearch, setOperatorSearch] = React.useState("");
   const [boardingSearch, setBoardingSearch] = React.useState("");
   const [droppingSearch, setDroppingSearch] = React.useState("");
@@ -205,6 +208,12 @@ export default function AllFilterScreen() {
     setBoardingSearch("");
     setDroppingSearch("");
   }, []);
+
+  const handleApply = React.useCallback(() => {
+    navigation.navigate("BusListingScreen", {
+      selectedFilters: selectedOptions,
+    } as any);
+  }, [navigation, selectedOptions]);
 
   const filterPointOptions = React.useCallback((items: PointOption[], query: string) => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -521,7 +530,7 @@ export default function AllFilterScreen() {
           <Text style={styles.clearButtonText}>Clear all</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={0.9} style={styles.applyButtonWrap}>
+        <TouchableOpacity activeOpacity={0.9} onPress={handleApply} style={styles.applyButtonWrap}>
           <LinearGradient
             colors={["#D7192D", "#B81525"]}
             start={{ x: 0, y: 0 }}

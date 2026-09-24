@@ -37,7 +37,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="${usesCleartextTraffic}"
+        android:usesCleartextTraffic="true"
         android:supportsRtl="true">
 
         <!-- Google Maps API key - replace with your key from Google Cloud Console -->
