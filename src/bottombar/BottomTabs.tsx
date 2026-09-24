@@ -396,7 +396,7 @@ function BottomTabs({
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
         {
           height: TAB_BAR_HEIGHT + bottomInset,
-          backgroundColor: layoutMode === "navigator" ? theme.background : "transparent",
+          backgroundColor: "transparent",
         },
       ]}
     >
