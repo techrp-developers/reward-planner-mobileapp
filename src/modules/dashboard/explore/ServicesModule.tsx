@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -25,13 +26,13 @@ type ServicesModuleProps = {
 const Categories1 = require('../../../assets/sampleImages/Categories(1).png');
 const Categories2 = require('../../../assets/sampleImages/Categories(2).png');
 const Categories3 = require('../../../assets/sampleImages/Categories(3).png');
-// const Categories4 = require('../../../assets/sampleImages/Categories(4).png');
-// const Categories5 = require('../../../assets/sampleImages/Categories(5).png');
-// const Categories6 = require('../../../assets/sampleImages/Categories(6).png');
-// const Categories7 = require('../../../assets/sampleImages/Categories(7).png');
 
 type CategoryItem = {
-  image: ReturnType<typeof require>;
+  image?: ReturnType<typeof require>;
+  SvgCard?: React.ComponentType<{
+    width?: number | string;
+    height?: number | string;
+  }>;
   tab: TopTab;
 };
 
@@ -39,10 +40,7 @@ const categoriesData: CategoryItem[] = [
   { image: Categories1, tab: 'Product' },
   { image: Categories2, tab: 'Services' },
   { image: Categories3, tab: 'Payments' },
-  // { image: Categories4, tab: 'Product' },
-  // { image: Categories5, tab: 'Product' },
-  // { image: Categories6, tab: 'Product' },
-  // { image: Categories7, tab: 'DineOut' },
+  { SvgCard: BusBookingCard, tab: 'DineOut' },
 ];
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
@@ -136,15 +134,20 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
             activeOpacity={0.88}
             accessibilityRole="button"
             onPress={() => handleCategoryPress(item.tab)}
+            style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
           >
-            <Image
-              source={item.image}
-              style={[
-                styles.cardImage,
-                { width: CARD_WIDTH, height: CARD_HEIGHT },
-              ]}
-              resizeMode="cover"
-            />
+            {item.SvgCard ? (
+              <item.SvgCard width={CARD_WIDTH} height={CARD_HEIGHT} />
+            ) : (
+              <Image
+                source={item.image}
+                style={[
+                  styles.cardImage,
+                  { width: CARD_WIDTH, height: CARD_HEIGHT },
+                ]}
+                resizeMode="cover"
+              />
+            )}
           </TouchableOpacity>
         ))}
 
