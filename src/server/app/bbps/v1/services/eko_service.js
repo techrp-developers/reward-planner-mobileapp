@@ -419,6 +419,21 @@ exports.getRechargeOperator = async (mobile) => {
 
 exports.getRechargePlans = async ({ mobile, operatorCode, circleId }) => {
   const detected = await exports.getRechargeOperator(mobile);
+
+  if (/\bpostpaid\b/i.test(String(detected.operatorName || ""))) {
+    const error = new Error(
+      "This mobile number is postpaid. Recharge packages are available only for prepaid numbers.",
+    );
+    error.statusCode = 422;
+    error.code = "RECHARGE_POSTPAID_NUMBER";
+    error.details = {
+      detectedOperatorId: detected.operatorId,
+      detectedOperatorName: detected.operatorName,
+      detectedCircleId: detected.circleId,
+    };
+    throw error;
+  }
+
   if (operatorCode && String(operatorCode) !== detected.operatorId) {
     const error = new Error(
       `This mobile number belongs to ${detected.operatorName || "another operator"}. Please select the correct operator.`,
@@ -704,23 +719,22 @@ exports.fetchBill = async (body, req) => {
       ),
     });
 
+    const fetchBillEndpoint = ekoRechargeUrl("customer/payment/bbps/bill");
+
     console.info("[BBPS][provider][fetch-bill] request-meta", {
       initiator_id: process.env.EKO_INITIATOR_ID,
       source_ip: payload.source_ip,
-      endpoint: ekoUrl(
-        `billpayments/fetchbill?initiator_id=${process.env.EKO_INITIATOR_ID}`,
-      ),
+      endpoint: fetchBillEndpoint,
+      method: "GET",
     });
 
     const res = await retry(
       () =>
-        axios.post(
-          ekoUrl(
-            `billpayments/fetchbill?initiator_id=${process.env.EKO_INITIATOR_ID}`,
-          ),
-          payload,
-          { headers, timeout: FETCH_BILL_TIMEOUT_MS },
-        ),
+        axios.get(fetchBillEndpoint, {
+          headers,
+          params: payload,
+          timeout: FETCH_BILL_TIMEOUT_MS,
+        }),
       1,
     );
 
