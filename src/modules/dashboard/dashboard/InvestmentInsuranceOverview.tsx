@@ -118,9 +118,6 @@ const InvestmentInsuranceOverview: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.shieldDecorationWrap} pointerEvents="none">
-            <MaterialCommunityIcons name="shield-check" size={44} color={PURPLE_BG} />
-          </View>
         </View>
 
         <View style={[styles.ctaButton, { backgroundColor: PURPLE_BG }]}>
@@ -211,12 +208,6 @@ const styles = StyleSheet.create({
   sparklineWrap: {
     marginTop: 6,
     height: 28,
-  },
-  shieldDecorationWrap: {
-    position: "absolute",
-    right: 8,
-    bottom: 34,
-    opacity: 0.9,
   },
   ctaButton: {
     marginTop: 8,

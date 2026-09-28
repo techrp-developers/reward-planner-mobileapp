@@ -36,6 +36,7 @@ import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
 import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import OffersBanner from '../../ecommerce/components/home/OffersBanner';
 import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
+import StatusTray from '../../status/components/StatusTray';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
@@ -338,6 +339,9 @@ function Dashbord() {
           showRewardPoints
           rewardPoints={rewardPoints}
         />
+        <View style={styles.statusTrayWrap}>
+          <StatusTray textColor={headerTextColor} />
+        </View>
       </>
     );
 
@@ -535,6 +539,9 @@ const styles = StyleSheet.create({
     shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
     shadowRadius: rs(18),
     elevation: 8,
+  },
+  statusTrayWrap: {
+    paddingHorizontal: rs(20),
   },
   topSectionImage: {
     borderBottomLeftRadius: rs(30),

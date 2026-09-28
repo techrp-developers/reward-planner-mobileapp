@@ -367,8 +367,10 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   );
 }
 
-function StatusTray() {
+function StatusTray({ textColor }: { textColor?: string }) {
   const { isAuthenticated, user } = useAuth();
+  const { isDark } = useAppTheme();
+  const labelColor = textColor ?? (isDark ? '#FFFFFF' : '#0F172A');
   const [composerVisible, setComposerVisible] = useState(false);
   const [activeGroup, setActiveGroup] = useState<StatusFeedGroup | null>(null);
   const [viewingOwn, setViewingOwn] = useState(false);
@@ -407,12 +409,12 @@ function StatusTray() {
             <Avatar uri={myGroup?.user.image_url} name={user?.name} />
             <Pressable onPress={() => setComposerVisible(true)} style={styles.addBadge}><MaterialCommunityIcons name="plus" color="#FFF" size={16} /></Pressable>
           </Pressable>
-          <Text numberOfLines={1} style={[styles.storyName, { color: '#FFFFFF' }]}>My status</Text>
+          <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>My status</Text>
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
             <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} /></View>
-            <Text numberOfLines={1} style={[styles.storyName, { color: '#FFFFFF' }]}>{group.user.name || 'User'}</Text>
+            <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>{group.user.name || 'User'}</Text>
           </Pressable>
         ))}
         {(mineQuery.isFetching || feedQuery.isFetching) && <ActivityIndicator size="small" color="#A5B4FC" />}
