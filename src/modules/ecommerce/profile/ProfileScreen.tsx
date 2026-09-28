@@ -4,9 +4,11 @@
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Svg, Path } from 'react-native-svg';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Image, ActivityIndicator, Alert, Animated, Easing, Modal, Platform, Linking, PermissionsAndroid, Switch,
+  Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,6 +26,7 @@ import { rs, fs } from '../../../utils/responsive';
 import axios from 'axios';
 import Reward from '../../../assets/product/rewards.svg';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import { fetchGmcDetails } from '../../inssurance/services/inssuranceApi';
 import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import Share from 'react-native-share';
@@ -96,6 +99,56 @@ const formatDate = (dateStr: string): string => {
   } catch { return dateStr; }
 };
 
+const CardPattern: React.FC = () => {
+  const lines: React.ReactNode[] = [];
+  const spacing = 28;
+  const height = 280;
+  const strokeColor = "rgba(255, 255, 255, 0.16)";
+  const strokeWidth = 0.6;
+
+  // Diagonal 1: Down and right
+  for (let i = -15; i < 25; i++) {
+    lines.push(
+      <Path
+        key={`d1-${i}`}
+        d={`M ${i * spacing} -20 L ${(i * spacing) + height} ${height}`}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+      />
+    );
+  }
+
+  // Diagonal 2: Up and right
+  for (let i = -15; i < 25; i++) {
+    lines.push(
+      <Path
+        key={`d2-${i}`}
+        d={`M ${i * spacing} ${height} L ${(i * spacing) + height} -20`}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+      />
+    );
+  }
+
+  // Vertical lines
+  for (let i = -5; i < 30; i++) {
+    lines.push(
+      <Path
+        key={`v-${i}`}
+        d={`M ${i * (spacing / 2)} -20 L ${i * (spacing / 2)} ${height}`}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+      />
+    );
+  }
+
+  return (
+    <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      {lines}
+    </Svg>
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
@@ -110,6 +163,7 @@ const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const [userInfo, setUserInfo]         = useState<UserInfo | null>(null);
+  const [gmcDetails, setGmcDetails]     = useState<any | null>(null);
   const [displayName, setDisplayName]   = useState('User');
   const [avatarUri, setAvatarUri]         = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
@@ -123,6 +177,7 @@ const ProfileScreen: React.FC = () => {
     gracePeriodDays: number;
   } | null>(null);
   const [deletionExitLoading, setDeletionExitLoading] = useState(false);
+  const [profileCardPage, setProfileCardPage] = useState(0);
   const [visitCardQr, setVisitCardQr] = useState<string | null>(null);
   const [visitCardHeaders, setVisitCardHeaders] = useState<Record<string, string>>({});
   const [, setVisitCardLoading] = useState(false);
@@ -132,6 +187,8 @@ const ProfileScreen: React.FC = () => {
   const [visitCardActionsHidden, setVisitCardActionsHidden] = useState(false);
   const visitCardCaptureRef = useRef<ViewShotRef>(null);
   const cardFlipAnimation = useRef(new Animated.Value(0)).current;
+
+  const cardWidth = Dimensions.get('window').width - rs(40);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -150,14 +207,23 @@ const ProfileScreen: React.FC = () => {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) return;
 
-      const res = await axios.get<{ success: boolean; data: UserInfo }>(
-        `${API_BASE_URL}/v1/auth/user-info`,
-        { headers }
-      );
+      const [res, gmcRes] = await Promise.all([
+        axios.get<{ success: boolean; data: UserInfo }>(
+          `${API_BASE_URL}/v1/auth/user-info`,
+          { headers }
+        ),
+        fetchGmcDetails().catch(() => ({ success: false, data: null }))
+      ]);
+
+      console.log('[Profile Debug] User Info API response:', res.data);
+      console.log('[Profile Debug] GMC API response:', gmcRes);
 
       if (res.data?.success) {
         setUserInfo(res.data.data);
         setDisplayName(res.data.data.name);
+      }
+      if (gmcRes?.success) {
+        setGmcDetails(gmcRes.data);
       }
     } catch {
       const fallback = await getStoredUserName();
@@ -269,6 +335,7 @@ const ProfileScreen: React.FC = () => {
     }
   }, []);
 
+  // ─────────────────────────────────────────────────────────────────────────
   const loadVisitCardQr = useCallback(async (): Promise<string | null> => {
     if (visitCardQr) return visitCardQr;
     try {
@@ -280,17 +347,7 @@ const ProfileScreen: React.FC = () => {
       setVisitCardQr(qrUri);
       return qrUri;
     } catch (error: any) {
-      const serverMessage = error?.response?.data?.message ?? error?.response?.data?.error;
-      const status = error?.response?.status;
-      console.warn('Visit card QR request failed', {
-        status,
-        data: error?.response?.data,
-        message: error?.message,
-      });
-      Alert.alert(
-        'Visiting card unavailable',
-        serverMessage || (status ? `The server returned error ${status}. Please try again.` : error?.message || 'Could not load your QR code. Please try again.'),
-      );
+      Alert.alert('Visiting card unavailable', error?.message || 'Could not load your QR code. Please try again.');
       return null;
     } finally {
       setVisitCardLoading(false);
@@ -298,61 +355,26 @@ const ProfileScreen: React.FC = () => {
   }, [visitCardQr]);
 
   const captureVisitCard = useCallback(async () => {
-    if (!visitCardCaptureRef.current) {
-      throw new Error('The visiting card is not ready yet.');
-    }
-
+    if (!visitCardCaptureRef.current) throw new Error('The visiting card is not ready yet.');
     setVisitCardActionsHidden(true);
-    await new Promise<void>(resolve => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
-
-    try {
-      return await visitCardCaptureRef.current.capture();
-    } finally {
-      setVisitCardActionsHidden(false);
-    }
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    try { return await visitCardCaptureRef.current.capture(); }
+    finally { setVisitCardActionsHidden(false); }
   }, []);
-
-  const visitCardShareMessage = [
-    displayName,
-    userInfo?.employeeInfo?.role,
-    userInfo?.company?.name,
-    userInfo?.phone,
-    userInfo?.email,
-  ].filter(Boolean).join('\n');
 
   const handleDownloadVisitCard = useCallback(async () => {
     try {
       setVisitCardExporting(true);
-
       if (Platform.OS === 'android' && Number(Platform.Version) <= 28) {
-        const result = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          {
-            title: 'Save visiting card',
-            message: 'Allow Reward Planners to save your visiting card to Photos.',
-            buttonPositive: 'Allow',
-            buttonNegative: 'Cancel',
-          },
-        );
-        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission required', 'Storage access is needed to save the card on this Android version.');
-          return;
-        }
+        const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) return;
       }
-
       const uri = await captureVisitCard();
-      await CameraRoll.save(uri, {
-        type: 'photo',
-        album: Platform.OS === 'android' ? 'Reward Planners' : undefined,
-      });
+      await CameraRoll.save(uri, { type: 'photo', album: Platform.OS === 'android' ? 'Reward Planners' : undefined });
       Alert.alert('Card saved', 'Your visiting card JPG has been saved to Photos.');
     } catch (error: any) {
       Alert.alert('Could not save card', error?.message || 'Please try again.');
-    } finally {
-      setVisitCardExporting(false);
-    }
+    } finally { setVisitCardExporting(false); }
   }, [captureVisitCard]);
 
   const handleShareVisitCard = useCallback(async () => {
@@ -361,18 +383,15 @@ const ProfileScreen: React.FC = () => {
       const uri = await captureVisitCard();
       await Share.open({
         title: `${displayName}'s visiting card`,
-        subject: `${displayName}'s visiting card`,
-        message: visitCardShareMessage,
+        message: [displayName, userInfo?.employeeInfo?.role, userInfo?.company?.name, userInfo?.phone, userInfo?.email].filter(Boolean).join('\n'),
         url: uri,
         type: 'image/jpeg',
         failOnCancel: false,
       });
     } catch (error: any) {
       Alert.alert('Could not share card', error?.message || 'Please try again.');
-    } finally {
-      setVisitCardExporting(false);
-    }
-  }, [captureVisitCard, displayName, visitCardShareMessage]);
+    } finally { setVisitCardExporting(false); }
+  }, [captureVisitCard, displayName, userInfo]);
 
   const handleOpenVisitCard = useCallback(() => {
     cardFlipAnimation.setValue(0);
@@ -380,12 +399,7 @@ const ProfileScreen: React.FC = () => {
   }, [cardFlipAnimation]);
 
   const handleVisitCardModalShown = useCallback(() => {
-    Animated.timing(cardFlipAnimation, {
-      toValue: 1,
-      duration: 600,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(cardFlipAnimation, { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
   }, [cardFlipAnimation]);
 
   useEffect(() => {
@@ -395,7 +409,6 @@ const ProfileScreen: React.FC = () => {
     }
   }, [isAuthenticated, loadVisitCardQr, loading, visitCardRequested]);
 
-  // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.loader, { backgroundColor: theme.background }]}>
@@ -440,78 +453,190 @@ const ProfileScreen: React.FC = () => {
             <Text style={[styles.heroTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>My Profile</Text>
             <View style={styles.heroBtnGhost} />
           </View>
+          {/* Swipable Carousel for Profile Card and Policybazaar Card */}
+          <View style={{ width: '100%' }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={cardWidth + rs(12)}
+              decelerationRate="fast"
+              snapToAlignment="start"
+              contentContainerStyle={{
+                paddingHorizontal: rs(20),
+                gap: rs(12),
+              }}
+              style={{ marginHorizontal: -rs(20) }}
+              onScroll={(event) => {
+                const scrollOffset = event.nativeEvent.contentOffset.x;
+                const page = Math.round(scrollOffset / (cardWidth + rs(12)));
+                setProfileCardPage(page);
+              }}
+              scrollEventThrottle={16}
+            >
+              {/* Card 1: Main Profile Info Card */}
+              <LinearGradient
+                colors={isDark ? ['#18181B', '#27233A', '#312E81'] : ['#111827', '#312E81', '#4F46E5']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.profilePanel, { width: cardWidth }]}
+              >
+                <View style={styles.avatarWrap}>
+                  <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} disabled={imageUploading}>
+                    <View style={styles.avatarRing}>
+                      <View style={[styles.avatarInner, { backgroundColor: isDark ? '#18181B' : '#FFFFFF' }]}>
+                        {(avatarUri || userInfo?.userImage)
+                          ? <Image
+                              source={{ uri: (avatarUri || userInfo?.userImage)! }}
+                              style={styles.avatarImg}
+                            />
+                          : <MaterialCommunityIcons name="account-circle" size={76} color="#6366F1" />}
 
-          <LinearGradient
-            colors={isDark ? ['#18181B', '#27233A', '#312E81'] : ['#111827', '#312E81', '#4F46E5']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.profilePanel}
-          >
-            <View style={styles.avatarWrap}>
-              <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} disabled={imageUploading}>
-                <View style={styles.avatarRing}>
-                  <View style={[styles.avatarInner, { backgroundColor: isDark ? '#18181B' : '#FFFFFF' }]}>
-                    {(avatarUri || userInfo?.userImage)
-                      ? <Image
-                          source={{ uri: (avatarUri || userInfo?.userImage)! }}
-                          style={styles.avatarImg}
-                        />
-                      : <MaterialCommunityIcons name="account-circle" size={76} color="#6366F1" />}
-
-                    {imageUploading && (
-                      <View style={styles.avatarUploadOverlay}>
-                        <ActivityIndicator size="small" color="#fff" />
+                        {imageUploading && (
+                          <View style={styles.avatarUploadOverlay}>
+                            <ActivityIndicator size="small" color="#fff" />
+                          </View>
+                        )}
                       </View>
-                    )}
-                  </View>
-                </View>
-                <View style={styles.camBadge}>
-                  <MaterialCommunityIcons name="camera" size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName} numberOfLines={1}>
-                {displayName}
-              </Text>
-              {showRole && (
-                <Text style={styles.heroRole} numberOfLines={1}>
-                  {emp!.role}
-                </Text>
-              )}
-
-              <View style={styles.heroMetrics}>
-                <View style={styles.heroMetricCard}>
-                  <View style={styles.heroMetricIcon}>
-                    <Reward width={18} height={18} />
-                  </View>
-                  <View style={styles.flex1}>
-                    <Text style={styles.heroMetricValue} numberOfLines={1}>
-                      {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
-                    </Text>
-                    <Text style={styles.heroMetricLabel}>RP Points</Text>
-                  </View>
-                </View>
-
-                <View style={styles.heroMetricCard}>
-                  {userInfo?.company?.logo ? (
-                    <Image source={{ uri: userInfo.company.logo }} style={styles.heroCompanyLogo} resizeMode="contain" />
-                  ) : (
-                    <View style={styles.heroMetricIcon}>
-                      <MaterialCommunityIcons name="office-building-outline" size={16} color="#4F46E5" />
                     </View>
-                  )}
-                  <View style={styles.flex1}>
-                    <Text style={styles.heroMetricValue} numberOfLines={1}>
-                      {userInfo?.company?.name ?? 'Company'}
+                    <View style={styles.camBadge}>
+                      <MaterialCommunityIcons name="camera" size={12} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.heroInfo}>
+                  <Text style={styles.heroName} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  {showRole && (
+                    <Text style={styles.heroRole} numberOfLines={1}>
+                      {emp!.role}
                     </Text>
-                    <Text style={styles.heroMetricLabel}>Company</Text>
+                  )}
+
+                  <View style={styles.heroMetrics}>
+                    <View style={styles.heroMetricCard}>
+                      <View style={styles.heroMetricIcon}>
+                        <Reward width={18} height={18} />
+                      </View>
+                      <View style={styles.flex1}>
+                        <Text style={styles.heroMetricValue} numberOfLines={1}>
+                          {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
+                        </Text>
+                        <Text style={styles.heroMetricLabel}>Points</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.heroMetricCard}>
+                      {userInfo?.company?.logo ? (
+                        <Image source={{ uri: userInfo.company.logo }} style={styles.heroCompanyLogo} resizeMode="contain" />
+                      ) : (
+                        <View style={styles.heroMetricIcon}>
+                          <MaterialCommunityIcons name="office-building-outline" size={16} color="#4F46E5" />
+                        </View>
+                      )}
+                      <View style={styles.flex1}>
+                        <Text style={styles.heroMetricValue} numberOfLines={1}>
+                          {userInfo?.company?.name ?? 'Company'}
+                        </Text>
+                        <Text style={styles.heroMetricLabel}>Company</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
+              </LinearGradient>
+              {/* Card 2: GMC Digital Insurance Card (Policybazaar Theme) */}
+              {gmcDetails && (
+                <View style={[styles.pbCardShadowWrapper, { width: cardWidth }]}>
+                  <LinearGradient
+                    colors={['#009ac7', '#007ca5', '#005b7f']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.policybazaarCard, { width: cardWidth }]}
+                  >
+                    <CardPattern />
+                    
+                    {/* Upper Card Content wrapper with padding */}
+                    <View style={styles.pbCardUpperContent}>
+                      <View style={styles.pbCardHeader}>
+                        <View style={styles.pbLogoRow}>
+                          <Text style={styles.pbLogoText}>policybazaar</Text>
+                          <View style={styles.pbDotComBox}>
+                            <Text style={styles.pbDotComText}>.com</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.pbActiveBadge}>
+                          <View style={styles.pbActiveIconCircle}>
+                            <MaterialCommunityIcons name="check" size={8} color="#10B981" />
+                          </View>
+                          <Text style={styles.pbActiveText}>Active Policy</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.pbCardMiddle}>
+                        <View style={styles.pbMiddleLeft}>
+                          <Text style={styles.pbNameText}>{gmcDetails.name || displayName}</Text>
+                          <Text style={styles.pbInsurerText}>{gmcDetails.policy_company_name || 'Care Health Insurance'}</Text>
+                          <Text style={styles.pbPolicyLabel}>Policy No.</Text>
+                          <Text style={styles.pbPolicyNoText}>{gmcDetails.policy_number || 'N/A'}</Text>
+                        </View>
+
+                        <View style={styles.pbMiddleRight}>
+                          <View style={styles.pbOrbOuterRing}>
+                            <View style={styles.pbOrbInnerRing}>
+                              <View style={styles.pbShieldIconBox}>
+                                <MaterialCommunityIcons name="shield" size={26} color="#FFFFFF" />
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Bottom Panel spans complete width */}
+                    <View style={[styles.pbBottomPanel, { width: '100%', left: 0 }]}>
+                      <View style={styles.pbBottomCol}>
+                        <MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005b7f" />
+                        <View style={{ marginLeft: rs(4) }}>
+                          <Text style={styles.pbBottomLabel}>Member ID</Text>
+                          <Text style={styles.pbBottomVal}>{gmcDetails.member_id || '—'}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.pbVerticalLine} />
+
+                      <View style={styles.pbBottomCol}>
+                        <MaterialCommunityIcons name="calendar-clock" size={14} color="#005b7f" />
+                        <View style={{ marginLeft: rs(4) }}>
+                          <Text style={styles.pbBottomLabel}>Valid Till</Text>
+                          <Text style={styles.pbBottomVal}>{gmcDetails.valid_till || '—'}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.pbVerticalLine} />
+
+                      <View style={styles.pbBottomCol}>
+                        <MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" />
+                        <View style={{ marginLeft: rs(4) }}>
+                          <Text style={styles.pbBottomLabel}>Policy Type</Text>
+                          <Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails.policy_type || 'Group Card'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Pagination indicator dots */}
+            {gmcDetails && (
+              <View style={styles.paginationRow}>
+                <View style={[styles.pagDot, profileCardPage === 0 ? styles.pagDotActive : styles.pagDotInactive]} />
+                <View style={[styles.pagDot, profileCardPage === 1 ? styles.pagDotActive : styles.pagDotInactive]} />
               </View>
-            </View>
-          </LinearGradient>
+            )}
+          </View>
         </LinearGradient>
 
         {/* ════════════════════════════════════
@@ -521,24 +646,52 @@ const ProfileScreen: React.FC = () => {
           {isDashboardProfile && (
             <>
               <SectionHead title="My Cards" isDark={isDark} />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRail}>
-                <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={handleOpenVisitCard} activeOpacity={0.78}>
-                  <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
-                    <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
-                  </LinearGradient>
-                  <View style={styles.cardDirectoryCopy}>
-                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Visiting Card</Text>
-                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view your digital card</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
-                </TouchableOpacity>
-              </ScrollView>
+              <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={handleOpenVisitCard} activeOpacity={0.78}>
+                <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
+                  <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={styles.cardDirectoryCopy}>
+                  <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Visiting Card</Text>
+                  <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view, download or share your digital card</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
+              </TouchableOpacity>
             </>
           )}
 
           {/* ════════════════════════════════════
               CONTACT INFO
           ════════════════════════════════════ */}
+          {isDashboardProfile && gmcDetails && (
+            <>
+              {/* Health Insurance Section */}
+              <SectionHead title="Health Insurance" isDark={isDark} />
+              <TouchableOpacity
+                style={[styles.horizontalClaimCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}
+                onPress={() => navigation.navigate('InssuranceStack' as any)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#005b7f', '#002534'] : ['#e5f6fd', '#d0f0fd']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.horizontalClaimGradient}
+                >
+                  <View style={styles.horizontalClaimLeft}>
+                    <View style={[styles.claimIconBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#005b7f' }]}>
+                      <MaterialCommunityIcons name="hand-heart" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={{ marginLeft: rs(10) }}>
+                      <Text style={[styles.claimTitle, { color: isDark ? '#FFFFFF' : '#003950' }]}>Mediclaim</Text>
+                      <Text style={[styles.claimSub, { color: isDark ? 'rgba(255,255,255,0.7)' : '#005b7f' }]}>Raise & track claims easily</Text>
+                    </View>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={isDark ? '#FFFFFF' : '#005b7f'} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
+
           {isDashboardProfile && (
             <>
               <SectionHead title="User Info" isDark={isDark} />
@@ -701,66 +854,49 @@ const ProfileScreen: React.FC = () => {
       <Modal visible={visitCardModalVisible} transparent animationType="fade" statusBarTranslucent onShow={handleVisitCardModalShown} onRequestClose={() => setVisitCardModalVisible(false)}>
         <View style={styles.cardModalBackdrop}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel="Close visiting card" />
-          <View style={[styles.cardModalSheet, { backgroundColor: '#000000' }]}>
+          <View style={styles.cardModalSheet}>
             <View style={styles.cardModalHandle} />
             <View style={styles.cardModalHeader}>
-              <TouchableOpacity style={[styles.cardModalClose, { backgroundColor: '#18181B' }]} onPress={() => setVisitCardModalVisible(false)}>
+              <TouchableOpacity style={styles.cardModalClose} onPress={() => setVisitCardModalVisible(false)}>
                 <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-
             <Animated.View style={[styles.businessCardFlipWrap, { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnimation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
-            <ViewShot ref={visitCardCaptureRef} options={{ format: 'jpg', quality: 0.95, result: 'tmpfile', fileName: 'reward-planners-visiting-card' }} style={styles.businessCardCapture}>
-            <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard} collapsable={false}>
-              <View style={styles.businessCardHeader}>
-                <View style={styles.businessBrand}>
-                  {userInfo?.company?.logo ? (
-                    <Image
-                      source={{ uri: userInfo.company.logo }}
-                      style={styles.businessCompanyLogo}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <View style={styles.businessBrandIcon}><MaterialCommunityIcons name="office-building-outline" size={19} color="#FFFFFF" /></View>
-                  )}
-                </View>
-              </View>
-              <View style={styles.businessCardBody}>
-                <View style={styles.businessDetails}>
-                  <View style={styles.businessIdentityRow}>
+              <ViewShot ref={visitCardCaptureRef} options={{ format: 'jpg', quality: 0.95, result: 'tmpfile', fileName: 'reward-planners-visiting-card' }} style={styles.businessCardCapture}>
+                <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard} collapsable={false}>
+                  <View style={styles.businessCardHeader}>
+                    {userInfo?.company?.logo ? <Image source={{ uri: userInfo.company.logo }} style={styles.businessCompanyLogo} resizeMode="contain" /> : <MaterialCommunityIcons name="office-building-outline" size={28} color="#FFFFFF" />}
+                  </View>
+                  <View style={styles.businessCardBody}>
                     <View style={styles.businessAvatar}>
                       {(avatarUri || userInfo?.userImage) ? <Image source={{ uri: (avatarUri || userInfo?.userImage)! }} style={styles.businessAvatarImage} /> : <Text style={styles.businessInitial}>{displayName.trim().charAt(0).toUpperCase() || 'U'}</Text>}
                     </View>
-                    <View style={styles.businessIdentityCopy}>
-                      <Text style={styles.businessName} numberOfLines={1}>{displayName}</Text>
-                      {emp?.role ? <Text style={styles.businessRole} numberOfLines={1}>{emp.role}</Text> : null}
-                      {userInfo?.company?.name ? <Text style={styles.businessCompany} numberOfLines={1}>{userInfo.company.name}</Text> : null}
+                    <Text style={styles.businessName} numberOfLines={1}>{displayName}</Text>
+                    {emp?.role ? <Text style={styles.businessRole}>{emp.role}</Text> : null}
+                    {userInfo?.company?.name ? <Text style={styles.businessCompany}>{userInfo.company.name}</Text> : null}
+                    <View style={styles.businessContacts}>
+                      {userInfo?.phone ? <BusinessContact icon="phone-outline" value={formatPhone(userInfo.phone)} /> : null}
+                      {userInfo?.email ? <BusinessContact icon="email-outline" value={userInfo.email} /> : null}
+                    </View>
+                    <View style={styles.businessQrColumn}>
+                      <View style={styles.businessQrBox}>
+                        {visitCardQr ? <Image source={{ uri: visitCardQr, headers: visitCardHeaders }} style={styles.businessQr} resizeMode="contain" /> : <ActivityIndicator color="#4F46E5" />}
+                      </View>
+                      <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
+                    </View>
+                    <View style={[styles.businessCardActions, visitCardActionsHidden && styles.businessCardActionsHidden]}>
+                      <TouchableOpacity style={styles.businessDownloadButton} onPress={handleDownloadVisitCard} disabled={visitCardExporting}>
+                        {visitCardExporting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="download-outline" size={17} color="#FFFFFF" />}
+                        <Text style={styles.businessShareText}>Download</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} disabled={visitCardExporting}>
+                        <MaterialCommunityIcons name="share-variant-outline" size={17} color="#FFFFFF" />
+                        <Text style={styles.businessShareText}>Share</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  <View style={styles.businessContacts}>
-                    {userInfo?.phone ? <BusinessContact icon="phone-outline" value={formatPhone(userInfo.phone)} /> : null}
-                    {userInfo?.email ? <BusinessContact icon="email-outline" value={userInfo.email} /> : null}
-                  </View>
-                </View>
-                <View style={styles.businessQrColumn}>
-                  <View style={styles.businessQrBox}>
-                    {visitCardQr ? <Image source={{ uri: visitCardQr, headers: visitCardHeaders }} style={styles.businessQr} resizeMode="contain" onError={() => Alert.alert('Visiting card unavailable', 'The server response could not be displayed as a QR image.')} /> : <ActivityIndicator color="#4F46E5" />}
-                  </View>
-                  <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
-                </View>
-                <View style={[styles.businessCardActions, visitCardActionsHidden && styles.businessCardActionsHidden]}>
-                  <TouchableOpacity style={styles.businessDownloadButton} onPress={handleDownloadVisitCard} activeOpacity={0.8} disabled={visitCardExporting}>
-                    {visitCardExporting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="download-outline" size={17} color="#FFFFFF" />}
-                    <Text style={styles.businessShareText}>Download</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} activeOpacity={0.8} disabled={visitCardExporting}>
-                    <MaterialCommunityIcons name="share-variant-outline" size={17} color="#FFFFFF" />
-                    <Text style={styles.businessShareText}>Share</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </LinearGradient>
-            </ViewShot>
+                </LinearGradient>
+              </ViewShot>
             </Animated.View>
           </View>
         </View>
@@ -1071,46 +1207,40 @@ const styles = StyleSheet.create({
   secTitle: { fontSize: fs(10), fontWeight: '800', letterSpacing: 0.6 },
   secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
 
-  cardsRail: { minWidth: '100%' },
-  cardDirectoryItem: { flex: 1, width: '100%', minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  cardDirectoryItem: { minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
   cardDirectoryIcon: { width: rs(50), height: rs(50), borderRadius: rs(15), alignItems: 'center', justifyContent: 'center' },
   cardDirectoryCopy: { flex: 1, minWidth: 0 },
   cardDirectoryTitle: { fontSize: fs(14), fontWeight: '900' },
   cardDirectorySubtitle: { fontSize: fs(9), lineHeight: fs(13), fontWeight: '600', marginTop: rs(3) },
   cardModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'flex-end' },
-  cardModalSheet: { height: '90%', borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24), paddingHorizontal: rs(16), paddingTop: rs(8), paddingBottom: rs(16), elevation: 20 },
+  cardModalSheet: { height: '90%', borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24), paddingHorizontal: rs(16), paddingTop: rs(8), paddingBottom: rs(16), elevation: 20, backgroundColor: '#000000' },
   cardModalHandle: { width: rs(40), height: rs(4), borderRadius: rs(2), backgroundColor: '#71717A', opacity: 0.7, alignSelf: 'center', marginBottom: rs(8) },
-  cardModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: rs(8) },
-  cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center' },
+  cardModalHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: rs(8) },
+  cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' },
   businessCardFlipWrap: { width: '100%', flex: 1, backfaceVisibility: 'hidden' },
   businessCardCapture: { width: '100%', flex: 1, borderRadius: rs(24), overflow: 'hidden', backgroundColor: '#09090B' },
-  businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)', elevation: 5, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
-  businessCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: rs(16), zIndex: 2 },
-  businessBrand: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
-  businessBrandIcon: { width: rs(29), height: rs(29), borderRadius: rs(9), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
+  businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)' },
+  businessCardHeader: { alignItems: 'center', marginBottom: rs(12) },
   businessCompanyLogo: { width: rs(112), height: rs(42) },
-  businessCardBody: { flex: 1, alignItems: 'center', zIndex: 2 },
-  businessDetails: { width: '100%', minWidth: 0, alignItems: 'center' },
-  businessIdentityRow: { width: '100%', flexDirection: 'column', alignItems: 'center', gap: rs(8) },
-  businessIdentityCopy: { width: '100%', alignItems: 'center' },
+  businessCardBody: { flex: 1, alignItems: 'center' },
   businessAvatar: { width: rs(92), height: rs(92), borderRadius: rs(46), borderWidth: 4, borderColor: '#818CF8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5' },
   businessAvatarImage: { width: '100%', height: '100%' },
   businessInitial: { color: '#FFFFFF', fontSize: fs(32), fontWeight: '900' },
-  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900', textAlign: 'center' },
+  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900', textAlign: 'center', marginTop: rs(8) },
   businessRole: { color: '#A5B4FC', fontSize: fs(12), fontWeight: '700', marginTop: rs(4), textAlign: 'center' },
   businessCompany: { color: '#C4B5FD', fontSize: fs(12), fontWeight: '800', marginTop: rs(5), textAlign: 'center' },
-  businessContacts: { width: '82%', gap: rs(8), marginTop: rs(16), alignSelf: 'center' },
+  businessContacts: { width: '82%', gap: rs(8), marginTop: rs(16) },
   businessContactRow: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
   businessContactIcon: { width: rs(26), height: rs(26), borderRadius: rs(13), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
   businessContactText: { flex: 1, color: 'rgba(255,255,255,0.90)', fontSize: fs(11), fontWeight: '600' },
-  businessQrColumn: { alignSelf: 'center', alignItems: 'center', gap: rs(8), marginTop: rs(16) },
+  businessQrColumn: { alignItems: 'center', gap: rs(8), marginTop: rs(16) },
   businessQrBox: { width: rs(132), height: rs(132), padding: rs(8), borderRadius: rs(17), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   businessQr: { width: '100%', height: '100%' },
   businessScanText: { color: '#C4B5FD', fontSize: fs(7), fontWeight: '900', letterSpacing: 0.6 },
-  businessCardActions: { width: '100%', flexDirection: 'row', gap: rs(10), marginTop: rs(24) },
+  businessCardActions: { width: '100%', flexDirection: 'row', gap: rs(10), marginTop: rs(18) },
   businessCardActionsHidden: { opacity: 0 },
-  businessDownloadButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), paddingHorizontal: rs(12), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#27272A', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  businessShareButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), paddingHorizontal: rs(12), paddingVertical: rs(12), borderRadius: rs(14), backgroundColor: '#4F46E5', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  businessDownloadButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), borderRadius: rs(14), backgroundColor: '#27272A', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  businessShareButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), borderRadius: rs(14), backgroundColor: '#4F46E5' },
   businessShareText: { color: '#FFFFFF', fontSize: fs(13), fontWeight: '900' },
 
   card: {
@@ -1214,7 +1344,520 @@ const styles = StyleSheet.create({
   footer:       { alignItems: 'center', paddingVertical: rs(28), gap: rs(5) },
   footerCopy:   { fontSize: fs(11), fontWeight: '400', textAlign: 'center' },
   footerMember: { fontSize: fs(11), fontWeight: '500', textAlign: 'center' },
+
+  // Health Card Paging Styles (Care Group Card format)
+  healthCardContent: {
+    borderRadius: rs(18),
+    padding: rs(12),
+    aspectRatio: 1.7, // Shorter card ratio
+    justifyContent: 'space-between',
+  },
+  careCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  careLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: rs(4),
+  },
+  careLogoBox: {
+    backgroundColor: '#FBBF24',
+    paddingHorizontal: rs(6),
+    paddingVertical: rs(2),
+    borderRadius: rs(4),
+    marginRight: rs(4),
+  },
+  careLogoText: {
+    fontSize: fs(13.5),
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  careLogoSubBox: {
+    justifyContent: 'center',
+  },
+  careLogoSubText: {
+    fontSize: fs(8.5),
+    fontWeight: '800',
+    color: '#FBBF24',
+    lineHeight: fs(9.5),
+  },
+  careLogoSubTextMin: {
+    fontSize: fs(6.5),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: fs(8),
+  },
+  carePolicyRow: {
+    marginVertical: rs(2),
+  },
+  carePolicySubRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: rs(1.5),
+  },
+  careMetaTextMin: {
+    fontSize: fs(8),
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  carePolicyType: {
+    fontSize: fs(8.5),
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+  },
+  careOrgName: {
+    fontSize: fs(9),
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  careHeaderRight: {
+    alignItems: 'flex-end',
+    flex: 1,
+  },
+  careMetaText: {
+    fontSize: fs(8.5),
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    lineHeight: fs(11),
+  },
+  careMetaBold: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  careDivider: {
+    height: 0.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginVertical: rs(6),
+  },
+  careTable: {
+    flex: 1,
+    justifyContent: 'space-around',
+  },
+  careTableHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+    paddingBottom: rs(2),
+    marginBottom: rs(2),
+  },
+  careColHeader: {
+    fontSize: fs(8),
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  careTableRow: {
+    flexDirection: 'row',
+    paddingVertical: rs(1),
+  },
+  careColValue: {
+    fontSize: fs(8.5),
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  // Back of card styles
+  careBackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: rs(4),
+  },
+  careBackUrl: {
+    fontSize: fs(9.5),
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  careBackIconsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: rs(4),
+  },
+  careBackIconBox: {
+    alignItems: 'center',
+    flex: 1,
+    gap: rs(2),
+  },
+  careBackIconsRowBox: {
+    alignItems: 'center',
+    flex: 1,
+    gap: rs(2),
+  },
+  careBackIconText: {
+    fontSize: fs(8),
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: fs(9.5),
+  },
+  careBackQueries: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: rs(3),
+    paddingHorizontal: rs(6),
+    borderRadius: rs(4),
+    alignItems: 'center',
+    marginVertical: rs(3),
+  },
+  careBackQueriesText: {
+    fontSize: fs(8),
+    color: '#FFFFFF',
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  careDisclaimer: {
+    paddingHorizontal: rs(2),
+  },
+  disclaimerTitle: {
+    fontSize: fs(8),
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginBottom: rs(1),
+  },
+  disclaimerLine: {
+    fontSize: fs(7),
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '600',
+    lineHeight: fs(9.5),
+  },
+  careBackFooter: {
+    alignItems: 'center',
+    marginTop: rs(4),
+  },
+  careBackFooterText: {
+    fontSize: fs(8.5),
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  // dots & claim now button
+  healthDotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: rs(8),
+    gap: rs(6),
+  },
+  healthDot: {
+    width: rs(6),
+    height: rs(6),
+    borderRadius: rs(3),
+  },
+  healthDotActive: {
+    backgroundColor: '#6366F1',
+    width: rs(12),
+  },
+  healthDotInactive: {
+    backgroundColor: '#D1D5DB',
+  },
+  claimNowBtn: {
+    borderRadius: rs(8),
+    overflow: 'hidden',
+    width: rs(130),
+    alignSelf: 'center',
+  },
+  claimNowBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: rs(7),
+  },
+  claimNowBtnText: {
+    color: '#FFFFFF',
+    fontSize: fs(11),
+    fontWeight: '800',
+  },
+  pbCardShadowWrapper: {
+    borderTopLeftRadius: rs(24),
+    borderTopRightRadius: rs(24),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  policybazaarCard: {
+    borderTopLeftRadius: rs(24),
+    borderTopRightRadius: rs(24),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    minHeight: rs(200),
+  },
+  pbCardUpperContent: {
+    paddingHorizontal: rs(14),
+    paddingTop: rs(14),
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: rs(58),
+  },
+  pbCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: rs(8),
+  },
+  pbLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pbLogoText: {
+    fontSize: fs(14),
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  pbDotComBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: rs(8),
+    paddingHorizontal: rs(4),
+    paddingVertical: rs(1),
+    marginLeft: rs(3),
+  },
+  pbDotComText: {
+    fontSize: fs(8),
+    fontWeight: '900',
+    color: '#005b7f',
+  },
+  pbActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: rs(8),
+    paddingVertical: rs(3),
+    borderRadius: rs(12),
+  },
+  pbActiveIconCircle: {
+    width: rs(12),
+    height: rs(12),
+    borderRadius: rs(6),
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: rs(4),
+  },
+  pbActiveText: {
+    fontSize: fs(9),
+    fontWeight: '800',
+    color: '#047857',
+  },
+  pbCardMiddle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: rs(10),
+  },
+  pbMiddleLeft: {
+    flex: 1.5,
+  },
+  pbNameText: {
+    fontSize: fs(18),
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  pbInsurerText: {
+    fontSize: fs(12),
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: rs(2),
+  },
+  pbPolicyLabel: {
+    fontSize: fs(8),
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    marginTop: rs(8),
+    textTransform: 'uppercase',
+  },
+  pbPolicyNoText: {
+    fontSize: fs(10.5),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: rs(1),
+  },
+  pbMiddleRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  pbOrbOuterRing: {
+    width: rs(70),
+    height: rs(70),
+    borderRadius: rs(35),
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pbOrbInnerRing: {
+    width: rs(58),
+    height: rs(58),
+    borderRadius: rs(29),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  pbShieldIconBox: {
+    width: rs(46),
+    height: rs(46),
+    borderRadius: rs(23),
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  pbBottomPanel: {
+    position: 'absolute',
+    bottom: -1,
+    height: rs(58),
+    backgroundColor: '#F8FAFC',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderTopLeftRadius: rs(20),
+    borderTopRightRadius: rs(20),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: rs(14),
+    alignItems: 'center',
+  },
+  pbBottomCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  pbBottomLabel: {
+    fontSize: fs(8),
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  pbBottomVal: {
+    fontSize: fs(9.5),
+    color: '#1E293B',
+    fontWeight: '800',
+    marginTop: rs(1),
+  }, 
+  pbVerticalLine: {
+    width: 0.5,
+    height: rs(20),
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: rs(4),
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: rs(10),
+    gap: rs(6),
+  },
+  pagDot: {
+    width: rs(6),
+    height: rs(6),
+    borderRadius: rs(3),
+    backgroundColor: '#CBD5E1',
+  },
+  pagDotActive: {
+    backgroundColor: '#6366F1',
+    width: rs(12),
+  },
+  pagDotInactive: {
+    backgroundColor: '#CBD5E1',
+  },
+  horizontalClaimCard: {
+    borderRadius: rs(14),
+    overflow: 'hidden',
+    marginBottom: rs(16),
+    marginHorizontal: rs(10),
+    borderWidth: 1,
+    borderColor: 'rgba(0, 91, 127, 0.08)',
+  },
+  horizontalClaimGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: rs(12),
+  },
+  horizontalClaimLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  claimIconBox: {
+    width: rs(36),
+    height: rs(36),
+    borderRadius: rs(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimTitle: {
+    fontSize: fs(13),
+    fontWeight: '800',
+  },
+  claimSub: {
+    fontSize: fs(9),
+    fontWeight: '500',
+    marginTop: rs(2),
+  },
+  // Group Card & Care Logo Styles
+  groupCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: rs(6),
+  },
+  groupHeaderRight: {
+    alignItems: 'flex-end',
+  },
+  groupHeaderRightText: {
+    fontSize: fs(7.5),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  groupPolicyText: {
+    fontSize: fs(9),
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  groupCompanyText: {
+    fontSize: fs(8),
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginTop: rs(1),
+  },
+  groupTableContainer: {
+    marginTop: rs(6),
+    width: '100%',
+  },
+  groupTableHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+    paddingBottom: rs(1.5),
+  },
+  groupColHeader: {
+    fontSize: fs(7.5),
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  groupTableRow: {
+    flexDirection: 'row',
+    paddingVertical: rs(1.5),
+  },
+  groupColVal: {
+    fontSize: fs(8),
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
 });
 
 export default ProfileScreen;
-
