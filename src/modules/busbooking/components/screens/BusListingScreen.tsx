@@ -487,12 +487,8 @@ console.log(
     } else if (Array.isArray(buses) && buses.length === 0) {
       filtered = [];
     } else {
-      console.log("[BusBooking][Listing] Using fallback demo buses", {
-        sourceCity,
-        destinationCity,
-        journeyDate,
-      });
-      filtered = busCards;
+      // Never present demo inventory as bookable inventory in production.
+      filtered = [];
     }
 
     // 1. Apply quick filter chips (AC, Sleeper, Seater)

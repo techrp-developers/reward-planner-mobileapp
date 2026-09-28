@@ -22,47 +22,55 @@ Starting dev server on http://localhost:8081
               Fast - Scalable - Integrated
 
 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
  INFO  Dev server ready. Press Ctrl+C to exit.
  INFO  Interactive mode is not supported in this environment
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (19/215)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (74/397)
- BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (136/497)
- BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 15% (233/594)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (322/729)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (334/744)
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (335/744)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (19/216)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (69/361)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (126/470)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 11% (197/588)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 19% (302/702)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 19% (334/755)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 19% (335/755)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\order_banner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 23% (388/816)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (380/791)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (402/838)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\sampleImages\Categories(8).svg as it exceeds the max of 500KB.
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\product\product(1).svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (463/941)
- BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 31% (600/1066)
- BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 36% (707/1180)
-transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\exclusiveofferbooking.svg as it exceeds the max of 500KB.
-transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe1.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (472/950)
+ BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 30% (575/1052)
+ BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 35% (681/1164)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe2.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 43% (809/1227)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53% (951/1302)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe1.svg as it exceeds the max of 500KB.
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\exclusiveofferbooking.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 39% (772/1232)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓░░░░░░░░░ 49% (905/1292)
 transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\serviceBanner.svg as it exceeds the max of 500KB.
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65% (1110/1367)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1295/1558)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1334/1587)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 78% (1455/1638)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1602/1717)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1630/2015)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1756/2111)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1929/2159)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (2111/2241)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2301/2377)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96% (2375/2420)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2446/2453)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 58% (1036/1351)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74% (1213/1406)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1349/1602)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1361/1608)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79% (1475/1657)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1596/1711)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1648/1793)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1649/2033)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1737/2116)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1812/2143)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87% (1987/2177)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (2109/2243)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2230/2312)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2329/2402)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96% (2389/2435)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2469/2469)
  BUNDLE  ./index.js 
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
  INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91% (2267/2364)
  BUNDLE  ./index.js 
  INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.

@@ -1,5 +1,32 @@
 import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import api from "../../common/auth/api/axios";
+import { SERVER_URL } from "../../../config/apiConfig";
+
+const BUS_REQUEST_TIMEOUT_MS = 20_000;
+const nativeFetch = globalThis.fetch.bind(globalThis);
+const nativeConsole = globalThis.console;
+
+// Keep detailed provider and booking diagnostics out of production builds.
+const console = {
+  log: (...args: unknown[]) => {
+    if (__DEV__) nativeConsole.log(...args);
+  },
+};
+
+// Apply a deterministic timeout to every raw fetch in this API module.
+const fetch: typeof globalThis.fetch = async (input, init = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), BUS_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await nativeFetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 export type City = {
   id: number | string;
@@ -43,6 +70,17 @@ export type BusSearchResponse = {
   count?: number;
 
   buses?: any[];
+};
+
+export type BusProviderBalance = {
+  balance: number;
+  creditLimit: number;
+};
+
+export type BusProviderBalanceResponse = {
+  success: boolean;
+  message: string;
+  data: BusProviderBalance;
 };
 
 export type SeatPrice = {
@@ -457,7 +495,75 @@ export type CreateBusPaymentOrderResponse = {
 |
 |--------------------------------------------------------------------------
 */
-export const BUS_BOOKING_BASE_URL = "http://localhost:5000";
+// Uses the same local/live environment switch as every other app module.
+// local: http://localhost:5000 (with adb reverse on a physical Android phone)
+// live:  https://rewardplanners.com
+export const BUS_BOOKING_BASE_URL = SERVER_URL.replace(/\/$/, "");
+
+/*
+|--------------------------------------------------------------------------
+| Provider Balance
+|--------------------------------------------------------------------------
+|
+| The backend owns the SRDV credentials and calls:
+| POST https://bus.srdvtest.com/v9/rest/Balance
+|
+| The mobile app calls only the authenticated local proxy below. Never place
+| ClientId, UserName, or Password in the React Native bundle.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const getBusBalanceApi = async (): Promise<BusProviderBalanceResponse> => {
+  const authHeaders = await getAuthHeaders();
+  const requestUrl = `${BUS_BOOKING_BASE_URL}/api/busbooking/balance`;
+
+  let response: Response;
+  let result: any;
+
+  try {
+    response = await fetch(requestUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({}),
+    });
+    result = await response.json();
+  } catch (error: any) {
+    console.log("[BusBooking][API][Balance] Network Error", {
+      requestUrl,
+      message: error?.message || error,
+    });
+    throw new Error(
+      "Unable to reach the bus booking service. Please try again."
+    );
+  }
+
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || "Unable to fetch bus provider balance");
+  }
+
+  const balance = Number(result?.data?.balance ?? result?.Balance);
+  const creditLimit = Number(
+    result?.data?.creditLimit ?? result?.data?.credit_limit ?? result?.CreditLimit
+  );
+
+  if (!Number.isFinite(balance) || !Number.isFinite(creditLimit)) {
+    throw new Error("The bus provider returned an invalid balance response");
+  }
+
+  return {
+    success: true,
+    message: String(result?.message || "Bus provider balance fetched successfully"),
+    data: {
+      balance,
+      creditLimit,
+    },
+  };
+};
 
 
 /*
@@ -501,7 +607,7 @@ export const searchCitiesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Check whether your local backend is running on http://localhost:5000 or adb reverse is missing"
+      "Unable to reach the bus booking service. Please try again."
     );
   }
 
@@ -572,7 +678,7 @@ export const searchBusesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Check whether your local backend is running on http://localhost:5000 or adb reverse is missing"
+      "Unable to reach the bus booking service. Please try again."
     );
   }
 
