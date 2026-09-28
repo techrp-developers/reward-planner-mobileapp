@@ -15,7 +15,6 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 
@@ -41,11 +40,10 @@ const activeServices: CategoryItem[] = [
   { image: Explore1, tab: 'Product' },
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
-  { SvgCard: BusBookingCard, tab: 'DineOut' },
+  { image: Explore4, tab: 'DineOut' },
 ];
 
 const upcomingServices: CategoryItem[] = [
-  { image: Explore4, tab: 'Product' },
   { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];

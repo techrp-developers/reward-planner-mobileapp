@@ -14,7 +14,6 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BusBookingCard from '../../../assets/sampleImages/Categories(8).svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -40,7 +39,6 @@ const categoriesData: CategoryItem[] = [
   { image: Categories1, tab: 'Product' },
   { image: Categories2, tab: 'Services' },
   { image: Categories3, tab: 'Payments' },
-  { SvgCard: BusBookingCard, tab: 'DineOut' },
 ];
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
