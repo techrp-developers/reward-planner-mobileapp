@@ -183,6 +183,7 @@ const ProfileScreen: React.FC = () => {
   const [, setVisitCardLoading] = useState(false);
   const [visitCardRequested, setVisitCardRequested] = useState(false);
   const [visitCardModalVisible, setVisitCardModalVisible] = useState(false);
+  const [mediclaimCardModalVisible, setMediclaimCardModalVisible] = useState(false);
   const [visitCardExporting, setVisitCardExporting] = useState(false);
   const [visitCardActionsHidden, setVisitCardActionsHidden] = useState(false);
   const visitCardCaptureRef = useRef<ViewShotRef>(null);
@@ -457,6 +458,7 @@ const ProfileScreen: React.FC = () => {
           <View style={{ width: '100%' }}>
             <ScrollView
               horizontal
+              scrollEnabled={false}
               showsHorizontalScrollIndicator={false}
               snapToInterval={cardWidth + rs(12)}
               decelerationRate="fast"
@@ -545,8 +547,8 @@ const ProfileScreen: React.FC = () => {
                   </View>
                 </View>
               </LinearGradient>
-              {/* Card 2: GMC Digital Insurance Card (Policybazaar Theme) */}
-              {gmcDetails && (
+              {/* The mediclaim card now opens from the My Cards directory below. */}
+              {false && gmcDetails && (
                 <View style={[styles.pbCardShadowWrapper, { width: cardWidth }]}>
                   <LinearGradient
                     colors={['#009ac7', '#007ca5', '#005b7f']}
@@ -630,7 +632,7 @@ const ProfileScreen: React.FC = () => {
             </ScrollView>
 
             {/* Pagination indicator dots */}
-            {gmcDetails && (
+            {false && gmcDetails && (
               <View style={styles.paginationRow}>
                 <View style={[styles.pagDot, profileCardPage === 0 ? styles.pagDotActive : styles.pagDotInactive]} />
                 <View style={[styles.pagDot, profileCardPage === 1 ? styles.pagDotActive : styles.pagDotInactive]} />
@@ -656,6 +658,32 @@ const ProfileScreen: React.FC = () => {
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
               </TouchableOpacity>
+              {gmcDetails && (
+                <TouchableOpacity
+                  style={[styles.cardDirectoryItem, styles.cardDirectorySpacing, cardColor(isDark, theme)]}
+                  onPress={() => setMediclaimCardModalVisible(true)}
+                  activeOpacity={0.78}
+                >
+                  <LinearGradient colors={['#009AC7', '#005B7F']} style={[styles.cardDirectoryIcon, styles.mediclaimThumbnail]}>
+                    <View style={styles.mediclaimLogoRow}>
+                      <View style={styles.mediclaimCareBox}>
+                        <Text style={styles.mediclaimCareText}>care</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.mediclaimHealthText}>HEALTH</Text>
+                        <Text style={styles.mediclaimInsuranceText}>INSURANCE</Text>
+                      </View>
+                    </View>
+                    <View style={styles.mediclaimCardLine} />
+                    <View style={styles.mediclaimCardLineShort} />
+                  </LinearGradient>
+                  <View style={styles.cardDirectoryCopy}>
+                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Mediclaim Card</Text>
+                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view your health insurance card</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={21} color="#007CA5" />
+                </TouchableOpacity>
+              )}
             </>
           )}
 
@@ -850,6 +878,53 @@ const ProfileScreen: React.FC = () => {
 
         </View>
       </ScrollView>
+
+      <Modal visible={mediclaimCardModalVisible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setMediclaimCardModalVisible(false)}>
+        <View style={styles.mediclaimModalBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setMediclaimCardModalVisible(false)} accessibilityLabel="Close mediclaim card" />
+          <View style={styles.mediclaimModalContent}>
+            <View style={styles.mediclaimModalHeader}>
+              <Text style={styles.mediclaimModalTitle}>Mediclaim Card</Text>
+              <TouchableOpacity style={styles.mediclaimModalClose} onPress={() => setMediclaimCardModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <LinearGradient colors={['#009AC7', '#007CA5', '#005B7F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.mediclaimPreviewCard}>
+              <CardPattern />
+              <View style={styles.pbCardUpperContent}>
+                <View style={styles.pbCardHeader}>
+                  <View style={styles.pbLogoRow}>
+                    <Text style={styles.pbLogoText}>policybazaar</Text>
+                    <View style={styles.pbDotComBox}><Text style={styles.pbDotComText}>.com</Text></View>
+                  </View>
+                  <View style={styles.pbActiveBadge}>
+                    <View style={styles.pbActiveIconCircle}><MaterialCommunityIcons name="check" size={8} color="#10B981" /></View>
+                    <Text style={styles.pbActiveText}>Active Policy</Text>
+                  </View>
+                </View>
+                <View style={styles.pbCardMiddle}>
+                  <View style={styles.pbMiddleLeft}>
+                    <Text style={styles.pbNameText}>{gmcDetails?.name || displayName}</Text>
+                    <Text style={styles.pbInsurerText}>{gmcDetails?.policy_company_name || 'Care Health Insurance'}</Text>
+                    <Text style={styles.pbPolicyLabel}>Policy No.</Text>
+                    <Text style={styles.pbPolicyNoText}>{gmcDetails?.policy_number || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.pbMiddleRight}>
+                    <View style={styles.pbOrbOuterRing}><View style={styles.pbOrbInnerRing}><View style={styles.pbShieldIconBox}><MaterialCommunityIcons name="shield" size={26} color="#FFFFFF" /></View></View></View>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.pbBottomPanel}>
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Member ID</Text><Text style={styles.pbBottomVal}>{gmcDetails?.member_id || '—'}</Text></View></View>
+                <View style={styles.pbVerticalLine} />
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="calendar-clock" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Valid Till</Text><Text style={styles.pbBottomVal}>{gmcDetails?.valid_till || '—'}</Text></View></View>
+                <View style={styles.pbVerticalLine} />
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Policy Type</Text><Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails?.policy_type || 'Group Card'}</Text></View></View>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={visitCardModalVisible} transparent animationType="fade" statusBarTranslucent onShow={handleVisitCardModalShown} onRequestClose={() => setVisitCardModalVisible(false)}>
         <View style={styles.cardModalBackdrop}>
@@ -1208,7 +1283,23 @@ const styles = StyleSheet.create({
   secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
 
   cardDirectoryItem: { minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  cardDirectorySpacing: { marginTop: rs(10) },
   cardDirectoryIcon: { width: rs(50), height: rs(50), borderRadius: rs(15), alignItems: 'center', justifyContent: 'center' },
+  mediclaimThumbnail: { alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: rs(5), paddingVertical: rs(7), overflow: 'hidden' },
+  mediclaimLogoRow: { flexDirection: 'row', alignItems: 'center', gap: rs(2) },
+  mediclaimCareBox: { backgroundColor: '#FBBF24', borderRadius: rs(2), paddingHorizontal: rs(3), paddingVertical: rs(1) },
+  mediclaimCareText: { color: '#0F172A', fontSize: fs(6), lineHeight: fs(7), fontWeight: '900' },
+  mediclaimHealthText: { color: '#FBBF24', fontSize: fs(4), lineHeight: fs(5), fontWeight: '900' },
+  mediclaimInsuranceText: { color: '#FFFFFF', fontSize: fs(3), lineHeight: fs(4), fontWeight: '800' },
+  mediclaimCardLine: { width: '88%', height: rs(2), borderRadius: rs(1), backgroundColor: 'rgba(255,255,255,0.78)' },
+  mediclaimCardLineShort: { width: '58%', height: rs(2), borderRadius: rs(1), backgroundColor: 'rgba(255,255,255,0.48)' },
+  mediclaimModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', paddingHorizontal: rs(16) },
+  mediclaimModalContent: { width: '100%' },
+  mediclaimModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(12), paddingHorizontal: rs(4) },
+  mediclaimModalTitle: { color: '#FFFFFF', fontSize: fs(18), fontWeight: '900' },
+  mediclaimModalClose: { width: rs(38), height: rs(38), borderRadius: rs(19), alignItems: 'center', justifyContent: 'center', backgroundColor: '#27272A' },
+  mediclaimPreviewCard: { width: '100%', aspectRatio: 1.58, borderRadius: rs(22), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  mediclaimFieldCopy: { marginLeft: rs(4), flex: 1 },
   cardDirectoryCopy: { flex: 1, minWidth: 0 },
   cardDirectoryTitle: { fontSize: fs(14), fontWeight: '900' },
   cardDirectorySubtitle: { fontSize: fs(9), lineHeight: fs(13), fontWeight: '600', marginTop: rs(3) },
@@ -1719,6 +1810,8 @@ const styles = StyleSheet.create({
   pbBottomPanel: {
     position: 'absolute',
     bottom: -1,
+    left: 0,
+    right: 0,
     height: rs(58),
     backgroundColor: '#F8FAFC',
     borderBottomLeftRadius: 0,
