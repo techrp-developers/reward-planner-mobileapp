@@ -6,6 +6,7 @@ import { SvgProps } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
 import { useBbpsTheme } from '../../utils/useBbpsTheme';
+import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 
 // Asset Imports
 import Recharge from '../../assets/BBPS_Service/Recharge.svg';
@@ -433,6 +434,8 @@ function RechargeBill() {
         </View>
       )}
 
+      <OffersBanner module="payment" wrapperStyle={styles.afterQuickPayOffer} />
+
       <View
         style={[
           styles.directoryCard,
@@ -582,6 +585,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
   quickCardTitle: { fontSize: 12, fontWeight: '700', lineHeight: 16, minHeight: 32 },
   quickCardAccent: { position: 'absolute', left: 12, right: 12, bottom: 0, height: 3, borderTopLeftRadius: 2, borderTopRightRadius: 2, opacity: 0.75 },
+  afterQuickPayOffer: { marginHorizontal: -16, paddingTop: 14, paddingBottom: 0 },
   featuredLarge: { flex: 1.05, borderRadius: 21, overflow: 'hidden', borderWidth: 1, borderColor: '#2A2630' },
   featuredSide: { flex: 0.95, gap: 10 },
   featuredSmall: { flex: 1, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#2A2630' },

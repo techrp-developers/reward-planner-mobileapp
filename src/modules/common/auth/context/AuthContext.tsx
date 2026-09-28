@@ -235,7 +235,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const requestLoginOtp = useCallback(async (identifier: string) => {
     setLoading(true);
     try {
+      if (__DEV__) {
+        console.log("[Auth] Request login OTP:", {
+          url: `${API_BASE_URL}/v1/auth/request-otp`,
+          login: identifier,
+        });
+      }
       const response = await api.post("/v1/auth/request-otp", { login: identifier });
+      if (__DEV__) {
+        console.log("[Auth] Request login OTP success:", response.data);
+      }
       return response.data;
     } finally {
       setLoading(false);

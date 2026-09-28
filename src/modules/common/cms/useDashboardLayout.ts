@@ -7,7 +7,7 @@ import {
   type DashboardLayoutId,
   normaliseDashboardLayout,
 } from './dashboardLayout';
-import { API_V1_URL as CMS_BASE_URL } from '../../../config/apiConfig';
+import { API_V1_URL } from '../../../config/apiConfig';
 const cacheKey = (id: DashboardLayoutId) => `cms:dashboard-layout:${id}`;
 
 type LayoutResponse = { success: boolean; data?: DashboardLayout };
@@ -28,7 +28,7 @@ export function useDashboardLayout(id: DashboardLayoutId, supportedKeys: readonl
       }
 
       try {
-        const response = await axios.get<LayoutResponse>(`${CMS_BASE_URL}/cms/dashboard-layouts/${id}`);
+        const response = await axios.get<LayoutResponse>(`${API_V1_URL}/cms/dashboard-layouts/${id}`);
         if (!response.data?.success || !response.data.data) return;
         const next = normaliseDashboardLayout(response.data.data, id, stableKeys);
         if (active) setLayout(next);

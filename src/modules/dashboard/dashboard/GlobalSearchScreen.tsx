@@ -21,7 +21,7 @@ import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import SkeletonBox from "../../services/component/constant/SkeletonBox";
 import { useGlobalSearch } from "../header/useGlobalSearch";
 import HeaderComponent from "../header/HeaderComponent";
-import { API_V1_URL } from '../../../config/apiConfig';
+import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 
 const HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
 let globalSearchHeaderCache: {
@@ -74,8 +74,8 @@ function GlobalSearchScreen() {
       if (userRes.data?.success) {
         const d = userRes.data.data;
         const nextUserName = d.name || headerUserName;
-        const nextUserImage = d.userImage ?? headerUserImage;
-        const nextCompanyLogo = d.company?.logo ?? headerCompanyLogo;
+        const nextUserImage = normalizeLocalCmsImageUrl(d.userImage) ?? headerUserImage;
+        const nextCompanyLogo = normalizeLocalCmsImageUrl(d.company?.logo) ?? headerCompanyLogo;
 
         setHeaderUserName((prev) => (prev === nextUserName ? prev : nextUserName));
         setHeaderUserImage((prev) => (prev === nextUserImage ? prev : nextUserImage));

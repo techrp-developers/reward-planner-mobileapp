@@ -1,30 +1,25 @@
-import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import RechargeBill from '../component/home/ReachargeBill';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import PromotionalBanner from '../../ecommerce/components/home/PromotionalBanner';
+import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
 
 function HomePageComponent() {
   const { colors } = useBbpsTheme();
-  const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({ queryKey: ['bbps'] });
-    } finally {
-      setRefreshing(false);
-    }
-  }, [queryClient]);
+  const { onScroll } = useNavbarScroll();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
+        {/* Payment-module CMS content (fetchResolvedZones("payment")) — both
+            components render null when their CMS entry is null/absent. */}
+        <PromotionalBanner module="payment" />
         <RechargeBill />
       </ScrollView>
     </View>

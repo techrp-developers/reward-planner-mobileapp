@@ -102,6 +102,19 @@ const isAuthEndpoint = (url?: string) => {
 api.interceptors.request.use((config) => {
   const nextConfig = applyNoStoreHeaders(config);
   const token = sessionHandlers?.getAccessToken?.();
+  const isAuthRequest = isAuthEndpoint(nextConfig.url);
+
+  if (isAuthRequest) {
+    const headers: any = nextConfig.headers;
+    if (headers && typeof headers.delete === "function") {
+      headers.delete("Authorization");
+    } else if (headers) {
+      delete headers.Authorization;
+      delete headers.authorization;
+    }
+
+    return nextConfig;
+  }
 
   if (token) {
     const headers: any = nextConfig.headers;

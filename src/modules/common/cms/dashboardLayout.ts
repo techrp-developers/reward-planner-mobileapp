@@ -4,11 +4,13 @@ export type MainDashboardSectionKey =
   | 'header'
   | 'birthdays'
   | 'stepProgress'
+  | 'investmentInsurance'
   | 'exploreModules'
   | 'moduleBanner'
   | 'rewardsOverview';
 
 export type EcommerceDashboardSectionKey =
+  | 'homeBanner'
   | 'categories'
   | 'bestSeller'
   | 'topRated'
@@ -54,6 +56,7 @@ export const DEFAULT_DASHBOARD_LAYOUTS: Record<DashboardLayoutId, DashboardLayou
       section('header', 10),
       section('birthdays', 20),
       section('stepProgress', 30),
+      section('investmentInsurance', 35),
       section('exploreModules', 40),
       section('moduleBanner', 50),
       section('rewardsOverview', 60),
@@ -63,16 +66,17 @@ export const DEFAULT_DASHBOARD_LAYOUTS: Record<DashboardLayoutId, DashboardLayou
     id: 'ecommerce',
     version: 1,
     sections: [
-      section('categories', 10),
-      section('bestSeller', 20),
-      section('topRated', 30),
-      section('offerHome', 40),
-      section('newArrivals', 50),
-      section('mostView', 60),
-      section('recommended', 70),
-      section('features', 80),
-      section('recent', 90),
-      section('productCategory', 100),
+      section('homeBanner', 10),
+      section('categories', 20),
+      section('bestSeller', 30),
+      section('topRated', 40),
+      section('offerHome', 50),
+      section('newArrivals', 60),
+      section('mostView', 70),
+      section('recommended', 80),
+      section('features', 90),
+      section('recent', 100),
+      section('productCategory', 110),
     ],
   },
   services: { id: 'services', version: 1, sections: [] },
@@ -101,6 +105,21 @@ export function normaliseDashboardLayout(
       return (item as DashboardSection).enabled !== false;
     })
     .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+
+  // A cached or backend-published layout can predate a section that was
+  // added to the app later (e.g. a new frontend-only card) — `seen` only
+  // contains keys the candidate actually mentioned (including ones it
+  // explicitly disabled), so anything supported-but-unmentioned here is
+  // genuinely missing from the candidate, not intentionally hidden. Carry
+  // those in from the default template at their default position instead
+  // of silently dropping them.
+  fallback.sections.forEach((defaultSection) => {
+    const key = String(defaultSection.key);
+    if (seen.has(key) || !supported.has(key)) return;
+    sections.push(defaultSection);
+    seen.add(key);
+  });
+  sections.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
 
   return {
     id,

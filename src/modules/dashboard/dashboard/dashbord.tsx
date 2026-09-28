@@ -1,12 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
   Platform,
   Pressable,
+  ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +17,7 @@ import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
 import ModuleBanner from '../explore/ModuleBanner';
-import { rs, fs } from '../../../utils/responsive';
+import { rs } from '../../../utils/responsive';
 import ServicesModule, { type ExploreServiceTab } from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
 // import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
@@ -32,14 +31,30 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
-import { API_V1_URL } from '../../../config/apiConfig';
-import { queryClient } from '../../../query/queryClient';
-import StatusTray from '../../status/components/StatusTray';
-import LivePollCard from '../../polls/components/LivePollCard';
+import { fetchResolvedZones } from '../../common/cms/cmsContentApi';
+import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
+import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
+import OffersBanner from '../../ecommerce/components/home/OffersBanner';
+import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
-  'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+  'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
 ];
+
+// The CMS only stores one solid color per navbar_background entry — turn it
+// into a two-stop gradient client-side (rather than needing a second
+// gradient-end field added to the backend) by blending it toward black.
+const darkenHexColor = (hex: string, amount: number): string => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return hex;
+
+  const channel = (start: number) =>
+    Math.max(0, Math.min(255, Math.round(parseInt(normalized.slice(start, start + 2), 16) * (1 - amount))))
+      .toString(16)
+      .padStart(2, '0');
+
+  return `#${channel(0)}${channel(2)}${channel(4)}`;
+};
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
@@ -48,24 +63,11 @@ const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   DineOut: 'DineOutModule',
 };
 
-const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
-  Product: '#5F341A',
-  Services: '#4F6BFF',
-  Payments: '#7C3AED',
-  DineOut: '#DC2626',
-};
-
-const MODULE_DISPLAY_NAME: Record<ExploreServiceTab, string> = {
-  Product: 'Product',
-  Services: 'Services',
-  Payments: 'Payments',
-  DineOut: 'Bus Booking',
-};
-
 type DashboardHeaderCache = {
   userName: string;
   userImage: string | null;
   companyLogo: string | null;
+  thought: string;
   stepGoal: number;
   birthdays: BirthdayEmployee[];
   fetchedAt: number;
@@ -79,6 +81,8 @@ const MemoServicesModule = memo(ServicesModule);
 const MemoModuleBanner = memo(ModuleBanner);
 const MemoRewardsOverview = memo(RewardsOverview);
 const MemoBirthdayCarousel = memo(BirthdayCarousel);
+const MemoOffersBanner = memo(OffersBanner);
+const MemoInvestmentInsuranceOverview = memo(InvestmentInsuranceOverview);
 
 function Dashbord() {
   const { isDark } = useAppTheme();
@@ -96,6 +100,7 @@ function Dashbord() {
   const [headerCompanyLogo, setHeaderCompanyLogo] = useState<string | null>(
     () => dashboardHeaderCache?.companyLogo ?? null,
   );
+  const [thought, setThought] = useState<string>(() => dashboardHeaderCache?.thought ?? '');
   const [stepGoal, setStepGoal] = useState<number>(() => {
     if (dashboardHeaderCache?.stepGoal) return dashboardHeaderCache.stepGoal;
     const initialGoal = Number((user as any)?.steps?.goal_steps);
@@ -108,7 +113,6 @@ function Dashbord() {
     () => dashboardHeaderCache?.birthdays ?? [],
   );
   const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const hasBirthdays = birthdays.length > 0;
   const { data: walletBalanceResponse } = useQuery({
     queryKey: ['dashboard', 'header-wallet-balance'],
@@ -117,19 +121,40 @@ function Dashbord() {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const { data: mobileDashboardContent } = useQuery({
+    queryKey: moduleContentQueryKey('mobile_dashboard'),
+    queryFn: () => fetchResolvedZones('mobile_dashboard'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
+  const mobileDashboardBackground = mobileDashboardContent?.navbar_background ?? null;
+  const mobileDashboardImageUrl =
+    mobileDashboardBackground?.content_type === 'image'
+      ? mobileDashboardBackground.image_url
+      : null;
+  const mobileDashboardColor =
+    mobileDashboardBackground?.content_type === 'color'
+      ? mobileDashboardBackground.color_value
+      : null;
+  const mobileDashboardTextColor = mobileDashboardBackground?.text_color ?? null;
+  const hasMobileDashboardOffers =
+    mobileDashboardContent?.offers_banner?.content_type === 'image' &&
+    Array.isArray(mobileDashboardContent.offers_banner.images) &&
+    mobileDashboardContent.offers_banner.images.some((image) => image.is_active === 1 && image.image_url);
 
-  const loadHeaderInfo = useCallback(async (forceRefresh = false) => {
+  const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
 
     if (
-      !forceRefresh &&
       dashboardHeaderCache &&
       Date.now() - dashboardHeaderCache.fetchedAt < DASHBOARD_HEADER_CACHE_TTL_MS
     ) {
       setHeaderUserName(dashboardHeaderCache.userName);
       setHeaderUserImage(dashboardHeaderCache.userImage);
       setHeaderCompanyLogo(dashboardHeaderCache.companyLogo);
+      setThought(dashboardHeaderCache.thought);
       setStepGoal(dashboardHeaderCache.stepGoal);
       setBirthdays(dashboardHeaderCache.birthdays);
       return;
@@ -146,9 +171,12 @@ function Dashbord() {
 
       if (userRes.data?.success) {
         const d = userRes.data.data;
+        const nextUserImage = normalizeLocalCmsImageUrl(d.userImage);
+        const nextCompanyLogo = normalizeLocalCmsImageUrl(d.company?.logo);
         if (d.name)          setHeaderUserName((prev) => (prev === d.name ? prev : d.name));
-        if (d.userImage)     setHeaderUserImage((prev) => (prev === d.userImage ? prev : d.userImage));
-        if (d.company?.logo) setHeaderCompanyLogo((prev) => (prev === d.company.logo ? prev : d.company.logo));
+        if (nextUserImage)   setHeaderUserImage((prev) => (prev === nextUserImage ? prev : nextUserImage));
+        if (nextCompanyLogo) setHeaderCompanyLogo((prev) => (prev === nextCompanyLogo ? prev : nextCompanyLogo));
+        if (d.thought)       setThought((prev) => (prev === d.thought ? prev : d.thought));
 
         const apiStepGoal = Number(d.steps?.goal_steps);
         if (Number.isFinite(apiStepGoal) && apiStepGoal > 0) {
@@ -161,7 +189,7 @@ function Dashbord() {
           name:        b.name,
           designation: b.role,
           department:  b.department,
-          photo:       b.image ?? null,
+          photo:       normalizeLocalCmsImageUrl(b.image) ?? null,
         }));
         setBirthdays((prev) => (
           JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays
@@ -169,8 +197,9 @@ function Dashbord() {
 
         dashboardHeaderCache = {
           userName: d.name || headerUserName,
-          userImage: d.userImage ?? headerUserImage,
-          companyLogo: d.company?.logo ?? headerCompanyLogo,
+          userImage: nextUserImage ?? headerUserImage,
+          companyLogo: nextCompanyLogo ?? headerCompanyLogo,
+          thought: d.thought ?? thought,
           stepGoal:
             Number.isFinite(Number(d.steps?.goal_steps)) && Number(d.steps?.goal_steps) > 0
               ? Number(d.steps.goal_steps)
@@ -180,7 +209,7 @@ function Dashbord() {
         };
       }
     } catch { }
-  }, [headerCompanyLogo, headerUserImage, headerUserName, isAuthenticated, stepGoal]);
+  }, [headerCompanyLogo, headerUserImage, headerUserName, isAuthenticated, stepGoal, thought]);
 
   // Warm the ecommerce route shortly after the first dashboard paint. A timer
   // is intentional here: InteractionManager may never become idle while the
@@ -210,8 +239,7 @@ function Dashbord() {
       require('../../bbps/screen/HomePage');
       require('../../step_counter/navigation/RewardHomeStack');
       require('../../step_counter/component/fitness/StepWelcome');
-      require('../../busbooking/navigation/BusBookingStack');
-      require('../../busbooking/components/screens/BookingHomeScreen');
+      require('../../ecommerce/constants/ComingSoon');
     }, 900);
 
     return () => {
@@ -224,19 +252,6 @@ function Dashbord() {
     setOpeningModule(null);
     loadHeaderInfo();
   }, [loadHeaderInfo]));
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    dashboardHeaderCache = null;
-    try {
-      await Promise.all([
-        loadHeaderInfo(true),
-        queryClient.invalidateQueries(),
-      ]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadHeaderInfo]);
 
   const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
     setOpeningModule(tab);
@@ -283,13 +298,102 @@ function Dashbord() {
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
-  const topSectionGradient: string[] = isDark
-    ? ['#09090B', '#111827', '#18181B']
-    : ['#111827', '#1E1B4B', '#312E81'];
+  // Default (no CMS navbar_background configured for this module) header
+  // background — matches the light, near-white reference design. Only used
+  // as a fallback: renderHeaderSection still swaps in the CMS-provided
+  // image/color first when one is published, so this never overrides
+  // dynamic content — it just fixes what shows before any is set.
+  const topSectionGradient: string[] = useMemo(
+    () => (isDark ? ['#09090B', '#111827', '#18181B'] : ['#F8FAFC', '#FFFFFF', '#F1F5F9']),
+    [isDark],
+  );
 
   const rootGradient = isDark
     ? ['#09090B', '#111827', '#151526']
-    : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
+    : ['#F8FAFC', '#FFFFFF', '#F8FAFC'];
+
+  const renderHeaderSection = useCallback((key: string) => {
+    // Only override the theme-aware text colors when a CMS background
+    // (image or color) is actually active — the default fallback gradient
+    // below keeps HeaderComponent's own light/dark text, matching the
+    // reference design when no CMS content has been published yet.
+    const hasDynamicHeaderBackground = !!(mobileDashboardImageUrl || mobileDashboardColor);
+    const headerTextColor = hasDynamicHeaderBackground
+      ? mobileDashboardTextColor ?? '#FFFFFF'
+      : undefined;
+
+    const headerContent = (
+      <>
+        <HeaderComponent
+          userName={headerUserName}
+          userImageUri={headerUserImage ?? undefined}
+          companyLogoUri={headerCompanyLogo ?? undefined}
+          surface="transparent"
+          textColor={headerTextColor}
+          dismissSignal={searchDismissSignal}
+          onSearchActiveChange={setIsSearchOpen}
+          onSearchOverlayChange={setSearchOverlay}
+          onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+          onNotificationPress={() => navigation.navigate('Notification')}
+          showRewardPoints
+          rewardPoints={rewardPoints}
+        />
+      </>
+    );
+
+    if (mobileDashboardImageUrl) {
+      return (
+        <ImageBackground
+          key={key}
+          source={{ uri: mobileDashboardImageUrl }}
+          resizeMode="cover"
+          style={styles.topSection}
+          imageStyle={styles.topSectionImage}
+        >
+          <LinearGradient
+            colors={isDark ? ['rgba(9,9,11,0.70)', 'rgba(17,24,39,0.54)'] : ['rgba(17,24,39,0.56)', 'rgba(49,46,129,0.36)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {headerContent}
+        </ImageBackground>
+      );
+    }
+
+    if (mobileDashboardColor) {
+      return (
+        <LinearGradient
+          key={key}
+          colors={[mobileDashboardColor, darkenHexColor(mobileDashboardColor, 0.28)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topSection}
+        >
+          {headerContent}
+        </LinearGradient>
+      );
+    }
+
+    return (
+      <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
+        {headerContent}
+      </LinearGradient>
+    );
+  }, [
+    headerCompanyLogo,
+    headerUserImage,
+    headerUserName,
+    isDark,
+    mobileDashboardColor,
+    mobileDashboardImageUrl,
+    mobileDashboardTextColor,
+    navigation,
+    rewardPoints,
+    searchDismissSignal,
+    topSectionGradient,
+  ]);
 
   return (
     <LinearGradient
@@ -298,6 +402,10 @@ function Dashbord() {
       end={{ x: 0, y: 1 }}
       style={styles.root}
     >
+      {/* Fixed — stays pinned above the scrollable sections below, rather
+          than scrolling away with the rest of the dashboard content. */}
+      {renderHeaderSection('header')}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
@@ -305,40 +413,35 @@ function Dashbord() {
         scrollEnabled={!isSearchOpen}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         removeClippedSubviews={Platform.OS === 'android'}
         bounces
       >
         {dashboardLayout.sections.map(({ key }) => {
           switch (key as MainDashboardSectionKey) {
             case 'header':
-              return (
-                <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
-                  <HeaderComponent
-                    userName={headerUserName}
-                    userImageUri={headerUserImage ?? undefined}
-                    companyLogoUri={headerCompanyLogo ?? undefined}
-                    surface="transparent"
-                    dismissSignal={searchDismissSignal}
-                    onSearchActiveChange={setIsSearchOpen}
-                    onSearchOverlayChange={setSearchOverlay}
-                    onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-                    onNotificationPress={() => navigation.navigate('Notification')}
-                    showRewardPoints
-                    rewardPoints={rewardPoints}
-                    middleContent={<StatusTray />}
-                  />
-                  <LivePollCard />
-                </LinearGradient>
-              );
+              // Rendered fixed above the ScrollView instead — skip here.
+              return null;
             case 'birthdays':
               return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
             case 'stepProgress':
               return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
+            case 'investmentInsurance':
+              return <Pressable key={key} onPress={dismissSearch}><MemoInvestmentInsuranceOverview /></Pressable>;
             case 'exploreModules':
               return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
             case 'moduleBanner':
-              return <MemoModuleBanner key={key} />;
+              return hasMobileDashboardOffers ? (
+                <MemoOffersBanner
+                  key={key}
+                  module="mobile_dashboard"
+                  moduleContent={mobileDashboardContent}
+                  aspectRatio={2.55}
+                  resizeMode="cover"
+                  wrapperStyle={styles.dashboardOffers}
+                />
+              ) : (
+                <MemoModuleBanner key={key} />
+              );
             case 'rewardsOverview':
               return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
             default:
@@ -376,37 +479,27 @@ function Dashbord() {
         <View
           style={[
             styles.moduleLaunchOverlay,
-            { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
+            { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
           ]}
         >
-          <Text style={styles.moduleLaunchTitle}>
-            {MODULE_DISPLAY_NAME[openingModule]}
-          </Text>
           <View
             style={[
-              styles.moduleLaunchContent,
-              { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
+              styles.moduleLaunchLineWide,
+              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
             ]}
-          >
-            <View
-              style={[
-                styles.moduleLaunchLineWide,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchLine,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchCard,
-                { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
-              ]}
-            />
-          </View>
+          />
+          <View
+            style={[
+              styles.moduleLaunchLine,
+              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
+            ]}
+          />
+          <View
+            style={[
+              styles.moduleLaunchCard,
+              { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
+            ]}
+          />
         </View>
       )}
       {/* <FloatingBottomBar/> */}
@@ -435,12 +528,22 @@ const styles = StyleSheet.create({
     paddingBottom: rs(16),
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
+    overflow: 'hidden',
     zIndex: 20,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: rs(12) },
     shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.22,
     shadowRadius: rs(18),
     elevation: 8,
+  },
+  topSectionImage: {
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
+  },
+
+  dashboardOffers: {
+    paddingTop: rs(12),
+    paddingBottom: rs(8),
   },
 
   searchOverlay: {
@@ -466,20 +569,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 500,
     elevation: 50,
-    paddingTop: rs(72),
-  },
-  moduleLaunchTitle: {
-    color: '#FFFFFF',
-    fontSize: fs(22),
-    fontWeight: '800',
-    paddingHorizontal: rs(20),
-    paddingBottom: rs(20),
-  },
-  moduleLaunchContent: {
-    flex: 1,
     padding: rs(18),
-    borderTopLeftRadius: rs(28),
-    borderTopRightRadius: rs(28),
+    paddingTop: rs(90),
   },
   moduleLaunchLineWide: {
     width: '58%',
