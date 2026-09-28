@@ -338,6 +338,7 @@ function Dashbord() {
           onNotificationPress={() => navigation.navigate('Notification')}
           showRewardPoints
           rewardPoints={rewardPoints}
+          showSearch={false}
         />
         <View style={styles.statusTrayWrap}>
           <StatusTray textColor={headerTextColor} />

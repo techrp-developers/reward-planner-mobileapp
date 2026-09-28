@@ -56,6 +56,7 @@ interface HeaderProps {
   onSearchOverlayChange?: (state: SearchOverlayState) => void;
   showRewardPoints?:      boolean;
   rewardPoints?:          number;
+  showSearch?:            boolean;
 }
 
 // Hex "#RRGGBB" -> "rgba(r,g,b,alpha)" — used to derive a muted/secondary
@@ -84,6 +85,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onSearchActiveChange,
   onSearchDropdownChange,
   onSearchOverlayChange,
+  showSearch = true,
 }) => {
   const { isDark }   = useAppTheme();
   const navigation   = useNavigation<any>();
@@ -292,7 +294,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         </View>
 
         {/* ── Row 2 : Date ←→ Search | Actions ── */}
-        <View style={styles.bottomRow}>
+        {showSearch && <View style={styles.bottomRow}>
 
           {/*
            * flexZone: two absolutely-stacked children
@@ -359,7 +361,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
           </View>
 
-        </View>
+        </View>}
       </View>
 
       {/* ── Search Dropdown ─────────────────────────────────────────────────
