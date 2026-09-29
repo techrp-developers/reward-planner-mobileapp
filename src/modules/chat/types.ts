@@ -1,0 +1,55 @@
+export type ChatUser = {
+  user_id: number;
+  name: string;
+  user_image?: string | null;
+  department?: string | null;
+  role?: string | null;
+};
+
+export type ChatMember = ChatUser & { role?: 'admin' | 'member' | string };
+
+export type ChatConversation = {
+  conversation_id: number;
+  type: 'direct' | 'group';
+  name?: string | null;
+  description?: string | null;
+  updated_at: string;
+  role?: string;
+  last_message_id?: number | null;
+  last_message?: string | null;
+  last_message_type?: 'text' | 'image' | 'file' | null;
+  last_message_at?: string | null;
+  last_sender_id?: number | null;
+  unread_count: number;
+  members: ChatMember[];
+};
+
+export type ChatMessage = {
+  message_id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_image?: string | null;
+  client_message_id?: string | null;
+  message_type: 'text' | 'image' | 'file';
+  body?: string | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_mime_type?: string | null;
+  reply_to_message_id?: number | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  created_at: string;
+};
+
+export type ChatStackParamList = {
+  ChatInbox: undefined;
+  NewChat: undefined;
+  ChatConversation: { conversation: ChatConversation };
+};
+
+export type ChatSocketEvent = {
+  type: 'connected' | 'conversation:available' | 'message:new' | 'message:read' |
+    'typing:start' | 'typing:stop' | 'presence' | 'error';
+  data: any;
+};

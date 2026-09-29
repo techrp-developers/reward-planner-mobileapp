@@ -284,6 +284,9 @@ function Dashbord() {
         case 'Profile':
           navigation.navigate('Profile', { context: 'dashboard' });
           break;
+        case 'Chat':
+          navigation.navigate('Chat');
+          break;
         // 'Home' is Dashboard itself — already here, no-op
       }
     },

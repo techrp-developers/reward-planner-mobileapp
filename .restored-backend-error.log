@@ -1,0 +1,16 @@
+SMTP Error Mail Services: Error: queryA ETIMEOUT smtp.gmail.com
+    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/callback_resolver:45:19) {
+  errno: undefined,
+  code: 'EDNS',
+  syscall: 'queryA',
+  hostname: 'smtp.gmail.com',
+  command: 'CONN'
+}
+SMTP Error: Error: queryA ETIMEOUT smtp.gmail.com
+    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/callback_resolver:45:19) {
+  errno: undefined,
+  code: 'EDNS',
+  syscall: 'queryA',
+  hostname: 'smtp.gmail.com',
+  command: 'CONN'
+}

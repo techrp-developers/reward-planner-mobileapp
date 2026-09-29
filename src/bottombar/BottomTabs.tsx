@@ -20,7 +20,7 @@ export const TAB_BAR_HEIGHT = FLOATING_BAR_HEIGHT + FLOATING_BOTTOM_GAP + 24;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search";
+export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search" | "Chat";
 
 type Props = {
   activeMode?: AppMode;
@@ -283,7 +283,7 @@ function BottomTabs({
     }).start();
   }, [dashboardIndicatorX]);
 
-  const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Profile") => {
+  const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Chat") => {
     const index = tab === "Notes" ? 0 : tab === "Home" ? 1 : 2;
     activeTabRef.current = tab;
     setActiveTab(tab);
@@ -301,6 +301,7 @@ function BottomTabs({
     () => ({
       Home: () => handlePress("Home"),
       Notes: () => handlePress("Notes"),
+      Chat: () => handlePress("Chat"),
       Search: () => handlePress("Search"),
       Cart: () => handlePress("Cart"),
       History: () => handlePress("History"),
@@ -375,14 +376,14 @@ function BottomTabs({
 
           <TouchableOpacity
             activeOpacity={0.82}
-            onPress={() => handleDashboardPress("Profile")}
+            onPress={() => handleDashboardPress("Chat")}
             style={styles.dashboardSideBtn}
             hitSlop={HIT_SLOP}
           >
             <MaterialCommunityIcons
-              name="account-circle-outline"
+              name="message-text-outline"
               size={24}
-              color={activeTab === "Profile" ? dashboardActiveColor : dashboardInactiveColor}
+              color={activeTab === "Chat" ? dashboardActiveColor : dashboardInactiveColor}
             />
           </TouchableOpacity>
         </View>

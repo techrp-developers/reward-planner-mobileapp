@@ -51,6 +51,7 @@ export type AppStackParamList = {
   ExploreModule: undefined;
   AIAssistant: undefined;
   TodoList: undefined;
+  Chat: undefined;
 };
 
 export type RootStackParamList = {
@@ -221,6 +222,10 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/profile/TodoList").default
         }
+      />
+      <AppStack.Screen
+        name="Chat"
+        getComponent={() => require("../modules/chat/navigation/ChatStack").default}
       />
       <AppStack.Screen
         name="MyOrder"
