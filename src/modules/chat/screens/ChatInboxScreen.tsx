@@ -11,6 +11,7 @@ import ChatAvatar from '../components/ChatAvatar';
 import { chatError, chatTime, conversationTitle, otherMember } from '../utils';
 import type { ChatConversation, ChatStackParamList } from '../types';
 import { chatSocket } from '../services/chatSocket';
+import BottomTabs, { TAB_BAR_HEIGHT, type TabKey } from '../../../bottombar/BottomTabs';
 
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
 
@@ -23,6 +24,10 @@ export default function ChatInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const appNavigation = navigation.getParent<any>();
+  const handleFooterPress = (tab: TabKey) => {
+    if (tab === 'Notes') appNavigation?.navigate('TodoList');
+  };
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
@@ -54,7 +59,7 @@ export default function ChatInboxScreen() {
         data={items}
         keyExtractor={item => String(item.conversation_id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.primary} />}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + 12 }]}
         renderItem={({ item }) => {
           const title = conversationTitle(item, user?.user_id);
           const member = otherMember(item, user?.user_id);
@@ -64,6 +69,12 @@ export default function ChatInboxScreen() {
             <View style={styles.rowBody}><View style={styles.rowTop}><Text numberOfLines={1} style={[styles.name, { color: theme.text }]}>{title}</Text><Text style={[styles.time, { color: item.unread_count ? theme.primary : theme.secondaryText }]}>{chatTime(item.last_message_at || item.updated_at)}</Text></View><View style={styles.rowBottom}><Text numberOfLines={1} style={[styles.preview, { color: theme.secondaryText }, item.unread_count > 0 && { color: theme.text, fontWeight: '700' }]}>{preview}</Text>{item.unread_count > 0 ? <View style={[styles.badge, { backgroundColor: theme.primary }]}><Text style={styles.badgeText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text></View> : null}</View></View>
           </TouchableOpacity>;
         }}
+      />
+      <BottomTabs
+        isDashboard
+        activeTabKey="Chat"
+        onTabPress={handleFooterPress}
+        onCenterPress={() => appNavigation?.navigate('Dashboard')}
       />
     </View>
   );

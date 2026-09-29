@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import BottomTabs, { TAB_BAR_HEIGHT, type TabKey } from "../../../bottombar/BottomTabs";
 
 import {
   addTodo,
@@ -116,6 +117,9 @@ const buildTimeOptions = () => {
 
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
+  const handleFooterPress = useCallback((tab: TabKey) => {
+    if (tab === "Chat") navigation.navigate("Chat");
+  }, [navigation]);
   const { isDark, theme } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const dateListRef = useRef<FlatList<DateItem>>(null);
@@ -800,7 +804,7 @@ const TodoListScreen = () => {
           </View>
         )}
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
           {filteredTodos.map(todo => {
             const active = selectedTodoId === todo.id;
             const isChecked = selectedTodoIds.includes(todo.id);
@@ -1159,6 +1163,13 @@ const TodoListScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <BottomTabs
+        isDashboard
+        activeTabKey="Notes"
+        onTabPress={handleFooterPress}
+        onCenterPress={() => navigation.navigate("Dashboard")}
+      />
     </SafeAreaView>
   );
 };

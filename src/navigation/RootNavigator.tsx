@@ -222,10 +222,12 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/profile/TodoList").default
         }
+        options={{ animation: "slide_from_left" }}
       />
       <AppStack.Screen
         name="Chat"
         getComponent={() => require("../modules/chat/navigation/ChatStack").default}
+        options={{ animation: "slide_from_right" }}
       />
       <AppStack.Screen
         name="MyOrder"
