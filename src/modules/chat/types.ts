@@ -40,6 +40,14 @@ export type ChatMessage = {
   edited_at?: string | null;
   deleted_at?: string | null;
   created_at: string;
+  is_read?: boolean;
+  read_by?: Array<{ user_id: number; name: string }>;
+};
+
+export type ChatPresence = {
+  user_id: number;
+  online: boolean;
+  last_seen_at?: string | null;
 };
 
 export type ChatStackParamList = {
