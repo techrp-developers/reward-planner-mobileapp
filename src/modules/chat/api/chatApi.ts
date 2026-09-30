@@ -1,6 +1,6 @@
 import api from '../../common/auth/api/axios';
 import { CHAT_API_BASE_URL } from '../../../config/apiConfig';
-import type { ChatConversation, ChatMessage, ChatPresence, ChatUser } from '../types';
+import type { ChatConversation, ChatMessage, ChatPoll, ChatPresence, ChatUser } from '../types';
 
 type DataResponse<T> = { success: boolean; data: T; message?: string };
 const chatUrl = (path: string) => `${CHAT_API_BASE_URL}/v1/chat${path}`;
@@ -42,6 +42,15 @@ export async function uploadChatImage(asset: { uri: string; type?: string; fileN
   const response = await api.post<DataResponse<UploadedChatImage>>(chatUrl('/uploads/images'), form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
+  });
+  return response.data.data;
+}
+
+export async function uploadChatDocument(file: { uri: string; type?: string | null; name?: string | null }): Promise<UploadedChatImage> {
+  const form = new FormData();
+  form.append('document', { uri: file.uri, type: file.type || 'application/pdf', name: file.name || `document-${Date.now()}` } as any);
+  const response = await api.post<DataResponse<UploadedChatImage>>(chatUrl('/uploads/documents'), form, {
+    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 90000,
   });
   return response.data.data;
 }
@@ -97,6 +106,27 @@ export async function sendImageMessage(
       attachment_mime_type: upload.attachment_mime_type,
     },
   );
+  return response.data.data;
+}
+
+export async function sendFileMessage(conversationId: number, upload: UploadedChatImage, clientMessageId: string): Promise<ChatMessage> {
+  const response = await api.post<DataResponse<ChatMessage>>(chatUrl(`/conversations/${conversationId}/messages`), {
+    message_type: 'file', client_message_id: clientMessageId,
+    attachment_url: upload.attachment_url, attachment_name: upload.attachment_name,
+    attachment_mime_type: upload.attachment_mime_type,
+  });
+  return response.data.data;
+}
+
+export async function createChatPoll(conversationId: number, question: string, options: string[], clientMessageId: string): Promise<ChatMessage> {
+  const response = await api.post<DataResponse<ChatMessage>>(chatUrl(`/conversations/${conversationId}/polls`), {
+    question, options, allow_multiple: false, client_message_id: clientMessageId,
+  });
+  return response.data.data;
+}
+
+export async function voteChatPoll(pollId: number, optionIds: number[]): Promise<ChatPoll> {
+  const response = await api.post<DataResponse<ChatPoll>>(chatUrl(`/polls/${pollId}/votes`), { option_ids: optionIds });
   return response.data.data;
 }
 

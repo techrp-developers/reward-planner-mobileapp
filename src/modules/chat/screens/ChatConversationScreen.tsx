@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { pick, types as documentTypes } from '@react-native-documents/picker';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import { fetchChatPresence, fetchMessages, markConversationRead, sendImageMessage, sendTextMessage, uploadChatImage } from '../api/chatApi';
+import { createChatPoll, fetchChatPresence, fetchMessages, markConversationRead, sendFileMessage, sendImageMessage, sendTextMessage, uploadChatDocument, uploadChatImage, voteChatPoll } from '../api/chatApi';
 import ChatAvatar from '../components/ChatAvatar';
 import { chatError, chatImageUrl, chatTime, conversationTitle, otherMember } from '../utils';
 import { chatSocket } from '../services/chatSocket';
 import type { ChatMessage, ChatStackParamList } from '../types';
+import PollBubble from '../components/PollBubble';
+import CreatePollModal from '../components/CreatePollModal';
 
 type Route = NativeStackScreenProps<ChatStackParamList, 'ChatConversation'>['route'];
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
@@ -33,6 +36,7 @@ export default function ChatConversationScreen() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
+  const [pollModal, setPollModal] = useState(false);
   const title = conversationTitle(conversation, user?.user_id);
   const peer = otherMember(conversation, user?.user_id);
 
@@ -51,6 +55,7 @@ export default function ChatConversationScreen() {
       if (Number(event.data?.conversation_id) !== Number(conversation.conversation_id)) return;
       if (event.type === 'message:new') setMessages(current => { if (current.some(item => item.message_id === event.data.message_id)) return current; const next = [...current, event.data]; markLatestRead(next); return next; });
       if (event.type === 'message:read') setMessages(current => current.map(item => Number(item.sender_id) === Number(user?.user_id) && item.message_id <= Number(event.data?.message_id) ? { ...item, is_read: true } : item));
+      if (event.type === 'poll:updated') setMessages(current => current.map(item => item.message_id === Number(event.data?.message_id) ? { ...item, poll: { ...event.data.poll, options: event.data.poll.options.map((option: any) => ({ ...option, selected_by_me: Number(event.data?.voter_id) === Number(user?.user_id) && event.data.option_ids.map(Number).includes(Number(option.option_id)) })) } } : item));
       if ((event.type === 'typing:start' || event.type === 'typing:stop') && Number(event.data?.user_id) !== Number(user?.user_id)) setTyping(event.type === 'typing:start');
       if (event.type === 'presence' && Number(event.data?.user_id) === Number(peer?.user_id)) { setOnline(Boolean(event.data.online)); if (event.data?.last_seen_at) setLastSeenAt(event.data.last_seen_at); }
     });
@@ -79,6 +84,24 @@ export default function ChatConversationScreen() {
     catch (error) { Alert.alert('Image not sent', chatError(error, 'Please try again.')); }
     finally { setSending(false); }
   };
+  const pickAndSendDocument = async () => {
+    if (sending) return;
+    try {
+      const [file] = await pick({ type: [documentTypes.pdf, documentTypes.doc, documentTypes.docx, documentTypes.xls, documentTypes.xlsx, documentTypes.ppt, documentTypes.pptx, documentTypes.plainText, documentTypes.csv] });
+      if (!file) return; setSending(true);
+      const upload = await uploadChatDocument({ uri: file.uri, type: file.type, name: file.name });
+      addMessage(await sendFileMessage(conversation.conversation_id, upload, clientId(user?.user_id)));
+    } catch (error: any) { if (error?.code !== 'OPERATION_CANCELED') Alert.alert('Document not sent', chatError(error, 'Please try again.')); }
+    finally { setSending(false); }
+  };
+  const showAttachmentMenu = () => Alert.alert('Share in chat', undefined, [
+    { text: 'Image', onPress: pickAndSendImage },
+    { text: 'Document', onPress: pickAndSendDocument },
+    { text: 'Poll', onPress: () => setPollModal(true) },
+    { text: 'Cancel', style: 'cancel' },
+  ]);
+  const createPoll = async (question: string, options: string[]) => { addMessage(await createChatPoll(conversation.conversation_id, question, options, clientId(user?.user_id))); };
+  const votePoll = async (messageId: number, pollId: number, optionId: number) => { const poll = await voteChatPoll(pollId, [optionId]); setMessages(current => current.map(item => item.message_id === messageId ? { ...item, poll } : item)); };
   const directStatus = online
     ? 'online'
     : lastSeenAt
@@ -97,12 +120,14 @@ export default function ChatConversationScreen() {
     </View>
     {loading ? <View style={styles.center}><ActivityIndicator color={theme.primary} /></View> : <FlatList ref={listRef} data={messages} keyExtractor={item => String(item.message_id || item.client_message_id)} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })} renderItem={({ item, index }) => {
       const mine = Number(item.sender_id) === Number(user?.user_id); const showName = conversation.type === 'group' && !mine && messages[index - 1]?.sender_id !== item.sender_id;
-      return <View style={[styles.bubbleWrap, mine ? styles.mineWrap : styles.theirWrap]}>{showName ? <Text style={[styles.sender, { color: theme.primary }]}>{item.sender_name}</Text> : null}<View style={[styles.bubble, item.message_type === 'image' && styles.imageBubble, mine ? styles.mine : { backgroundColor: isDark ? '#27272A' : '#F3F4F6' }]}>{item.deleted_at ? <Text style={[styles.messageText, { color: mine ? '#FFF' : theme.text }]}>This message was deleted</Text> : item.message_type === 'image' && item.attachment_url ? <Image source={{ uri: chatImageUrl(item.attachment_url) }} style={styles.chatImage} resizeMode="cover" /> : <Text style={[styles.messageText, { color: mine ? '#FFF' : theme.text }]}>{item.body}</Text>}<View style={styles.metaRow}><Text style={[styles.messageTime, { color: mine ? 'rgba(255,255,255,.72)' : theme.secondaryText }]}>{chatTime(item.created_at)}</Text>{mine ? <MaterialCommunityIcons name={item.is_read ? 'check-all' : 'check'} size={15} color={item.is_read ? '#67E8F9' : 'rgba(255,255,255,.72)'} /> : null}</View></View></View>;
+      const foreground = mine ? '#FFF' : theme.text;
+      return <View style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}><View style={[styles.bubbleWrap, mine ? styles.mineWrap : styles.theirWrap]}>{showName ? <Text style={[styles.sender, { color: theme.primary }]}>{item.sender_name}</Text> : null}<View style={[styles.bubble, item.message_type === 'image' && styles.imageBubble, mine ? styles.mine : { backgroundColor: isDark ? '#27272A' : '#F3F4F6' }]}>{item.deleted_at ? <Text style={[styles.messageText, { color: foreground }]}>This message was deleted</Text> : item.message_type === 'image' && item.attachment_url ? <Image source={{ uri: chatImageUrl(item.attachment_url) }} style={styles.chatImage} resizeMode="cover" /> : item.message_type === 'file' && item.attachment_url ? <TouchableOpacity style={styles.fileRow} onPress={() => Linking.openURL(item.attachment_url!)}><MaterialCommunityIcons name="file-document-outline" size={30} color={foreground} /><View style={styles.fileText}><Text numberOfLines={2} style={[styles.fileName, { color: foreground }]}>{item.attachment_name || 'Document'}</Text><Text style={[styles.fileType, { color: foreground }]}>{item.attachment_mime_type || 'File'}</Text></View><MaterialCommunityIcons name="download" size={21} color={foreground} /></TouchableOpacity> : item.message_type === 'poll' && item.poll ? <PollBubble poll={item.poll} mine={mine} textColor={foreground} onVote={optionId => votePoll(item.message_id, item.poll!.poll_id, optionId)} /> : <Text style={[styles.messageText, { color: foreground }]}>{item.body}</Text>}<View style={styles.metaRow}><Text style={[styles.messageTime, { color: mine ? 'rgba(255,255,255,.72)' : theme.secondaryText }]}>{chatTime(item.created_at)}</Text>{mine ? <MaterialCommunityIcons name={item.is_read ? 'check-all' : 'check'} size={15} color={item.is_read ? '#67E8F9' : 'rgba(255,255,255,.72)'} /> : null}</View></View></View></View>;
     }} ListEmptyComponent={<View style={styles.empty}><MaterialCommunityIcons name="hand-wave-outline" size={32} color={theme.primary} /><Text style={[styles.emptyText, { color: theme.secondaryText }]}>Say hello to start the conversation</Text></View>} />}
-    <View style={[styles.composerWrap, { paddingBottom: Math.max(insets.bottom, 9), borderTopColor: theme.border, backgroundColor: theme.card }]}><View style={[styles.composer, { backgroundColor: theme.background, borderColor: theme.border }]}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Upload image" onPress={pickAndSendImage} disabled={sending} style={[styles.attach, { backgroundColor: theme.primary }]}><MaterialCommunityIcons name="paperclip" size={21} color="#FFF" /></TouchableOpacity><TextInput value={text} onChangeText={onChangeText} onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 250)} placeholder="Message" placeholderTextColor={theme.secondaryText} style={[styles.input, { color: theme.text }]} multiline maxLength={5000} /><TouchableOpacity onPress={send} disabled={!text.trim() || sending} style={[styles.send, { backgroundColor: text.trim() ? theme.primary : theme.border }]}>{sending ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" size={20} color="#FFF" />}</TouchableOpacity></View></View>
+    <View style={[styles.composerWrap, { paddingBottom: Math.max(insets.bottom, 9), borderTopColor: theme.border, backgroundColor: theme.card }]}><View style={[styles.composer, { backgroundColor: theme.background, borderColor: theme.border }]}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Add attachment or poll" onPress={showAttachmentMenu} disabled={sending} style={[styles.attach, { backgroundColor: theme.primary }]}><MaterialCommunityIcons name="paperclip" size={21} color="#FFF" /></TouchableOpacity><TextInput value={text} onChangeText={onChangeText} onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 250)} placeholder="Message" placeholderTextColor={theme.secondaryText} style={[styles.input, { color: theme.text }]} multiline maxLength={5000} /><TouchableOpacity onPress={send} disabled={!text.trim() || sending} style={[styles.send, { backgroundColor: text.trim() ? theme.primary : theme.border }]}>{sending ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" size={20} color="#FFF" />}</TouchableOpacity></View></View>
+    <CreatePollModal visible={pollModal} onClose={() => setPollModal(false)} onCreate={createPoll} />
   </KeyboardAvoidingView>;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth }, back: { width: 40, height: 42, alignItems: 'center', justifyContent: 'center' }, headerText: { flex: 1, marginLeft: 10 }, title: { fontSize: 16, fontWeight: '800' }, statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' }, status: { flexShrink: 1, fontSize: 11 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, messages: { flexGrow: 1, justifyContent: 'flex-end', paddingHorizontal: 13, paddingVertical: 16 }, bubbleWrap: { maxWidth: '84%', marginVertical: 3 }, mineWrap: { alignSelf: 'flex-end', alignItems: 'flex-end' }, theirWrap: { alignSelf: 'flex-start', alignItems: 'flex-start' }, sender: { fontSize: 11, fontWeight: '700', marginLeft: 9, marginBottom: 2 }, bubble: { borderRadius: 18, paddingHorizontal: 13, paddingTop: 9, paddingBottom: 6 }, imageBubble: { padding: 4 }, chatImage: { width: 220, height: 220, borderRadius: 14, backgroundColor: '#E5E7EB' }, mine: { backgroundColor: '#7C3AED', borderBottomRightRadius: 5 }, messageText: { fontSize: 15, lineHeight: 20 }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, paddingHorizontal: 5 }, messageTime: { fontSize: 9, marginTop: 3 }, empty: { alignItems: 'center', paddingBottom: 120 }, emptyText: { marginTop: 10 }, composerWrap: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 10, paddingTop: 8 }, composer: { minHeight: 52, maxHeight: 120, borderWidth: 1, borderRadius: 27, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 5, paddingVertical: 5 }, attach: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 4 }, input: { flex: 1, maxHeight: 105, paddingVertical: 8, fontSize: 15 }, send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  screen: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth }, back: { width: 40, height: 42, alignItems: 'center', justifyContent: 'center' }, headerText: { flex: 1, marginLeft: 10 }, title: { fontSize: 16, fontWeight: '800' }, statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' }, status: { flexShrink: 1, fontSize: 11 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, messages: { flexGrow: 1, justifyContent: 'flex-end', paddingHorizontal: 13, paddingVertical: 16 }, messageRow: { width: '100%', flexDirection: 'row' }, mineRow: { justifyContent: 'flex-end' }, theirRow: { justifyContent: 'flex-start' }, bubbleWrap: { maxWidth: '84%', marginVertical: 3 }, mineWrap: { alignItems: 'flex-end' }, theirWrap: { alignItems: 'flex-start' }, sender: { fontSize: 11, fontWeight: '700', marginLeft: 9, marginBottom: 2 }, bubble: { borderRadius: 18, paddingHorizontal: 13, paddingTop: 9, paddingBottom: 6 }, imageBubble: { padding: 4 }, chatImage: { width: 220, height: 220, borderRadius: 14, backgroundColor: '#E5E7EB' }, fileRow: { width: 245, flexDirection: 'row', alignItems: 'center', gap: 9, padding: 8 }, fileText: { flex: 1 }, fileName: { fontSize: 13, fontWeight: '800' }, fileType: { fontSize: 9, opacity: 0.7, marginTop: 3 }, mine: { backgroundColor: '#7C3AED', borderBottomRightRadius: 5 }, messageText: { fontSize: 15, lineHeight: 20 }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, paddingHorizontal: 5 }, messageTime: { fontSize: 9, marginTop: 3 }, empty: { alignItems: 'center', paddingBottom: 120 }, emptyText: { marginTop: 10 }, composerWrap: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 10, paddingTop: 8 }, composer: { minHeight: 52, maxHeight: 120, borderWidth: 1, borderRadius: 27, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 5, paddingVertical: 5 }, attach: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 4 }, input: { flex: 1, maxHeight: 105, paddingVertical: 8, fontSize: 15 }, send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });

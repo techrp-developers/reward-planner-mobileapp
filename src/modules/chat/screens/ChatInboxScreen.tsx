@@ -48,9 +48,6 @@ export default function ChatInboxScreen() {
     <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View><Text style={[styles.title, { color: theme.text }]}>Chats</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>Your company conversations</Text></View>
-        <TouchableOpacity accessibilityLabel="Start a new chat" onPress={() => navigation.navigate('NewChat')} style={styles.newButton}>
-          <MaterialCommunityIcons name="message-plus-outline" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
       {loading && !items.length ? <View style={styles.center}><ActivityIndicator color={theme.primary} size="large" /></View> : null}
       {!loading && error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-alert-outline" size={42} color={theme.secondaryText} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Couldn’t load chats</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>{error}</Text><TouchableOpacity onPress={() => load()} style={styles.retry}><Text style={styles.retryText}>Try again</Text></TouchableOpacity></View> : null}
@@ -70,6 +67,14 @@ export default function ChatInboxScreen() {
           </TouchableOpacity>;
         }}
       />
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Start a new chat"
+        onPress={() => navigation.navigate('NewChat')}
+        style={[styles.newButton, { bottom: TAB_BAR_HEIGHT + 14 }]}
+      >
+        <MaterialCommunityIcons name="message-plus-outline" size={27} color="#FFFFFF" />
+      </TouchableOpacity>
       <BottomTabs
         isDashboard
         activeTabKey="Chat"
@@ -82,7 +87,7 @@ export default function ChatInboxScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 }, header: { paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 30, fontWeight: '800' }, subtitle: { marginTop: 3, fontSize: 13 }, newButton: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' },
+  title: { fontSize: 30, fontWeight: '800' }, subtitle: { marginTop: 3, fontSize: 13 }, newButton: { position: 'absolute', right: 22, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED', elevation: 10, shadowColor: '#4C1D95', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, zIndex: 10 },
   list: { paddingHorizontal: 18, paddingBottom: 24 }, row: { flexDirection: 'row', gap: 13, alignItems: 'center', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth }, rowBody: { flex: 1 }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 }, rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }, name: { flex: 1, fontSize: 16, fontWeight: '700' }, time: { fontSize: 11 }, preview: { flex: 1, fontSize: 13 }, badge: { minWidth: 21, height: 21, borderRadius: 11, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' }, badgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 38 }, emptyTitle: { marginTop: 14, fontSize: 19, fontWeight: '800' }, emptyText: { marginTop: 7, textAlign: 'center', lineHeight: 20 }, retry: { marginTop: 18, backgroundColor: '#7C3AED', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 }, retryText: { color: '#FFF', fontWeight: '700' },
 });

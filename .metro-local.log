@@ -17,21 +17,85 @@ Starting dev server on http://localhost:8081
                         ▒▒▓▓▓▓▒▒
 
 
+ WARN  the transform cache was reset.
                 Welcome to Metro v0.83.7
               Fast - Scalable - Integrated
 
 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
  INFO  Dev server ready. Press Ctrl+C to exit.
  INFO  Interactive mode is not supported in this environment
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
- BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89% (2124/2264)
+transform[stderr]: (node:2856) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+transform[stderr]: (Use `node --trace-warnings ...` to show where the warning was created)
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 1% (1/1)
+transform[stderr]: (node:9604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+transform[stderr]: (Use `node --trace-warnings ...` to show where the warning was created)
+transform[stderr]: (node:15380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+transform[stderr]: (Use `node --trace-warnings ...` to show where the warning was created)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (19/204)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (66/311)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (82/428)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (119/484)
+ BUNDLE  ./index.js ▓░░░░░░░░░░░░░░░ 9% (170/567)
+ BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 16% (270/660)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (342/761)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 20% (343/761)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\order_banner.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (387/786)
+ BUNDLE  ./index.js ▓▓▓░░░░░░░░░░░░░ 24% (413/851)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\product\product(1).svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 25% (491/971)
+ BUNDLE  ./index.js ▓▓▓▓░░░░░░░░░░░░ 29% (588/1075)
+ BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 37% (701/1168)
+ BUNDLE  ./index.js ▓▓▓▓▓▓░░░░░░░░░░ 40% (792/1251)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓░░░░░░░░ 51% (946/1321)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\assets\order\serviceBanner.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 59% (1061/1372)
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\exclusiveofferbooking.svg as it exceeds the max of 500KB.
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe2.svg as it exceeds the max of 500KB.
+transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling of C:\xampp\htdocs\reward-planner-mobileapp\src\modules\busbooking\assets\banners\busframe1.svg as it exceeds the max of 500KB.
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76% (1246/1423)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77% (1360/1613)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77% (1361/1615)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82% (1516/1672)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1632/1747)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1659/2044)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1772/2138)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87% (1872/2176)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88% (2113/2253)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 93% (2246/2341)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94% (2344/2415)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97% (2436/2465)
  BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
- ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
- INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
+ ERROR  SyntaxError: C:\xampp\htdocs\reward-planner-mobileapp\src\modules\chat\screens\ChatInboxScreen.tsx: Unterminated string constant. (3:0)
+
+  1 |
+  2 |
+> 3 | "import React, { useCallback, useEffect, useState } from 'react';
+    | ^
+  4 | import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+  5 | import { useFocusEffect, useNavigation } from '@react-navigation/native';
+  6 | import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74% (1290/1540)
+ BUNDLE  ./index.js 
+ ERROR  SyntaxError: C:\xampp\htdocs\reward-planner-mobileapp\src\modules\chat\screens\ChatInboxScreen.tsx: Unterminated string constant. (3:0)
+
+  1 |
+  2 |
+> 3 | "import React, { useCallback, useEffect, useState } from 'react';
+    | ^
+  4 | import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+  5 | import { useFocusEffect, useNavigation } from '@react-navigation/native';
+  6 | import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
  BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
  BUNDLE  ./index.js 
- INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ ERROR  SyntaxError: C:\xampp\htdocs\reward-planner-mobileapp\src\modules\chat\screens\ChatInboxScreen.tsx: Unterminated string constant. (3:0)
+
+  1 |
+  2 |
+> 3 | "import React, { useCallback, useEffect, useState } from 'react';
+    | ^
+  4 | import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+  5 | import { useFocusEffect, useNavigation } from '@react-navigation/native';
+  6 | import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

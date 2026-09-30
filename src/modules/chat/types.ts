@@ -31,7 +31,7 @@ export type ChatMessage = {
   sender_name: string;
   sender_image?: string | null;
   client_message_id?: string | null;
-  message_type: 'text' | 'image' | 'file';
+  message_type: 'text' | 'image' | 'file' | 'poll';
   body?: string | null;
   attachment_url?: string | null;
   attachment_name?: string | null;
@@ -42,6 +42,16 @@ export type ChatMessage = {
   created_at: string;
   is_read?: boolean;
   read_by?: Array<{ user_id: number; name: string }>;
+  poll?: ChatPoll | null;
+};
+
+export type ChatPollOption = { option_id: number; text: string; vote_count: number; selected_by_me?: boolean };
+export type ChatPoll = {
+  poll_id: number;
+  question: string;
+  allow_multiple: boolean;
+  closes_at?: string | null;
+  options: ChatPollOption[];
 };
 
 export type ChatPresence = {
@@ -57,7 +67,7 @@ export type ChatStackParamList = {
 };
 
 export type ChatSocketEvent = {
-  type: 'connected' | 'conversation:available' | 'message:new' | 'message:read' |
+  type: 'connected' | 'conversation:available' | 'message:new' | 'message:read' | 'poll:updated' |
     'typing:start' | 'typing:stop' | 'presence' | 'error';
   data: any;
 };
