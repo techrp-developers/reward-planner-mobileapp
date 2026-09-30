@@ -99,3 +99,33 @@ transform[stderr]: [BABEL] Note: The code generator has deoptimised the styling 
   4 | import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
   5 | import { useFocusEffect, useNavigation } from '@react-navigation/native';
   6 | import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82% (1529/1684)
+ BUNDLE  ./index.js 
+ ERROR  SyntaxError: C:\xampp\htdocs\reward-planner-mobileapp\src\modules\chat\screens\ChatInboxScreen.tsx: Unterminated string constant. (3:0)
+
+  1 |
+  2 |
+> 3 | "import React, { useCallback, useEffect, useState } from 'react';
+    | ^
+  4 | import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+  5 | import { useFocusEffect, useNavigation } from '@react-navigation/native';
+  6 | import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99% (2480/2480)
+ BUNDLE  ./index.js 
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
+ INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
+ INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.rewardsplanners' on device='RMX3710 - 15 - API 35'.
+ ERROR  [timeout] connection terminated with Device for app='com.rewardsplanners' on device='RMX3710 - 15 - API 35' after not responding for 60 seconds.
+ INFO  Connection closed to device='RMX3710 - 15 - API 35' for app='com.rewardsplanners' with code='1006' and reason=''.
