@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import api from "../../common/auth/api/axios";
+import { canRetryRequest } from '../utils/paymentSafety';
 
 /**
  * BBPS diagnostics layer.
@@ -150,9 +151,7 @@ api.interceptors.request.use((config: ConfigWithMetadata) => {
     __DEV__ && console.log(
       `[BBPS API →] ${(config.method || "GET").toUpperCase()} ${config.baseURL ?? ""}${config.url}`,
       {
-        payload: config.data,
-        params: config.params,
-        headers: config.headers,
+        hasPayload: Boolean(config.data),
       }
     );
   }
@@ -169,7 +168,7 @@ api.interceptors.response.use(
     if (__DEV__) {
       __DEV__ && console.log(
         `[BBPS API ←] ${(config.method || "GET").toUpperCase()} ${config.url} — ${response.status} (${durationMs}ms)`,
-        response.data
+        { status: response.status }
       );
     }
 
@@ -180,7 +179,7 @@ api.interceptors.response.use(
 
     // Retry only network/timeout failures (no response at all) — never 4xx/5xx,
     // since those are real backend answers, not transport hiccups.
-    if (config && isRetryableNetworkError(error)) {
+    if (config && canRetryRequest(config.method) && isRetryableNetworkError(error)) {
       const retryCount = config._retryCount ?? 0;
 
       if (retryCount < RETRYABLE_BACKOFF_MS.length) {
@@ -204,9 +203,6 @@ api.interceptors.response.use(
         {
           status: normalized.status,
           message: normalized.message,
-          requestPayload: config?.data,
-          requestHeaders: config?.headers,
-          responseBody: error.response?.data,
           axiosCode: error.code,
           isAxiosNetworkError: isNetworkError(error),
           isTimeout: isTimeoutError(error),

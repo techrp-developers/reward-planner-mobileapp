@@ -21,6 +21,7 @@ import {
 } from '../api/BillsAPI';
 import { useAlert } from '../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import { isPositiveAmount, isValidCheckoutOrder } from '../utils/paymentSafety';
 
 // Premium Design Theme Config
 const BRAND_PRIMARY = '#8665FF';
@@ -65,8 +66,8 @@ const hasDisplayValue = (value?: string | number | null) => {
 };
 
 const formatAmount = (value?: string | number) => {
-  const normalized = String(value ?? '').replace(/[^0-9.]/g, '');
-  if (!normalized) return '';
+  const normalized = String(value ?? '').trim();
+  if (!isPositiveAmount(normalized)) return '';
   const amount = Number(normalized);
   return Number.isNaN(amount) ? normalized : amount.toString();
 };
@@ -164,7 +165,7 @@ const PaymentConfirmationScreenComponent = () => {
     return !hasDisplayValue(bill.amount) && !hasDisplayValue(bill.dueDate) && !hasDisplayValue(bill.billNumber);
   }, [bill]);
 
-  const isProceedDisabled = useMemo(() => processing || !billAmount, [processing, billAmount]);
+  const isProceedDisabled = processing || !billAmount || !billFetchId || !customer.operatorId;
   const headerTitle = useMemo(() => `Pay ${categoryName}`, [categoryName]);
   const logoText = useMemo(() => operatorName.slice(0, 2).toUpperCase() || 'BB', [operatorName]);
 
@@ -172,8 +173,8 @@ const PaymentConfirmationScreenComponent = () => {
   const handleProceed = useCallback(async () => {
     if (paymentFlowInProgress.current) return;
 
-    if (!billFetchId) {
-      alert.warning('Missing Bill', 'Bill fetch id is missing. Please fetch the bill again.');
+    if (!billFetchId || !customer.operatorId || !billAmount) {
+      alert.warning('Bill Not Payable', 'A valid bill reference, biller, and positive amount are required. Please fetch the bill again.');
       return;
     }
 
@@ -203,7 +204,7 @@ const PaymentConfirmationScreenComponent = () => {
       const order = response.data;
       transactionId = order?.transaction_id ?? null;
 
-      if (!order?.key || !order?.orderId || !Number(order?.amount)) {
+      if (!isValidCheckoutOrder(order)) {
         alert.warning('Payment Failed', 'Payment order details are missing.', PAYMENT_MESSAGE_DURATION_MS);
         return;
       }
@@ -217,7 +218,9 @@ const PaymentConfirmationScreenComponent = () => {
         description: `${operatorName} Bill Payment`,
         prefill: {
           name: customerName,
-          contact: consumerNumber,
+          ...(params.formValues?.confirmation_mobile_no
+            ? { contact: params.formValues.confirmation_mobile_no }
+            : {}),
         },
         theme: {
           color: BRAND_PRIMARY,
@@ -249,7 +252,7 @@ const PaymentConfirmationScreenComponent = () => {
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', { transactionId });
+      navigation.replace('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
       // A rejected verify-payment call (e.g. HTTP 422 when the provider
       // permanently rejected the transaction) still carries a transaction_id —
@@ -257,7 +260,7 @@ const PaymentConfirmationScreenComponent = () => {
       const errorTransactionId = error?.transaction_id ?? transactionId;
 
       if (razorpaySucceeded && errorTransactionId) {
-        navigation.navigate('TransactionStatusScreen', {
+        navigation.replace('TransactionStatusScreen', {
           transactionId: errorTransactionId,
         });
         return;
@@ -267,7 +270,7 @@ const PaymentConfirmationScreenComponent = () => {
         try {
           await cancelUnpaidBillPayOrder(errorTransactionId);
         } catch {
-          navigation.navigate('TransactionStatusScreen', {
+          navigation.replace('TransactionStatusScreen', {
             transactionId: errorTransactionId,
           });
           return;
@@ -279,7 +282,7 @@ const PaymentConfirmationScreenComponent = () => {
       setProcessing(false);
       paymentFlowInProgress.current = false;
     }
-  }, [billFetchId, customer.operatorId, operatorName, customerName, consumerNumber, alert, navigation]);
+  }, [billFetchId, billAmount, customer.operatorId, operatorName, customerName, params.formValues, alert, navigation]);
 
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 

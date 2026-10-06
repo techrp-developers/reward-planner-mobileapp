@@ -19,6 +19,7 @@ import { compareRechargePayloads } from '../utils/rechargeDebug';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAlert } from '../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import { isValidCheckoutOrder } from '../utils/paymentSafety';
 
 // Last successful create-order payload, kept in memory for this session so
 // a failing payload (e.g. a different operator) can be diffed against it —
@@ -132,11 +133,11 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
       const order = response.data;
       transactionId = order?.transaction_id ?? null;
 
-      if (!order?.key || !order?.orderId) {
+      if (!isValidCheckoutOrder(order)) {
         setOrderFailure({
           status: null,
           kind: 'BAD_RESPONSE',
-          message: 'Payment order details (key/orderId) are missing from the response.',
+          message: 'Payment details are incomplete. Please try again later.',
           error: order,
           payload,
         });
@@ -166,7 +167,6 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_signature: paymentResult.razorpay_signature,
       };
-      __DEV__ && console.log('Verify Recharge Payment Payload:', verifyPayload);
       const verifyResponse = await verifyBillPayPayment(verifyPayload);
       __DEV__ && console.log('Verify Recharge Payment Response:', verifyResponse);
 
@@ -185,14 +185,14 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         return;
       }
 
-      navigation.navigate('TransactionStatusScreen', { transactionId });
+      navigation.replace('TransactionStatusScreen', { transactionId });
     } catch (error: any) {
       // A rejected verify-payment call (e.g. HTTP 422 when the provider
       // permanently rejected the transaction) still carries a transaction_id —
       // route to the status screen instead of stranding the user on an alert.
       const errorTransactionId = error?.transaction_id ?? transactionId;
       if (razorpaySucceeded && errorTransactionId) {
-        navigation.navigate('TransactionStatusScreen', { transactionId: errorTransactionId });
+        navigation.replace('TransactionStatusScreen', { transactionId: errorTransactionId });
         return;
       }
 
@@ -202,7 +202,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
         } catch {
           // Cancellation is rejected when a payment was attempted/captured.
           // In that case status tracking is safer than inviting another pay.
-          navigation.navigate('TransactionStatusScreen', {
+          navigation.replace('TransactionStatusScreen', {
             transactionId: errorTransactionId,
           });
           return;
@@ -304,7 +304,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
                 <Text style={styles.errorCardTitle}>Order Creation Failed</Text>
               </View>
               <Text style={styles.errorCardMessage}>{orderFailure.message}</Text>
-              {orderFailure.status !== null && (
+              {__DEV__ && orderFailure.status !== null && (
                 <Text style={styles.errorCardMeta}>
                   Status {orderFailure.status} · {orderFailure.kind}
                 </Text>
@@ -318,14 +318,14 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
                   <MaterialIcons name="refresh" size={16} color="#FFFFFF" />
                   <Text style={styles.errorRetryText}>Retry</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                {__DEV__ && <TouchableOpacity
                   style={styles.errorCopyBtn}
                   activeOpacity={0.85}
                   onPress={handleCopyErrorDetails}
                 >
                   <MaterialIcons name="content-copy" size={16} color="#5B47A3" />
                   <Text style={styles.errorCopyText}>Copy Error Details</Text>
-                </TouchableOpacity>
+                </TouchableOpacity>}
               </View>
             </View>
           )}

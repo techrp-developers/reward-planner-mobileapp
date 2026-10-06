@@ -15,7 +15,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BBPSHead from '../../constatnt/BBPSHead';
 import { useAuth } from '../../../common/auth/context/AuthContext';
-import { fetchBillLocations, BillLocation } from '../../api/BillsAPI';
+import { fetchBillLocations, fetchBillsCategories, BillLocation } from '../../api/BillsAPI';
+import { useAlert } from '../../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../../utils/useBbpsTheme';
 
 // Assets
@@ -28,6 +29,7 @@ const CONTACTS: any[] = [];
 
 function ReachargeHomeScreen({ navigation, route }: any) {
   const { user } = useAuth();
+  const alert = useAlert();
   const bbpsTheme = useBbpsTheme();
   const [mobileNumber, setMobileNumber] = useState(
     route?.params?.mobileNumber ?? user?.phone ?? '',
@@ -72,17 +74,30 @@ function ReachargeHomeScreen({ navigation, route }: any) {
     : null;
 
   // Navigate with both number and location when Recharge is pressed
-  const handleRechargePress = (overrideNumber?: string) => {
-    const number = overrideNumber ?? mobileNumber;
-    navigation.navigate('RechargeSection', {
-      mobileNumber: number,
-      selectedLocation: selectedLocation ?? undefined,
-    });
+  const handleRechargePress = async (overrideNumber?: string) => {
+    const number = String(overrideNumber ?? mobileNumber).trim();
+    if (!/^[6-9][0-9]{9}$/.test(number)) {
+      alert.warning('Invalid Number', 'Enter a valid 10-digit mobile number.');
+      return;
+    }
+    try {
+      const categories = await fetchBillsCategories();
+      const prepaid = categories.find(item => /mobile prepaid/i.test(item.operator_category_name));
+      if (!prepaid) throw new Error('Mobile recharge is currently unavailable.');
+      navigation.navigate('BillerSelectScreen', {
+        categoryId: prepaid.operator_category_id,
+        categoryName: prepaid.operator_category_name,
+        mobileNumber: number,
+        selectedLocation: selectedLocation ?? undefined,
+      });
+    } catch (error: any) {
+      alert.error('Unable to Load Operators', error?.message || 'Please try again.');
+    }
   };
 
   const filteredLocations = locations.filter(loc =>
     loc.operator_location_name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-    loc.abbreviation.toLowerCase().includes(locationSearch.toLowerCase())
+    loc.abbreviation?.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
   const renderItem = (item: any) => (

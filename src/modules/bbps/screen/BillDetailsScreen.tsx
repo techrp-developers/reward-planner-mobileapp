@@ -40,6 +40,8 @@ type BillDetailsRouteParams = {
   operatorLogoAlt?: string;
   categoryName?: string;
   categoryId?: number | string;
+  mobileNumber?: string;
+  selectedLocation?: { operator_location_id: string; operator_location_name: string; abbreviation: string };
 };
 
 type BillDetailsScreenProps = {
@@ -90,6 +92,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const [logoFailed, setLogoFailed] = useState(false);
   // const [selectedCategory, setSelectedCategory] = useState('Home');
   const [isLoading, setIsLoading] = useState(false);
+  const fetchInProgress = useRef(false);
+  const formOperatorId = useRef<number | null>(null);
 
   const {
     data: operatorDetails = null,
@@ -153,14 +157,14 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       return;
     }
 
-    const initialValues = (operatorDetails.data || []).filter(isUserInputField).reduce<FormValues>((values, field) => {
-      if (field?.param_name) {
-        values[field.param_name] = '';
-      }
+    const sameOperator = formOperatorId.current === operatorId;
+    formOperatorId.current = operatorId;
+    setFormValues(current => fields.reduce<FormValues>((values, field) => {
+      values[field.param_name] = sameOperator ? current[field.param_name] || ''
+        : field.param_name === 'utility_acc_no' ? routeParams.mobileNumber || '' : '';
       return values;
-    }, {});
-    setFormValues(initialValues);
-  }, [hasValidOperatorId, operatorDetails]);
+    }, {}));
+  }, [hasValidOperatorId, operatorDetails, operatorId, fields, routeParams.mobileNumber]);
 
   const updateFieldValue = useCallback((field: OperatorField, value: string) => {
     setFormValues((current) => ({
@@ -210,16 +214,18 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   }, [fields, formValues, alert, operatorId]);
 
   const handleContinue = useCallback(async () => {
+    if (fetchInProgress.current || detailsLoading || detailsError) return;
     if (!validateInputs()) {
       return;
     }
 
+    fetchInProgress.current = true;
     setIsLoading(true);
     try {
       const payload = {
         sender_name: loggedInUserName,
         operator_id: String(operatorId),
-        ...formValues,
+        ...Object.fromEntries(Object.entries(formValues).map(([key, value]) => [key, value.trim()])),
         ...(Number(routeParams.categoryId) > 0
           ? { category: Number(routeParams.categoryId) }
           : {}),
@@ -229,7 +235,12 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       };
 
       if (!isBillFetchSupported) {
+        if (!/mobile prepaid/i.test(categoryName)) {
+          alert.warning('Service Unavailable', 'This biller does not currently support bill fetching. Please choose another biller.');
+          return;
+        }
         navigation.navigate('RechargePlanScreen', {
+          selectedLocation: routeParams.selectedLocation,
           operatorId,
           operatorName: providerName,
           operatorLogoUrl,
@@ -260,10 +271,13 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     } catch (error: any) {
       alert.error('Error', error?.message || 'Could not fetch bill details.');
     } finally {
+      fetchInProgress.current = false;
       setIsLoading(false);
     }
   }, [
     validateInputs,
+    detailsLoading,
+    detailsError,
     formValues,
     loggedInUserName,
     operatorId,
@@ -274,6 +288,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     operatorLogoUrl,
     routeParams.operatorLogoAlt,
     routeParams.categoryId,
+    routeParams.selectedLocation,
     categoryName,
     alert,
   ]);
@@ -391,6 +406,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
                     placeholderTextColor={bbpsTheme.colors.subtle}
                     keyboardType={isNumericField(field) ? 'numeric' : 'default'}
                     value={formValues[field.param_name] || ''}
+                    editable={!isLoading}
                     onChangeText={(value) => updateFieldValue(field, value)}
                   />
                   <Text style={[styles.helperText, { color: bbpsTheme.colors.subtle }]}>

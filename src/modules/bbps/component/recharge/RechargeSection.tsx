@@ -62,6 +62,9 @@ function RechargeSection({ navigation, route }: any) {
   // every read below is safe.
   const params = route?.params ?? {};
   const operatorId = params.operatorId;
+  useEffect(() => {
+    if (!operatorId) navigation.replace('ReachargeHomeScreen');
+  }, [operatorId, navigation]);
   const formValues = params.formValues || {};
   const primaryValue =
     formValues.utility_acc_no ||
@@ -269,6 +272,7 @@ function RechargeSection({ navigation, route }: any) {
           timestamp: Date.now(),
         });
       } catch (error: any) {
+        if (!mounted) return;
         setPlans([]);
         setPlanGroups([]);
         setActiveGroupLabel('');
@@ -288,6 +292,7 @@ function RechargeSection({ navigation, route }: any) {
   }, [operatorId, primaryValue, selectedLocation]);
 
   const handlePlanPress = (plan: RechargePlan, startPaymentImmediately = false) => {
+    if (plansLoading || loading) return;
     if (!selectedLocation) {
       alert.warning('Select Circle', 'Please select a circle first.');
       return;

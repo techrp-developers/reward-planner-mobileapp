@@ -50,7 +50,7 @@ export interface Operator {
 
 export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`);
+    const res = await axios.get(`${API_BASE_URL}/v1/bills/categories`, { timeout: 45000 });
     return Array.isArray(res.data?.data)
       ? res.data.data.filter(isEnabledBbpsCategory)
       : [];
@@ -62,7 +62,7 @@ export const fetchBillsCategories = async (): Promise<BillCategory[]> => {
 
 export const fetchBillLocations = async (): Promise<BillLocation[]> => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/v1/bills/locations`);
+    const res = await axios.get(`${API_BASE_URL}/v1/bills/locations`, { timeout: 45000 });
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (error: any) {
     if (__DEV__) { console.error("Fetch Locations Error:", error?.response?.data || error); }
@@ -83,7 +83,7 @@ export const fetchOperators = async (
 ): Promise<Operator[]> => {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/v1/bills/operators?category_id=${categoryId}`
+      `${API_BASE_URL}/v1/bills/operators?category_id=${categoryId}`, { timeout: 45000 }
     );
 
     return Array.isArray(res.data?.data) ? res.data.data : [];
@@ -115,14 +115,14 @@ export const fetchOperatorDetails = async (
 ): Promise<OperatorDetails> => {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/v1/bills/operator/${operatorId}`
+      `${API_BASE_URL}/v1/bills/operator/${operatorId}`, { timeout: 45000 }
     );
 
     return {
       operator_name: res.data?.operator_name || "",
       operator_id: res.data?.operator_id || 0,
-      fetchBill: res.data?.fetchBill || 0,
-      BBPS: res.data?.BBPS || 0,
+      fetchBill: Number(res.data?.fetchBill) === 1 ? 1 : 0,
+      BBPS: Number(res.data?.BBPS) === 1 ? 1 : 0,
       data: Array.isArray(res.data?.data) ? res.data.data : [],
     };
   } catch (error: any) {
@@ -144,6 +144,7 @@ export const fetchBill = async (
       `${API_BASE_URL}/v1/bills/fetch-bill`,
       payload,
       {
+        timeout: 75000,
         headers: {
           "Content-Type": "application/json",
           ...authHeaders,
@@ -166,7 +167,9 @@ export const fetchBill = async (
       return error.response.data;
     }
 
-    throw error?.response?.data || error?.message;
+    throw new Error(error?.code === 'ECONNABORTED'
+      ? 'Bill fetching timed out. Please try again.'
+      : error?.message || 'Could not fetch bill details.');
   }
 };
 
@@ -204,6 +207,7 @@ export const fetchRechargePlans = async (
     const res = await axios.get(
       `${API_BASE_URL}/v1/bills/recharge/plans`,
       {
+        timeout: 75000,
         params: {
           mobile,
           operator_id: operatorId,
@@ -445,6 +449,7 @@ export const fetchOrderHistory = async (
       : await getAuthHeaders();
 
     const res = await axios.get(`${API_BASE_URL}/v1/bills/order-history`, {
+      timeout: 20000,
       headers: authHeaders,
       params: {
         page: params.page,

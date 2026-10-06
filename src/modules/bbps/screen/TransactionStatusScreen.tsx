@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../constatnt/BBPSHead';
@@ -65,14 +66,20 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   const presentation = STATUS_PRESENTATION[status] ?? STATUS_PRESENTATION.PENDING;
 
   const handleGoHome = useCallback(() => {
-    navigation.navigate('Home');
+    navigation.popToTop();
   }, [navigation]);
 
-  const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
+  useFocusEffect(useCallback(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleGoHome();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [handleGoHome]));
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
-      <BBPSHead title="Payment Status" onBackPress={handleGoBack} />
+      <BBPSHead title="Payment Status" onBackPress={handleGoHome} />
 
       <View style={styles.container}>
         <View
@@ -102,7 +109,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
           ) : null}
         </View>
 
-        {isTerminal && (
+        {(
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleGoHome}

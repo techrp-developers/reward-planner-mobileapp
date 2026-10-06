@@ -215,10 +215,12 @@ const BillerSelectScreenComponent = () => {
         operatorLogoUrl: item.logoUrl,
         operatorLogoAlt: item.logoAlt,
         categoryId: categoryId,
-        categoryName: categoryName,
+          categoryName: categoryName,
+          mobileNumber: route.params?.mobileNumber,
+          selectedLocation: route.params?.selectedLocation,
       });
     },
-    [navigation, queryClient, categoryId, categoryName]
+    [navigation, queryClient, categoryId, categoryName, route.params?.mobileNumber, route.params?.selectedLocation]
   );
 
   // Render individual Biller Item
