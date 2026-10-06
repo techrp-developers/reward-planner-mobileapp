@@ -51,25 +51,17 @@ const resolveLocalHost = (): string => {
 export const LOCAL_SERVER_HOST = IS_LOCAL_ENVIRONMENT ? resolveLocalHost() : '';
 const LOCAL_SERVER_URL = `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`;
 
-// Chat is currently backed by the temporary local server even while the rest
-// of a debug build targets the live API. Keep this isolated so enabling chat
-// does not redirect ecommerce, payments, or authentication traffic locally.
-export const CHAT_SERVER_URL = __DEV__
-  ? `http://${resolveLocalHost()}:${LOCAL_API_PORT}`
-  : 'https://rewardplanners.com';
-
 const LIVE_SERVER_URL = 'https://rewardplanners.com';
 const LIVE_IMAGE_CDN_URL = 'https://cdn.rewardplanners.com';
 
 export const SERVER_URL = IS_LOCAL_ENVIRONMENT ? LOCAL_SERVER_URL : LIVE_SERVER_URL;
+export const CHAT_SERVER_URL = SERVER_URL;
 export const IMAGE_CDN_URL = IS_LOCAL_ENVIRONMENT ? SERVER_URL : LIVE_IMAGE_CDN_URL;
 
 // Live traffic uses the reverse-proxy prefix; the local Express server does not.
 export const API_BASE_URL =
   IS_LOCAL_ENVIRONMENT ? SERVER_URL : `${SERVER_URL}/api/crm`;
-export const CHAT_API_BASE_URL = __DEV__
-  ? CHAT_SERVER_URL
-  : `${CHAT_SERVER_URL}/api/crm`;
+export const CHAT_API_BASE_URL = API_BASE_URL;
 export const API_V1_URL = `${API_BASE_URL}/v1`;
 export const API_V1_URL_WITH_SLASH = `${API_V1_URL}/`;
 export const UPLOADS_URL = IS_LOCAL_ENVIRONMENT

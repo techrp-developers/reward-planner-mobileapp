@@ -23,6 +23,7 @@ import { useAlert } from '../../ecommerce/components/alerts';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import { getBillFetchErrorMessage } from '../utils/billFetchError';
 
 const BRAND_END = '#5B47A3';
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -38,6 +39,7 @@ type BillDetailsRouteParams = {
   operatorLogoUrl?: string;
   operatorLogoAlt?: string;
   categoryName?: string;
+  categoryId?: number | string;
 };
 
 type BillDetailsScreenProps = {
@@ -172,14 +174,26 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       const value = formValues[field.param_name]?.trim() || '';
 
       if (!value) {
-        alert.warning('Invalid Input', field.error_message || `Please enter ${field.param_label}.`);
+        alert.warning('Invalid Input', `Please enter ${field.param_label}.`);
         return false;
       }
 
       try {
         const regex = new RegExp(field.regex);
         if (!regex.test(value)) {
-          alert.warning('Invalid Input', field.error_message || `Please enter valid ${field.param_label}.`);
+          if (__DEV__) {
+            console.warn('[BBPS] Field validation failed', {
+              operatorId,
+              field: field.param_name,
+              regex: field.regex,
+              characterCount: value.length,
+            });
+          }
+          alert.warning(
+            'Invalid Input',
+            `${field.param_label}: ${field.error_message || 'The entered value does not match the required format.'}\nYou entered ${value.length} characters.`,
+            7000,
+          );
           return false;
         }
       } catch {
@@ -188,7 +202,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     }
 
     return true;
-  }, [fields, formValues, alert]);
+  }, [fields, formValues, alert, operatorId]);
 
   const handleContinue = useCallback(async () => {
     if (!validateInputs()) {
@@ -201,6 +215,9 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
         sender_name: loggedInUserName,
         operator_id: String(operatorId),
         ...formValues,
+        ...(Number(routeParams.categoryId) > 0
+          ? { category: Number(routeParams.categoryId) }
+          : {}),
         ...(!formValues.confirmation_mobile_no && user?.phone
           ? { confirmation_mobile_no: user.phone }
           : {}),
@@ -223,7 +240,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       if (!response?.success) {
         alert.warning(
           'Bill Fetch Failed',
-          response?.message || 'Unable to fetch bill details'
+          getBillFetchErrorMessage(response),
+          10000,
         );
         return;
       }
@@ -250,6 +268,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     providerName,
     operatorLogoUrl,
     routeParams.operatorLogoAlt,
+    routeParams.categoryId,
     categoryName,
     alert,
   ]);
