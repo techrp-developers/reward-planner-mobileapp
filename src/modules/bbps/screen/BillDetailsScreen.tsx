@@ -83,6 +83,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   };
   const operatorId = Number(operatorData.id || routeParams.operatorId);
   const categoryName = routeParams?.categoryName || 'Electricity Bill';
+  const isCreditCard = Number(routeParams.categoryId) === 7 || /credit\s*card/i.test(categoryName);
   const hasValidOperatorId = Number.isFinite(operatorId) && operatorId > 0;
 
   const [formValues, setFormValues] = useState<FormValues>({});
@@ -93,6 +94,9 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const {
     data: operatorDetails = null,
     isLoading: detailsLoading,
+    isError: detailsError,
+    isFetching: detailsFetching,
+    refetch: refetchDetails,
   } = useQuery({
     queryKey: bbpsOperatorDetailsQueryKey(operatorId),
     queryFn: () => fetchOperatorDetails(operatorId),
@@ -112,6 +116,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const isBillFetchSupported = operatorDetails?.fetchBill === 1;
   const isContinueDisabled =
     detailsLoading ||
+    detailsError ||
     isLoading ||
     fields.length === 0 ||
     fields.some((field) => !formValues[field.param_name]?.trim());
@@ -338,6 +343,37 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
                   </View>
                 ))}
               </>
+            ) : detailsError || fields.length === 0 ? (
+              <View accessibilityLiveRegion="polite">
+                <Text style={[styles.unavailableTitle, { color: bbpsTheme.colors.textStrong }]}>
+                  {isCreditCard ? 'Credit card bill payment unavailable' : 'Biller temporarily unavailable'}
+                </Text>
+                <Text style={[styles.unavailableMessage, { color: bbpsTheme.colors.muted }]}>
+                  {isCreditCard
+                    ? `We couldn't load bill payment details for ${providerName}. Please try again later or choose another bank.`
+                    : `We couldn't load bill payment details for ${providerName}. Please try again or choose another biller.`}
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.unavailableAction}
+                  disabled={detailsFetching}
+                  accessibilityState={{ disabled: detailsFetching }}
+                  onPress={() => { void refetchDetails(); }}
+                >
+                  <Text style={[styles.label, { color: bbpsTheme.colors.text }]}>
+                    {detailsFetching ? 'Loading…' : 'Retry'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.unavailableAction}
+                  onPress={handleBackPress}
+                >
+                  <Text style={[styles.label, { color: bbpsTheme.colors.text }]}>
+                    {isCreditCard ? 'Choose another bank' : 'Choose another biller'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               fields.map((field, index) => (
                 <View key={field.param_id || field.param_name} style={index > 0 && styles.mobileLabel}>
@@ -476,6 +512,9 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 8 },
+  unavailableTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  unavailableMessage: { fontSize: 14, lineHeight: 21, marginBottom: 12 },
+  unavailableAction: { minHeight: 44, justifyContent: 'center' },
   skeletonInputGap: { marginTop: 8 },
   nicknameWrapper: {
     backgroundColor: '#F3EFFF',
