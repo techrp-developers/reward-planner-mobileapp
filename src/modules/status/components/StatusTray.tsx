@@ -22,15 +22,19 @@ import { queryClient } from '../../../query/queryClient';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import {
+  addStatusComment,
   createStatus,
   deleteStatus,
+  deleteStatusComment,
   fetchStatusAudienceOptions,
+  fetchStatusComments,
   fetchMyStatuses,
   fetchStatusFeed,
   fetchStatusViewers,
   markStatusViewed,
+  toggleStatusLike,
 } from '../api/statusApi';
-import type { StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, StatusVisibility, UserStatus } from '../types';
+import type { StatusComment, StatusFeedGroup, StatusMediaInput, StatusType, StatusViewer, StatusVisibility, UserStatus } from '../types';
 
 const STATUS_COLORS = ['#202C33', '#6D28D9', '#BE123C', '#0369A1', '#047857', '#B45309'];
 const AUDIENCES: Array<{ value: StatusVisibility; label: string }> = [
@@ -198,9 +202,20 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   const [busy, setBusy] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
+  const [liking, setLiking] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const [comments, setComments] = useState<StatusComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [nextCommentId, setNextCommentId] = useState<number | null>(null);
   const videoTouchStart = useRef({ x: 0, y: 0 });
   const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
+  const activeStatusId = status?.id;
   // Derive ownership from the API data too. This keeps owner actions available
   // when a user's own status is opened from a refreshed/cached feed rather than
   // exclusively through the local "My status" navigation flag.
@@ -213,16 +228,29 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     setIndex(0);
     setViewers(null);
     setViewerCount(Number(group?.statuses[0]?.view_count ?? 0));
+    setLiked(Boolean(group?.statuses[0]?.liked));
+    setLikeCount(Number(group?.statuses[0]?.like_count ?? 0));
+    setCommentCount(Number(group?.statuses[0]?.comment_count ?? 0));
+    setCommentsVisible(false);
+    setComments([]);
+    setCommentText('');
     setVideoError(false);
     setVideoPaused(false);
   }, [group, visible]);
   useEffect(() => { setVideoError(false); setVideoPaused(false); }, [status?.id]);
   useEffect(() => {
     setViewerCount(Number(status?.view_count ?? 0));
-  }, [status?.id, status?.view_count]);
+    setLiked(Boolean(status?.liked));
+    setLikeCount(Number(status?.like_count ?? 0));
+    setCommentCount(Number(status?.comment_count ?? 0));
+    setCommentsVisible(false);
+    setComments([]);
+    setCommentText('');
+    setNextCommentId(null);
+  }, [status?.id, status?.view_count, status?.liked, status?.like_count, status?.comment_count]);
   useEffect(() => {
-    if (!visible || !status || isOwner) return;
-    markStatusViewed(status.id).then(result => {
+    if (!visible || !activeStatusId || isOwner) return;
+    markStatusViewed(activeStatusId).then(result => {
       queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current => {
         if (!current) return current;
         return current.map(feedGroup => {
@@ -239,7 +267,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
         });
       });
     }).catch(() => {});
-  }, [isOwner, status?.id, visible]);
+  }, [activeStatusId, isOwner, visible]);
 
   const next = useCallback(() => {
     if (!group) return;
@@ -292,6 +320,100 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     ]);
   }, [onChanged, onClose, status]);
 
+  const updateCachedInteraction = useCallback((statusId: number, patch: Partial<UserStatus>) => {
+    queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current =>
+      current?.map(feedGroup => ({
+        ...feedGroup,
+        statuses: feedGroup.statuses.map(item => item.id === statusId ? { ...item, ...patch } : item),
+      })),
+    );
+    queryClient.setQueryData<UserStatus[]>(['statuses', 'mine'], current =>
+      current?.map(item => item.id === statusId ? { ...item, ...patch } : item),
+    );
+  }, []);
+
+  const toggleLike = useCallback(async () => {
+    if (!status || liking) return;
+    const previousLiked = liked;
+    const previousCount = likeCount;
+    const optimisticLiked = !previousLiked;
+    const optimisticCount = Math.max(0, previousCount + (optimisticLiked ? 1 : -1));
+    setLiked(optimisticLiked);
+    setLikeCount(optimisticCount);
+    setLiking(true);
+    try {
+      const result = await toggleStatusLike(status.id);
+      setLiked(result.liked);
+      setLikeCount(result.like_count);
+      updateCachedInteraction(status.id, { liked: result.liked, like_count: result.like_count });
+    } catch (error) {
+      setLiked(previousLiked);
+      setLikeCount(previousCount);
+      Alert.alert('Could not update like', messageFrom(error));
+    } finally {
+      setLiking(false);
+    }
+  }, [likeCount, liked, liking, status, updateCachedInteraction]);
+
+  const loadComments = useCallback(async (append = false) => {
+    if (!status || commentsLoading) return;
+    setCommentsLoading(true);
+    try {
+      const result = await fetchStatusComments(status.id, append ? nextCommentId : null);
+      setComments(current => append ? [...current, ...result.comments] : result.comments);
+      setNextCommentId(result.nextBeforeId);
+    } catch (error) {
+      Alert.alert('Could not load comments', messageFrom(error));
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [commentsLoading, nextCommentId, status]);
+
+  const openComments = useCallback(() => {
+    setCommentsVisible(true);
+    setComments([]);
+    setNextCommentId(null);
+    loadComments(false);
+  }, [loadComments]);
+
+  const submitComment = useCallback(async () => {
+    const text = commentText.trim();
+    if (!status || !text || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      const comment = await addStatusComment(status.id, text);
+      setComments(current => [comment, ...current]);
+      setCommentText('');
+      const count = commentCount + 1;
+      setCommentCount(count);
+      updateCachedInteraction(status.id, { comment_count: count });
+    } catch (error) {
+      Alert.alert('Could not add comment', messageFrom(error));
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [commentCount, commentSubmitting, commentText, status, updateCachedInteraction]);
+
+  const removeComment = useCallback((comment: StatusComment) => {
+    if (!status) return;
+    Alert.alert('Delete comment?', 'This comment will be removed.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await deleteStatusComment(status.id, comment.id);
+          setComments(current => current.filter(item => item.id !== comment.id));
+          setCommentCount(current => {
+            const count = Math.max(0, current - 1);
+            updateCachedInteraction(status.id, { comment_count: count });
+            return count;
+          });
+        } catch (error) {
+          Alert.alert('Could not delete comment', messageFrom(error));
+        }
+      } },
+    ]);
+  }, [status, updateCachedInteraction]);
+
   if (!group || !status) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -312,7 +434,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   style={styles.viewerMedia}
                   resizeMode="contain"
                   viewType={ViewType.TEXTURE}
-                  paused={!visible || videoPaused}
+                  paused={!visible || videoPaused || commentsVisible}
                   playInBackground={false}
                   playWhenInactive={false}
                   onEnd={next}
@@ -339,6 +461,16 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
             {status.type !== 'text' && !!status.text && <Text style={styles.viewerCaption}>{status.text}</Text>}
             {status.type !== 'video' && <><Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} /></>}
           </View>
+          <View style={styles.interactionBar}>
+            <Pressable onPress={toggleLike} disabled={liking} style={styles.interactionButton}>
+              <MaterialCommunityIcons name={liked ? 'heart' : 'heart-outline'} color={liked ? '#FB7185' : '#FFF'} size={27} />
+              <Text style={styles.interactionText}>{likeCount}</Text>
+            </Pressable>
+            <Pressable onPress={openComments} style={styles.interactionButton}>
+              <MaterialCommunityIcons name="comment-outline" color="#FFF" size={25} />
+              <Text style={styles.interactionText}>{commentCount}</Text>
+            </Pressable>
+          </View>
           {isOwner && (
             <View style={styles.ownerActions}>
               <Pressable
@@ -361,6 +493,62 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
             </View>
           )}
           {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
+          {commentsVisible && (
+            <View style={styles.commentsSheet}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.commentsHeader}>
+                <Text style={styles.viewersTitle}>Comments ({commentCount})</Text>
+                <Pressable onPress={() => setCommentsVisible(false)} hitSlop={10}>
+                  <MaterialCommunityIcons name="close" size={24} color="#18181B" />
+                </Pressable>
+              </View>
+              {commentsLoading && comments.length === 0 ? (
+                <ActivityIndicator style={styles.commentsLoader} color="#7C3AED" />
+              ) : (
+                <FlatList
+                  data={comments}
+                  keyExtractor={item => String(item.id)}
+                  style={styles.commentsList}
+                  ListEmptyComponent={<Text style={styles.emptyViewers}>No comments yet. Start the conversation.</Text>}
+                  ListFooterComponent={nextCommentId ? (
+                    <Pressable onPress={() => loadComments(true)} disabled={commentsLoading} style={styles.loadCommentsButton}>
+                      {commentsLoading ? <ActivityIndicator color="#7C3AED" /> : <Text style={styles.loadCommentsText}>Load older comments</Text>}
+                    </Pressable>
+                  ) : null}
+                  renderItem={({ item }) => {
+                    const canDelete = isOwner || Number(item.user.id) === Number(currentUserId);
+                    return (
+                      <View style={styles.commentRow}>
+                        <Avatar uri={item.user.image_url} name={item.user.name} size={38} />
+                        <View style={styles.commentBody}>
+                          <View style={styles.commentMeta}>
+                            <Text style={styles.commentName}>{item.user.name || 'User'}</Text>
+                            <Text style={styles.commentTime}>{new Date(item.created_at).toLocaleString()}</Text>
+                          </View>
+                          <Text style={styles.commentText}>{item.text}</Text>
+                        </View>
+                        {canDelete && <Pressable onPress={() => removeComment(item)} hitSlop={8}><MaterialCommunityIcons name="delete-outline" color="#A1A1AA" size={20} /></Pressable>}
+                      </View>
+                    );
+                  }}
+                />
+              )}
+              <View style={styles.commentComposer}>
+                <TextInput
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  placeholder="Add a comment..."
+                  placeholderTextColor="#A1A1AA"
+                  maxLength={1000}
+                  multiline
+                  style={styles.commentInput}
+                />
+                <Pressable onPress={submitComment} disabled={!commentText.trim() || commentSubmitting} style={[styles.commentSend, (!commentText.trim() || commentSubmitting) && styles.commentSendDisabled]}>
+                  {commentSubmitting ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" color="#FFF" size={20} />}
+                </Pressable>
+              </View>
+            </View>
+          )}
         </SafeAreaView>
       </View>
     </Modal>
@@ -377,8 +565,10 @@ function StatusTray({ textColor }: { textColor?: string }) {
   const enabled = isAuthenticated;
   const mineQuery = useQuery({ queryKey: ['statuses', 'mine'], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
   const feedQuery = useQuery({ queryKey: ['statuses', 'feed'], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
-  const feed = feedQuery.data ?? [];
-  const visibleFeed = useMemo(() => feed.filter(group => Number(group.user.id) !== Number(user?.user_id)), [feed, user?.user_id]);
+  const visibleFeed = useMemo(
+    () => (feedQuery.data ?? []).filter(group => Number(group.user.id) !== Number(user?.user_id)),
+    [feedQuery.data, user?.user_id],
+  );
 
   const myGroup = useMemo<StatusFeedGroup | null>(() => {
     const mine = mineQuery.data ?? [];
@@ -441,10 +631,24 @@ const styles = StyleSheet.create({
   viewer: { flex: 1 }, viewerSafe: { flex: 1 }, progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 8 }, progressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.35)', overflow: 'hidden' }, progressFill: { height: 3, backgroundColor: '#FFF' }, viewerHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 }, viewerIdentity: { flex: 1 }, viewerHeaderName: { color: '#FFF', fontWeight: '700', fontSize: 15 }, viewerHeaderTime: { color: 'rgba(255,255,255,.72)', fontSize: 11, marginTop: 2 },
   statusStage: { flex: 1, alignItems: 'center', justifyContent: 'center' }, viewerText: { color: '#FFF', fontSize: 32, lineHeight: 42, fontWeight: '700', paddingHorizontal: 30, textAlign: 'center' }, viewerMedia: { width: '100%', height: '100%' }, viewerCaption: { position: 'absolute', bottom: 24, left: 18, right: 18, color: '#FFF', textAlign: 'center', fontSize: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,.55)' }, videoOpen: { alignItems: 'center' }, videoOpenText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 8 }, previousArea: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '32%' }, nextArea: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '32%' },
   videoTouchLayer: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  interactionBar: { minHeight: 52, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 22 },
+  interactionButton: { minWidth: 54, height: 44, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  interactionText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   ownerActions: { minHeight: 58, paddingHorizontal: 18, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 12 },
   viewsButton: { height: 46, flex: 1, borderRadius: 23, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
   viewsText: { color: '#FFF', fontWeight: '700' },
   deleteButton: { height: 46, paddingHorizontal: 18, borderRadius: 23, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(220,38,38,.92)' },
   deleteText: { color: '#FFF', fontWeight: '800' },
   viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
+  commentsSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '68%', paddingTop: 12, paddingHorizontal: 18, paddingBottom: 10, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  commentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  commentsLoader: { marginTop: 40 }, commentsList: { flex: 1 },
+  commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4E4E7' },
+  commentBody: { flex: 1 }, commentMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  commentName: { color: '#18181B', fontWeight: '800', flexShrink: 1 }, commentTime: { color: '#A1A1AA', fontSize: 10 },
+  commentText: { color: '#3F3F46', fontSize: 14, lineHeight: 20, marginTop: 3 },
+  commentComposer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E4E4E7' },
+  commentInput: { flex: 1, minHeight: 44, maxHeight: 96, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, color: '#18181B', backgroundColor: '#F4F4F5' },
+  commentSend: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' }, commentSendDisabled: { opacity: 0.45 },
+  loadCommentsButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' }, loadCommentsText: { color: '#7C3AED', fontWeight: '700' },
 });

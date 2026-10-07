@@ -7,6 +7,7 @@ import type {
   StatusAudienceCompany,
   StatusAudiencePerson,
   StatusViewer,
+  StatusComment,
   UserStatus,
 } from '../types';
 
@@ -21,6 +22,16 @@ export type StatusViewResult = {
 export type StatusViewersResult = {
   viewers: StatusViewer[];
   viewCount: number;
+};
+
+export type StatusLikeResult = {
+  liked: boolean;
+  like_count: number;
+};
+
+export type StatusCommentsResult = {
+  comments: StatusComment[];
+  nextBeforeId: number | null;
 };
 
 export async function fetchMyStatuses() {
@@ -97,4 +108,36 @@ export async function fetchStatusViewers(statusId: number): Promise<StatusViewer
 
 export async function deleteStatus(statusId: number) {
   await api.delete(`/v1/status/${statusId}`);
+}
+
+export async function toggleStatusLike(statusId: number) {
+  const response = await api.post<DataResponse<StatusLikeResult>>(`/v1/status/${statusId}/like`);
+  return response.data.data;
+}
+
+export async function fetchStatusComments(
+  statusId: number,
+  beforeId?: number | null,
+): Promise<StatusCommentsResult> {
+  const response = await api.get<DataResponse<StatusComment[]> & {
+    pagination?: { next_before_id?: number | null };
+  }>(`/v1/status/${statusId}/comments`, {
+    params: { limit: 50, ...(beforeId ? { before_id: beforeId } : {}) },
+  });
+  return {
+    comments: response.data.data ?? [],
+    nextBeforeId: response.data.pagination?.next_before_id ?? null,
+  };
+}
+
+export async function addStatusComment(statusId: number, text: string) {
+  const response = await api.post<DataResponse<StatusComment>>(
+    `/v1/status/${statusId}/comments`,
+    { text },
+  );
+  return response.data.data;
+}
+
+export async function deleteStatusComment(statusId: number, commentId: number) {
+  await api.delete(`/v1/status/${statusId}/comments/${commentId}`);
 }
