@@ -26,6 +26,7 @@ export const NAVBAR_BACKGROUND_ASPECT_RATIO = CMS_IMAGE_ASPECT_RATIOS.navbarBack
 // profile/search block collapses away above it.
 export const NAVBAR_COLLAPSED_BACKGROUND_HEIGHT = 105;
 export const NAVBAR_COLLAPSE_DISTANCE = 90;
+export const NAVBAR_SCROLLED_BACKGROUND_OFFSET = NAVBAR_COLLAPSE_DISTANCE;
 
 export default function Navbar_Background({
   activeTab,
