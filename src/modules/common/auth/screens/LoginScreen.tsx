@@ -23,6 +23,10 @@ import {
   parseLoginIdentifier,
 } from "../utils/loginIdentifier";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import {
+  isPhoneNumberHintAvailable,
+  requestPhoneNumberHint,
+} from "../services/phoneNumberHint";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -31,6 +35,7 @@ export default function LoginScreen({ navigation }: Props) {
   const { isDark } = useAppTheme();
   const alert = useAlert();
   const [identifier, setIdentifier] = useState("");
+  const [phoneHintLoading, setPhoneHintLoading] = useState(false);
 
   const onLogin = useCallback(async () => {
     try {
@@ -59,6 +64,23 @@ export default function LoginScreen({ navigation }: Props) {
       alert.error("Login Error", String(message));
     }
   }, [identifier, requestLoginOtp, navigation, alert]);
+
+  const onPickPhoneNumber = useCallback(async () => {
+    if (!isPhoneNumberHintAvailable() || phoneHintLoading) return;
+
+    try {
+      setPhoneHintLoading(true);
+      const selectedNumber = await requestPhoneNumberHint();
+
+      if (selectedNumber) {
+        setIdentifier(selectedNumber);
+      }
+    } catch {
+      setIdentifier((current) => current);
+    } finally {
+      setPhoneHintLoading(false);
+    }
+  }, [phoneHintLoading]);
 
   return (
       <SafeAreaView
@@ -112,6 +134,30 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={[styles.helperText, { color: isDark ? "#A1A1AA" : "#777" }]}>
                   Registered email or mobile number
                 </Text>
+
+                {isPhoneNumberHintAvailable() ? (
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={onPickPhoneNumber}
+                    disabled={phoneHintLoading || loading}
+                    style={styles.phoneHintButton}
+                  >
+                    {phoneHintLoading ? (
+                      <ActivityIndicator size="small" color={isDark ? "#F472B6" : "#852BAF"} />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons
+                          name="cellphone"
+                          size={17}
+                          color={isDark ? "#F472B6" : "#852BAF"}
+                        />
+                        <Text style={[styles.phoneHintText, { color: isDark ? "#F472B6" : "#852BAF" }]}>
+                          Use phone on this device
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
               </View>
 
               <TouchableOpacity
@@ -192,6 +238,18 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     fontSize: 12,
     color: "#777",
+  },
+  phoneHintButton: {
+    alignSelf: "flex-start",
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  phoneHintText: {
+    fontSize: 13,
+    fontWeight: "600",
   },
   loginBtn: {
     paddingVertical: 14,

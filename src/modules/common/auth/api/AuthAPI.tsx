@@ -1,6 +1,7 @@
   import axios from "axios";
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import api from "./axios";
+  import { secureDeleteItem, secureGetItem, secureSetItem } from "../services/secureStorage";
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
@@ -68,19 +69,19 @@
     setAuthToken(normalizedToken);
 
     if (normalizedToken) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, normalizedToken);
+      await secureSetItem(AUTH_TOKEN_KEY, normalizedToken);
       return;
     }
 
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    await secureDeleteItem(AUTH_TOKEN_KEY);
   };
 
   export const hydrateAuthToken = async () => {
-    const storedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const storedToken = await secureGetItem(AUTH_TOKEN_KEY);
     const normalizedToken = normalizeToken(storedToken);
 
     if (!normalizedToken && storedToken) {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      await secureDeleteItem(AUTH_TOKEN_KEY);
     }
 
     setAuthToken(normalizedToken);
@@ -113,7 +114,7 @@
 
   export const getAuthHeaders = async () => {
     const token =
-      getAuthToken() || normalizeToken(await AsyncStorage.getItem(AUTH_TOKEN_KEY));
+      getAuthToken() || normalizeToken(await secureGetItem(AUTH_TOKEN_KEY));
 
     if (!token) {
       applyAuthHeader(null);
