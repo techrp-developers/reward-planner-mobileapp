@@ -57,6 +57,11 @@ export type StatusComment = {
   updated_at?: string | null;
 };
 
+export type StatusLike = {
+  user: StatusUser;
+  liked_at: string;
+};
+
 export type StatusMediaInput = {
   uri: string;
   type: string;

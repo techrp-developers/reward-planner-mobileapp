@@ -8,6 +8,7 @@ import type {
   StatusAudiencePerson,
   StatusViewer,
   StatusComment,
+  StatusLike,
   UserStatus,
 } from '../types';
 
@@ -113,6 +114,22 @@ export async function deleteStatus(statusId: number) {
 export async function toggleStatusLike(statusId: number) {
   const response = await api.post<DataResponse<StatusLikeResult>>(`/v1/status/${statusId}/like`);
   return response.data.data;
+}
+
+export async function fetchStatusLikes(statusId: number, beforeUserId?: number | null) {
+  const response = await api.get<DataResponse<StatusLike[]> & {
+    like_count?: number;
+    pagination?: { next_before_user_id?: number | null };
+  }>(
+    `/v1/status/${statusId}/likes`,
+    { params: { limit: 50, ...(beforeUserId ? { before_user_id: beforeUserId } : {}) } },
+  );
+  const likes = response.data.data ?? [];
+  return {
+    likes,
+    likeCount: Number(response.data.like_count ?? likes.length),
+    nextBeforeUserId: response.data.pagination?.next_before_user_id ?? null,
+  };
 }
 
 export async function fetchStatusComments(
