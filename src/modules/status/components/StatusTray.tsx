@@ -13,7 +13,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -28,9 +27,7 @@ import {
   addStatusComment,
   createStatus,
   deleteStatus,
-  deleteStatusComment,
   fetchStatusAudienceOptions,
-  fetchStatusComments,
   fetchMyStatuses,
   fetchStatusFeed,
   fetchStatusLikes,
@@ -38,7 +35,7 @@ import {
   markStatusViewed,
   toggleStatusLike,
 } from '../api/statusApi';
-import type { StatusComment, StatusFeedGroup, StatusLike, StatusMediaInput, StatusType, StatusViewer, StatusVisibility, UserStatus } from '../types';
+import type { StatusFeedGroup, StatusLike, StatusMediaInput, StatusType, StatusViewer, StatusVisibility, UserStatus } from '../types';
 
 const STATUS_COLORS = ['#202C33', '#6D28D9', '#BE123C', '#0369A1', '#047857', '#B45309'];
 const AUDIENCES: Array<{ value: StatusVisibility; label: string }> = [
@@ -215,19 +212,11 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   const [likesLoading, setLikesLoading] = useState(false);
   const likesLoadingRef = useRef(false);
   const [nextLikeUserId, setNextLikeUserId] = useState<number | null>(null);
-  const [commentsVisible, setCommentsVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [comments, setComments] = useState<StatusComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const commentsLoadingRef = useRef(false);
+  const [replyFocused, setReplyFocused] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
-  const [nextCommentId, setNextCommentId] = useState<number | null>(null);
-  const { height: windowHeight } = useWindowDimensions();
-  const commentsSheetStyle = useMemo(() => ({
-    bottom: keyboardHeight,
-    height: Math.max(240, Math.round(windowHeight * 0.68 - keyboardHeight)),
-  }), [keyboardHeight, windowHeight]);
+  const replyKeyboardStyle = useMemo(() => ({ paddingBottom: keyboardHeight }), [keyboardHeight]);
   const videoTouchStart = useRef({ x: 0, y: 0 });
   const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
@@ -250,15 +239,14 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     setLikesVisible(false);
     setLikes([]);
     setNextLikeUserId(null);
-    setCommentsVisible(false);
-    setComments([]);
+    setReplyFocused(false);
     setCommentText('');
     setVideoError(false);
     setVideoPaused(false);
   }, [group, visible]);
   useEffect(() => { setVideoError(false); setVideoPaused(false); }, [status?.id]);
   useEffect(() => {
-    if (!visible || !commentsVisible) {
+    if (!visible || !replyFocused) {
       setKeyboardHeight(0);
       return undefined;
     }
@@ -272,7 +260,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, [commentsVisible, visible]);
+  }, [replyFocused, visible]);
   useEffect(() => {
     setViewerCount(Number(status?.view_count ?? 0));
     setLiked(Boolean(status?.liked));
@@ -281,10 +269,8 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     setLikesVisible(false);
     setLikes([]);
     setNextLikeUserId(null);
-    setCommentsVisible(false);
-    setComments([]);
+    setReplyFocused(false);
     setCommentText('');
-    setNextCommentId(null);
   }, [status?.id, status?.view_count, status?.liked, status?.like_count, status?.comment_count]);
   useEffect(() => {
     if (!visible || !activeStatusId || isOwner) return;
@@ -332,7 +318,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     if (!status) return;
     Keyboard.dismiss();
     setLikesVisible(false);
-    setCommentsVisible(false);
+    setReplyFocused(false);
     setBusy(true);
     try {
       const result = await fetchStatusViewers(status.id);
@@ -400,7 +386,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     if (!status) return;
     Keyboard.dismiss();
     setViewers(null);
-    setCommentsVisible(false);
+    setReplyFocused(false);
     setLikesVisible(true);
     setLikes([]);
     setNextLikeUserId(null);
@@ -430,78 +416,31 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     }
   }, [likeCount, liked, liking, status, updateCachedInteraction]);
 
-  const loadComments = useCallback(async (append = false) => {
-    if (!status || commentsLoadingRef.current) return;
-    commentsLoadingRef.current = true;
-    setCommentsLoading(true);
-    try {
-      const result = await fetchStatusComments(status.id, append ? nextCommentId : null);
-      setComments(current => {
-        if (!append) return result.comments;
-        const existingIds = new Set(current.map(comment => comment.id));
-        return [...current, ...result.comments.filter(comment => !existingIds.has(comment.id))];
-      });
-      setNextCommentId(result.nextBeforeId);
-    } catch (error) {
-      Alert.alert('Could not load comments', messageFrom(error));
-    } finally {
-      commentsLoadingRef.current = false;
-      setCommentsLoading(false);
-    }
-  }, [nextCommentId, status]);
-
-  const openComments = useCallback(() => {
-    setViewers(null);
-    setLikesVisible(false);
-    setCommentsVisible(true);
-    setComments([]);
-    setNextCommentId(null);
-    loadComments(false);
-  }, [loadComments]);
-
   const submitComment = useCallback(async () => {
     const text = commentText.trim();
     if (!status || !text || commentSubmitting) return;
     setCommentSubmitting(true);
     try {
-      const comment = await addStatusComment(status.id, text);
-      setComments(current => [comment, ...current]);
+      await addStatusComment(status.id, text);
       setCommentText('');
+      Keyboard.dismiss();
+      setReplyFocused(false);
       const count = commentCount + 1;
       setCommentCount(count);
       updateCachedInteraction(status.id, { comment_count: count });
+      Alert.alert('Reply sent');
     } catch (error) {
-      Alert.alert('Could not add comment', messageFrom(error));
+      Alert.alert('Could not send reply', messageFrom(error));
     } finally {
       setCommentSubmitting(false);
     }
   }, [commentCount, commentSubmitting, commentText, status, updateCachedInteraction]);
 
-  const removeComment = useCallback((comment: StatusComment) => {
-    if (!status) return;
-    Alert.alert('Delete comment?', 'This comment will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try {
-          await deleteStatusComment(status.id, comment.id);
-          setComments(current => current.filter(item => item.id !== comment.id));
-          setCommentCount(current => {
-            const count = Math.max(0, current - 1);
-            updateCachedInteraction(status.id, { comment_count: count });
-            return count;
-          });
-        } catch (error) {
-          Alert.alert('Could not delete comment', messageFrom(error));
-        }
-      } },
-    ]);
-  }, [status, updateCachedInteraction]);
-
   if (!group || !status) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={[styles.viewer, { backgroundColor: status.background_color || '#050505' }]}>
-        <SafeAreaView style={styles.viewerSafe}>
+        <SafeAreaView style={[styles.viewerSafe, replyKeyboardStyle]}>
           <View style={styles.progressRow}>{group.statuses.map((item, position) => <View key={item.id} style={styles.progressTrack}><View style={[styles.progressFill, { width: position <= index ? '100%' : '0%' }]} /></View>)}</View>
           <View style={styles.viewerHeader}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /><View style={styles.viewerIdentity}><Text style={styles.viewerHeaderName}>{isOwner ? 'My status' : group.user.name || 'Status'}</Text><Text style={styles.viewerHeaderTime}>{new Date(status.created_at).toLocaleString()}</Text></View>{isOwner && <Pressable onPress={remove} hitSlop={10}><MaterialCommunityIcons name="delete-outline" color="#FFF" size={25} /></Pressable>}<Pressable onPress={onClose} hitSlop={10}><MaterialCommunityIcons name="close" color="#FFF" size={27} /></Pressable></View>
           <View style={styles.statusStage}>
@@ -517,7 +456,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   style={styles.viewerMedia}
                   resizeMode="contain"
                   viewType={ViewType.TEXTURE}
-                  paused={!visible || videoPaused || commentsVisible || likesVisible}
+                  paused={!visible || videoPaused || replyFocused || likesVisible}
                   playInBackground={false}
                   playWhenInactive={false}
                   onEnd={next}
@@ -545,18 +484,30 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
             {status.type !== 'video' && <><Pressable style={styles.previousArea} onPress={previous} /><Pressable style={styles.nextArea} onPress={next} /></>}
           </View>
           <View style={styles.interactionBar}>
+            {!isOwner && (
+              <View style={styles.replyBox}>
+                <TextInput
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  placeholder="Reply..."
+                  placeholderTextColor="rgba(255,255,255,.65)"
+                  maxLength={1000}
+                  returnKeyType="send"
+                  onFocus={() => setReplyFocused(true)}
+                  onBlur={() => setReplyFocused(false)}
+                  onSubmitEditing={submitComment}
+                  style={styles.replyInput}
+                />
+                <Pressable onPress={submitComment} disabled={!commentText.trim() || commentSubmitting} style={[styles.replySend, (!commentText.trim() || commentSubmitting) && styles.replySendDisabled]}>
+                  {commentSubmitting ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" color="#FFF" size={18} />}
+                </Pressable>
+              </View>
+            )}
             <View style={styles.likeActions}>
-              <Pressable onPress={toggleLike} disabled={liking} style={styles.interactionIconButton}>
-              <MaterialCommunityIcons name={liked ? 'heart' : 'heart-outline'} color={liked ? '#FB7185' : '#FFF'} size={27} />
-              </Pressable>
-              <Pressable onPress={showLikes} disabled={likesLoading} hitSlop={8}>
-                <Text style={styles.interactionText}>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</Text>
+              <Pressable onPress={toggleLike} onLongPress={showLikes} disabled={liking} style={styles.interactionIconButton}>
+                <MaterialCommunityIcons name={liked ? 'heart' : 'heart-outline'} color={liked ? '#FB7185' : '#FFF'} size={27} />
               </Pressable>
             </View>
-            <Pressable onPress={openComments} style={styles.interactionButton}>
-              <MaterialCommunityIcons name="comment-outline" color="#FFF" size={25} />
-              <Text style={styles.interactionText}>{commentCount}</Text>
-            </Pressable>
           </View>
           {isOwner && (
             <View style={styles.ownerActions}>
@@ -606,74 +557,12 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   renderItem={({ item }) => (
                     <View style={styles.viewerRow}>
                       <Avatar uri={item.user.image_url} name={item.user.name} size={42} />
-                      <View>
-                        <Text style={styles.viewerName}>{item.user.name || 'User'}</Text>
-                        <Text style={styles.viewerTime}>{new Date(item.liked_at).toLocaleString()}</Text>
-                      </View>
+                      <Text style={styles.likeUserName}>{item.user.name || 'User'}</Text>
+                      <MaterialCommunityIcons name="heart" color="#EF4444" size={20} />
                     </View>
                   )}
                 />
               )}
-            </View>
-          )}
-          {commentsVisible && (
-            <View style={[styles.commentsSheet, commentsSheetStyle]}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.commentsHeader}>
-                <Text style={styles.viewersTitle}>Comments ({commentCount})</Text>
-                <Pressable onPress={() => setCommentsVisible(false)} hitSlop={10}>
-                  <MaterialCommunityIcons name="close" size={24} color="#18181B" />
-                </Pressable>
-              </View>
-              {commentsLoading && comments.length === 0 ? (
-                <ActivityIndicator style={styles.commentsLoader} color="#7C3AED" />
-              ) : (
-                <FlatList
-                  data={comments}
-                  keyExtractor={item => String(item.id)}
-                  style={styles.commentsList}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  onEndReached={() => {
-                    if (nextCommentId) loadComments(true);
-                  }}
-                  onEndReachedThreshold={0.35}
-                  ListEmptyComponent={<Text style={styles.emptyViewers}>No comments yet. Start the conversation.</Text>}
-                  ListFooterComponent={commentsLoading && comments.length > 0
-                    ? <ActivityIndicator style={styles.commentsFooterLoader} color="#7C3AED" />
-                    : null}
-                  renderItem={({ item }) => {
-                    const canDelete = isOwner || Number(item.user.id) === Number(currentUserId);
-                    return (
-                      <View style={styles.commentRow}>
-                        <Avatar uri={item.user.image_url} name={item.user.name} size={38} />
-                        <View style={styles.commentBody}>
-                          <View style={styles.commentMeta}>
-                            <Text style={styles.commentName}>{item.user.name || 'User'}</Text>
-                            <Text style={styles.commentTime}>{new Date(item.created_at).toLocaleString()}</Text>
-                          </View>
-                          <Text style={styles.commentText}>{item.text}</Text>
-                        </View>
-                        {canDelete && <Pressable onPress={() => removeComment(item)} hitSlop={8}><MaterialCommunityIcons name="delete-outline" color="#A1A1AA" size={20} /></Pressable>}
-                      </View>
-                    );
-                  }}
-                />
-              )}
-              <View style={styles.commentComposer}>
-                <TextInput
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  placeholder="Add a comment..."
-                  placeholderTextColor="#A1A1AA"
-                  maxLength={1000}
-                  multiline
-                  style={styles.commentInput}
-                />
-                <Pressable onPress={submitComment} disabled={!commentText.trim() || commentSubmitting} style={[styles.commentSend, (!commentText.trim() || commentSubmitting) && styles.commentSendDisabled]}>
-                  {commentSubmitting ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" color="#FFF" size={20} />}
-                </Pressable>
-              </View>
             </View>
           )}
         </SafeAreaView>
@@ -758,26 +647,20 @@ const styles = StyleSheet.create({
   viewer: { flex: 1 }, viewerSafe: { flex: 1 }, progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 8 }, progressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.35)', overflow: 'hidden' }, progressFill: { height: 3, backgroundColor: '#FFF' }, viewerHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 }, viewerIdentity: { flex: 1 }, viewerHeaderName: { color: '#FFF', fontWeight: '700', fontSize: 15 }, viewerHeaderTime: { color: 'rgba(255,255,255,.72)', fontSize: 11, marginTop: 2 },
   statusStage: { flex: 1, alignItems: 'center', justifyContent: 'center' }, viewerText: { color: '#FFF', fontSize: 32, lineHeight: 42, fontWeight: '700', paddingHorizontal: 30, textAlign: 'center' }, viewerMedia: { width: '100%', height: '100%' }, viewerCaption: { position: 'absolute', bottom: 24, left: 18, right: 18, color: '#FFF', textAlign: 'center', fontSize: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(0,0,0,.55)' }, videoOpen: { alignItems: 'center' }, videoOpenText: { color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 8 }, previousArea: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '32%' }, nextArea: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '32%' },
   videoTouchLayer: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
-  interactionBar: { minHeight: 52, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 22 },
-  likeActions: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  interactionBar: { minHeight: 84, paddingHorizontal: 18, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  replyBox: { flex: 1, minHeight: 44, paddingLeft: 16, paddingRight: 4, borderRadius: 22, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
+  replyInput: { flex: 1, color: '#FFF', paddingVertical: 9, fontSize: 14 },
+  replySend: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' },
+  replySendDisabled: { opacity: 0.45 },
+  likeActions: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, marginLeft: 'auto' },
   interactionIconButton: { width: 34, height: 44, alignItems: 'center', justifyContent: 'center' },
-  interactionButton: { minWidth: 54, height: 44, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  interactionText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   ownerActions: { minHeight: 58, paddingHorizontal: 18, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 12 },
   viewsButton: { height: 46, flex: 1, borderRadius: 23, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
   viewsText: { color: '#FFF', fontWeight: '700' },
   deleteButton: { height: 46, paddingHorizontal: 18, borderRadius: 23, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(220,38,38,.92)' },
   deleteText: { color: '#FFF', fontWeight: '800' },
-  viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
-  commentsSheet: { position: 'absolute', left: 0, right: 0, paddingTop: 12, paddingHorizontal: 18, paddingBottom: 10, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, likeUserName: { flex: 1, color: '#18181B', fontWeight: '700' }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
   commentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  commentsLoader: { marginTop: 40 }, commentsList: { flex: 1 },
-  commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4E4E7' },
-  commentBody: { flex: 1 }, commentMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  commentName: { color: '#18181B', fontWeight: '800', flexShrink: 1 }, commentTime: { color: '#A1A1AA', fontSize: 10 },
-  commentText: { color: '#3F3F46', fontSize: 14, lineHeight: 20, marginTop: 3 },
-  commentComposer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E4E4E7' },
-  commentInput: { flex: 1, minHeight: 44, maxHeight: 96, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, color: '#18181B', backgroundColor: '#F4F4F5' },
-  commentSend: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' }, commentSendDisabled: { opacity: 0.45 },
+  commentsLoader: { marginTop: 40 },
   commentsFooterLoader: { marginVertical: 16 },
 });
