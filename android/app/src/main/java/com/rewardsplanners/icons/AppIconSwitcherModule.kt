@@ -18,6 +18,8 @@ class AppIconSwitcherModule(context: ReactApplicationContext) : ReactContextBase
     "christmas" to "ChristmasIconAlias",
     "holi" to "HoliIconAlias",
     "independence_day" to "IndependenceDayIconAlias",
+    "navratri" to "NavratriIconAlias",
+    "dasera" to "DaseraIconAlias",
   ).mapValues { (_, name) -> ComponentName(context.packageName, "com.rewardsplanners.icons.$name") }
 
   private fun applyStates(states: Map<ComponentName, Int>) {

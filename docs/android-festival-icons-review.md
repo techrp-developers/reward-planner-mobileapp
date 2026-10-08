@@ -1,5 +1,13 @@
 # Android Festival App Icons - Implementation Review
 
+This document records the original five-festival implementation and its diff. The subsequent
+Navratri and Dasera extension adds Android keys `navratri` and `dasera`, two disabled launcher
+aliases, ten density PNG placeholders and two adaptive-icon XML resources. There are now eight
+launcher aliases (including default) and seven supported Android festivals. Apply
+`src/server/migrations/20261007_02_add_android_festival_icons.sql` after the original migration,
+even when the schedules table already exists. iOS keys remain unchanged until its icons are
+registered. Both new festivals still use default artwork and need real festival artwork before release.
+
 ## Checkout findings and original files
 
 The requested backend lives at src/server/routes/contentRoutes.js (not server/routes/contentRoutes.js).
@@ -1089,5 +1097,4 @@ index 0000000..b24638c
 +  expect(androidSwitch).not.toHaveBeenCalled();
 +});
 ```
-
 

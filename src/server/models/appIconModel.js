@@ -1,6 +1,7 @@
 const db = require("../config/database");
 
 const ICON_KEYS = ["default", "diwali", "eid", "christmas", "holi", "independence_day"];
+const ANDROID_ICON_KEYS = [...ICON_KEYS, "navratri", "dasera"];
 const PLATFORMS = ["ios", "android"];
 const fail = (message, statusCode = 400) => {
   throw Object.assign(new Error(message), { statusCode });
@@ -10,6 +11,8 @@ const validatePlatform = (platform) => {
   if (!PLATFORMS.includes(platform)) fail("platform must be ios or android");
   return platform;
 };
+
+const getIconKeys = (platform) => validatePlatform(platform) === "android" ? ANDROID_ICON_KEYS : ICON_KEYS;
 
 const validateId = (id) => {
   if (!/^[1-9]\d*$/.test(String(id)) || !Number.isSafeInteger(Number(id))) fail("Invalid campaign id");
@@ -28,7 +31,7 @@ const toUtcSqlDate = (value) => {
 
 const validateCampaign = (data) => {
   validatePlatform(data.platform);
-  if (!ICON_KEYS.includes(data.icon_key)) fail("Unsupported icon_key");
+  if (!getIconKeys(data.platform).includes(data.icon_key)) fail("Unsupported icon_key");
   const startsAt = toUtcSqlDate(data.starts_at);
   const endsAt = toUtcSqlDate(data.ends_at);
   if (endsAt <= startsAt) fail("ends_at must be after starts_at");
@@ -47,6 +50,7 @@ const getById = async (id) => {
 
 module.exports = {
   ICON_KEYS,
+  getIconKeys,
   validatePlatform,
   validateCampaign,
   getById,
@@ -59,7 +63,7 @@ module.exports = {
        ORDER BY priority DESC, starts_at DESC, id DESC LIMIT 1`,
       [platform],
     );
-    return { platform, icon_key: ICON_KEYS.includes(rows[0]?.icon_key) ? rows[0].icon_key : "default" };
+    return { platform, icon_key: getIconKeys(platform).includes(rows[0]?.icon_key) ? rows[0].icon_key : "default" };
   },
   async list(platform) {
     if (platform !== undefined) validatePlatform(platform);

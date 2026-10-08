@@ -1,0 +1,309 @@
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 60f1af3..e6470dd 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -164,6 +164,32 @@
+             </intent-filter>
+         </activity-alias>
+ 
++        <activity-alias
++            android:name=".icons.NavratriIconAlias"
++            android:enabled="false"
++            android:targetActivity=".MainActivity"
++            android:icon="@mipmap/ic_launcher_navratri"
++            android:label="@string/app_name"
++            android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity-alias>
++
++        <activity-alias
++            android:name=".icons.DaseraIconAlias"
++            android:enabled="false"
++            android:targetActivity=".MainActivity"
++            android:icon="@mipmap/ic_launcher_dasera"
++            android:label="@string/app_name"
++            android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity-alias>
++
+         <!-- Required for Health Connect permission usage -->
+         <activity-alias
+             android:name="ViewPermissionUsageActivity"
+diff --git a/android/app/src/main/java/com/rewardsplanners/icons/AppIconSwitcherModule.kt b/android/app/src/main/java/com/rewardsplanners/icons/AppIconSwitcherModule.kt
+index a6d1c51..de60ca7 100644
+--- a/android/app/src/main/java/com/rewardsplanners/icons/AppIconSwitcherModule.kt
++++ b/android/app/src/main/java/com/rewardsplanners/icons/AppIconSwitcherModule.kt
+@@ -18,6 +18,8 @@ class AppIconSwitcherModule(context: ReactApplicationContext) : ReactContextBase
+     "christmas" to "ChristmasIconAlias",
+     "holi" to "HoliIconAlias",
+     "independence_day" to "IndependenceDayIconAlias",
++    "navratri" to "NavratriIconAlias",
++    "dasera" to "DaseraIconAlias",
+   ).mapValues { (_, name) -> ComponentName(context.packageName, "com.rewardsplanners.icons.$name") }
+ 
+   private fun applyStates(states: Map<ComponentName, Int>) {
+diff --git a/docs/android-festival-icons-review.md b/docs/android-festival-icons-review.md
+index b096538..ec8f731 100644
+--- a/docs/android-festival-icons-review.md
++++ b/docs/android-festival-icons-review.md
+@@ -1,5 +1,13 @@
+ # Android Festival App Icons - Implementation Review
+ 
++This document records the original five-festival implementation and its diff. The subsequent
++Navratri and Dasera extension adds Android keys `navratri` and `dasera`, two disabled launcher
++aliases, ten density PNG placeholders and two adaptive-icon XML resources. There are now eight
++launcher aliases (including default) and seven supported Android festivals. Apply
++`src/server/migrations/20261007_02_add_android_festival_icons.sql` after the original migration,
++even when the schedules table already exists. iOS keys remain unchanged until its icons are
++registered. Both new festivals still use default artwork and need real festival artwork before release.
++
+ ## Checkout findings and original files
+ 
+ The requested backend lives at src/server/routes/contentRoutes.js (not server/routes/contentRoutes.js).
+@@ -1090,4 +1098,3 @@ index 0000000..b24638c
+ +});
+ ```
+ 
+-
+diff --git a/src/server/controllers/appIconController.js b/src/server/controllers/appIconController.js
+index 86344ff..c72f74e 100644
+--- a/src/server/controllers/appIconController.js
++++ b/src/server/controllers/appIconController.js
+@@ -12,7 +12,7 @@ const handler = (action, status = 200) => async (req, res) => {
+ 
+ module.exports = {
+   resolve: handler((req) => model.resolve(req.query.platform)),
+-  keys: handler((req) => ({ platform: model.validatePlatform(req.query.platform), icon_keys: model.ICON_KEYS })),
++  keys: handler((req) => ({ platform: model.validatePlatform(req.query.platform), icon_keys: model.getIconKeys(req.query.platform) })),
+   list: handler((req) => model.list(req.query.platform)),
+   get: handler((req) => model.getById(req.params.id)),
+   create: handler((req) => model.create(req.body), 201),
+diff --git a/src/server/models/appIconModel.js b/src/server/models/appIconModel.js
+index aae7913..559617d 100644
+--- a/src/server/models/appIconModel.js
++++ b/src/server/models/appIconModel.js
+@@ -1,6 +1,7 @@
+ const db = require("../config/database");
+ 
+ const ICON_KEYS = ["default", "diwali", "eid", "christmas", "holi", "independence_day"];
++const ANDROID_ICON_KEYS = [...ICON_KEYS, "navratri", "dasera"];
+ const PLATFORMS = ["ios", "android"];
+ const fail = (message, statusCode = 400) => {
+   throw Object.assign(new Error(message), { statusCode });
+@@ -11,6 +12,8 @@ const validatePlatform = (platform) => {
+   return platform;
+ };
+ 
++const getIconKeys = (platform) => validatePlatform(platform) === "android" ? ANDROID_ICON_KEYS : ICON_KEYS;
++
+ const validateId = (id) => {
+   if (!/^[1-9]\d*$/.test(String(id)) || !Number.isSafeInteger(Number(id))) fail("Invalid campaign id");
+   return Number(id);
+@@ -28,7 +31,7 @@ const toUtcSqlDate = (value) => {
+ 
+ const validateCampaign = (data) => {
+   validatePlatform(data.platform);
+-  if (!ICON_KEYS.includes(data.icon_key)) fail("Unsupported icon_key");
++  if (!getIconKeys(data.platform).includes(data.icon_key)) fail("Unsupported icon_key");
+   const startsAt = toUtcSqlDate(data.starts_at);
+   const endsAt = toUtcSqlDate(data.ends_at);
+   if (endsAt <= startsAt) fail("ends_at must be after starts_at");
+@@ -47,6 +50,7 @@ const getById = async (id) => {
+ 
+ module.exports = {
+   ICON_KEYS,
++  getIconKeys,
+   validatePlatform,
+   validateCampaign,
+   getById,
+@@ -59,7 +63,7 @@ module.exports = {
+        ORDER BY priority DESC, starts_at DESC, id DESC LIMIT 1`,
+       [platform],
+     );
+-    return { platform, icon_key: ICON_KEYS.includes(rows[0]?.icon_key) ? rows[0].icon_key : "default" };
++    return { platform, icon_key: getIconKeys(platform).includes(rows[0]?.icon_key) ? rows[0].icon_key : "default" };
+   },
+   async list(platform) {
+     if (platform !== undefined) validatePlatform(platform);
+diff --git a/src/server/tests/appIcon.test.js b/src/server/tests/appIcon.test.js
+index 6d5ed4e..0474d45 100644
+--- a/src/server/tests/appIcon.test.js
++++ b/src/server/tests/appIcon.test.js
+@@ -21,13 +21,25 @@ test("validates both platforms, exact icon keys, timezone, date order, priority
+     assert.equal(model.validateCampaign({ ...campaign, platform })[0], platform);
+   }
+   for (const override of [
+-    { platform: "web" }, { icon_key: "navratri" }, { icon_key: "independence-day" },
++    { platform: "web" }, { icon_key: "unknown_festival" }, { icon_key: "independence-day" },
+     { starts_at: "2026-10-01T00:00:00" }, { ends_at: campaign.starts_at },
+     { priority: 1.2 }, { is_active: "false" },
+   ]) assert.throws(() => model.validateCampaign({ ...campaign, ...override }), { statusCode: 400 });
+   assert.equal(model.validateCampaign({ ...campaign, starts_at: "2026-10-01T05:30:00+05:30" })[2], "2026-10-01 00:00:00.000");
+ });
+ 
++test("Navratri and Dasera are supported on Android without advertising unregistered iOS icons", async () => {
++  for (const icon_key of ["navratri", "dasera"]) {
++    assert.equal(model.validateCampaign({ ...campaign, icon_key })[1], icon_key);
++    assert.ok(model.getIconKeys("android").includes(icon_key));
++    assert.ok(!model.getIconKeys("ios").includes(icon_key));
++    assert.throws(() => model.validateCampaign({ ...campaign, platform: "ios", icon_key }), { statusCode: 400 });
++    rows = [{ icon_key }];
++    assert.equal((await model.resolve("android")).icon_key, icon_key);
++    assert.equal((await model.resolve("ios")).icon_key, "default");
++  }
++});
++
+ test("resolution filters active platform schedules in UTC and orders priority with deterministic ties", async () => {
+   calls = [];
+   rows = [{ icon_key: "diwali" }];
+@@ -38,7 +50,7 @@ test("resolution filters active platform schedules in UTC and orders priority wi
+   assert.match(calls[0].sql, /ORDER BY priority DESC, starts_at DESC, id DESC LIMIT 1/);
+   rows = [];
+   assert.deepEqual(await model.resolve("ios"), { platform: "ios", icon_key: "default" });
+-  rows = [{ icon_key: "navratri" }];
++  rows = [{ icon_key: "unknown_festival" }];
+   assert.equal((await model.resolve("android")).icon_key, "default");
+ });
+ 
+diff --git a/src/services/__tests__/iconService.test.ts b/src/services/__tests__/iconService.test.ts
+index b24638c..da8a2b0 100644
+--- a/src/services/__tests__/iconService.test.ts
++++ b/src/services/__tests__/iconService.test.ts
+@@ -22,8 +22,16 @@ test('Android sends its platform and passes the key to native', async () => {
+   expect(androidSwitch).toHaveBeenCalledWith('independence_day');
+ });
+ 
++test('Navratri and Dasera reach Android native switching but restore default on unregistered iOS', async () => {
++  for (const key of ['navratri', 'dasera']) await applyAppIcon(key);
++  expect(androidSwitch.mock.calls).toEqual([['navratri'], ['dasera']]);
++  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
++  for (const key of ['navratri', 'dasera']) await applyAppIcon(key);
++  expect(iosSwitch.mock.calls).toEqual([[null], [null]]);
++});
++
+ test('unknown and prototype-like keys restore default', async () => {
+-  for (const key of ['navratri', 'independence-day', 'toString', '__proto__']) await applyAppIcon(key);
++  for (const key of ['unknown_festival', 'independence-day', 'toString', '__proto__']) await applyAppIcon(key);
+   expect(androidSwitch.mock.calls).toEqual(Array(4).fill(['default']));
+ });
+ 
+diff --git a/src/services/iconService.ts b/src/services/iconService.ts
+index 31d2bee..580aac1 100644
+--- a/src/services/iconService.ts
++++ b/src/services/iconService.ts
+@@ -17,11 +17,12 @@ export const ICON_MAP = {
+     christmas: 'christmas',
+     holi: 'holi',
+     independence_day: 'independence_day',
++    navratri: 'navratri',
++    dasera: 'dasera',
+   },
+ } as const;
+ 
+ type IconPlatform = keyof typeof ICON_MAP;
+-type IconKey = keyof typeof ICON_MAP.android;
+ 
+ const getPlatform = (): IconPlatform | null =>
+   Platform.OS === 'android' || Platform.OS === 'ios' ? Platform.OS : null;
+@@ -29,15 +30,16 @@ const getPlatform = (): IconPlatform | null =>
+ export const applyAppIcon = async (iconKey: string): Promise<void> => {
+   const platform = getPlatform();
+   if (!platform) return;
+-  const key: IconKey = Object.prototype.hasOwnProperty.call(ICON_MAP[platform], iconKey)
+-    ? (iconKey as IconKey)
++  const iconMap: Readonly<Record<string, string>> = ICON_MAP[platform];
++  const key = Object.prototype.hasOwnProperty.call(iconMap, iconKey)
++    ? iconKey
+     : 'default';
+   const bridge = platform === 'android'
+     ? NativeModules.AppIconSwitcherModule
+     : NativeModules.AppIconSwitcher;
+   if (!bridge?.setAppIcon) throw new Error(`App icon native bridge is unavailable on ${platform}`);
+   // Android owns ComponentName mapping; iOS receives its alternate asset name (null resets default).
+-  await bridge.setAppIcon(platform === 'ios' && key === 'default' ? null : ICON_MAP[platform][key]);
++  await bridge.setAppIcon(platform === 'ios' && key === 'default' ? null : iconMap[key]);
+ };
+ 
+ let refreshInFlight: Promise<void> | null = null;
+diff --git a/src/server/migrations/20261007_02_add_android_festival_icons.sql b/src/server/migrations/20261007_02_add_android_festival_icons.sql
+new file mode 100644
+index 0000000..281da76
+--- /dev/null
++++ b/src/server/migrations/20261007_02_add_android_festival_icons.sql
+@@ -0,0 +1,6 @@
++-- Run after 20261007_01_create_app_icon_campaigns.sql, including on existing installations.
++-- New Android artwork keys; the API keeps iOS restricted to its registered icons.
++ALTER TABLE app_icon_campaigns
++  MODIFY COLUMN icon_key ENUM(
++    'default', 'diwali', 'eid', 'christmas', 'holi', 'independence_day', 'navratri', 'dasera'
++  ) NOT NULL;
+diff --git a/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_navratri.xml b/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_navratri.xml
+new file mode 100644
+index 0000000..d6ed6dd
+--- /dev/null
++++ b/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_navratri.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Placeholder: replace with dedicated festival layers before release. -->
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++  <background android:drawable="@mipmap/ic_launcher_adaptive_back" />
++  <foreground android:drawable="@mipmap/ic_launcher_adaptive_fore" />
++</adaptive-icon>
+diff --git a/android/app/src/main/res/mipmap-mdpi/ic_launcher_navratri.png b/android/app/src/main/res/mipmap-mdpi/ic_launcher_navratri.png
+new file mode 100644
+index 0000000..47aa612
+Binary files /dev/null and b/android/app/src/main/res/mipmap-mdpi/ic_launcher_navratri.png differ
+diff --git a/android/app/src/main/res/mipmap-hdpi/ic_launcher_navratri.png b/android/app/src/main/res/mipmap-hdpi/ic_launcher_navratri.png
+new file mode 100644
+index 0000000..733d5d7
+Binary files /dev/null and b/android/app/src/main/res/mipmap-hdpi/ic_launcher_navratri.png differ
+diff --git a/android/app/src/main/res/mipmap-xhdpi/ic_launcher_navratri.png b/android/app/src/main/res/mipmap-xhdpi/ic_launcher_navratri.png
+new file mode 100644
+index 0000000..c550ace
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xhdpi/ic_launcher_navratri.png differ
+diff --git a/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_navratri.png b/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_navratri.png
+new file mode 100644
+index 0000000..c7fb7bb
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_navratri.png differ
+diff --git a/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_navratri.png b/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_navratri.png
+new file mode 100644
+index 0000000..796ac4f
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_navratri.png differ
+diff --git a/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_dasera.xml b/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_dasera.xml
+new file mode 100644
+index 0000000..d6ed6dd
+--- /dev/null
++++ b/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_dasera.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Placeholder: replace with dedicated festival layers before release. -->
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++  <background android:drawable="@mipmap/ic_launcher_adaptive_back" />
++  <foreground android:drawable="@mipmap/ic_launcher_adaptive_fore" />
++</adaptive-icon>
+diff --git a/android/app/src/main/res/mipmap-mdpi/ic_launcher_dasera.png b/android/app/src/main/res/mipmap-mdpi/ic_launcher_dasera.png
+new file mode 100644
+index 0000000..47aa612
+Binary files /dev/null and b/android/app/src/main/res/mipmap-mdpi/ic_launcher_dasera.png differ
+diff --git a/android/app/src/main/res/mipmap-hdpi/ic_launcher_dasera.png b/android/app/src/main/res/mipmap-hdpi/ic_launcher_dasera.png
+new file mode 100644
+index 0000000..733d5d7
+Binary files /dev/null and b/android/app/src/main/res/mipmap-hdpi/ic_launcher_dasera.png differ
+diff --git a/android/app/src/main/res/mipmap-xhdpi/ic_launcher_dasera.png b/android/app/src/main/res/mipmap-xhdpi/ic_launcher_dasera.png
+new file mode 100644
+index 0000000..c550ace
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xhdpi/ic_launcher_dasera.png differ
+diff --git a/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_dasera.png b/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_dasera.png
+new file mode 100644
+index 0000000..c7fb7bb
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_dasera.png differ
+diff --git a/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_dasera.png b/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_dasera.png
+new file mode 100644
+index 0000000..796ac4f
+Binary files /dev/null and b/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_dasera.png differ

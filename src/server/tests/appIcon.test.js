@@ -21,11 +21,23 @@ test("validates both platforms, exact icon keys, timezone, date order, priority 
     assert.equal(model.validateCampaign({ ...campaign, platform })[0], platform);
   }
   for (const override of [
-    { platform: "web" }, { icon_key: "navratri" }, { icon_key: "independence-day" },
+    { platform: "web" }, { icon_key: "unknown_festival" }, { icon_key: "independence-day" },
     { starts_at: "2026-10-01T00:00:00" }, { ends_at: campaign.starts_at },
     { priority: 1.2 }, { is_active: "false" },
   ]) assert.throws(() => model.validateCampaign({ ...campaign, ...override }), { statusCode: 400 });
   assert.equal(model.validateCampaign({ ...campaign, starts_at: "2026-10-01T05:30:00+05:30" })[2], "2026-10-01 00:00:00.000");
+});
+
+test("Navratri and Dasera are supported on Android without advertising unregistered iOS icons", async () => {
+  for (const icon_key of ["navratri", "dasera"]) {
+    assert.equal(model.validateCampaign({ ...campaign, icon_key })[1], icon_key);
+    assert.ok(model.getIconKeys("android").includes(icon_key));
+    assert.ok(!model.getIconKeys("ios").includes(icon_key));
+    assert.throws(() => model.validateCampaign({ ...campaign, platform: "ios", icon_key }), { statusCode: 400 });
+    rows = [{ icon_key }];
+    assert.equal((await model.resolve("android")).icon_key, icon_key);
+    assert.equal((await model.resolve("ios")).icon_key, "default");
+  }
 });
 
 test("resolution filters active platform schedules in UTC and orders priority with deterministic ties", async () => {
@@ -38,7 +50,7 @@ test("resolution filters active platform schedules in UTC and orders priority wi
   assert.match(calls[0].sql, /ORDER BY priority DESC, starts_at DESC, id DESC LIMIT 1/);
   rows = [];
   assert.deepEqual(await model.resolve("ios"), { platform: "ios", icon_key: "default" });
-  rows = [{ icon_key: "navratri" }];
+  rows = [{ icon_key: "unknown_festival" }];
   assert.equal((await model.resolve("android")).icon_key, "default");
 });
 

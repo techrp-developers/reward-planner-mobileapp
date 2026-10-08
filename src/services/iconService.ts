@@ -17,11 +17,12 @@ export const ICON_MAP = {
     christmas: 'christmas',
     holi: 'holi',
     independence_day: 'independence_day',
+    navratri: 'navratri',
+    dasera: 'dasera',
   },
 } as const;
 
 type IconPlatform = keyof typeof ICON_MAP;
-type IconKey = keyof typeof ICON_MAP.android;
 
 const getPlatform = (): IconPlatform | null =>
   Platform.OS === 'android' || Platform.OS === 'ios' ? Platform.OS : null;
@@ -29,15 +30,16 @@ const getPlatform = (): IconPlatform | null =>
 export const applyAppIcon = async (iconKey: string): Promise<void> => {
   const platform = getPlatform();
   if (!platform) return;
-  const key: IconKey = Object.prototype.hasOwnProperty.call(ICON_MAP[platform], iconKey)
-    ? (iconKey as IconKey)
+  const iconMap: Readonly<Record<string, string>> = ICON_MAP[platform];
+  const key = Object.prototype.hasOwnProperty.call(iconMap, iconKey)
+    ? iconKey
     : 'default';
   const bridge = platform === 'android'
     ? NativeModules.AppIconSwitcherModule
     : NativeModules.AppIconSwitcher;
   if (!bridge?.setAppIcon) throw new Error(`App icon native bridge is unavailable on ${platform}`);
   // Android owns ComponentName mapping; iOS receives its alternate asset name (null resets default).
-  await bridge.setAppIcon(platform === 'ios' && key === 'default' ? null : ICON_MAP[platform][key]);
+  await bridge.setAppIcon(platform === 'ios' && key === 'default' ? null : iconMap[key]);
 };
 
 let refreshInFlight: Promise<void> | null = null;

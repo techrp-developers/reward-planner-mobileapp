@@ -22,8 +22,16 @@ test('Android sends its platform and passes the key to native', async () => {
   expect(androidSwitch).toHaveBeenCalledWith('independence_day');
 });
 
+test('Navratri and Dasera reach Android native switching but restore default on unregistered iOS', async () => {
+  for (const key of ['navratri', 'dasera']) await applyAppIcon(key);
+  expect(androidSwitch.mock.calls).toEqual([['navratri'], ['dasera']]);
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  for (const key of ['navratri', 'dasera']) await applyAppIcon(key);
+  expect(iosSwitch.mock.calls).toEqual([[null], [null]]);
+});
+
 test('unknown and prototype-like keys restore default', async () => {
-  for (const key of ['navratri', 'independence-day', 'toString', '__proto__']) await applyAppIcon(key);
+  for (const key of ['unknown_festival', 'independence-day', 'toString', '__proto__']) await applyAppIcon(key);
   expect(androidSwitch.mock.calls).toEqual(Array(4).fill(['default']));
 });
 
