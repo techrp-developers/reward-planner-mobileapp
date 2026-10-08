@@ -286,9 +286,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             activeOpacity={0.75}
           >
             <MaterialCommunityIcons name="bell-outline" size={24} color={tk.nameColor} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
           </TouchableOpacity>
 
         </View>
@@ -438,25 +435,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 1,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EF4444',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  notificationBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '900',
   },
   logoPill: {
     borderRadius: 18,
