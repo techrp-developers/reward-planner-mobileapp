@@ -46,7 +46,6 @@ export default function GroupInfoScreen() {
           </Text>
         </View>
         {isAdmin ? <View style={[styles.adminBadge, { borderColor: theme.primary }]}><Text style={[styles.adminText, { color: theme.primary }]}>Group admin</Text></View> : null}
-        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.secondaryText} />
       </TouchableOpacity>
     );
   };
@@ -61,6 +60,12 @@ export default function GroupInfoScreen() {
       </View>
       <FlatList
         data={members}
+        scrollEnabled
+        showsVerticalScrollIndicator
+        initialNumToRender={15}
+        maxToRenderPerBatch={15}
+        windowSize={9}
+        removeClippedSubviews
         keyExtractor={item => String(item.user_id)}
         renderItem={renderMember}
         contentContainerStyle={styles.content}

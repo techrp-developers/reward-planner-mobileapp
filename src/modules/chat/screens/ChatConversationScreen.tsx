@@ -122,7 +122,6 @@ export default function ChatConversationScreen() {
         style={styles.headerDetails}>
         <ChatAvatar name={title} uri={conversation.type === 'direct' ? peer?.user_image : undefined} size={42} online={online} />
         <View style={styles.headerText}><Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>{title}</Text><View style={styles.statusRow}>{online && !typing && conversation.type === 'direct' ? <View style={styles.onlineDot} /> : null}<Text style={[styles.status, { color: typing || online ? '#22C55E' : theme.secondaryText }]} numberOfLines={1}>{typing ? 'typing…' : conversation.type === 'group' ? `${conversation.members.length} members · tap for info` : directStatus}</Text></View></View>
-        {conversation.type === 'group' || peer ? <MaterialCommunityIcons name="chevron-right" size={22} color={theme.secondaryText} /> : null}
       </TouchableOpacity>
     </View>
     {loading ? <View style={styles.center}><ActivityIndicator color={theme.primary} /></View> : <FlatList ref={listRef} data={messages} keyExtractor={item => String(item.message_id || item.client_message_id)} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })} renderItem={({ item, index }) => {

@@ -54,6 +54,12 @@ export default function ChatInboxScreen() {
       {!loading && !error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-text-outline" size={48} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Start a conversation</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>Chat privately with a coworker or create a group.</Text></View> : null}
       <FlatList
         data={items}
+        scrollEnabled
+        showsVerticalScrollIndicator
+        initialNumToRender={15}
+        maxToRenderPerBatch={15}
+        windowSize={9}
+        removeClippedSubviews
         keyExtractor={item => String(item.conversation_id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.primary} />}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + 12 }]}
