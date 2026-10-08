@@ -64,6 +64,7 @@ export type ChatStackParamList = {
   ChatInbox: undefined;
   NewChat: undefined;
   ChatConversation: { conversation: ChatConversation };
+  GroupInfo: { conversation: ChatConversation };
 };
 
 export type ChatSocketEvent = {

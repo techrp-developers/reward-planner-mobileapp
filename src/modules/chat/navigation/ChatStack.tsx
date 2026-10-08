@@ -4,6 +4,7 @@ import type { ChatStackParamList } from '../types';
 import ChatInboxScreen from '../screens/ChatInboxScreen';
 import NewChatScreen from '../screens/NewChatScreen';
 import ChatConversationScreen from '../screens/ChatConversationScreen';
+import GroupInfoScreen from '../screens/GroupInfoScreen';
 
 const Stack = createNativeStackNavigator<ChatStackParamList>();
 
@@ -12,5 +13,6 @@ export default function ChatStack() {
     <Stack.Screen name="ChatInbox" component={ChatInboxScreen} />
     <Stack.Screen name="NewChat" component={NewChatScreen} />
     <Stack.Screen name="ChatConversation" component={ChatConversationScreen} />
+    <Stack.Screen name="GroupInfo" component={GroupInfoScreen} />
   </Stack.Navigator>;
 }
