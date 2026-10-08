@@ -4,6 +4,7 @@ export type ChatUser = {
   user_image?: string | null;
   department?: string | null;
   role?: string | null;
+  job_role?: string | null;
 };
 
 export type ChatMember = ChatUser & { role?: 'admin' | 'member' | string };
@@ -65,6 +66,7 @@ export type ChatStackParamList = {
   NewChat: undefined;
   ChatConversation: { conversation: ChatConversation };
   GroupInfo: { conversation: ChatConversation };
+  MemberProfile: { member: ChatMember };
 };
 
 export type ChatSocketEvent = {

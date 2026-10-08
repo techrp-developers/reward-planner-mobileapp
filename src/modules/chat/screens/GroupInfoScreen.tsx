@@ -29,18 +29,25 @@ export default function GroupInfoScreen() {
     const isMe = Number(item.user_id) === Number(user?.user_id);
     const isAdmin = item.role === 'admin';
     return (
-      <View style={[styles.memberRow, { borderBottomColor: theme.border }]}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`View ${item.name}'s profile`}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('MemberProfile', { member: item })}
+        style={[styles.memberRow, { borderBottomColor: theme.border }]}
+      >
         <ChatAvatar name={item.name} uri={item.user_image} size={48} />
         <View style={styles.memberText}>
           <Text style={[styles.memberName, { color: theme.text }]} numberOfLines={1}>
             {item.name}{isMe ? ' (You)' : ''}
           </Text>
           <Text style={[styles.memberMeta, { color: theme.secondaryText }]} numberOfLines={1}>
-            {[item.department, item.role && item.role !== 'admin' ? item.role : null].filter(Boolean).join(' · ') || 'Group member'}
+            {[item.department, item.job_role].filter(Boolean).join(' · ') || 'Group member'}
           </Text>
         </View>
         {isAdmin ? <View style={[styles.adminBadge, { borderColor: theme.primary }]}><Text style={[styles.adminText, { color: theme.primary }]}>Group admin</Text></View> : null}
-      </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.secondaryText} />
+      </TouchableOpacity>
     );
   };
 
