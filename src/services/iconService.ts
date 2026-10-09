@@ -41,6 +41,7 @@ export const applyAppIcon = async (iconKey: string): Promise<void> => {
   if (!bridge?.setAppIcon) throw new Error(`App icon native bridge is unavailable on ${platform}`);
   // Android owns ComponentName mapping; iOS receives its alternate asset name (null resets default).
   await bridge.setAppIcon(platform === 'ios' && key === 'default' ? null : iconMap[key]);
+  if (__DEV__) console.log('[AppIcon] Applied icon:', key);
 };
 
 let refreshInFlight: Promise<void> | null = null;
@@ -58,6 +59,7 @@ export const refreshFestivalIcon = (): Promise<void> => {
       throw new Error('Invalid resolved app-icon response');
     }
     // Fetch/validation failures never call the native bridge, preserving the current icon.
+    if (__DEV__) console.log('[AppIcon] Resolved icon:', data.data.icon_key);
     await applyAppIcon(data.data.icon_key);
   })().finally(() => { refreshInFlight = null; });
   return refreshInFlight;
