@@ -1,4 +1,5 @@
-const { spawnSync } = require('child_process');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { existsSync } = require('fs');
 const os = require('os');
 const path = require('path');
@@ -16,26 +17,50 @@ const adb = sdkRoots
   .map(root => path.join(root, 'platform-tools', executable))
   .find(candidate => existsSync(candidate)) || executable;
 
-const devices = spawnSync(adb, ['devices'], { encoding: 'utf8' });
-if (devices.error || devices.status !== 0) {
-  console.warn('[adb reverse] adb unavailable. Connect Android and forward ports 5000 and 8081 before using the local API.');
-} else {
-  const serials = devices.stdout.split(/\r?\n/)
-    .map(line => line.match(/^(\S+)\s+device\s*$/)?.[1])
-    .filter(Boolean);
+const run = promisify(execFile);
+const runAdb = args => run(adb, args, { encoding: 'utf8', timeout: 5000, windowsHide: true });
+let checking = false;
+let watcher;
 
-  if (!serials.length) {
-    console.warn('[adb reverse] No authorized Android device connected. Run this script again after connecting your device.');
-  }
-
-  for (const serial of serials) {
-    for (const port of [5000, 8081]) {
-      const result = spawnSync(adb, ['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`], { encoding: 'utf8' });
-      if (result.error || result.status !== 0) {
-        console.warn(`[adb reverse] Failed to forward port ${port} on ${serial}: ${result.error?.message || result.stderr}`);
-      } else {
-        console.log(`[adb reverse] ${serial}: port ${port} forwarded`);
+async function ensureReverse(quiet = false) {
+  if (checking) return;
+  checking = true;
+  try {
+    const devices = await runAdb(['devices']);
+    const serials = devices.stdout.split(/\r?\n/)
+      .map(line => line.match(/^(\S+)\s+device\s*$/)?.[1])
+      .filter(Boolean);
+    if (!serials.length && !quiet) {
+      console.warn('[adb reverse] No authorized Android device connected.');
+    }
+    for (const serial of serials) {
+      const mappings = await runAdb(['-s', serial, 'reverse', '--list']);
+      for (const port of [5000, 8081]) {
+        const target = `tcp:${port}`;
+        const exists = mappings.stdout.split(/\r?\n/).some(line => {
+          const fields = line.trim().split(/\s+/);
+          return fields[1] === target && fields[2] === target;
+        });
+        if (!exists) {
+          await runAdb(['-s', serial, 'reverse', target, target]);
+          console.log(`[adb reverse] ${serial}: port ${port} forwarded`);
+        }
       }
     }
+  } catch (error) {
+    if (!quiet) console.warn(`[adb reverse] Unable to configure forwarding: ${error.message}`);
+  } finally {
+    checking = false;
   }
 }
+
+function watchReverse() {
+  if (watcher) return;
+  void ensureReverse();
+  // USB reconnection and adb restarts can discard existing reverse mappings.
+  watcher = setInterval(() => { void ensureReverse(true); }, 5000);
+  watcher.unref();
+}
+
+module.exports = { ensureReverse, watchReverse };
+if (require.main === module) void ensureReverse();

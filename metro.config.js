@@ -4,6 +4,9 @@ const exclusionList = require("metro-config/private/defaults/exclusionList").def
 
 const defaultConfig = getDefaultConfig(__dirname);
 
+// Keep local Android API access working after USB/adb reconnects.
+require('./scripts/adb-reverse').watchReverse();
+
 module.exports = mergeConfig(defaultConfig, {
   // Watchman isn't installed on this machine; spawning a missing `watchman`
   // binary can hang on Windows instead of failing fast, which was causing

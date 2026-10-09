@@ -15,6 +15,7 @@ import { chatSocket } from '../services/chatSocket';
 import type { ChatMessage, ChatStackParamList } from '../types';
 import PollBubble from '../components/PollBubble';
 import CreatePollModal from '../components/CreatePollModal';
+import ChatAttachmentSheet from '../components/ChatAttachmentSheet';
 
 type Route = NativeStackScreenProps<ChatStackParamList, 'ChatConversation'>['route'];
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
@@ -37,6 +38,7 @@ export default function ChatConversationScreen() {
   const [online, setOnline] = useState(false);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const [pollModal, setPollModal] = useState(false);
+  const [attachmentMenu, setAttachmentMenu] = useState(false);
   const title = conversationTitle(conversation, user?.user_id);
   const peer = otherMember(conversation, user?.user_id);
 
@@ -94,12 +96,7 @@ export default function ChatConversationScreen() {
     } catch (error: any) { if (error?.code !== 'OPERATION_CANCELED') Alert.alert('Document not sent', chatError(error, 'Please try again.')); }
     finally { setSending(false); }
   };
-  const showAttachmentMenu = () => Alert.alert('Share in chat', undefined, [
-    { text: 'Image', onPress: pickAndSendImage },
-    { text: 'Document', onPress: pickAndSendDocument },
-    { text: 'Poll', onPress: () => setPollModal(true) },
-    { text: 'Cancel', style: 'cancel' },
-  ]);
+  const showAttachmentMenu = () => setAttachmentMenu(true);
   const createPoll = async (question: string, options: string[]) => { addMessage(await createChatPoll(conversation.conversation_id, question, options, clientId(user?.user_id))); };
   const votePoll = async (messageId: number, pollId: number, optionId: number) => { const poll = await voteChatPoll(pollId, [optionId]); setMessages(current => current.map(item => item.message_id === messageId ? { ...item, poll } : item)); };
   const directStatus = online
@@ -130,6 +127,13 @@ export default function ChatConversationScreen() {
       return <View style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}><View style={[styles.bubbleWrap, mine ? styles.mineWrap : styles.theirWrap]}>{showName ? <Text style={[styles.sender, { color: theme.primary }]}>{item.sender_name}</Text> : null}<View style={[styles.bubble, item.message_type === 'image' && styles.imageBubble, mine ? styles.mine : { backgroundColor: isDark ? '#27272A' : '#F3F4F6' }]}>{item.deleted_at ? <Text style={[styles.messageText, { color: foreground }]}>This message was deleted</Text> : item.message_type === 'image' && item.attachment_url ? <Image source={{ uri: chatImageUrl(item.attachment_url) }} style={styles.chatImage} resizeMode="cover" /> : item.message_type === 'file' && item.attachment_url ? <TouchableOpacity style={styles.fileRow} onPress={() => Linking.openURL(item.attachment_url!)}><MaterialCommunityIcons name="file-document-outline" size={30} color={foreground} /><View style={styles.fileText}><Text numberOfLines={2} style={[styles.fileName, { color: foreground }]}>{item.attachment_name || 'Document'}</Text><Text style={[styles.fileType, { color: foreground }]}>{item.attachment_mime_type || 'File'}</Text></View><MaterialCommunityIcons name="download" size={21} color={foreground} /></TouchableOpacity> : item.message_type === 'poll' && item.poll ? <PollBubble poll={item.poll} mine={mine} textColor={foreground} onVote={optionId => votePoll(item.message_id, item.poll!.poll_id, optionId)} /> : <Text style={[styles.messageText, { color: foreground }]}>{item.body}</Text>}<View style={styles.metaRow}><Text style={[styles.messageTime, { color: mine ? 'rgba(255,255,255,.72)' : theme.secondaryText }]}>{chatTime(item.created_at)}</Text>{mine ? <MaterialCommunityIcons name={item.is_read ? 'check-all' : 'check'} size={15} color={item.is_read ? '#67E8F9' : 'rgba(255,255,255,.72)'} /> : null}</View></View></View></View>;
     }} ListEmptyComponent={<View style={styles.empty}><MaterialCommunityIcons name="hand-wave-outline" size={32} color={theme.primary} /><Text style={[styles.emptyText, { color: theme.secondaryText }]}>Say hello to start the conversation</Text></View>} />}
     <View style={[styles.composerWrap, { paddingBottom: Math.max(insets.bottom, 9), borderTopColor: theme.border, backgroundColor: theme.card }]}><View style={[styles.composer, { backgroundColor: theme.background, borderColor: theme.border }]}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Add attachment or poll" onPress={showAttachmentMenu} disabled={sending} style={[styles.attach, { backgroundColor: theme.primary }]}><MaterialCommunityIcons name="paperclip" size={21} color="#FFF" /></TouchableOpacity><TextInput value={text} onChangeText={onChangeText} onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 250)} placeholder="Message" placeholderTextColor={theme.secondaryText} style={[styles.input, { color: theme.text }]} multiline maxLength={5000} /><TouchableOpacity onPress={send} disabled={!text.trim() || sending} style={[styles.send, { backgroundColor: text.trim() ? theme.primary : theme.border }]}>{sending ? <ActivityIndicator size="small" color="#FFF" /> : <MaterialCommunityIcons name="send" size={20} color="#FFF" />}</TouchableOpacity></View></View>
+    <ChatAttachmentSheet
+      visible={attachmentMenu}
+      onClose={() => setAttachmentMenu(false)}
+      onImage={() => { setAttachmentMenu(false); void pickAndSendImage(); }}
+      onDocument={() => { setAttachmentMenu(false); void pickAndSendDocument(); }}
+      onPoll={() => { setAttachmentMenu(false); setPollModal(true); }}
+    />
     <CreatePollModal visible={pollModal} onClose={() => setPollModal(false)} onCreate={createPoll} />
   </KeyboardAvoidingView>;
 }
