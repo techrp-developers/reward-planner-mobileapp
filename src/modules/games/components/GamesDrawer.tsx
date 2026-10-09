@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Modal from 'react-native-modal';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +35,15 @@ export default function GamesDrawer({ games: customGames }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const close = () => setVisible(false);
+  // Keep dismissal gestures off the list: the modal's pan responder captures
+  // touches before the native ScrollView can start a vertical drag.
+  const headerSwipe = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) =>
+      gesture.dx > 12 && gesture.dx > Math.abs(gesture.dy) * 1.5,
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dx > 64 || (gesture.dx > 24 && gesture.vx > 0.5)) setVisible(false);
+    },
+  }), []);
 
   return (
     <>
@@ -57,9 +66,6 @@ export default function GamesDrawer({ games: customGames }: Props) {
         backdropOpacity={0.45}
         onBackdropPress={close}
         onBackButtonPress={close}
-        swipeDirection="right"
-        onSwipeComplete={close}
-        propagateSwipe={(_, gesture) => Math.abs(gesture.dy) > Math.abs(gesture.dx)}
         onModalHide={() => {
           const selected = pendingGame;
           setPendingGame(null);
@@ -71,7 +77,7 @@ export default function GamesDrawer({ games: customGames }: Props) {
           accessibilityViewIsModal
           style={[styles.panel, { width: Math.min(width * 0.88, 420), paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20), paddingRight: 20 + insets.right }]}
         >
-          <View style={styles.header}>
+          <View style={styles.header} {...headerSwipe.panHandlers}>
             <View style={styles.brandIcon}>
               <MaterialCommunityIcons name="controller-classic" size={27} color="#BDF7D4" />
             </View>
@@ -83,7 +89,13 @@ export default function GamesDrawer({ games: customGames }: Props) {
               <MaterialCommunityIcons name="close" size={26} color="#F5F5F5" />
             </Pressable>
           </View>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <ScrollView
+            style={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+            directionalLockEnabled
+            nestedScrollEnabled
+          >
             <View style={styles.intro}>
               <MaterialCommunityIcons name="creation" size={30} color="#BDF7D4" />
               <Text style={styles.introTitle}>Take a play break</Text>
@@ -91,7 +103,6 @@ export default function GamesDrawer({ games: customGames }: Props) {
             </View>
             <View style={styles.sectionHeader}>
               <Text accessibilityRole="header" style={styles.sectionTitle}>All games</Text>
-              <Text style={styles.count}>{games.length}</Text>
             </View>
             {games.length === 0 && <Text style={styles.secondary}>New games will appear here when they are added.</Text>}
             {games.map(game => (
@@ -141,12 +152,12 @@ const styles = StyleSheet.create({
   title: { color: '#FAFAFA', fontSize: 27, fontWeight: '700', marginTop: 3 },
   close: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#242426', alignItems: 'center', justifyContent: 'center' },
   content: { paddingBottom: 16, gap: 16 },
+  scroll: { flex: 1 },
   intro: { backgroundColor: '#20332A', borderRadius: 24, padding: 22, gap: 10 },
   introTitle: { color: '#E5FFEE', fontSize: 25, fontWeight: '600' },
   secondary: { color: '#BDBDC5', fontSize: 14, lineHeight: 21 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   sectionTitle: { color: '#F5F5F5', fontSize: 22, fontWeight: '600' },
-  count: { color: '#C8C8CD', fontSize: 13, backgroundColor: '#29292D', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14 },
   card: { backgroundColor: '#212123', borderRadius: 24, padding: 20, gap: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   gameIcon: { width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
