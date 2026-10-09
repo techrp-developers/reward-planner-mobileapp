@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "migrate:quiz": "node scripts/migrate-quiz.js",
+    "test:quiz": "node --test app/games/v1/tests/quizPolicy.test.js app/games/v1/tests/quizController.test.js app/games/v1/tests/quizDatabase.test.js",
     "migrate:flea-market-invoices": "node scripts/migrate-invoices-add-flea-market-schedule.js",
     "migrate:flea-market-stock": "node scripts/migrate-allocations-to-vendor-stock.js",
     "migrate:client-onboarding": "node scripts/migrate-client-onboarding.js",

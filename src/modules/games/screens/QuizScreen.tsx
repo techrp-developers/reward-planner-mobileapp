@@ -1,30 +1,95 @@
-import React, { useCallback, useState } from 'react';
-import { BackHandler, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, BackHandler, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { quizLeaderboard, quizQuestions } from '../data/quizPreview';
+import { answerQuiz, getQuiz, getQuizLeaderboard, nextQuizQuestion, startQuiz, type QuizLeader, type QuizRules, type QuizSession } from '../api/quizApi';
 
 type Page = 'leaderboard' | 'question' | 'result';
-const facts = [
-  { icon: 'clipboard-list', title: '5 Questions', text: 'Each quiz has\n5 exciting questions.', color: '#368BFF' },
-  { icon: 'timer-outline', title: 'Time Limit', text: 'You have only\n15 seconds per question.', color: '#27D7A0' },
-  { icon: 'gift', title: '2 Rewards Each', text: 'Earn 2 rewards for\nevery correct answer.', color: '#BB65F4' },
-];
+const defaultRules: QuizRules = { questionCount: 5, secondsPerQuestion: 15, correctPoints: 2, wrongPenalty: 1, timeoutPenalty: 1 };
+const errorMessage = (error: any) => error?.response?.data?.message || 'Could not connect. Check your connection and try again.';
 
 export default function QuizScreen() {
   const navigation = useNavigation();
   const [page, setPage] = useState<Page>('leaderboard');
-  const [questionIndex, setQuestionIndex] = useState(0);
+  const [session, setSession] = useState<QuizSession | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  const [retried, setRetried] = useState(false);
-  const [firstTryScore, setFirstTryScore] = useState(0);
-  const question = quizQuestions[questionIndex];
-  const correct = selected === question.correctIndex;
-  const wrong = selected !== null && !correct;
+  const [leaders, setLeaders] = useState<QuizLeader[]>([]);
+  const [rules, setRules] = useState(defaultRules);
+  const [loadingLeaders, setLoadingLeaders] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [seconds, setSeconds] = useState(15);
+  const deadline = useRef(0);
+  const requestActive = useRef(false);
+  const mounted = useRef(true);
+  const questionIndex = session?.index ?? 0;
+  const question = session?.question;
+  const correct = session?.feedback === 'correct';
+  const timedOut = session?.feedback === 'timeout';
+  const wrong = selected !== null && !correct && !timedOut;
+  const facts = [
+    { icon: 'clipboard-list', title: `${rules.questionCount} Questions`, text: 'A fresh challenge\nin every round.', color: '#368BFF' },
+    { icon: 'timer-outline', title: 'Time Limit', text: `${rules.secondsPerQuestion} seconds per question.\nRetries share the timer.`, color: '#27D7A0' },
+    { icon: 'gift', title: `+${rules.correctPoints} Points`, text: `Wrong try: −${rules.wrongPenalty} point\nTime out: −${rules.timeoutPenalty} point`, color: '#BB65F4' },
+  ];
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const loadLeaders = useCallback(async () => {
+    setLoadingLeaders(true);
+    setError('');
+    try {
+      const data = await getQuizLeaderboard();
+      if (mounted.current) { setLeaders(data.players); setRules(data.rules); }
+    } catch (e) { if (mounted.current) setError(errorMessage(e)); }
+    finally { if (mounted.current) setLoadingLeaders(false); }
+  }, []);
+
+  useEffect(() => { if (page === 'leaderboard') loadLeaders(); }, [page, loadLeaders]);
+
+  const request = useCallback(async (operation: () => Promise<QuizSession>) => {
+    if (requestActive.current) return;
+    requestActive.current = true;
+    setBusy(true);
+    setError('');
+    const sentAt = Date.now();
+    try {
+      const data = await operation();
+      if (!mounted.current) return;
+      // Estimate the clock offset at the request midpoint; response latency
+      // must not grant another full 15 seconds on the device.
+      deadline.current = (sentAt + Date.now()) / 2 + data.deadline - data.serverNow;
+      setSeconds(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
+      setSession(data);
+      setRules(data.rules);
+      setSelected(data.selected);
+      setPage(data.status === 'completed' ? 'result' : 'question');
+    } catch (e) { if (mounted.current) setError(errorMessage(e)); }
+    finally { requestActive.current = false; if (mounted.current) setBusy(false); }
+  }, []);
+
+  useEffect(() => {
+    if (page !== 'question' || !session || session.feedback) return;
+    const update = () => setSeconds(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
+    update();
+    const interval = setInterval(update, 200);
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') update(); });
+    return () => { clearInterval(interval); listener.remove(); };
+  }, [page, session]);
+
+  useEffect(() => {
+    if (page === 'question' && session && seconds === 0 && !session.feedback && !busy && !error) {
+      request(() => getQuiz(session.id));
+    }
+  }, [page, session, seconds, busy, error, request]);
 
   const goBack = useCallback(() => {
+    if (requestActive.current) return;
     if (page !== 'leaderboard') setPage('leaderboard');
     else navigation.goBack();
   }, [navigation, page]);
@@ -37,28 +102,16 @@ export default function QuizScreen() {
     return () => listener.remove();
   }, [goBack]));
 
-  const start = () => {
-    setQuestionIndex(0);
-    setSelected(null);
-    setRetried(false);
-    setFirstTryScore(0);
-    setPage('question');
-  };
+  const start = () => request(startQuiz);
 
   const advance = () => {
-    if (selected === null) return;
+    if (!session || busy) return;
+    if (error) { request(() => getQuiz(session.id)); return; }
     if (wrong) {
-      setRetried(true);
       setSelected(null);
       return;
     }
-    if (!retried) setFirstTryScore(score => score + 1);
-    if (questionIndex === quizQuestions.length - 1) setPage('result');
-    else {
-      setQuestionIndex(index => index + 1);
-      setSelected(null);
-      setRetried(false);
-    }
+    if (correct || timedOut) request(() => nextQuizQuestion(session.id, session.index));
   };
 
   return (
@@ -88,9 +141,9 @@ export default function QuizScreen() {
             <View style={styles.trophy}><Icon name="trophy" size={40} color="#FFCB42" /></View>
             <Text style={styles.playTitle}>Play Smart Quiz Every Day</Text>
             <Text style={styles.tagline}>Boost knowledge daily, win challenges,{ '\n' }become smarter every day.</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Start sample quiz" onPress={start} style={styles.startWrap}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Start quiz" disabled={busy || loadingLeaders} onPress={start} style={styles.startWrap}>
               <LinearGradient colors={['#FFE363', '#FFB800', '#FF9C00']} style={styles.start}>
-                <Text style={styles.startText}>Start</Text><Icon name="play-outline" size={25} color="#121212" />
+                {busy || loadingLeaders ? <ActivityIndicator color="#121212" /> : <><Text style={styles.startText}>{session?.status === 'playing' ? 'Resume' : 'Start'}</Text><Icon name="play-outline" size={25} color="#121212" /></>}
               </LinearGradient>
             </Pressable>
             <View style={styles.leaderboard}>
@@ -101,35 +154,40 @@ export default function QuizScreen() {
                   <Text style={[styles.tableHeading, styles.player]}>Player</Text>
                   <Text style={[styles.tableHeading, styles.score]}>Score</Text>
                 </View>
-                {quizLeaderboard.map((player, index) => (
-                  <View key={player.name} style={styles.tableRow}>
+                {leaders.map((player, index) => (
+                  <View key={player.user_id} style={styles.tableRow}>
                     <View style={styles.rank}>
-                      {index < 3 ? <Icon name="medal" size={25} color={['#FFD253', '#CBD4E0', '#D98A48'][index]} /> : <Text style={styles.cell}>4</Text>}
+                      {index < 3 ? <Icon name="medal" size={25} color={['#FFD253', '#CBD4E0', '#D98A48'][index]} /> : <Text style={styles.cell}>{index + 1}</Text>}
                     </View>
                     <View style={[styles.player, styles.playerRow]}>
-                      <View style={[styles.avatar, { backgroundColor: player.color }]}><Text style={styles.initial}>{player.name[0]}</Text></View>
+                      <View style={styles.avatar}><Text style={styles.initial}>{player.name?.[0] || '?'}</Text></View>
                       <Text style={styles.cell}>{player.name}</Text>
                     </View>
                     <Text style={[styles.cell, styles.score]}>{player.score}</Text>
                   </View>
                 ))}
               </View>
+              {loadingLeaders && <ActivityIndicator color="#00DFED" />}
+              {!loadingLeaders && !error && leaders.length === 0 && <Text style={styles.previewNote}>Be the first to complete a quiz!</Text>}
             </View>
-            <Text style={styles.previewNote}>Preview · Sample rankings and rewards</Text>
+            <Text style={styles.previewNote}>Best completed score · Quiz points are separate from wallet rewards</Text>
+            {!!error && <Pressable accessibilityRole="button" onPress={loadLeaders}><Text style={styles.error}>{error} Tap to retry.</Text></Pressable>}
           </LinearGradient>
         </ScrollView>
-      ) : page === 'question' ? (
+      ) : page === 'question' && session && question ? (
+        <View style={styles.questionContainer}>
         <ScrollView key={questionIndex} contentContainerStyle={styles.questionPage} showsVerticalScrollIndicator={false}>
           <View style={styles.questionHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back to leaderboard" onPress={goBack} style={styles.back}><Icon name="chevron-left" color="#FFFFFF" size={28} /></Pressable>
-            <Text accessibilityRole="header" style={styles.questionCount}>Question {questionIndex + 1} of {quizQuestions.length}</Text>
+            <Text accessibilityRole="header" style={styles.questionCount}>Question {questionIndex + 1} of {session.total}</Text>
           </View>
-          <View style={styles.progress} accessibilityLabel={`Question ${questionIndex + 1} of ${quizQuestions.length}`}>
-            {quizQuestions.map((_, index) => <View key={index} style={[styles.segment, index <= questionIndex && styles.segmentActive]} />)}
+          <View style={styles.progress} accessibilityLabel={`Question ${questionIndex + 1} of ${session.total}`}>
+            {Array.from({ length: session.total }, (_, index) => <View key={index} style={[styles.segment, index <= questionIndex && styles.segmentActive]} />)}
           </View>
+          <Text style={styles.points}>Score: {session.score} · Wrong attempt −{rules.wrongPenalty}</Text>
           <View style={styles.timerSpace}>
-            <View style={styles.timer} accessibilityLabel="15 seconds, static preview">
-              <Text style={styles.timerValue}>00:15</Text><Text style={styles.seconds}>Seconds</Text>
+            <View style={[styles.timer, seconds <= 5 && !correct && styles.timerUrgent]} accessibilityLabel={`${seconds} seconds remaining`}>
+              <Text style={styles.timerValue}>00:{String(seconds).padStart(2, '0')}</Text><Text style={styles.seconds}>Seconds</Text>
             </View>
           </View>
           <Text accessibilityRole="header" style={styles.question}>{question.question}</Text>
@@ -143,10 +201,10 @@ export default function QuizScreen() {
                   key={option}
                   accessibilityRole="button"
                   accessibilityLabel={`${String.fromCharCode(65 + index)}. ${option}${isSelected ? (correct ? ', correct' : ', incorrect') : ''}`}
-                  accessibilityState={{ selected: isSelected, disabled: selected !== null }}
-                  disabled={selected !== null}
-                  onPress={() => setSelected(index)}
-                  style={[styles.option, stateStyle]}
+                  accessibilityState={{ selected: isSelected, disabled: selected !== null || busy || seconds === 0 || timedOut || session.attempts.includes(index) }}
+                  disabled={selected !== null || busy || seconds === 0 || timedOut || session.attempts.includes(index)}
+                  onPress={() => request(() => answerQuiz(session.id, questionIndex, index))}
+                  style={[styles.option, stateStyle, !isSelected && session.attempts.includes(index) && styles.usedOption]}
                 >
                   <View style={[styles.letterCircle, isSelected && stateStyle]}><Text style={[styles.letter, textStyle]}>{String.fromCharCode(65 + index)}</Text></View>
                   <Text style={[styles.optionText, textStyle]}>{option}</Text>
@@ -155,19 +213,24 @@ export default function QuizScreen() {
               );
             })}
           </View>
-          <Text accessibilityLiveRegion="polite" style={styles.feedback}>{selected === null ? ' ' : correct ? 'Correct! Well done.' : 'Not quite. Give it another try.'}</Text>
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: selected === null }} disabled={selected === null} onPress={advance} style={[styles.action, selected === null && styles.disabledAction, wrong && styles.retryAction]}>
-            <Text style={styles.actionText}>{wrong ? 'Try Again' : questionIndex === quizQuestions.length - 1 ? 'Finish' : 'Continue'}</Text>
-          </Pressable>
         </ScrollView>
+        <View style={styles.questionFooter}>
+          <Text accessibilityLiveRegion="polite" style={styles.feedback}>{timedOut ? `Time’s up! −${rules.timeoutPenalty} point` : selected === null ? ' ' : correct ? `Correct! +${rules.correctPoints} points` : `Incorrect. −${rules.wrongPenalty} point. Try another answer.`}</Text>
+          {!!error && <Text style={styles.error}>{error}</Text>}
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || (!error && selected === null && !timedOut) }} disabled={busy || (!error && selected === null && !timedOut)} onPress={advance} style={[styles.action, !error && selected === null && !timedOut && styles.disabledAction, wrong && styles.retryAction]}>
+            {busy ? <ActivityIndicator color="#030B12" /> : <Text style={styles.actionText}>{error ? 'Reconnect' : wrong ? 'Try Again' : questionIndex === session.total - 1 ? 'Finish' : 'Continue'}</Text>}
+          </Pressable>
+        </View>
+        </View>
       ) : (
         <View style={styles.result}>
           <Icon name="trophy" size={88} color="#FFCB42" />
           <Text accessibilityRole="header" style={styles.resultTitle}>Quiz complete!</Text>
-          <Text style={styles.resultScore}>{firstTryScore} / {quizQuestions.length}</Text>
-          <Text style={styles.resultCopy}>Correct on your first try.{'\n'}Keep playing, keep learning.</Text>
-          <Text style={styles.previewNote}>Practice round · No rewards credited</Text>
-          <Pressable accessibilityRole="button" onPress={start} style={styles.action}><Text style={styles.actionText}>Play Again</Text></Pressable>
+          <Text style={styles.resultScore}>{session?.score ?? 0} pts</Text>
+          <Text style={styles.resultCopy}>Correct: {session?.correctCount ?? 0} / {session?.total ?? 5} · Wrong attempts: {session?.wrongCount ?? 0}{'\n'}Timed out: {(session?.total ?? 5) - (session?.correctCount ?? 0)}</Text>
+          <Text style={styles.previewNote}>Score saved · Your best round counts on the leaderboard</Text>
+          {!!error && <Text style={styles.error}>{error}</Text>}
+          <Pressable accessibilityRole="button" disabled={busy} onPress={start} style={styles.action}>{busy ? <ActivityIndicator color="#030B12" /> : <Text style={styles.actionText}>Play Again</Text>}</Pressable>
           <Pressable accessibilityRole="button" onPress={goBack} style={styles.touchTarget}><Text style={styles.skip}>Back to Leaderboard</Text></Pressable>
         </View>
       )}
@@ -206,25 +269,31 @@ const styles = StyleSheet.create({
   player: { flex: 1, paddingLeft: 8 },
   score: { width: '23%', textAlign: 'center' },
   playerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#1C3049', paddingVertical: 3 },
-  avatar: { width: 23, height: 23, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 23, height: 23, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#9BB9F7' },
   initial: { color: '#14213C', fontSize: 12, fontWeight: '700' },
   cell: { color: '#F4F6FC', fontSize: 12 },
   previewNote: { color: '#94A3B8', fontSize: 10, textAlign: 'center', marginVertical: 8 },
-  questionPage: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24, maxWidth: 540, width: '100%', alignSelf: 'center' },
+  error: { color: '#FF9DA9', fontSize: 13, textAlign: 'center', marginVertical: 8 },
+  points: { color: '#9BCFF5', fontSize: 12, textAlign: 'center', marginTop: 14 },
+  timerUrgent: { borderColor: '#FF5964' },
+  usedOption: { opacity: 0.4 },
+  questionContainer: { flex: 1 },
+  questionFooter: { paddingHorizontal: 16, paddingBottom: 16, maxWidth: 540, width: '100%', alignSelf: 'center' },
+  questionPage: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, maxWidth: 540, width: '100%', alignSelf: 'center' },
   questionHeader: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 44 },
   back: { position: 'absolute', left: 0, width: 44, height: 44, justifyContent: 'center' },
   questionCount: { color: '#FFFFFF', fontSize: 18, fontWeight: '500', textAlign: 'center' },
   progress: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 16 },
   segment: { width: 27, height: 8, borderRadius: 5, backgroundColor: '#D9D9D9' },
   segmentActive: { backgroundColor: '#388BCD' },
-  timerSpace: { flex: 1, minHeight: 156, justifyContent: 'center', alignItems: 'center', paddingVertical: 24 },
+  timerSpace: { flex: 1, minHeight: 130, justifyContent: 'center', alignItems: 'center', paddingVertical: 14 },
   timer: { width: 108, height: 108, borderRadius: 54, borderWidth: 6, borderColor: '#388BCD', alignItems: 'center', justifyContent: 'center' },
   timerValue: { color: '#F7FFFF', fontSize: 25, fontVariant: ['tabular-nums'] },
   seconds: { color: '#FFFFFF', fontSize: 15, letterSpacing: 2 },
-  question: { color: '#FAFAFF', fontSize: 22, fontWeight: '600', textAlign: 'center', lineHeight: 30, marginBottom: 34, marginTop: 10 },
-  options: { gap: 20 },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 65, padding: 10, borderWidth: 1, borderColor: '#388BCD', borderRadius: 11, backgroundColor: '#142031' },
-  letterCircle: { width: 45, height: 45, borderRadius: 23, borderWidth: 1, borderColor: '#60BFFF', backgroundColor: '#091D35', justifyContent: 'center', alignItems: 'center' },
+  question: { color: '#FAFAFF', fontSize: 20, fontWeight: '600', textAlign: 'center', lineHeight: 28, marginBottom: 24, marginTop: 10 },
+  options: { gap: 12 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 60, padding: 8, borderWidth: 1, borderColor: '#388BCD', borderRadius: 11, backgroundColor: '#142031' },
+  letterCircle: { width: 42, height: 42, borderRadius: 21, borderWidth: 1, borderColor: '#60BFFF', backgroundColor: '#091D35', justifyContent: 'center', alignItems: 'center' },
   letter: { color: '#60BFFF', fontSize: 20, fontWeight: '700' },
   optionText: { flex: 1, color: '#FFFFFF', fontSize: 21 },
   correct: { backgroundColor: '#142F15', borderColor: '#40D335' },
