@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, BackHandler, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -9,9 +9,17 @@ import { answerQuiz, getQuiz, getQuizLeaderboard, nextQuizQuestion, startQuiz, t
 type Page = 'leaderboard' | 'question' | 'result';
 const defaultRules: QuizRules = { questionCount: 5, secondsPerQuestion: 15, correctPoints: 2, wrongPenalty: 1, timeoutPenalty: 1 };
 const errorMessage = (error: any) => error?.response?.data?.message || 'Could not connect. Check your connection and try again.';
+const quizInfoCards = [
+  { source: require('../assets/quiz-questions.png'), aspectRatio: 424 / 268, label: '5 Questions. Each quiz has 5 exciting questions.' },
+  { source: require('../assets/quiz-timer.png'), aspectRatio: 420 / 264, label: 'Time Limit. You have 15 seconds to answer each question.' },
+  { source: require('../assets/quiz-rewards.png'), aspectRatio: 420 / 264, label: '2 Rewards Each. Earn 2 rewards for every question you answer.' },
+];
 
 export default function QuizScreen() {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(160, (Math.min(width, 540) - 40) * 0.5);
+  const heroHeight = quizInfoCards.reduce((height, card) => height + cardWidth / card.aspectRatio, 24);
   const [page, setPage] = useState<Page>('leaderboard');
   const [session, setSession] = useState<QuizSession | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -29,11 +37,6 @@ export default function QuizScreen() {
   const correct = session?.feedback === 'correct';
   const timedOut = session?.feedback === 'timeout';
   const wrong = selected !== null && !correct && !timedOut;
-  const facts = [
-    { icon: 'clipboard-list', title: `${rules.questionCount} Questions`, text: 'A fresh challenge\nin every round.', color: '#368BFF' },
-    { icon: 'timer-outline', title: 'Time Limit', text: `${rules.secondsPerQuestion} seconds per question.\nRetries share the timer.`, color: '#27D7A0' },
-    { icon: 'gift', title: `+${rules.correctPoints} Points`, text: `Wrong try: −${rules.wrongPenalty} point\nTime out: −${rules.timeoutPenalty} point`, color: '#BB65F4' },
-  ];
 
   useEffect(() => {
     mounted.current = true;
@@ -121,19 +124,19 @@ export default function QuizScreen() {
         <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>
           <View style={styles.brandRow}>
             <Text style={styles.brand}>Quivio <Text style={styles.gold}>🏆</Text></Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close quiz" onPress={goBack} style={styles.touchTarget}><Text style={styles.skip}>Skip</Text></Pressable>
           </View>
-          <View style={styles.hero}>
+          <View style={[styles.hero, { height: heroHeight }]}>
             <Image source={require('../assets/quiz-host.png')} style={styles.host} resizeMode="contain" accessibilityLabel="Quivio host in a purple suit" />
             <View style={styles.facts}>
-              {facts.map(fact => (
-                <LinearGradient key={fact.title} colors={['#101B35', '#060B17']} style={[styles.fact, { borderColor: fact.color }]}>
-                  <Icon name={fact.icon} size={38} color={fact.color} />
-                  <View style={styles.factCopy}>
-                    <Text style={styles.factTitle}>{fact.title}</Text>
-                    <Text style={styles.factText}>{fact.text}</Text>
-                  </View>
-                </LinearGradient>
+              {quizInfoCards.map(card => (
+                  <Image
+                    key={card.label}
+                    source={card.source}
+                    style={[styles.factImage, { width: cardWidth, height: cardWidth / card.aspectRatio }]}
+                    resizeMode="contain"
+                    accessible
+                    accessibilityLabel={card.label}
+                  />
               ))}
             </View>
           </View>
@@ -246,13 +249,10 @@ const styles = StyleSheet.create({
   gold: { color: '#FFCB42' },
   touchTarget: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
   skip: { color: '#EDEEF4', fontSize: 14 },
-  hero: { flexDirection: 'row', height: 294, marginHorizontal: -10 },
-  host: { width: '44%', height: '112%', zIndex: 1 },
-  facts: { flex: 1, gap: 9, paddingTop: 12, paddingRight: 10, paddingBottom: 16 },
-  fact: { flex: 1, borderWidth: 1, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8 },
-  factCopy: { flex: 1 },
-  factTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', marginBottom: 5 },
-  factText: { color: '#CDD5E4', fontSize: 10, lineHeight: 15 },
+  hero: { flexDirection: 'row', marginHorizontal: -10 },
+  host: { position: 'absolute', left: 0, bottom: -16, width: '44%', height: '105%', zIndex: 1 },
+  facts: { flex: 1, marginLeft: '44%', gap: 2, paddingTop: 8, paddingRight: 10, paddingBottom: 12 },
+  factImage: { alignSelf: 'center', flexShrink: 0 },
   arena: { borderWidth: 1, borderColor: '#168BFF', borderRadius: 28, padding: 9, paddingTop: 30, shadowColor: '#008CFF', shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
   trophy: { position: 'absolute', top: -23, alignSelf: 'center' },
   playTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center' },
