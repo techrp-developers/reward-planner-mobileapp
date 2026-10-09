@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { FlatList, InteractionManager, Platform, StyleSheet, View, ViewToken } from 'react-native';
+import { FlatList, InteractionManager, StyleSheet, View, ViewToken } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import Banner from '../constant/Banner';
 import ServicesHome from '../home/ServicesHome';
@@ -12,9 +13,9 @@ import PromotionalBanner from '../../../ecommerce/components/home/PromotionalBan
 import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 import { useNavbarScroll } from '../../../../navbar/NavbarScrollContext';
+import { useModuleContent } from '../../../common/cms/useModuleContent';
 
 type ServiceSectionKey =
-  | 'promotionalBanner'
   | 'offersBanner'
   | 'banner'
   | 'services'
@@ -24,24 +25,19 @@ type ServiceSectionKey =
   | 'exclusiveOffers'
   | 'bundles';
 
-// Promotional Banner and Offers Banner are Service-module CMS content
-// (fetchResolvedZones("service")) and must render above the rest of the
-// existing Service home content. Both components already render null when
-// their CMS entry is null/absent — no placeholder is shown for either.
+// Keep offers near the top; the promotional banner is the list header.
 const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
-  { key: 'promotionalBanner' },
-  { key: 'banner' },
   { key: 'services' },
+  { key: 'offersBanner' },
+  { key: 'banner' },
   { key: 'slider' },
   { key: 'mostBooked' },
   { key: 'quickServices' },
-  { key: 'offersBanner' },
   { key: 'exclusiveOffers' },
   { key: 'bundles' },
 ];
 
 const INITIAL_SERVICE_SECTIONS = new Set<ServiceSectionKey>([
-  'promotionalBanner',
   'banner',
   'services',
   'slider',
@@ -60,7 +56,6 @@ const ServiceSection = React.memo(({
   if (!isReady) return <View style={styles.sectionPlaceholder} />;
 
   switch (sectionKey) {
-    case 'promotionalBanner': return <PromotionalBanner module="service" />;
     case 'offersBanner': return <OffersBanner module="service" />;
     case 'banner': return <Banner />;
     case 'services': return <ServicesHome />;
@@ -75,9 +70,16 @@ const ServiceSection = React.memo(({
 
 ServiceSection.displayName = 'ServiceHomeSection';
 
+const ServicePromotionalBanner = React.memo(() => <PromotionalBanner module="service" />);
+ServicePromotionalBanner.displayName = 'ServicePromotionalBanner';
+
 function HomeScreen() {
   const { colors } = useServicesTheme();
   const { onScroll } = useNavbarScroll();
+  const { refetch: refetchModuleContent } = useModuleContent('service');
+  useFocusEffect(useCallback(() => {
+    void refetchModuleContent();
+  }, [refetchModuleContent]));
   const [readySections, setReadySections] = useState<Set<ServiceSectionKey>>(
     () => new Set(READY_SERVICE_SECTIONS),
   );
@@ -127,11 +129,12 @@ function HomeScreen() {
         keyExtractor={(item) => item.key}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={ServicePromotionalBanner}
         initialNumToRender={3}
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={32}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}

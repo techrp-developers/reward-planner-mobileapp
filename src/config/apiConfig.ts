@@ -7,7 +7,7 @@ export type ApiEnvironment = 'local' | 'live';
 // - debug/development builds use the local API
 // - production/release builds use the live API
 // Set to 'live' or 'local' only when you need to force a target while testing.
-const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = 'local';
+const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = 'live';
 
 export const API_ENVIRONMENT: ApiEnvironment =
   API_ENVIRONMENT_OVERRIDE ?? (__DEV__ ? 'local' : 'live');
