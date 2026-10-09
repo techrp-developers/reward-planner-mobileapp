@@ -28,15 +28,15 @@ test("validates both platforms, exact icon keys, timezone, date order, priority 
   assert.equal(model.validateCampaign({ ...campaign, starts_at: "2026-10-01T05:30:00+05:30" })[2], "2026-10-01 00:00:00.000");
 });
 
-test("Navratri and Dasera are supported on Android without advertising unregistered iOS icons", async () => {
+test("Navratri and Dasera are supported on both platforms", async () => {
   for (const icon_key of ["navratri", "dasera"]) {
     assert.equal(model.validateCampaign({ ...campaign, icon_key })[1], icon_key);
     assert.ok(model.getIconKeys("android").includes(icon_key));
-    assert.ok(!model.getIconKeys("ios").includes(icon_key));
-    assert.throws(() => model.validateCampaign({ ...campaign, platform: "ios", icon_key }), { statusCode: 400 });
+    assert.ok(model.getIconKeys("ios").includes(icon_key));
+    assert.equal(model.validateCampaign({ ...campaign, platform: "ios", icon_key })[1], icon_key);
     rows = [{ icon_key }];
     assert.equal((await model.resolve("android")).icon_key, icon_key);
-    assert.equal((await model.resolve("ios")).icon_key, "default");
+    assert.equal((await model.resolve("ios")).icon_key, icon_key);
   }
 });
 

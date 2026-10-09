@@ -2,7 +2,6 @@ package com.rewardsplanners.icons
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
-import android.os.Build
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -12,60 +11,53 @@ class AppIconSwitcherModule(context: ReactApplicationContext) : ReactContextBase
   override fun getName() = "AppIconSwitcherModule"
 
   private val aliases = mapOf(
-    "default" to "DefaultIconAlias",
-    "diwali" to "DiwaliIconAlias",
-    "eid" to "EidIconAlias",
-    "christmas" to "ChristmasIconAlias",
-    "holi" to "HoliIconAlias",
-    "independence_day" to "IndependenceDayIconAlias",
-    "navratri" to "NavratriIconAlias",
-    "dasera" to "DaseraIconAlias",
-  ).mapValues { (_, name) -> ComponentName(context.packageName, "com.rewardsplanners.icons.$name") }
+    "default" to ".icons.DefaultIconAlias",
+    "diwali" to ".icons.DiwaliIconAlias",
+    "eid" to ".icons.EidIconAlias",
+    "christmas" to ".icons.ChristmasIconAlias",
+    "holi" to ".icons.HoliIconAlias",
+    "independence_day" to ".icons.IndependenceDayIconAlias",
+    "navratri" to ".icons.NavratriIconAlias",
+    "dasera" to ".icons.DaseraIconAlias",
+  ).mapValues { (_, name) -> ComponentName(context.packageName, "${context.packageName}$name") }
 
-  private fun applyStates(states: Map<ComponentName, Int>) {
+  private fun getAliasState(manager: PackageManager, component: ComponentName): Int {
+    val state = manager.getComponentEnabledSetting(component)
+    return if (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
+      if (component == aliases.getValue("default")) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+      else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    } else state
+  }
+
+  private fun setAliasState(manager: PackageManager, component: ComponentName, state: Int) {
+    manager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+  }
+
+  private fun applyIcon(target: ComponentName) {
     val manager = reactApplicationContext.packageManager
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      manager.setComponentEnabledSettings(states.map { (component, state) ->
-        PackageManager.ComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
-      })
-    } else {
-      // Older Android cannot batch atomically. Enable the target before removing the old entry.
-      states.entries.sortedBy { if (it.value == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) 0 else 1 }
-        .forEach { (component, state) ->
-          manager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
-        }
+    val currentEnabled = aliases.values.firstOrNull { component ->
+      getAliasState(manager, component) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
     }
+
+    if (currentEnabled == target) {
+      return
+    }
+
+    // Enable the new launcher entry before disabling old aliases; MainActivity stays untouched.
+    setAliasState(manager, target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+    aliases.values
+      .filter { component -> component != target }
+      .forEach { component ->
+        setAliasState(manager, component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+      }
   }
 
   @ReactMethod
   @Synchronized
   fun setAppIcon(iconKey: String, promise: Promise) {
     try {
-      val manager = reactApplicationContext.packageManager
       val target = aliases[iconKey] ?: aliases.getValue("default")
-      val previous = aliases.values.associateWith { component ->
-        val state = manager.getComponentEnabledSetting(component)
-        if (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
-          if (component == aliases.getValue("default")) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-          else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        } else state
-      }
-      val desired = aliases.values.associateWith { component ->
-        if (component == target) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-      }
-      if (previous != desired) {
-        try {
-          applyStates(desired)
-        } catch (error: Exception) {
-          try {
-            applyStates(previous)
-          } catch (rollbackError: Exception) {
-            error.addSuppressed(rollbackError)
-          }
-          throw error
-        }
-      }
+      applyIcon(target)
       promise.resolve(null)
     } catch (error: Exception) {
       promise.reject("APP_ICON_SWITCH_FAILED", "Could not switch the launcher icon", error)

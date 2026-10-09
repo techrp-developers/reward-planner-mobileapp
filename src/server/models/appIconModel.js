@@ -1,7 +1,6 @@
 const db = require("../config/database");
 
-const ICON_KEYS = ["default", "diwali", "eid", "christmas", "holi", "independence_day"];
-const ANDROID_ICON_KEYS = [...ICON_KEYS, "navratri", "dasera"];
+const ICON_KEYS = ["default", "diwali", "eid", "christmas", "holi", "independence_day", "navratri", "dasera"];
 const PLATFORMS = ["ios", "android"];
 const fail = (message, statusCode = 400) => {
   throw Object.assign(new Error(message), { statusCode });
@@ -12,7 +11,10 @@ const validatePlatform = (platform) => {
   return platform;
 };
 
-const getIconKeys = (platform) => validatePlatform(platform) === "android" ? ANDROID_ICON_KEYS : ICON_KEYS;
+const getIconKeys = (platform) => {
+  validatePlatform(platform);
+  return ICON_KEYS;
+};
 
 const validateId = (id) => {
   if (!/^[1-9]\d*$/.test(String(id)) || !Number.isSafeInteger(Number(id))) fail("Invalid campaign id");

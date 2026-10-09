@@ -18,7 +18,10 @@ beforeEach(() => {
 test('Android sends its platform and passes the key to native', async () => {
   get.mockResolvedValue({ data: { success: true, data: { platform: 'android', icon_key: 'independence_day' } } });
   await refreshFestivalIcon();
-  expect(get).toHaveBeenCalledWith('/content/resolved/app-icon', { params: { platform: 'android' } });
+  expect(get).toHaveBeenCalledWith('/content/resolved/app-icon', {
+    params: { platform: 'android' },
+    timeout: 2500,
+  });
   expect(androidSwitch).toHaveBeenCalledWith('independence_day');
 });
 
@@ -60,7 +63,10 @@ test('iOS maps alternate names and resets default with null', async () => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
   get.mockResolvedValue({ data: { success: true, data: { platform: 'ios', icon_key: 'diwali' } } });
   await refreshFestivalIcon();
-  expect(get).toHaveBeenCalledWith('/content/resolved/app-icon', { params: { platform: 'ios' } });
+  expect(get).toHaveBeenCalledWith('/content/resolved/app-icon', {
+    params: { platform: 'ios' },
+    timeout: 2500,
+  });
   expect(iosSwitch).toHaveBeenCalledWith('DiwaliIcon');
   await applyAppIcon('default');
   expect(iosSwitch).toHaveBeenLastCalledWith(null);

@@ -23,6 +23,7 @@ export const ICON_MAP = {
 } as const;
 
 type IconPlatform = keyof typeof ICON_MAP;
+const APP_ICON_REQUEST_TIMEOUT_MS = 2500;
 
 const getPlatform = (): IconPlatform | null =>
   Platform.OS === 'android' || Platform.OS === 'ios' ? Platform.OS : null;
@@ -49,7 +50,10 @@ export const refreshFestivalIcon = (): Promise<void> => {
   if (!platform) return Promise.resolve();
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
-    const { data } = await cmsApi.get('/content/resolved/app-icon', { params: { platform } });
+    const { data } = await cmsApi.get('/content/resolved/app-icon', {
+      params: { platform },
+      timeout: APP_ICON_REQUEST_TIMEOUT_MS,
+    });
     if (data?.success !== true || data.data?.platform !== platform || typeof data.data?.icon_key !== 'string') {
       throw new Error('Invalid resolved app-icon response');
     }

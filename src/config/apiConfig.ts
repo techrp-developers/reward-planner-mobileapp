@@ -7,7 +7,7 @@ export type ApiEnvironment = 'local' | 'live';
 // - debug/development builds use the local API
 // - production/release builds use the live API
 // Set to 'live' or 'local' only when you need to force a target while testing.
-const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = 'live';
+const API_ENVIRONMENT_OVERRIDE: ApiEnvironment | null = 'local';
 
 export const API_ENVIRONMENT: ApiEnvironment =
   API_ENVIRONMENT_OVERRIDE ?? (__DEV__ ? 'local' : 'live');
@@ -22,9 +22,9 @@ const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 // on-device points back at the device itself, not your PC.
 export const LOCAL_API_HOST = '192.168.1.111';
 
-// Physical Android devices can use adb reverse to reach the dev machine at
-// 127.0.0.1 when the local Wi-Fi cannot route to LOCAL_API_HOST.
-export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = true;
+// Physical Android devices should use the dev machine's LAN IP by default.
+// Set this to true only when `adb reverse tcp:5000 tcp:5000` is running.
+export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = false;
 
 // Resolve the right local host per target automatically:
 // - Android emulator: 10.0.2.2 is the AVD's alias for the host machine.
