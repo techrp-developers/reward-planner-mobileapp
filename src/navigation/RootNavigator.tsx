@@ -52,6 +52,7 @@ export type AppStackParamList = {
   AIAssistant: undefined;
   TodoList: undefined;
   Chat: undefined;
+  Quiz: undefined;
 };
 
 export type RootStackParamList = {
@@ -100,6 +101,10 @@ function AppNavigator() {
     >
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
+      <AppStack.Screen
+        name="Quiz"
+        getComponent={() => require("../modules/games/screens/QuizScreen").default}
+      />
       <AppStack.Screen
         name="Home"
         component={MainLayout}

@@ -3,6 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import Modal from 'react-native-modal';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../../navigation/RootNavigator';
 
 export type DrawerGame = {
   id: string;
@@ -21,7 +24,12 @@ const DEFAULT_GAMES: DrawerGame[] = [
 
 type Props = { games?: DrawerGame[] };
 
-export default function GamesDrawer({ games = DEFAULT_GAMES }: Props) {
+export default function GamesDrawer({ games: customGames }: Props) {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const games = customGames ?? [
+    { id: 'quiz', title: 'Quiz', description: 'Five questions. A new challenge. Test your knowledge with Quivio.', category: 'Trivia', icon: 'head-question-outline', color: '#72DEEF', onPlay: () => navigation.navigate('Quiz') },
+    ...DEFAULT_GAMES,
+  ];
   const [visible, setVisible] = useState(false);
   const [pendingGame, setPendingGame] = useState<DrawerGame | null>(null);
   const { width, height } = useWindowDimensions();
