@@ -37,6 +37,7 @@ import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig
 import OffersBanner from '../../ecommerce/components/home/OffersBanner';
 import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
 import StatusTray from '../../status/components/StatusTray';
+import GamesDrawer from '../../games/components/GamesDrawer';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
@@ -510,7 +511,7 @@ function Dashbord() {
           />
         </View>
       )}
-      {/* <FloatingBottomBar/> */}
+      {!isSearchOpen && !openingModule && <GamesDrawer />}
     </LinearGradient>
   );
 }
