@@ -220,8 +220,8 @@ export default function QuizScreen() {
         <View style={styles.questionFooter}>
           <Text accessibilityLiveRegion="polite" style={styles.feedback}>{timedOut ? `Time’s up! −${rules.timeoutPenalty} point` : selected === null ? ' ' : correct ? `Correct! +${rules.correctPoints} points` : `Incorrect. −${rules.wrongPenalty} point. Try another answer.`}</Text>
           {!!error && <Text style={styles.error}>{error}</Text>}
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || (!error && selected === null && !timedOut) }} disabled={busy || (!error && selected === null && !timedOut)} onPress={advance} style={[styles.action, !error && selected === null && !timedOut && styles.disabledAction, wrong && styles.retryAction]}>
-            {busy ? <ActivityIndicator color="#030B12" /> : <Text style={styles.actionText}>{error ? 'Reconnect' : wrong ? 'Try Again' : questionIndex === session.total - 1 ? 'Finish' : 'Continue'}</Text>}
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || (!error && selected === null && !timedOut) }} disabled={busy || (!error && selected === null && !timedOut)} onPress={advance} style={[styles.action, styles.questionAction, !error && selected === null && !timedOut && styles.disabledAction, wrong && styles.retryAction]}>
+            {busy ? <ActivityIndicator color="#030B12" /> : <Text style={[styles.actionText, styles.questionActionText]}>{error ? 'Reconnect' : wrong ? 'Try Again' : questionIndex === session.total - 1 ? 'Finish' : 'Continue'}</Text>}
           </Pressable>
         </View>
         </View>
@@ -278,24 +278,24 @@ const styles = StyleSheet.create({
   timerUrgent: { borderColor: '#FF5964' },
   usedOption: { opacity: 0.4 },
   questionContainer: { flex: 1 },
-  questionFooter: { paddingHorizontal: 16, paddingBottom: 16, maxWidth: 540, width: '100%', alignSelf: 'center' },
-  questionPage: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, maxWidth: 540, width: '100%', alignSelf: 'center' },
+  questionFooter: { paddingHorizontal: 24, paddingBottom: 24, maxWidth: 480, width: '100%', alignSelf: 'center' },
+  questionPage: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, maxWidth: 480, width: '100%', alignSelf: 'center' },
   questionHeader: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 44 },
   back: { position: 'absolute', left: 0, width: 44, height: 44, justifyContent: 'center' },
-  questionCount: { color: '#FFFFFF', fontSize: 18, fontWeight: '500', textAlign: 'center' },
+  questionCount: { color: '#FFFFFF', fontSize: 16, fontWeight: '500', textAlign: 'center' },
   progress: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 16 },
-  segment: { width: 27, height: 8, borderRadius: 5, backgroundColor: '#D9D9D9' },
+  segment: { width: 23, height: 6, borderRadius: 3, backgroundColor: '#D9D9D9' },
   segmentActive: { backgroundColor: '#388BCD' },
-  timerSpace: { flex: 1, minHeight: 130, justifyContent: 'center', alignItems: 'center', paddingVertical: 14 },
-  timer: { width: 108, height: 108, borderRadius: 54, borderWidth: 6, borderColor: '#388BCD', alignItems: 'center', justifyContent: 'center' },
-  timerValue: { color: '#F7FFFF', fontSize: 25, fontVariant: ['tabular-nums'] },
-  seconds: { color: '#FFFFFF', fontSize: 15, letterSpacing: 2 },
-  question: { color: '#FAFAFF', fontSize: 20, fontWeight: '600', textAlign: 'center', lineHeight: 28, marginBottom: 24, marginTop: 10 },
-  options: { gap: 12 },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 60, padding: 8, borderWidth: 1, borderColor: '#388BCD', borderRadius: 11, backgroundColor: '#142031' },
-  letterCircle: { width: 42, height: 42, borderRadius: 21, borderWidth: 1, borderColor: '#60BFFF', backgroundColor: '#091D35', justifyContent: 'center', alignItems: 'center' },
-  letter: { color: '#60BFFF', fontSize: 20, fontWeight: '700' },
-  optionText: { flex: 1, color: '#FFFFFF', fontSize: 21 },
+  timerSpace: { minHeight: 116, justifyContent: 'center', alignItems: 'center', paddingVertical: 14 },
+  timer: { width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: '#388BCD', alignItems: 'center', justifyContent: 'center' },
+  timerValue: { color: '#F7FFFF', fontSize: 22, fontVariant: ['tabular-nums'] },
+  seconds: { color: '#FFFFFF', fontSize: 12, letterSpacing: 1 },
+  question: { color: '#FAFAFF', fontSize: 18, fontWeight: '600', textAlign: 'center', lineHeight: 25, marginBottom: 20, marginTop: 8 },
+  options: { gap: 10 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, padding: 8, borderWidth: 1, borderColor: '#388BCD', borderRadius: 11, backgroundColor: '#142031' },
+  letterCircle: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: '#60BFFF', backgroundColor: '#091D35', justifyContent: 'center', alignItems: 'center' },
+  letter: { color: '#60BFFF', fontSize: 16, fontWeight: '700' },
+  optionText: { flex: 1, color: '#FFFFFF', fontSize: 17 },
   correct: { backgroundColor: '#142F15', borderColor: '#40D335' },
   incorrect: { backgroundColor: '#300C19', borderColor: '#FF343F' },
   correctText: { color: '#40D335' },
@@ -305,6 +305,8 @@ const styles = StyleSheet.create({
   disabledAction: { backgroundColor: '#E5E5E5' },
   retryAction: { backgroundColor: '#FFD0DA', borderWidth: 1, borderColor: '#FF343F' },
   actionText: { color: '#030B12', fontSize: 21, fontWeight: '600' },
+  questionAction: { minHeight: 52, borderRadius: 26, padding: 12, marginTop: 14 },
+  questionActionText: { fontSize: 18 },
   result: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 14, maxWidth: 540, width: '100%', alignSelf: 'center' },
   resultTitle: { color: '#FFFFFF', fontSize: 30, fontWeight: '700' },
   resultScore: { color: '#00DFED', fontSize: 48, fontWeight: '700' },
