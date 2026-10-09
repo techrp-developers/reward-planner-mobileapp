@@ -41,6 +41,10 @@ export default function ChatInboxScreen() {
   useEffect(() => {
     if (accessToken) chatSocket.connect(accessToken);
     return chatSocket.subscribe(event => {
+      if (event.type === 'conversation:theme') {
+        setItems(current => current.map(item => Number(item.conversation_id) === Number(event.data?.conversation_id) ? { ...item, theme_key: event.data.theme_key } : item));
+        return;
+      }
       if (event.type === 'message:new' || event.type === 'conversation:available') load(true);
     });
   }, [accessToken, load]);

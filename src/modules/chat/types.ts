@@ -14,6 +14,7 @@ export type ChatConversation = {
   type: 'direct' | 'group';
   name?: string | null;
   description?: string | null;
+  theme_key?: ChatThemeKey;
   updated_at: string;
   role?: string;
   last_message_id?: number | null;
@@ -61,6 +62,8 @@ export type ChatPresence = {
   last_seen_at?: string | null;
 };
 
+export type ChatThemeKey = 'default' | 'violet' | 'ocean' | 'forest' | 'sunset';
+
 export type ChatStackParamList = {
   ChatInbox: undefined;
   NewChat: undefined;
@@ -70,7 +73,7 @@ export type ChatStackParamList = {
 };
 
 export type ChatSocketEvent = {
-  type: 'connected' | 'conversation:available' | 'message:new' | 'message:read' | 'poll:updated' |
-    'typing:start' | 'typing:stop' | 'presence' | 'error';
+  type: 'connected' | 'conversation:available' | 'conversation:theme' | 'message:new' | 'message:read' |
+    'poll:updated' | 'typing:start' | 'typing:stop' | 'presence' | 'error';
   data: any;
 };

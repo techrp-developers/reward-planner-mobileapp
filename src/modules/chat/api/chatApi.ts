@@ -1,6 +1,6 @@
 import api from '../../common/auth/api/axios';
 import { CHAT_API_BASE_URL } from '../../../config/apiConfig';
-import type { ChatConversation, ChatMessage, ChatPoll, ChatPresence, ChatUser } from '../types';
+import type { ChatConversation, ChatMessage, ChatPoll, ChatPresence, ChatThemeKey, ChatUser } from '../types';
 
 type DataResponse<T> = { success: boolean; data: T; message?: string };
 const chatUrl = (path: string) => `${CHAT_API_BASE_URL}/v1/chat${path}`;
@@ -132,4 +132,12 @@ export async function voteChatPoll(pollId: number, optionIds: number[]): Promise
 
 export async function markConversationRead(conversationId: number, messageId: number) {
   await api.post(chatUrl(`/conversations/${conversationId}/read`), { message_id: messageId });
+}
+
+export async function updateConversationTheme(conversationId: number, themeKey: ChatThemeKey) {
+  const response = await api.patch<DataResponse<{ conversation_id: number; theme_key: ChatThemeKey }>>(
+    chatUrl(`/conversations/${conversationId}/theme`),
+    { theme_key: themeKey },
+  );
+  return response.data.data;
 }
