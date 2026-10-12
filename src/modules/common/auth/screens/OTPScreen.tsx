@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import type { AuthStackParamList } from "../navigation/types";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 
 type OTPScreenRouteProp = RouteProp<AuthStackParamList, "LoginOTP">;
+const OTP_LENGTH = 6;
+const createEmptyOtp = () => Array(OTP_LENGTH).fill("");
 
 function OTPScreen() {
   const route = useRoute<OTPScreenRouteProp>();
@@ -26,12 +28,16 @@ function OTPScreen() {
 
   const identifier = route.params?.identifier || "";
 
-  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(60);
+  const resendAvailableAt = route.params?.resendAvailableAt || Date.now() + 60000;
+  const initialTimer = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+
+  const [otpValues, setOtpValues] = useState<string[]>(createEmptyOtp);
+  const [timer, setTimer] = useState(initialTimer);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(true);
-  const otpRefs = useRef<Array<TextInput | null>>(Array(6).fill(null));
+  const [resendCooldown, setResendCooldown] = useState(initialTimer > 0);
+  const otpRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+  const verifyingRef = useRef(false);
 
   useEffect(() => {
     if (timer === 0) {
@@ -49,20 +55,20 @@ function OTPScreen() {
   const handleOtpChange = (text: string, index: number) => {
     const digits = text.replace(/\D/g, "");
 
-    // SMS autofill and clipboard paste can deliver the complete OTP to one
-    // input. Distribute it across the six visible boxes.
+    // Autofill and clipboard paste can deliver the complete OTP to one input.
+    // Distribute it across the visible boxes without adding SMS-reading logic.
     if (digits.length > 1) {
       const nextOtp = [...otpValues];
-      const startIndex = digits.length >= 6 ? 0 : index;
+      const startIndex = digits.length >= OTP_LENGTH ? 0 : index;
 
-      digits.slice(0, 6 - startIndex).split("").forEach((digit, offset) => {
+      digits.slice(0, OTP_LENGTH - startIndex).split("").forEach((digit, offset) => {
         nextOtp[startIndex + offset] = digit;
       });
 
       setOtpValues(nextOtp);
 
       const nextEmptyIndex = nextOtp.findIndex((digit) => !digit);
-      const focusIndex = nextEmptyIndex >= 0 ? nextEmptyIndex : 5;
+      const focusIndex = nextEmptyIndex >= 0 ? nextEmptyIndex : OTP_LENGTH - 1;
       otpRefs.current[focusIndex]?.focus();
       return;
     }
@@ -71,7 +77,7 @@ function OTPScreen() {
     newOtp[index] = digits;
     setOtpValues(newOtp);
 
-    if (digits && index < 5) {
+    if (digits && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -82,14 +88,17 @@ function OTPScreen() {
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerify = useCallback(async () => {
+    if (verifyingRef.current) return;
+
     const otp = otpValues.join("");
-    if (otp.length !== 6) {
-      alert.error("Validation", "Please enter all 6 digits of the login code");
+    if (otp.length !== OTP_LENGTH) {
+      alert.error("Validation", `Please enter all ${OTP_LENGTH} digits of the login code`);
       return;
     }
 
     try {
+      verifyingRef.current = true;
       setLoading(true);
 
       await verifyLoginOtp(identifier, otp);
@@ -100,8 +109,17 @@ function OTPScreen() {
       );
     } finally {
       setLoading(false);
+      verifyingRef.current = false;
     }
-  };
+  }, [alert, identifier, otpValues, verifyLoginOtp]);
+
+  useEffect(() => {
+    const otp = otpValues.join("");
+
+    if (otp.length === OTP_LENGTH) {
+      handleVerify();
+    }
+  }, [handleVerify, otpValues]);
 
   const handleResend = async () => {
     if (resendCooldown || resendLoading) return;
@@ -114,7 +132,7 @@ function OTPScreen() {
       alert.info("Resent", "A new login code was sent to your registered contact");
       setTimer(60);
       setResendCooldown(true);
-      setOtpValues(["", "", "", "", "", ""]);
+      setOtpValues(createEmptyOtp());
       otpRefs.current[0]?.focus();
     } catch (error: any) {
       alert.error(
@@ -138,17 +156,17 @@ function OTPScreen() {
         </Text>
 
         <Text style={[styles.subText, { color: isDark ? "#D4D4D8" : "#555" }]}>
-          Enter the 6-digit code sent to {identifier || "your registered contact"}
+          Enter the {OTP_LENGTH}-digit code sent to {identifier || "your registered contact"}
         </Text>
 
         <View style={styles.otpRow}>
-          {[0, 1, 2, 3, 4, 5].map((_, i) => (
+          {otpValues.map((_, i) => (
             <TextInput
               key={i}
               ref={(ref) => {
                 otpRefs.current[i] = ref;
               }}
-              maxLength={6}
+              maxLength={OTP_LENGTH}
               keyboardType="number-pad"
               textContentType="oneTimeCode"
               autoComplete="sms-otp"

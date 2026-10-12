@@ -2,13 +2,15 @@ const express = require("express");
 const router = express.Router();
 const contentController = require("../controllers/contentController");
 const moduleIconController = require("../controllers/moduleIconController");
+const appIconController = require("../controllers/appIconController");
+const { authenticateToken, authorizeRoles } = require("../middleware/auth");
 const { uploadContentImage } = require("../middleware/mediaUpload/contentUpload");
 
 // Keep in sync with MAX_OFFER_IMAGES in controllers/contentController.js.
 const MAX_OFFER_IMAGES = 10;
 
-// navbar_background/promotional_banner send a single "image" field; offers_banner
-// sends one or more files under "images". Both are optional so the same upload
+// navbar_background uses "image"; promotional and offers banners can also
+// send multiple files under "images". Both are optional so the same upload
 // step covers a color-content save too (no files at all).
 const uploadEntryFiles = uploadContentImage.fields([
   { name: "image", maxCount: 1 },
@@ -45,6 +47,15 @@ const handleUpload = (middleware) => (req, res, next) => {
 };
 
 // ================================= ADMIN ROUTES =================================
+
+const appIconAdmin = [authenticateToken, authorizeRoles("admin")];
+router.get("/app-icons/keys", ...appIconAdmin, appIconController.keys);
+router.get("/app-icons", ...appIconAdmin, appIconController.list);
+router.get("/app-icons/:id", ...appIconAdmin, appIconController.get);
+router.post("/app-icons", ...appIconAdmin, appIconController.create);
+router.put("/app-icons/:id", ...appIconAdmin, appIconController.update);
+router.patch("/app-icons/:id/deactivate", ...appIconAdmin, appIconController.deactivate);
+router.delete("/app-icons/:id", ...appIconAdmin, appIconController.delete);
 
 router.post(
   "/entries",
@@ -140,6 +151,7 @@ router.delete(
 // ================================= PUBLIC (storefront/app) =================================
 
 router.get("/resolved/navbar", contentController.getResolvedNavbar);
+router.get("/resolved/app-icon", appIconController.resolve);
 // Must be registered before the "/resolved/:module" wildcard below, or a request for
 // "modules" would be captured as module="modules" and hit getResolvedZones instead.
 router.get("/resolved/modules", moduleIconController.getResolvedModules);

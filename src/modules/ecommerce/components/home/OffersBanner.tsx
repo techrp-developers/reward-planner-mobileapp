@@ -56,14 +56,18 @@ function OffersBanner({
       return [];
     }
 
-    const images = Array.isArray(banner.images) ? banner.images : [];
+    const images = Array.isArray(banner.images) && banner.images.length > 0
+      ? banner.images
+      : banner.image_url
+        ? [{ image_id: banner.content_id, image_url: banner.image_url, sort_order: 0, is_active: 1 }]
+        : [];
 
     return images
-      .filter((image) => image.is_active === 1)
+      .filter((image) => Number(image.is_active) === 1)
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((image) => ({
-        id: String(image.image_id),
+        id: String(image.image_id ?? `${banner.content_id}_${image.sort_order}`),
         imageUrl: image.image_url,
       }))
       .filter((slide) => slide.imageUrl && !failedImages[slide.id]);

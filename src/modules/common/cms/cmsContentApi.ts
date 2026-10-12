@@ -30,6 +30,7 @@ export interface CmsZoneEntry {
   redirect_link: string | null;
   is_default: 0 | 1;
   status: 'default' | 'draft' | 'scheduled' | 'active' | 'expired';
+  images?: CmsOfferImage[];
 }
 
 export interface CmsOfferImage {

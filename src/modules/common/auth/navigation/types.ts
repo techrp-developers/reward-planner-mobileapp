@@ -1,6 +1,9 @@
 export type AuthStackParamList = {
   Login: undefined;
-  LoginOTP: { identifier: string };
+  LoginOTP: {
+    identifier: string;
+    resendAvailableAt?: number;
+  };
   // Legacy routes retained only for isolated screen type-checking. They are no
   // longer registered in either auth navigator or exposed by the login UI.
   AccountActivate: undefined;

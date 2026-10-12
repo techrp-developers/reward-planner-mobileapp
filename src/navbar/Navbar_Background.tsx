@@ -10,6 +10,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { NavbarBannerMap } from "./api/NavbarContentApi";
 import { TopTab } from "./navbarConstants";
 import { rs } from "../utils/responsive";
+import { CMS_IMAGE_ASPECT_RATIOS } from "../modules/common/cms/cmsImageLayout";
 
 type Props = {
   activeTab: TopTab;
@@ -20,10 +21,12 @@ type Props = {
 };
 
 export const NAVBAR_BACKGROUND_HEIGHT = 230;
+export const NAVBAR_BACKGROUND_ASPECT_RATIO = CMS_IMAGE_ASPECT_RATIOS.navbarBackground;
 // Collapsed state still needs to cover the pinned module-tabs row once the
 // profile/search block collapses away above it.
 export const NAVBAR_COLLAPSED_BACKGROUND_HEIGHT = 105;
 export const NAVBAR_COLLAPSE_DISTANCE = 90;
+export const NAVBAR_SCROLLED_BACKGROUND_OFFSET = NAVBAR_COLLAPSE_DISTANCE;
 
 export default function Navbar_Background({
   activeTab,

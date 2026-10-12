@@ -11,6 +11,7 @@ import { queryClient } from './src/query/queryClient';
 import { AppThemeProvider } from "./src/theme/ThemeContext";
 import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
 import PushNotificationManager from './src/modules/common/notifications/PushNotificationManager';
+import { useFestivalIcon } from './src/hooks/useFestivalIcon';
 type AuthModalStackParamList = {
   Login: undefined;
   LoginOTP: { identifier: string };
@@ -37,6 +38,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 export default function App() {
+  useFestivalIcon();
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

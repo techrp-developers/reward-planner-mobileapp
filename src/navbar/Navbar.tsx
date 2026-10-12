@@ -28,7 +28,10 @@ import { getNotificationBadge } from "../modules/dashboard/notification/Notifica
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { handleNavigateWithPrefetch } from "../modules/ecommerce/navigation/navigationPerformance";
 
-import Navbar_Background from "./Navbar_Background";
+import Navbar_Background, {
+  NAVBAR_SCROLLED_BACKGROUND_OFFSET,
+  NAVBAR_COLLAPSE_DISTANCE,
+} from "./Navbar_Background";
 import { useNavbarBanners } from "./hooks/useNavbarBanners";
 import { TAB_MODULE_MAP, TopTab, isTopTab } from "./navbarConstants";
 import { useModuleIcons } from "./hooks/useModuleIcons";
@@ -229,10 +232,56 @@ const MODULE_KEY_BY_TOP_TAB = Object.entries(TAB_MODULE_MAP).reduce(
 );
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-const ACTIVE_TAB_SCALE = 1.04;
+// Keep the tab underline inside the measured row; press feedback still shrinks it.
+const ACTIVE_TAB_SCALE = 1;
 const PRESSED_SCALE_DELTA = 0.06;
 const NAV_TABS_H_PADDING = rs(16);
 const NAV_TAB_GAP = rs(10);
+const SEARCH_PLACEHOLDERS: Record<string, string[]> = {
+  product: ["Search products and offers", "Search brands and categories", "Search rewards and deals"],
+  service: ["Search PAN and Aadhaar", "Search passport services", "Search insurance and SIP"],
+  payment: ["Search mobile recharge", "Search electricity bills", "Search water and DTH bills"],
+  dineout: ["Search bus routes", "Search bus tickets", "Search destinations"],
+};
+
+function RotatingSearchPlaceholder({
+  moduleKey,
+  color,
+}: {
+  moduleKey: string;
+  color: string;
+}) {
+  const placeholders = SEARCH_PLACEHOLDERS[moduleKey] ?? SEARCH_PLACEHOLDERS.product;
+  const [index, setIndex] = React.useState(0);
+  const opacity = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    setIndex(0);
+    opacity.setValue(1);
+    const interval = setInterval(() => {
+      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true })
+        .start(({ finished }) => {
+          if (!finished) return;
+          setIndex((current) => (current + 1) % placeholders.length);
+          Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }).start();
+        });
+    }, 3200);
+
+    return () => {
+      clearInterval(interval);
+      opacity.stopAnimation();
+    };
+  }, [moduleKey, opacity, placeholders]);
+
+  return (
+    <Animated.Text
+      style={[styles.searchPlaceholder, { color, opacity }]}
+      numberOfLines={1}
+    >
+      {placeholders[index]}
+    </Animated.Text>
+  );
+}
 
 // --- Sub-component (icon-forward, no card background — dot indicator marks active) ---
 const TopIconWithLabel = React.memo(
@@ -240,6 +289,7 @@ const TopIconWithLabel = React.memo(
     active,
     onPress,
     iconUrl,
+    fallbackIconUrl,
     moduleKey,
     label,
     activeTint,
@@ -254,6 +304,7 @@ const TopIconWithLabel = React.memo(
     active: boolean;
     onPress: () => void;
     iconUrl: string | null;
+    fallbackIconUrl: string | null;
     moduleKey: string;
     label: string;
     activeTint?: string;
@@ -272,6 +323,15 @@ const TopIconWithLabel = React.memo(
     React.useEffect(() => {
       setImageUrl(iconUrl);
     }, [iconUrl]);
+
+    // If the active icon fails, fall back to the normal icon once; if that
+    // also fails, hide the icon instead of showing a broken image.
+    const handleIconError = React.useCallback(() => {
+      setImageUrl((current) =>
+        current === iconUrl && fallbackIconUrl !== iconUrl ? fallbackIconUrl : null
+      );
+    }, [fallbackIconUrl, iconUrl]);
+
     // Base scale grows with a spring when the tab becomes active (visual
     // weight), and presses shrink from whatever the current base is —
     // never fighting an in-flight active/inactive transition.
@@ -345,8 +405,7 @@ const TopIconWithLabel = React.memo(
                   if (__DEV__) {
                     console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
                   }
-                  if (imageUrl !== iconUrl) return;
-                  setImageUrl(null);
+                  handleIconError();
                 }}
               />
             </LinearGradient>
@@ -364,7 +423,7 @@ const TopIconWithLabel = React.memo(
                 if (__DEV__) {
                   console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
                 }
-                setImageUrl(null);
+                handleIconError();
               }}
             />
           )
@@ -399,6 +458,19 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const { isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { scrollY } = useNavbarScroll();
+
+  // Once the page scrolls past the offset, the navbar switches to a solid
+  // white surface (light mode) so content underneath never bleeds through.
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  React.useEffect(() => {
+    const listener = scrollY.addListener(({ value }) => {
+      const next = value >= NAVBAR_SCROLLED_BACKGROUND_OFFSET;
+      setIsScrolled((current) => (current === next ? current : next));
+    });
+    return () => scrollY.removeListener(listener);
+  }, [scrollY]);
+  const isScrolledWhite = isScrolled && !isDark;
+
   const [rewardPoints, setRewardPoints] = React.useState(0);
   const [customerName, setCustomerName] = React.useState("Guest");
   const [customerLocation, setCustomerLocation] = React.useState("Set delivery location");
@@ -408,6 +480,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     if (points >= 10000) return `${(points / 1000).toFixed(1)}k`;
     return points.toLocaleString("en-IN");
   }, [rewardPoints]);
+
   // ✅ Get full navigation state once and derive both deepest route and active module
   const navigationState = useNavigationState((state) => state);
 
@@ -443,6 +516,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   // Product/Services/Payments/etc. fallback, per the CMS-only requirement.
   const { modules } = useModuleIcons();
   const { width: screenWidth } = useWindowDimensions();
+
   // Evenly size tab items so the module row fills the navbar width instead
   // of a fixed minWidth left-packing 4 icons into less than half the bar —
   // clamped so it doesn't blow up with 1-2 modules or shrink too far with many.
@@ -480,10 +554,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     });
   }, [modules]);
 
-  const moduleNormalColor = React.useMemo(
-    () => selectedModule?.normal_color || (isDark ? "#FFFFFF" : "#111827"),
-    [isDark, selectedModule?.normal_color],
-  );
   const activeThemeColor = React.useMemo(
     () => {
       const bannerColor = banners[activeTab]?.bgColor;
@@ -492,25 +562,69 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     },
     [activeTab, banners, selectedModule?.active_color],
   );
-  const walletBadgeColor = React.useMemo(
-    () => activeThemeColor,
-    [activeThemeColor]
-  );
+  const walletBadgeColor = activeThemeColor;
   const walletBadgeTextColor = React.useMemo(
     () => getReadableTextColor(walletBadgeColor),
     [walletBadgeColor]
   );
+
   // Search bar + wallet button float over the campaign banner, so they read
   // as translucent glass cards rather than solid boxes on top of it.
-  const frostedSurface = isDark ? "rgba(20,20,20,0.55)" : "rgba(255,255,255,0.88)";
-  const navbarBorder = isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
-  const navbarIconColor = moduleNormalColor;
-  const navbarMutedColor = moduleNormalColor;
+  const frostedSurface = isScrolledWhite
+    ? "#FFFFFF"
+    : isDark
+      ? "rgba(20,20,20,0.55)"
+      : "rgba(255,255,255,0.88)";
+  const navbarBorder = isScrolledWhite
+    ? "rgba(0,0,0,0.08)"
+    : isDark
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)";
+  const activeBanner = banners[activeTab];
+  const navbarIconColor = isDark
+    ? "#FFFFFF"
+    : isScrolledWhite
+      ? "#111827"
+      : activeBanner?.imageUrl
+        ? "#FFFFFF"
+        : activeBanner?.bgColor
+          ? getReadableTextColor(activeBanner.bgColor)
+          : "#111827";
+  const navbarMutedColor = isScrolledWhite
+    ? "#6B7280"
+    : isDark
+      ? "#D4D4D8"
+      : navbarIconColor;
+  const searchSurface = isScrolledWhite
+    ? "#F8FAFC"
+    : isDark
+      ? "rgba(24,24,27,0.94)"
+      : "rgba(255,255,255,0.94)";
+  const searchContentColor = isScrolledWhite
+    ? "#111827"
+    : isDark
+      ? "#F4F4F5"
+      : "#111827";
+  const searchBorderColor = isScrolledWhite
+    ? "rgba(0,0,0,0.08)"
+    : isDark
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)";
   const isNavigatingRef = React.useRef(false);
 
-  const headerOpacity = 1;
-  const headerTranslateY = 0;
-  const headerHeight = rs(78);
+  // The search/address header collapses as the page scrolls; its natural
+  // height is measured on layout so the collapse works on any font scale.
+  const [measuredHeaderHeight, setMeasuredHeaderHeight] = React.useState(rs(78));
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, NAVBAR_COLLAPSE_DISTANCE],
+    outputRange: [measuredHeaderHeight, 0],
+    extrapolate: "clamp",
+  });
   const headerMarginTop = 0;
   const headerPaddingBottom = rs(2);
   const searchHeight = rs(34);
@@ -604,14 +718,14 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
       // then navigates inside ModuleStack) and from within MainLayout (already on Home –
       // React Navigation detects the screen is focused and updates the nested state directly).
       // No handleNavigateWithPrefetch wrapper so the switch is instant (<1 frame).
-       if (onModuleChange) {
-         onModuleChange(tab);
-       } else {
-         (navigation as any).navigate("Home", {
-           screen: SCREEN[tab],
-           params: { moduleName: tab },
-         });
-       }
+      if (onModuleChange) {
+        onModuleChange(tab);
+      } else {
+        (navigation as any).navigate("Home", {
+          screen: SCREEN[tab],
+          params: { moduleName: tab },
+        });
+      }
 
       requestAnimationFrame(() => {
         isNavigatingRef.current = false;
@@ -702,7 +816,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         ).trim();
         const fetchedLocation = compactAddressLine(user);
 
-
         const snapshot: NavbarUserSnapshot = {
           rewardPoints: fetchedRewardPoints,
           displayName: fetchedName || "Guest",
@@ -734,9 +847,9 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   }, [loadNavbarUser]);
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + rs(14) }]}>
+    <View style={[styles.wrapper, { paddingTop: insets.top }]}>
       <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
+        barStyle={isScrolledWhite ? "dark-content" : isDark ? "light-content" : "dark-content"}
         translucent
         backgroundColor="transparent"
       />
@@ -750,101 +863,100 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         scrollY={scrollY}
       />
 
-      <Animated.View
-        style={[
-          styles.searchActionsRow,
-          {
-            height: headerHeight,
-            marginTop: headerMarginTop,
-            paddingBottom: headerPaddingBottom,
-            opacity: headerOpacity,
-            transform: [{ translateY: headerTranslateY }],
-          },
-        ]}
-      >
-        
-        <View style={styles.topRow}>
-          <AnimatedTouchableOpacity
-            activeOpacity={0.9}
-            style={styles.deliveryContainer}
-            onPress={handleAddressPress}
-          >
-            <MaterialCommunityIcons
-              name="map-marker"
-              size={21}
-              color={navbarIconColor}
-              style={styles.deliveryPin}
-            />
-            <View style={styles.deliveryTextBlock}>
-              <View style={styles.deliveryTitleRow}>
-                <Text style={[styles.deliveryPrefix, { color: navbarMutedColor }]} numberOfLines={1}>
-                  Deliver to
-                </Text>
-                <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
-                  {customerName}
-                </Text>
-                <MaterialCommunityIcons
-                  name="chevron-down"
-                  size={18}
-                  color={navbarIconColor}
-                  style={styles.deliveryChevron}
-                />
-              </View>
-              <Text style={[styles.deliveryAddress, { color: navbarMutedColor }]} numberOfLines={1}>
-                {customerLocation}
-              </Text>
-            </View>
-          </AnimatedTouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
-            onPress={() => navigateToScreen("WalletHistory")}
-            hitSlop={hitSlop(8)}
-          >
-            <WalletSvg width={19} height={19} />
-            <View
-              style={[
-                styles.walletTag,
-                { backgroundColor: walletBadgeColor },
-              ]}
+      <Animated.View style={{ height: headerHeight, opacity: headerOpacity, overflow: "hidden" }}>
+        <View
+          onLayout={(event) => setMeasuredHeaderHeight(event.nativeEvent.layout.height)}
+          style={[
+            styles.searchActionsRow,
+            {
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              marginTop: headerMarginTop,
+              paddingBottom: headerPaddingBottom,
+            },
+          ]}
+        >
+          <View style={styles.topRow}>
+            <AnimatedTouchableOpacity
+              activeOpacity={0.9}
+              style={styles.deliveryContainer}
+              onPress={handleAddressPress}
             >
-              <View style={styles.walletTagInner}>
-                <Reward width={11} height={11} />
-                <Text
-                  style={[styles.walletTagText, { color: walletBadgeTextColor }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.78}
-                >
-                  {rewardPointsLabel}
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={21}
+                color={navbarIconColor}
+                style={styles.deliveryPin}
+              />
+              <View style={styles.deliveryTextBlock}>
+                <View style={styles.deliveryTitleRow}>
+                  <Text style={[styles.deliveryPrefix, { color: navbarMutedColor }]} numberOfLines={1}>
+                    Deliver to
+                  </Text>
+                  <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
+                    {customerName}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={18}
+                    color={navbarIconColor}
+                    style={styles.deliveryChevron}
+                  />
+                </View>
+                <Text style={[styles.deliveryAddress, { color: navbarMutedColor }]} numberOfLines={1}>
+                  {customerLocation}
                 </Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+            </AnimatedTouchableOpacity>
 
-        <View style={styles.searchRow}>
-          <AnimatedTouchableOpacity
-            activeOpacity={0.86}
-            style={[styles.searchBar, { backgroundColor: frostedSurface, borderColor: navbarBorder, height: searchHeight }]}
-            onPress={handleSearchPress}
-            hitSlop={hitSlop(6)}
-          >
-            <MaterialCommunityIcons name="magnify" size={20} color={navbarIconColor} />
-            <Text style={[styles.searchPlaceholder, { color: navbarMutedColor }]} numberOfLines={1}>
-              Search products and services
-            </Text>
-          </AnimatedTouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.bellBtn, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
-            onPress={() => navigateToScreen("Notification")}
-            hitSlop={hitSlop(8)}
-          >
-            <MaterialCommunityIcons name="bell-outline" size={19} color={navbarIconColor} />
-            {hasUnreadNotifications ? <View style={styles.bellDot} /> : null}
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.walletBox, { backgroundColor: frostedSurface, borderColor: navbarBorder }]}
+              onPress={() => navigateToScreen("WalletHistory")}
+              hitSlop={hitSlop(8)}
+            >
+              <WalletSvg width={19} height={19} />
+              <View style={[styles.walletTag, { backgroundColor: walletBadgeColor }]}>
+                <View style={styles.walletTagInner}>
+                  <Reward width={11} height={11} />
+                  <Text
+                    style={[styles.walletTagText, { color: walletBadgeTextColor }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.78}
+                  >
+                    {rewardPointsLabel}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.searchRow}>
+            <AnimatedTouchableOpacity
+              activeOpacity={0.86}
+              style={[
+                styles.searchBar,
+                { backgroundColor: searchSurface, borderColor: searchBorderColor, height: searchHeight },
+              ]}
+              onPress={handleSearchPress}
+              hitSlop={hitSlop(6)}
+            >
+              <MaterialCommunityIcons name="magnify" size={20} color={searchContentColor} />
+              <RotatingSearchPlaceholder moduleKey={selectedModuleKey} color={searchContentColor} />
+            </AnimatedTouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.bellBtn, { backgroundColor: searchSurface, borderColor: searchBorderColor }]}
+              onPress={() => navigateToScreen("Notification")}
+              hitSlop={hitSlop(8)}
+            >
+              <MaterialCommunityIcons name="bell-outline" size={19} color={searchContentColor} />
+              {hasUnreadNotifications ? <View style={styles.bellDot} /> : null}
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
 
@@ -867,10 +979,21 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
                 active={active}
                 onPress={() => handleModulePress(module)}
                 iconUrl={iconUrl}
+                fallbackIconUrl={module.icon_url}
                 moduleKey={module.module_key}
                 label={module.label}
-                activeTint={module.active_color || activeThemeColor}
-                inactiveTint={module.normal_color || navbarIconColor}
+                activeTint={
+                  isScrolledWhite
+                    ? module.active_color || "#B77900"
+                    : module.active_color || activeThemeColor
+                }
+                inactiveTint={
+                  isScrolledWhite
+                    ? "#111827"
+                    : isDark
+                      ? "#FFFFFF"
+                      : module.normal_color || navbarIconColor
+                }
                 gradientStart={module.gradient_start_color}
                 gradientEnd={module.gradient_end_color}
                 itemWidth={tabItemWidth}
@@ -888,8 +1011,9 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    // paddingTop set inline: insets.top (safe area / status bar height,
-    // needed since StatusBar is translucent) + rs(14) breathing room.
+    // The safe-area inset is applied inline because the status bar is
+    // translucent. The background fills this content-sized wrapper; the
+    // promotional banner below does not receive another top inset.
   },
 
   searchActionsRow: {
@@ -912,23 +1036,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: rs(10),
     minWidth: 0,
-  },
-
-  avatarWrap: {
-    width: rs(40),
-    height: rs(40),
-    borderRadius: rs(20),
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-
-  actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: rs(6),
-    flexShrink: 0,
   },
 
   bellBtn: {
@@ -981,16 +1088,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
 
-  deliveryIconWrap: {
-    width: rs(26),
-    height: rs(26),
-    borderRadius: rs(13),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: rs(6),
-    flexShrink: 0,
-  },
-
   deliveryPin: {
     marginRight: rs(5),
     flexShrink: 0,
@@ -1031,29 +1128,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  deliveryChangeText: {
-    marginLeft: rs(6),
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: "900",
-    includeFontPadding: false,
-    flexShrink: 0,
-  },
-
   deliveryAddress: {
     marginTop: rs(1),
     fontSize: 11,
     lineHeight: 13,
     fontWeight: "600",
     includeFontPadding: false,
-  },
-
-  searchIconButton: {
-    borderRadius: rs(16),
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
   },
 
   walletBox: {
@@ -1109,7 +1189,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minWidth: "100%",
     paddingHorizontal: NAV_TABS_H_PADDING,
-    paddingTop: rs(6),
+    paddingTop: 0,
     paddingBottom: 0,
     gap: NAV_TAB_GAP,
   },
@@ -1151,8 +1231,7 @@ const styles = StyleSheet.create({
   },
 
   activeIndicatorSpacer: {
-    height: rs(7),
+    height: rs(3),
     marginTop: rs(4),
   },
-
 });
