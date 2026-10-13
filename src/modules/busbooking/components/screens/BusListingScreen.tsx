@@ -1,5 +1,5 @@
 import React from "react";
-import { countAvailableSeats, formatAvailableSeats as toSeatLabel } from "../../utils/busSeatAvailability";
+import { getVerifiedAvailableSeats, formatAvailableSeats as toSeatLabel } from "../../utils/busSeatAvailability";
 
 import {
   ActivityIndicator,
@@ -656,7 +656,10 @@ const handleOpenSeatSelection =
         |--------------------------------------------------------------------------
         */
 
-        const availableSeats = countAvailableSeats(response.seats);
+        const availableSeats = getVerifiedAvailableSeats(response.seats);
+        if (availableSeats === null) {
+          throw new Error("Seat availability could not be verified. Please try View Seats again.");
+        }
         setLayoutCounts(current => ({
           ...current,
           [`${traceId}:${bus.id}`]: availableSeats,

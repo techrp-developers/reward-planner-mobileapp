@@ -1,5 +1,5 @@
 import React from "react";
-import { countAvailableSeats, isSeatAvailable as toBoolean } from "../../utils/busSeatAvailability";
+import { getVerifiedAvailableSeats, formatAvailableSeats, isSeatAvailable as toBoolean } from "../../utils/busSeatAvailability";
 import {
   ScrollView,
   StyleSheet,
@@ -1283,8 +1283,8 @@ switch (seat.status) {
   }
 >
   {
-    countAvailableSeats(apiSeats)
-  } SEATS LEFT
+    formatAvailableSeats(getVerifiedAvailableSeats(apiSeats))
+  }
 </Text>
           </View>
         </View>
