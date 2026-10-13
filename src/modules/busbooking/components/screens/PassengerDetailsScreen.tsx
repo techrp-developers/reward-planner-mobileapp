@@ -46,8 +46,6 @@ type PassengerForm = {
   whatsappUpdates: boolean;
 };
 
-const getFareValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
-
 const createPassengerForm = (): PassengerForm => ({
   sourceProfileId: "",
   title: "Mr",
@@ -167,6 +165,7 @@ export default function PassengerDetailsScreen() {
   const {
     bus,
     selectedSeats,
+    totalFare,
     boardingPoint,
     droppingPoint,
     traceId,
@@ -188,7 +187,6 @@ export default function PassengerDetailsScreen() {
   const [selectedQuickSelectId, setSelectedQuickSelectId] = React.useState("");
   const [deletedQuickSelectIds, setDeletedQuickSelectIds] = React.useState<string[]>([]);
 
-  const totalFare = getFareValue(bus.price) * selectedSeats.length;
   const idProofRequired =
     String(bus?.raw?.IdProofRequired ?? bus?.IdProofRequired ?? "").toLowerCase() === "true";
 
@@ -838,7 +836,7 @@ export default function PassengerDetailsScreen() {
           </Text>
 
           <View style={styles.bottomFareWrap}>
-            <Text style={styles.bottomFare}>Rs {totalFare.toLocaleString("en-IN")}</Text>
+            <Text style={styles.bottomFare}>Rs {totalFare.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</Text>
             <View style={styles.addIconBox}>
               <MaterialCommunityIcons name="plus" size={14} color="#6D6A72" />
             </View>

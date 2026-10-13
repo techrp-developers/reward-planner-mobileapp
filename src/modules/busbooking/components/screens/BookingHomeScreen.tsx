@@ -1,10 +1,12 @@
-import ModuleSkeleton from '../../../common/components/ModuleSkeleton';
 import React from "react";
 
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -203,6 +205,8 @@ const [cityResults, setCityResults] =
 
 const [cityLoading, setCityLoading] =
   React.useState(false);
+const citySearchRequest = React.useRef(0);
+const citySearchInputRef = React.useRef<TextInput>(null);
 
 
 /*
@@ -345,6 +349,8 @@ const openCityPicker = (
   });
 
   setCityPickerType(type);
+  citySearchRequest.current += 1;
+  setCityLoading(false);
 
   setCitySearchText("");
 
@@ -362,6 +368,7 @@ const handleCitySearch = async (
   });
 
   setCitySearchText(text);
+  const requestId = ++citySearchRequest.current;
 
   if (text.trim().length < 2) {
     console.log("[BusBooking][Home] City search skipped", {
@@ -370,6 +377,7 @@ const handleCitySearch = async (
     });
 
     setCityResults([]);
+    setCityLoading(false);
 
     return;
   }
@@ -391,9 +399,12 @@ const handleCitySearch = async (
       cities,
     });
 
-    setCityResults(cities);
+    if (requestId === citySearchRequest.current) {
+      setCityResults(cities);
+    }
 
   } catch (error: any) {
+    if (requestId !== citySearchRequest.current) return;
     console.log("[BusBooking][Home] City search failed", {
       cityPickerType,
       query: text.trim(),
@@ -408,7 +419,9 @@ const handleCitySearch = async (
 
   } finally {
 
-    setCityLoading(false);
+    if (requestId === citySearchRequest.current) {
+      setCityLoading(false);
+    }
   }
 };
 
@@ -438,6 +451,9 @@ const handleSelectCity = (city: City) => {
   }
 
 
+  citySearchRequest.current += 1;
+  citySearchInputRef.current?.blur();
+  Keyboard.dismiss();
   setCityModalVisible(false);
 };
 
@@ -1210,7 +1226,10 @@ const handleSearchBuses = async () => {
   }
 >
 
-  <View style={styles.modalOverlay}>
+  <KeyboardAvoidingView
+    style={styles.modalOverlay}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+  >
 
     <View style={styles.cityModal}>
 
@@ -1250,6 +1269,7 @@ const handleSearchBuses = async () => {
         />
 
         <TextInput
+          ref={citySearchInputRef}
           value={citySearchText}
           onChangeText={
             handleCitySearch
@@ -1263,7 +1283,9 @@ const handleSearchBuses = async () => {
 
 
       </View>
-      {cityLoading && <ModuleSkeleton variant="cities" height={250} />}
+      <View style={styles.citySearchProgress}>
+        {cityLoading ? <ActivityIndicator size="small" color="#C8102E" /> : null}
+      </View>
 
       {
         citySearchText.length < 2 ? (
@@ -1282,7 +1304,8 @@ const handleSearchBuses = async () => {
         keyExtractor={(item) =>
           String(item.id)
         }
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
 
         renderItem={({ item }) => (
 
@@ -1344,7 +1367,7 @@ const handleSearchBuses = async () => {
 
     </View>
 
-  </View>
+  </KeyboardAvoidingView>
 
 </Modal>
 <Modal
@@ -2125,6 +2148,10 @@ modalHeader: {
     color: "#FFFFFF",
   },
 
+citySearchProgress: {
+  height: 28,
+  justifyContent: "center",
+},
 citySearchBox: {
   height: 48,
   borderRadius: 14,

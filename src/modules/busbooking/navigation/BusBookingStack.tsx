@@ -57,6 +57,7 @@ export type BusBookingStackParamList = {
 };
 PassengerDetailsScreen: {
   bus: any;
+  totalFare: number;
 
   selectedSeats: any[];
 
@@ -74,6 +75,7 @@ PassengerDetailsScreen: {
 };
 BoardingDroppingSelectionScreen: {
   bus: any;
+  totalFare: number;
 
   selectedSeats: any[];
 

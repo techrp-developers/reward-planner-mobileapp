@@ -1065,6 +1065,7 @@ const handleContinue =
         "BoardingDroppingSelectionScreen",
         {
           bus,
+          totalFare,
 
           selectedSeats,
 
@@ -1096,6 +1097,7 @@ const handleContinue =
       navigation,
       seatLayout,
       selectedSeats,
+      totalFare,
       isWomenBooking,
     ]
   );
