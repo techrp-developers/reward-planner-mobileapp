@@ -11,26 +11,32 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BusFrame1 from "../../assets/banners/busframe1.svg";
-import BusFrame2 from "../../assets/banners/busframe2.svg";
-import ExclusiveOfferBooking from "../../assets/banners/exclusiveofferbooking.svg";
 import BusBookingStatusPopup, {
   useBusBookingPopup,
 } from "../BusBookingStatusPopup";
 import type { BusBookingStackParamList } from "../../navigation/BusBookingStack";
 
 import {
+  getBusOrdersApi,
+  getPopularBusRoutesApi,
   searchCitiesApi,
   searchBusesApi,
+  type BusOrderSummary,
+  type BusPopularRoute,
   type City,
 } from "../../services/busBookingApi";
+import {
+  findNextBusJourney,
+  formatBusAmount,
+  formatBusTime,
+  getBusJourneyDayLabel,
+} from "../../utils/busOrderFormat";
 import {
   loadRecentSearches,
   saveRecentSearch,
@@ -53,38 +59,6 @@ type CalendarMonth = {
   title: string;
   chips: DateChip[];
 };
-
-type Journey = {
-  route: string;
-  time: string;
-  ticket: string;
-};
-
-type PopularRoute = {
-  id: string;
-  illustration: "frame1" | "frame2";
-};
-
-const nextJourney: Journey = {
-  route: "Mumbai to Pune",
-  time: "22:45",
-  ticket: "BG-99281",
-};
-
-const popularRoutes: PopularRoute[] = [
-  {
-    id: "goa",
-    illustration: "frame1",
-  },
-  {
-    id: "nashik",
-    illustration: "frame2",
-  },
-  {
-    id: "indore",
-    illustration: "frame1",
-  },
-];
 
 const CALENDAR_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -184,10 +158,7 @@ const formatJourneyDateLabel = (journeyDate: string) => {
 
 export default function BookingHomeScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
-  const routeCardWidth = Math.min(150, width * 0.41);
-  const routeCardHeight = Math.round((routeCardWidth * 197) / 162);
   const { popup, showPopup, hidePopup } = useBusBookingPopup();
   const calendarMonths = React.useMemo(
     () => buildCalendarMonths(),
@@ -257,6 +228,12 @@ const [isWomenBooking, setIsWomenBooking] =
   React.useState(false);
 const [recentSearches, setRecentSearches] =
   React.useState<StoredRecentSearch[]>([]);
+const [nextJourney, setNextJourney] =
+  React.useState<BusOrderSummary | null>(null);
+const [loadingBookings, setLoadingBookings] =
+  React.useState(true);
+const [popularRoutes, setPopularRoutes] =
+  React.useState<BusPopularRoute[]>([]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -275,6 +252,35 @@ const [recentSearches, setRecentSearches] =
       };
 
       hydrateRecentSearches();
+
+      // The customer's real upcoming trip. Refreshed on focus so a ticket
+      // booked or cancelled a moment ago is reflected here.
+      getBusOrdersApi(1, 50)
+        .then((result) => {
+          if (mounted) {
+            setNextJourney(findNextBusJourney(result.data));
+          }
+        })
+        .catch((error) => {
+          console.log("[BusBooking][Home] Failed to load bookings", error?.message);
+        })
+        .finally(() => {
+          if (mounted) {
+            setLoadingBookings(false);
+          }
+        });
+
+      // Routes customers are actually booking; the section stays hidden
+      // until there is data for it.
+      getPopularBusRoutesApi()
+        .then((routes) => {
+          if (mounted) {
+            setPopularRoutes(routes);
+          }
+        })
+        .catch((error) => {
+          console.log("[BusBooking][Home] Failed to load popular routes", error?.message);
+        });
 
       return () => {
         mounted = false;
@@ -317,9 +323,18 @@ const [recentSearches, setRecentSearches] =
     });
   }, [selectedChip]);
 
-  const renderRouteIllustration = (illustration: PopularRoute["illustration"]) => {
-    const Illustration = illustration === "frame1" ? BusFrame1 : BusFrame2;
-    return <Illustration width="100%" height="100%" />;
+  const applyPopularRoute = (item: BusPopularRoute) => {
+    setFromCity({
+      id: item.sourceCityCode,
+      city_name: item.sourceCity,
+      city_type: "CITY",
+    });
+
+    setToCity({
+      id: item.destinationCityCode,
+      city_name: item.destinationCity,
+      city_type: "CITY",
+    });
   };
 
 const openCityPicker = (
@@ -1030,38 +1045,87 @@ const handleSearchBuses = async () => {
 </TouchableOpacity>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Next Journey</Text>
+        <Text style={styles.sectionTitle}>
+          {nextJourney ? "Your Next Journey" : "My Bookings"}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("BusOrdersScreen")}
+        >
+          <Text style={styles.viewAllText}>View All</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.journeyCard}>
-        <View style={styles.journeyTopRow}>
-          <View style={styles.tonightBadge}>
-            <Text style={styles.tonightBadgeText}>TONIGHT</Text>
+      {nextJourney ? (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.journeyCard}
+          onPress={() =>
+            navigation.navigate("BusOrderDetailScreen", {
+              orderRef: nextJourney.orderRef,
+            })
+          }
+        >
+          <View style={styles.journeyTopRow}>
+            <View style={styles.tonightBadge}>
+              <Text style={styles.tonightBadgeText}>
+                {getBusJourneyDayLabel(nextJourney.departureTime || nextJourney.journeyDate)}
+              </Text>
+            </View>
+            <View style={styles.departureWrap}>
+              <Text style={styles.departureTime}>
+                {formatBusTime(nextJourney.departureTime)}
+              </Text>
+              <Text style={styles.departureLabel}>DEPARTURE</Text>
+            </View>
           </View>
-          <View style={styles.departureWrap}>
-            <Text style={styles.departureTime}>{nextJourney.time}</Text>
-            <Text style={styles.departureLabel}>DEPARTURE</Text>
+
+          <Text style={styles.journeyRoute}>
+            {nextJourney.sourceCity} to {nextJourney.destinationCity}
+          </Text>
+
+          <View style={styles.journeyDivider} />
+
+          <View style={styles.journeyBottomRow}>
+            <View style={styles.ticketWrap}>
+              <MaterialCommunityIcons
+                name="ticket-confirmation-outline"
+                size={14}
+                color="#9CA3AF"
+              />
+              <Text style={styles.ticketText}>
+                {nextJourney.ticketNo
+                  ? `Ticket: ${nextJourney.ticketNo}`
+                  : `Ref: ${nextJourney.orderRef}`}
+              </Text>
+            </View>
+            <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
           </View>
-        </View>
-
-        <Text style={styles.journeyRoute}>{nextJourney.route}</Text>
-
-        <View style={styles.journeyDivider} />
-
-        <View style={styles.journeyBottomRow}>
-          <View style={styles.ticketWrap}>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          activeOpacity={0.88}
+          style={styles.historyCard}
+          onPress={() => navigation.navigate("BusOrdersScreen")}
+        >
+          <View style={styles.historyIconBox}>
             <MaterialCommunityIcons
               name="ticket-confirmation-outline"
-              size={14}
-              color="#9CA3AF"
+              size={20}
+              color="#E11D48"
             />
-            <Text style={styles.ticketText}>Ticket: {nextJourney.ticket}</Text>
           </View>
-          <TouchableOpacity activeOpacity={0.85}>
-            <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          <View style={styles.historyTextWrap}>
+            <Text style={styles.historyRoute}>View your bus bookings</Text>
+            <Text style={styles.historyMeta}>
+              {loadingBookings
+                ? "Checking for upcoming trips..."
+                : "No upcoming trips right now"}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color="#374151" />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Searches</Text>
@@ -1100,41 +1164,42 @@ const handleSearchBuses = async () => {
         )}
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Exclusive Offers</Text>
-        <TouchableOpacity activeOpacity={0.85}>
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
-      </View>
+      {popularRoutes.length > 0 ? (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular Routes</Text>
+          </View>
 
-      <View style={styles.offerArtworkOnlyWrap}>
-        <ExclusiveOfferBooking width="100%" height="100%" />
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Popular Routes</Text>
-        <TouchableOpacity activeOpacity={0.85}>
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.routesRow}
-      >
-        {popularRoutes.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            activeOpacity={0.88}
-            style={[styles.routeCard, { width: routeCardWidth }]}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.routesRow}
           >
-            <View style={[styles.routeArt, { height: routeCardHeight }]}>
-              {renderRouteIllustration(item.illustration)}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            {popularRoutes.map((item) => (
+              <TouchableOpacity
+                key={`${item.sourceCityCode}-${item.destinationCityCode}`}
+                activeOpacity={0.88}
+                style={styles.routeCard}
+                onPress={() => applyPopularRoute(item)}
+              >
+                <MaterialCommunityIcons name="bus" size={20} color="#E11D48" />
+                <Text style={styles.popularRouteCity} numberOfLines={1}>
+                  {item.sourceCity}
+                </Text>
+                <Text style={styles.popularRouteTo}>to</Text>
+                <Text style={styles.popularRouteCity} numberOfLines={1}>
+                  {item.destinationCity}
+                </Text>
+                {item.startingFare > 0 ? (
+                  <Text style={styles.popularRouteFare}>
+                    From {formatBusAmount(item.startingFare)}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      ) : null}
       </ScrollView>
 <Modal
   visible={cityModalVisible}
@@ -1822,21 +1887,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  offerArtworkOnlyWrap: {
-    width: "auto",
-    height: 130,
-    marginLeft: -34,
-    marginRight: -34,
-  },
   routesRow: {
     gap: 12,
     paddingRight: 2,
     paddingBottom: 16,
   },
   routeCard: {
+    width: 150,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 14,
   },
-  routeArt: {
-    width: "100%",
+  popularRouteCity: {
+    marginTop: 6,
+    color: "#333333",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  popularRouteTo: {
+    marginTop: 4,
+    color: "#9CA3AF",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  popularRouteFare: {
+    marginTop: 10,
+    color: "#C8102E",
+    fontSize: 12,
+    fontWeight: "700",
   },
   routeTextWrap: {
   marginLeft: 14,

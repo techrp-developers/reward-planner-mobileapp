@@ -46,7 +46,6 @@ import {
   getBusCheckoutErrorResult,
   runBusCheckout,
 } from "../../utils/busCheckout";
-import { fetchWalletBalance } from "../../../ecommerce/api/WalleteAPI";
 
 import Selectedseat1 from "../../assets/icons/selectedseat1.svg";
 import Selectedseat2 from "../../assets/icons/selectedseat2.svg";
@@ -283,19 +282,6 @@ export default function BusSummaryScreen() {
   const slideWidth =
     width - 16;
   const [
-    useRewardCoins,
-    setUseRewardCoins,
-  ] = React.useState(false);
-  const [
-    walletBalance,
-    setWalletBalance,
-  ] = React.useState(0);
-  const [
-    loadingWalletBalance,
-    setLoadingWalletBalance,
-  ] = React.useState(true);
-
-  const [
     creatingPaymentOrder,
     setCreatingPaymentOrder,
   ] =
@@ -310,55 +296,6 @@ export default function BusSummaryScreen() {
     React.useState(
       false
     );
-
-  const redeemableCoins =
-    Math.max(
-      0,
-      walletBalance
-    );
-
-  React.useEffect(() => {
-    let mounted = true;
-
-    const loadWalletBalance = async () => {
-      try {
-        setLoadingWalletBalance(true);
-        const response = await fetchWalletBalance();
-
-        if (!mounted) {
-          return;
-        }
-
-        setWalletBalance(
-          Number(
-            response?.data?.balance || 0
-          )
-        );
-      } catch (error) {
-        console.log(
-          "[BusBooking][Summary] Wallet balance load failed",
-          error
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        setWalletBalance(0);
-      } finally {
-        if (mounted) {
-          setLoadingWalletBalance(false);
-        }
-      }
-    };
-
-    loadWalletBalance();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
 
   /*
   |--------------------------------------------------------------------------
@@ -528,7 +465,8 @@ export default function BusSummaryScreen() {
   |--------------------------------------------------------------------------
   */
 
-  const baseFare =
+  // Only a fallback for the total if the block response carries no amount.
+  const listingFare =
     getFareValue(
       bus?.price
     ) *
@@ -560,29 +498,48 @@ const totalAmount =
 
     ? backendPayableAmount
 
-    : baseFare;
+    : listingFare;
 
 
 /*
 |--------------------------------------------------------------------------
-| Remove Fake Charges For Payment
+| Fare Breakdown
+|--------------------------------------------------------------------------
+|
+| Taken from the seat prices the provider returned when it blocked the
+| seats. When it sends no breakdown, only the total is shown.
+|
 |--------------------------------------------------------------------------
 */
 
-const taxes =
-  0;
-
-
-const rewardDiscount =
-  0;
-
-const rewardEarned =
-  Math.max(
-    0,
-    Math.round(
-      totalAmount * 0.03
-    )
+const providerBaseFare =
+  (Array.isArray(blockResponse?.passengers)
+    ? blockResponse.passengers
+    : []
+  ).reduce(
+    (sum: number, passenger: any) =>
+      sum +
+      Number(
+        passenger?.Seat?.Price?.BasePrice ??
+        passenger?.Seat?.Price?.BaseFare ??
+        0
+      ),
+    0
   );
+
+const hasFareBreakdown =
+  providerBaseFare > 0 &&
+  providerBaseFare <= totalAmount;
+
+const baseFare =
+  hasFareBreakdown
+    ? providerBaseFare
+    : totalAmount;
+
+const taxes =
+  hasFareBreakdown
+    ? Number((totalAmount - providerBaseFare).toFixed(2))
+    : 0;
 
   const openRazorpayCheckout =
     React.useCallback(
@@ -1395,153 +1352,6 @@ if (
 
         {/*
         |--------------------------------------------------------------------------
-        | Rewards Card
-        |--------------------------------------------------------------------------
-        */}
-
-        <View
-          style={
-            styles.pointsCard
-          }
-        >
-
-          <View
-            style={
-              styles.pointsCardHeader
-            }
-          >
-
-            <View
-              style={[
-                styles.pointsIcon,
-                useRewardCoins &&
-                redeemableCoins > 0
-                  ? styles.pointsIconActive
-                  : styles.pointsIconDisabled,
-              ]}
-            >
-
-              <MaterialCommunityIcons
-                name="star-four-points"
-                size={18}
-                color={
-                  useRewardCoins &&
-                  redeemableCoins > 0
-                    ? "#D31637"
-                    : "#8E8A90"
-                }
-              />
-
-            </View>
-
-
-            <View
-              style={
-                styles.pointsCardTextWrap
-              }
-            >
-
-              <Text
-                style={
-                  styles.pointsCardTitle
-                }
-              >
-                Redeem Rewards Planner Points
-              </Text>
-
-
-              <Text
-                style={
-                  styles.pointsCardSubtext
-                }
-              >
-                {loadingWalletBalance
-                  ? "Loading your available RP coins..."
-                  : redeemableCoins > 0
-                    ? `You currently have ${redeemableCoins.toLocaleString("en-IN")} RP coins in your wallet for redemption.`
-                    : "No RP coins are available in this wallet right now."}
-              </Text>
-
-            </View>
-
-
-            <TouchableOpacity
-              activeOpacity={0.88}
-              disabled={redeemableCoins <= 0}
-              onPress={() =>
-                setUseRewardCoins(
-                  current =>
-                    !current
-                )
-              }
-              style={[
-                styles.pointsToggleTrack,
-                useRewardCoins &&
-                redeemableCoins > 0
-                  ? styles.pointsToggleTrackActive
-                  : null,
-                redeemableCoins <= 0
-                  ? styles.pointsToggleTrackDisabled
-                  : null,
-              ]}
-            >
-
-              <View
-                style={[
-                  styles.pointsToggleThumb,
-                  useRewardCoins &&
-                  redeemableCoins > 0
-                    ? styles.pointsToggleThumbActive
-                    : null,
-                ]}
-              />
-
-            </TouchableOpacity>
-
-          </View>
-
-
-          <View
-            style={
-              styles.pointsCardFooter
-            }
-          >
-
-            <Text
-              style={
-                styles.pointsBalanceText
-              }
-            >
-              {loadingWalletBalance
-                ? "Current Balance: Loading..."
-                : `Current Balance: ${walletBalance.toLocaleString("en-IN")} Coins`}
-
-            </Text>
-
-
-            <Text
-              style={[
-                styles.pointsAppliedText,
-                useRewardCoins &&
-                redeemableCoins > 0
-                  ? styles.pointsAppliedTextActive
-                  : null,
-              ]}
-            >
-              {redeemableCoins <= 0
-                ? "Unavailable"
-                : useRewardCoins
-                  ? "Redeem enabled"
-                  : "Disabled"}
-            </Text>
-
-          </View>
-
-        </View>
-
-
-        {/*
-        |--------------------------------------------------------------------------
         | Fare Summary
         |--------------------------------------------------------------------------
         */}
@@ -1612,6 +1422,7 @@ if (
           |--------------------------------------------------------------------------
           */}
 
+          {taxes > 0 ? (
           <View
             style={
               styles.fareRow
@@ -1641,68 +1452,7 @@ if (
             </Text>
 
           </View>
-
-
-          {/*
-          |--------------------------------------------------------------------------
-          | Reward Discount
-          |--------------------------------------------------------------------------
-          */}
-
-          <View
-            style={
-              styles.fareRow
-            }
-          >
-
-            <View
-              style={
-                styles.discountRow
-              }
-            >
-
-              <Text
-                style={
-                  styles.fareLabel
-                }
-              >
-                Reward Discount
-              </Text>
-
-
-              <View
-                style={
-                  styles.rpBadge
-                }
-              >
-
-                <Text
-                  style={
-                    styles.rpBadgeText
-                  }
-                >
-                  RP COINS
-                </Text>
-
-              </View>
-
-            </View>
-
-
-            <Text
-              style={
-                styles.discountValue
-              }
-            >
-
-              -₹
-              {rewardDiscount.toLocaleString(
-                "en-IN"
-              )}
-
-            </Text>
-
-          </View>
+          ) : null}
 
 
           <View
@@ -1751,30 +1501,6 @@ if (
             </View>
 
 
-            <View
-              style={
-                styles.earnedWrap
-              }
-            >
-
-              <Text
-                style={
-                  styles.earnedLabel
-                }
-              >
-                EARNED
-              </Text>
-
-
-              <Text
-                style={
-                  styles.earnedValue
-                }
-              >
-                +{rewardEarned.toLocaleString("en-IN")} RP coins
-              </Text>
-
-            </View>
 
           </View>
 

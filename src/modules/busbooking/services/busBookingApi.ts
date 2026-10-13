@@ -1663,3 +1663,210 @@ export const createBusPaymentOrderApi =
 
     return result;
   };
+
+/*
+|--------------------------------------------------------------------------
+| Customer Bookings
+|--------------------------------------------------------------------------
+*/
+
+export type BusOrderStatus =
+  | "pending_payment"
+  | "payment_success"
+  | "booking_in_progress"
+  | "booking_review"
+  | "confirmed"
+  | "booking_failed"
+  | "cancelled"
+  | "expired";
+
+export type BusOrderSummary = {
+  orderRef: string;
+  operatorName: string | null;
+  busType: string | null;
+  sourceCity: string | null;
+  destinationCity: string | null;
+  journeyDate: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  boardingPointName: string | null;
+  droppingPointName: string | null;
+  seatCount: number;
+  seats: string[];
+  totalAmount: number;
+  amountPaid: number;
+  status: BusOrderStatus;
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  ticketNo: string | null;
+  travelOperatorPNR: string | null;
+  bookedAt: string | null;
+};
+
+export type BusOrderPassenger = {
+  name: string;
+  gender: string | null;
+  age: number | null;
+  seatName: string;
+  leadPassenger: boolean;
+  cancellationStatus: "processing" | "succeeded" | "failed" | null;
+  refundStatus: "not_requested" | "pending" | "processed" | "failed" | null;
+  refundAmount: number | null;
+};
+
+export type BusOrderRefund = {
+  reason: "booking_failed" | "cancellation";
+  amount: number;
+  status: "pending" | "initiated" | "processed" | "failed";
+  updatedAt: string | null;
+};
+
+export type BusOrderDetail = BusOrderSummary & {
+  cancellable: boolean;
+  passengers: BusOrderPassenger[];
+  refunds: BusOrderRefund[];
+  cancellationPolicy: any[];
+};
+
+export type BusOrdersPage = {
+  data: BusOrderSummary[];
+  page: number;
+  hasMore: boolean;
+};
+
+export type BusPopularRoute = {
+  sourceCityCode: string;
+  sourceCity: string;
+  destinationCityCode: string;
+  destinationCity: string;
+  bookings: number;
+  startingFare: number;
+};
+
+export type CancelBusSeatPayload = {
+  order_ref: string;
+  seatName: string;
+  remarks: string;
+};
+
+export type CancelBusSeatResult = {
+  // false while the provider has not confirmed the cancellation yet.
+  completed: boolean;
+  message: string;
+  refundAmount: number;
+  refundStatus: string;
+};
+
+const toBusApiError = (error: any, fallback: string) =>
+  new BusBookingApiError(
+    Number(error?.response?.status) === 401
+      ? "Your login session has expired. Please login again."
+      : error?.response?.data?.message ||
+        (error?.response
+          ? fallback
+          : "Unable to reach the bus booking service. Please try again."),
+    error?.response?.status,
+    error?.response?.data?.code
+  );
+
+export const getBusOrdersApi = async (
+  page = 1,
+  limit = 20
+): Promise<BusOrdersPage> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/orders`,
+      { params: { page, limit }, timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      page: Number(response.data?.page || page),
+      hasMore: Boolean(response.data?.hasMore),
+    };
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to load your bus bookings");
+  }
+};
+
+export const getBusOrderDetailApi = async (
+  orderRef: string
+): Promise<BusOrderDetail> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/orders/${encodeURIComponent(orderRef)}`,
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new BusBookingApiError("Unable to load this bus booking");
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    if (error instanceof BusBookingApiError) throw error;
+    throw toBusApiError(error, "Unable to load this bus booking");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Cancel A Booked Seat
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/cancel   { order_ref, seatName, remarks }
+|
+| 200 -> cancelled, refund queued
+| 202 -> provider has not confirmed yet; the backend keeps tracking it
+|
+|--------------------------------------------------------------------------
+*/
+
+export const cancelBusSeatApi = async (
+  payload: CancelBusSeatPayload
+): Promise<CancelBusSeatResult> => {
+  try {
+    const response = await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/cancel`,
+      payload,
+      { timeout: BUS_BOOK_TIMEOUT_MS }
+    );
+
+    const result = response.data;
+
+    if (!result?.success) {
+      throw new BusBookingApiError(
+        result?.message || "Unable to cancel bus seat",
+        response.status
+      );
+    }
+
+    return {
+      completed: response.status === 200,
+      message: String(result?.message || "Bus seat cancelled successfully"),
+      refundAmount: Number(result?.data?.refundAmount || 0),
+      refundStatus: String(result?.data?.refundStatus || "not_requested"),
+    };
+  } catch (error: any) {
+    if (error instanceof BusBookingApiError) throw error;
+    throw toBusApiError(error, "Unable to cancel bus seat");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Popular Routes
+|--------------------------------------------------------------------------
+*/
+
+export const getPopularBusRoutesApi = async (): Promise<BusPopularRoute[]> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/popular-routes`,
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to load popular routes");
+  }
+};

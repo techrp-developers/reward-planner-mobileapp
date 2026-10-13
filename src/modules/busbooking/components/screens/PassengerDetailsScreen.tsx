@@ -153,7 +153,12 @@ const getQuickSelectKey = (
   return "";
 };
 
-const BLOCK_TEST_REF_ID = "35";
+// The provider's Block call takes our own reference for the hold. It must be
+// unique per attempt, so it is generated here rather than fixed.
+const createBlockRefId = () =>
+  `${Date.now()}${Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0")}`;
 
 export default function PassengerDetailsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
@@ -486,7 +491,7 @@ export default function PassengerDetailsScreen() {
       resultIndex: String(resultIndex),
       boardingPointId: String(boardingPoint.Id),
       droppingPointId: String(droppingPoint.Id),
-      refId: BLOCK_TEST_REF_ID,
+      refId: createBlockRefId(),
       passengers: blockPassengers,
       sourceCity,
       destinationCity,
