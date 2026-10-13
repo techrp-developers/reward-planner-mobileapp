@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   View,
@@ -21,7 +21,7 @@ import type { CmsModule } from '../../common/cms/cmsContentApi';
 import ProductIcon from '../../../assets/sampleImages/Product.svg';
 import ServiceIcon from '../../../assets/sampleImages/Service.svg';
 import PaymentIcon from '../../../assets/sampleImages/Payment.svg';
-import DineOutIcon from '../../../assets/sampleImages/DineOut.svg';
+import BusIcon from '../../../assets/sampleImages/Bus_Booking.svg';
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -37,7 +37,7 @@ const FALLBACK_ICON_BY_TAB: Record<TopTab, React.ComponentType<{ width: number; 
   Product: ProductIcon,
   Services: ServiceIcon,
   Payments: PaymentIcon,
-  DineOut: DineOutIcon,
+  DineOut: BusIcon,
 };
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
@@ -72,6 +72,8 @@ type ServiceCardProps = {
 const ServiceCard = React.memo(
   ({ tab, label, iconUrl, cardWidth, iconContainerSize, iconRadius, iconSize, onPress }: ServiceCardProps) => {
     const { isDark } = useAppTheme();
+    const [iconFailed, setIconFailed] = useState(false);
+    useEffect(() => setIconFailed(false), [iconUrl]);
     const scale = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = useCallback(() => {
@@ -106,8 +108,8 @@ const ServiceCard = React.memo(
             { width: iconContainerSize, height: iconContainerSize, borderRadius: iconRadius },
           ]}
         >
-          {iconUrl ? (
-            <Image source={{ uri: iconUrl }} style={{ width: iconSize, height: iconSize }} resizeMode="contain" />
+          {iconUrl && !iconFailed ? (
+            <Image onError={() => setIconFailed(true)} source={{ uri: iconUrl }} style={{ width: iconSize, height: iconSize }} resizeMode="contain" />
           ) : FallbackIcon ? (
             <FallbackIcon width={iconSize} height={iconSize} />
           ) : null}
@@ -129,10 +131,7 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const { modules } = useModuleIcons();
-  const dashboardModules = useMemo(
-    () => modules.filter(module => module.module_key !== 'dineout'),
-    [modules],
-  );
+  const dashboardModules = modules;
   const isNavigatingRef = useRef(false);
   const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,

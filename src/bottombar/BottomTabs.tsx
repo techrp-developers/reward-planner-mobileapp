@@ -11,7 +11,7 @@ import ExploreIcon from "../assets/menu/Explore.svg";
 import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
 import { useAppTheme } from "../theme/ThemeContext";
-import RewardIcon from "../assets/homepage/RewardPlannersLogo.png";
+import RewardIcon from "../assets/menu/logo.png";
 
 const FLOATING_BOTTOM_GAP = 10;
 const FLOATING_BAR_HEIGHT = 64;
@@ -56,8 +56,6 @@ type TabItemProps = {
 // Defined outside render — stable reference, no allocation per press.
 const HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 } as const;
 const NOOP = () => {};
-const DASHBOARD_SLOT_WIDTH = 62;
-const DASHBOARD_INDICATOR_LEFT = 9;
 
 // Tab config is identical across modes — the parent's onTabPress handler
 // (MainLayout / Dashbord) decides where each generic tab key actually
@@ -246,7 +244,6 @@ function BottomTabs({
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
   // Without this, every tab press invalidates handlePress → pressHandlers → all TabItem memos.
   const activeTabRef = useRef<TabKey>("Home");
-  const dashboardIndicatorX = useRef(new Animated.Value(DASHBOARD_SLOT_WIDTH)).current;
   const [activeTab, setActiveTab] = useState<TabKey>("Home");
 
   const handlePress = useCallback(
@@ -274,26 +271,15 @@ function BottomTabs({
   const dashboardInactiveColor = isDark ? "#D8CBE5" : "#625A6B";
   const dashboardIndicatorBackground = isDark ? "rgba(106,0,255,0.45)" : "rgba(255,255,255,0.96)";
 
-  const animateDashboardIndicator = useCallback((index: number) => {
-    Animated.spring(dashboardIndicatorX, {
-      toValue: index * DASHBOARD_SLOT_WIDTH,
-      useNativeDriver: true,
-      tension: 120,
-      friction: 13,
-    }).start();
-  }, [dashboardIndicatorX]);
-
   const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Chat") => {
-    const index = tab === "Notes" ? 0 : tab === "Home" ? 1 : 2;
     activeTabRef.current = tab;
     setActiveTab(tab);
-    animateDashboardIndicator(index);
     if (tab === "Home") {
       onCenterPress?.();
       return;
     }
     onTabPress?.(tab);
-  }, [animateDashboardIndicator, onCenterPress, onTabPress]);
+  }, [onCenterPress, onTabPress]);
 
   // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,
   // not on every tab press. Passing these as onPress keeps TabItem React.memo effective.
@@ -319,73 +305,40 @@ function BottomTabs({
       setActiveTab(activeTabKey);
     }
 
-    if (isDashboard) {
-      const index = activeTabKey === "Notes" ? 0 : activeTabKey === "Home" ? 1 : 2;
-      animateDashboardIndicator(index);
-    }
-  }, [activeTabKey, animateDashboardIndicator, isDashboard, isFocused]);
+  }, [activeTabKey, isFocused]);
 
   if (isDashboard) {
     return (
-      <View style={[styles.dashboardWrap, { paddingBottom: bottomInset }]}>
-        <View
-          style={[
-            styles.dashboardPill,
-            {
-              backgroundColor: dashboardPillBackground,
-              borderColor: dashboardPillBorder,
-              shadowColor: isDark ? "#6A00FF" : "#4B0082",
-            },
-          ]}
-        >
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.dashboardIndicator,
-              {
-                backgroundColor: dashboardIndicatorBackground,
-                transform: [{ translateX: dashboardIndicatorX }],
-              },
-            ]}
-          />
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => handleDashboardPress("Notes")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="note-text-outline"
-              size={23}
-              color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor}
-            />
+      <View pointerEvents="box-none" style={[styles.dashboardWrap, { paddingBottom: bottomInset + 8 }]}>
+        <View style={[styles.referenceBar, { backgroundColor: dashboardPillBackground, borderColor: dashboardPillBorder }]}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Todo List" onPress={() => handleDashboardPress("Notes")} style={styles.referenceSide}>
+            <MaterialCommunityIcons name="compass-outline" size={26} color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor} />
+            <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>Todo List</Text>
           </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dashboard" onPress={() => handleDashboardPress("Home")} style={[styles.referenceLogoRing, { backgroundColor: dashboardIndicatorBackground }]}>
+            <Image source={RewardIcon} resizeMode="contain" style={styles.referenceLogo} />
+          </TouchableOpacity>
+         
+<TouchableOpacity
+  accessibilityRole="button"
+  accessibilityLabel="Chat"
+  onPress={() => handleDashboardPress("Chat")}
+  style={styles.referenceSide}
+>
+  <MaterialCommunityIcons
+    name="chat-outline"
+    size={26}
+    color={
+      activeTab === "Chat"
+        ? dashboardActiveColor
+        : dashboardInactiveColor
+    }
+  />
+  <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>
+    Chat
+  </Text>
+</TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => handleDashboardPress("Home")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="home"
-              size={24}
-              color={activeTab === "Home" ? dashboardActiveColor : dashboardInactiveColor}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => handleDashboardPress("Chat")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="message-text-outline"
-              size={24}
-              color={activeTab === "Chat" ? dashboardActiveColor : dashboardInactiveColor}
-            />
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -461,53 +414,17 @@ function BottomTabs({
 export default React.memo(BottomTabs);
 
 const styles = StyleSheet.create({
+  referenceBar: { width: "88%", height: 64, borderRadius: 34, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-around", shadowColor: "#111827", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 10 },
+  referenceSide: { flex: 1, height: 60, alignItems: "center", justifyContent: "center" },
+  referenceLabel: { fontSize: 11, fontWeight: "600", marginTop: 3 },
+  referenceLogoRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 4, borderColor: "#A1A1AA", marginTop: -24, alignItems: "center", justifyContent: "center", shadowColor: "#52525B", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  referenceLogo: { width: 38, height: 38 },
   dashboardWrap: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     alignItems: "center",
-  },
-  dashboardPill: {
-    height: 58,
-    minWidth: 204,
-    paddingHorizontal: 9,
-    borderRadius: 31,
-    backgroundColor: "#151515",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-  },
-  dashboardSideBtn: {
-    width: DASHBOARD_SLOT_WIDTH,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  dashboardIndicator: {
-    position: "absolute",
-    left: DASHBOARD_INDICATOR_LEFT,
-    width: DASHBOARD_SLOT_WIDTH,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F4F6",
-    shadowColor: "#FFFFFF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
   },
   wrap: {
     position: "absolute",

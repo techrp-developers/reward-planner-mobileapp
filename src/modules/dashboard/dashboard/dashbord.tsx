@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -108,13 +108,22 @@ function Dashbord() {
     const initialGoal = Number((user as any)?.steps?.goal_steps);
     return Number.isFinite(initialGoal) && initialGoal > 0 ? initialGoal : 5000;
   });
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const lastScrollY = useRef(0);
+  const handleDashboardScroll = useCallback((event: import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>) => {
+    const y = Math.max(0, event.nativeEvent.contentOffset.y);
+    const delta = y - lastScrollY.current;
+    if (y < 16) setHeaderCollapsed(false);
+    else if (delta > 6 && y > 80) setHeaderCollapsed(true);
+    else if (delta < -6) setHeaderCollapsed(false);
+    if (Math.abs(delta) > 6) lastScrollY.current = y;
+  }, []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>(
     () => dashboardHeaderCache?.birthdays ?? [],
   );
-  const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
   const { data: walletBalanceResponse } = useQuery({
     queryKey: ['dashboard', 'header-wallet-balance'],
@@ -239,6 +248,10 @@ function Dashbord() {
       require('../../services/component/screens/HomeScreen');
       require('../../bbps/navigation/BBPSHomeStack');
       require('../../bbps/screen/HomePage');
+      void Promise.allSettled([
+        require('../../services/component/home/ServicesHome').prefetchServiceCategories(),
+        require('../../bbps/component/home/ReachargeBill').prefetchBillCategories(),
+      ]);
       require('../../step_counter/navigation/RewardHomeStack');
       require('../../step_counter/component/fitness/StepWelcome');
       require('../../ecommerce/constants/ComingSoon');
@@ -251,22 +264,14 @@ function Dashbord() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    setOpeningModule(null);
     loadHeaderInfo();
   }, [loadHeaderInfo]));
 
   const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
-    setOpeningModule(tab);
-
-    // Let the lightweight module shell paint before mounting the destination.
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        navigation.navigate('Home', {
-          screen: MODULE_ROUTE[tab],
-          params: { moduleName: tab },
-          moduleName: tab,
-        });
-      }, 0);
+    navigation.navigate('Home', {
+      screen: MODULE_ROUTE[tab],
+      params: { moduleName: tab },
+      moduleName: tab,
     });
   }, [navigation]);
 
@@ -330,6 +335,7 @@ function Dashbord() {
     const headerContent = (
       <>
         <HeaderComponent
+          collapsed={headerCollapsed && !isSearchOpen}
           userName={headerUserName}
           userImageUri={headerUserImage ?? undefined}
           companyLogoUri={headerCompanyLogo ?? undefined}
@@ -342,11 +348,9 @@ function Dashbord() {
           onNotificationPress={() => navigation.navigate('Notification')}
           showRewardPoints
           rewardPoints={rewardPoints}
-          showSearch={false}
+          onProfilePress={() => navigation.navigate('Profile', { context: 'dashboard' })}
+          statusContent={<StatusTray textColor={headerTextColor} />}
         />
-        <View style={styles.statusTrayWrap}>
-          <StatusTray textColor={headerTextColor} />
-        </View>
       </>
     );
 
@@ -391,6 +395,8 @@ function Dashbord() {
       </LinearGradient>
     );
   }, [
+    headerCollapsed,
+    isSearchOpen,
     headerCompanyLogo,
     headerUserImage,
     headerUserName,
@@ -420,6 +426,8 @@ function Dashbord() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSearchOpen}
+        onScroll={handleDashboardScroll}
+        scrollEventThrottle={16}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
         removeClippedSubviews={Platform.OS === 'android'}
@@ -484,34 +492,7 @@ function Dashbord() {
         onTabPress={handleTabPress}
         onCenterPress={handleCenterPress}
       />
-      {openingModule && (
-        <View
-          style={[
-            styles.moduleLaunchOverlay,
-            { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
-          ]}
-        >
-          <View
-            style={[
-              styles.moduleLaunchLineWide,
-              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-            ]}
-          />
-          <View
-            style={[
-              styles.moduleLaunchLine,
-              { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-            ]}
-          />
-          <View
-            style={[
-              styles.moduleLaunchCard,
-              { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
-            ]}
-          />
-        </View>
-      )}
-      {!isSearchOpen && !openingModule && <GamesDrawer />}
+      {!isSearchOpen && <GamesDrawer />}
     </LinearGradient>
   );
 }
@@ -545,9 +526,6 @@ const styles = StyleSheet.create({
     shadowRadius: rs(18),
     elevation: 8,
   },
-  statusTrayWrap: {
-    paddingHorizontal: rs(20),
-  },
   topSectionImage: {
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
@@ -577,28 +555,4 @@ const styles = StyleSheet.create({
     elevation: 32,
   },
 
-  moduleLaunchOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 500,
-    elevation: 50,
-    padding: rs(18),
-    paddingTop: rs(90),
-  },
-  moduleLaunchLineWide: {
-    width: '58%',
-    height: rs(18),
-    borderRadius: rs(9),
-    marginBottom: rs(12),
-  },
-  moduleLaunchLine: {
-    width: '34%',
-    height: rs(12),
-    borderRadius: rs(6),
-    marginBottom: rs(22),
-  },
-  moduleLaunchCard: {
-    width: '100%',
-    height: rs(210),
-    borderRadius: rs(18),
-  },
 });

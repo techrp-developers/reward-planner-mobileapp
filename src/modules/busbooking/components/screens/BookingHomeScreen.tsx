@@ -1,8 +1,8 @@
+import ModuleSkeleton from '../../../common/components/ModuleSkeleton';
 import React from "react";
 
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   ScrollView,
@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-  Switch,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -241,7 +240,6 @@ const [cityLoading, setCityLoading] =
 |--------------------------------------------------------------------------
 */
 
-const journeyTime = "18:00";
 
 const [dateModalVisible, setDateModalVisible] =
   React.useState(false);
@@ -1197,15 +1195,10 @@ const handleSearchBuses = async () => {
           autoFocus
         />
 
-        {cityLoading && (
-          <ActivityIndicator
-            size="small"
-            color="#C8102E"
-          />
-        )}
+
 
       </View>
-
+      {cityLoading && <ModuleSkeleton variant="cities" height={250} />}
 
       {
         citySearchText.length < 2 ? (

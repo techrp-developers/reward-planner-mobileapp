@@ -50,7 +50,7 @@ const fallbackModules: ApiModuleIcon[] = [
   },
   {
     module_key: TAB_MODULE_MAP.DineOut,
-    label: "DineOut",
+    label: "Bus Booking",
     icon_url: null,
     active_icon_url: null,
     dashboard_icon_url: null,

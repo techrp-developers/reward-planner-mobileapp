@@ -8,13 +8,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
@@ -612,14 +612,14 @@ function StatusTray({ textColor }: { textColor?: string }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trayContent}>
         <View style={styles.storyItem}>
           <Pressable onPress={() => myGroup ? (setViewingOwn(true), setActiveGroup(myGroup)) : setComposerVisible(true)} onLongPress={() => setComposerVisible(true)} style={[styles.storyRing, myGroup && styles.storyRingActive]}>
-            <Avatar uri={myGroup?.user.image_url} name={user?.name} />
+            <Avatar uri={myGroup?.user.image_url} name={user?.name} size={46} />
             <Pressable onPress={() => setComposerVisible(true)} style={styles.addBadge}><MaterialCommunityIcons name="plus" color="#FFF" size={16} /></Pressable>
           </Pressable>
           <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>My status</Text>
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
-            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} /></View>
+            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} size={46} /></View>
             <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>{group.user.name || 'User'}</Text>
           </Pressable>
         ))}
@@ -635,9 +635,9 @@ export default memo(StatusTray);
 
 const styles = StyleSheet.create({
   tray: { marginTop: 8, marginBottom: 6 },
-  trayContent: { paddingHorizontal: 0, gap: 16, alignItems: 'center' }, storyItem: { width: 64, alignItems: 'center' },
-  storyRing: { width: 64, height: 64, borderRadius: 32, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
-  storyName: { fontSize: 11, marginTop: 5, width: 64, textAlign: 'center' }, addBadge: { position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: '#7C3AED', borderWidth: 2, borderColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  trayContent: { paddingHorizontal: 0, gap: 16, alignItems: 'center' }, storyItem: { width: 56, alignItems: 'center' },
+  storyRing: { width: 56, height: 56, borderRadius: 28, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
+  storyName: { fontSize: 11, marginTop: 5, width: 56, textAlign: 'center' }, addBadge: { position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: '#7C3AED', borderWidth: 2, borderColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   avatarFallback: { backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' }, avatarInitial: { color: '#FFF', fontWeight: '800' },
   composer: { flex: 1 }, composerHeader: { height: 62, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, composerTitle: { color: '#FFF', fontSize: 18, fontWeight: '700' }, composerBody: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusInput: { width: '88%', color: '#FFF', fontSize: 30, lineHeight: 40, fontWeight: '700', maxHeight: '70%' }, composerImage: { width: '100%', height: '100%' }, videoSelected: { alignItems: 'center', padding: 24 }, videoSelectedText: { color: '#FFF', marginTop: 14, fontSize: 16, fontWeight: '600', textAlign: 'center' }, videoHint: { color: '#A1A1AA', marginTop: 7 },

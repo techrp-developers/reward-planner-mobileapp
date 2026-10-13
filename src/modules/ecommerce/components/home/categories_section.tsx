@@ -1,5 +1,7 @@
+import ModuleSkeleton from '../../../common/components/ModuleSkeleton';
 import React from "react";
 import {
+  Animated,
   View,
   Text,
   StyleSheet,
@@ -8,7 +10,6 @@ import {
   Image,
   FlatList,
   InteractionManager,
-  Animated,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -27,7 +28,6 @@ const CATEGORIES_STALE_TIME = 10 * 60 * 1000;
 const HORIZONTAL_PADDING = rs(16);
 const CARD_GAP = rs(10);
 const VISIBLE_CATEGORY_COUNT = 5;
-const SKELETON_CARD_COUNT = 5;
 
 type Category = {
   id: number;
@@ -150,44 +150,7 @@ const CategoryTile = React.memo(function CategoryTile({
   );
 });
 
-function CategoryCarouselSkeleton({ cardWidth }: { cardWidth: number }) {
-  const { isDark } = useAppTheme();
-  const opacity = React.useRef(new Animated.Value(0.55)).current;
-  const skeletonColor = isDark ? "#27272A" : "#EEF1F5";
 
-  React.useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.55, duration: 650, useNativeDriver: true }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View
-      style={[styles.skeletonRow, { opacity, paddingHorizontal: HORIZONTAL_PADDING }]}
-    >
-      {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-        <View key={index} style={{ width: cardWidth, marginRight: CARD_GAP }}>
-          <View
-            style={[
-              styles.skeletonImage,
-              {
-                width: cardWidth,
-                height: cardWidth * 1.05,
-                backgroundColor: skeletonColor,
-              },
-            ]}
-          />
-          <View style={[styles.skeletonLabel, { backgroundColor: skeletonColor }]} />
-        </View>
-      ))}
-    </Animated.View>
-  );
-}
 
 export default function CategoriesSection() {
   const navigation = useNavigation<Nav>();
@@ -263,7 +226,7 @@ export default function CategoriesSection() {
         <View style={styles.headerRow}>
           <Text style={[styles.heading, { color: theme.text }]}>Categories</Text>
         </View>
-        <CategoryCarouselSkeleton cardWidth={layout.cardWidth} />
+        <ModuleSkeleton variant="categories" height={layout.imageHeight + 64} />
       </View>
     );
   }
@@ -361,18 +324,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: fs(13),
     minHeight: rs(26),
-  },
-  skeletonRow: {
-    flexDirection: "row",
-  },
-  skeletonImage: {
-    borderRadius: 16,
-  },
-  skeletonLabel: {
-    marginTop: 8,
-    alignSelf: "center",
-    width: "60%",
-    height: 12,
-    borderRadius: 6,
   },
 });

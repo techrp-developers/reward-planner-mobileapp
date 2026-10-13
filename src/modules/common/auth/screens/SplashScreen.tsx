@@ -1,13 +1,7 @@
-import React, { useEffect, useRef } from "react";
-import {
-  Animated,
-  Image,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import RewardPlannersLogo from "../../../../assets/homepage/RewardPlannersLogo.png";
+import React, { useEffect } from "react";
+import { View, Image, StatusBar, StyleSheet, useWindowDimensions } from "react-native";
+import logo from "../../../../assets/menu/logo.png";
+import logoword from "../../../../assets/menu/logo word.png";
 import { fetchAllCategories } from "../../../ecommerce/api/ProductApi";
 import {
   fetchBestSellers,
@@ -15,104 +9,35 @@ import {
   fetchTopRatedProducts,
 } from "../../../ecommerce/api/PromotionalApi";
 
-const MIN_SPLASH_MS = 1800;
 
-function SplashScreenComponent() {
-  const isMounted = useRef(true);
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.92)).current;
+function SplashScreen() {
+  const { width, height } = useWindowDimensions();
+  const logoSize = Math.min(width * 0.52, height * 0.32, 240);
+  const wordWidth = Math.min(width * 0.76, 340);
 
+  // Warm existing product caches; RootNavigator owns startup readiness.
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 520,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 70,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    const prepareApp = async () => {
-      const minDelay = new Promise<void>((resolve) =>
-        setTimeout(resolve, MIN_SPLASH_MS),
-      );
-
-      const fetchAll = Promise.all([
-        fetchBestSellers().catch(() => null),
-        fetchTopRatedProducts().catch(() => null),
-        fetchMostViewedProducts().catch(() => null),
-        fetchAllCategories().catch(() => null),
-      ]);
-
-      await Promise.all([fetchAll, minDelay]);
-
-      if (!isMounted.current) return;
-    };
-
-    prepareApp().catch((error) => {
-      if (isMounted.current) {
-        console.warn("SplashScreen prepareApp error:", error);
-      }
-    });
-
-    return () => {
-      isMounted.current = false;
-      logoOpacity.stopAnimation();
-      logoScale.stopAnimation();
-    };
-  }, [logoOpacity, logoScale]);
+    Promise.allSettled([
+      fetchBestSellers(), fetchTopRatedProducts(),
+      fetchMostViewedProducts(), fetchAllCategories(),
+    ]);
+  }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      <Animated.View
-        style={[
-          styles.logoWrap,
-          { opacity: logoOpacity, transform: [{ scale: logoScale }] },
-        ]}
-      >
-        <Image source={RewardPlannersLogo} style={styles.logo} resizeMode="contain" />
-      </Animated.View>
-
-      <Text style={styles.label}>Reward Planners</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F1F9" />
+      <View style={styles.content}>
+        <View style={[styles.logo, { width: logoSize, height: logoSize }]}>
+          <Image source={logo} style={{ width: logoSize, height: logoSize }} resizeMode="contain" accessible={false} />
+        </View>
+        <Image source={logoword} style={{ width: wordWidth, height: wordWidth * 718 / 2191 }} resizeMode="contain" accessible accessibilityLabel="Reward Planners" />
+      </View>
     </View>
   );
 }
-
-const SplashScreen = React.memo(SplashScreenComponent);
-export default SplashScreen;
-
+export default React.memo(SplashScreen);
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  logoWrap: {
-    width: 190,
-    height: 190,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logo: {
-    width: 170,
-    height: 170,
-  },
-  label: {
-    marginTop: 20,
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 0,
-    textShadowColor: "rgba(236, 72, 153, 0.42)",
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 12,
-  },
+  container: { flex: 1, backgroundColor: "#F4F1F9", alignItems: "center", justifyContent: "center" },
+  content: { alignItems: "center", justifyContent: "center" },
+  logo: { marginBottom: 24, alignItems: "center", justifyContent: "center" },
 });

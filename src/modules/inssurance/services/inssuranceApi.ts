@@ -1,7 +1,7 @@
 import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
+import { API_BASE_URL } from "../../../config/apiConfig";
 
-// We have run adb reverse tcp:5000 tcp:5000 so your phone connects directly down the USB cable
-export const INSURANCE_BASE_URL = "http://localhost:5000";
+export const INSURANCE_BASE_URL = API_BASE_URL;
 
 export const fetchGmcDetails = async (): Promise<any> => {
   const headers = await getAuthHeaders();

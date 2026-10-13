@@ -1,3 +1,4 @@
+import { queryClient } from '../../../../query/queryClient';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -233,11 +234,13 @@ const RechargeBillSkeleton = ({ bbpsTheme }: { bbpsTheme: BbpsTheme }) => {
           toValue: 1,
           duration: 650,
           useNativeDriver: true,
+          isInteraction: false,
         }),
         Animated.timing(shimmerAnim, {
           toValue: 0.3,
           duration: 650,
           useNativeDriver: true,
+          isInteraction: false,
         }),
       ]),
     );
@@ -711,3 +714,7 @@ const styles = StyleSheet.create({
 });
 
 export default RechargeBill;
+
+export const prefetchBillCategories = () => queryClient.prefetchQuery({
+  queryKey: BILL_CATEGORIES_QUERY_KEY, queryFn: fetchBillsCategories, staleTime: BILL_CATEGORIES_STALE_TIME,
+});

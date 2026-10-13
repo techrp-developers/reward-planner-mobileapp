@@ -1,3 +1,4 @@
+import BusBookingIcon from '../assets/sampleImages/Bus_Booking.svg';
 import React from "react";
 import {
   View,
@@ -396,15 +397,7 @@ const TopIconWithLabel = React.memo(
                 source={{ uri: imageUrl }}
                 style={{ width: gradientInnerSize, height: gradientInnerSize }}
                 resizeMode="contain"
-                onLoad={() => {
-                  if (__DEV__) {
-                    console.log("[CMS] Module icon loaded:", moduleKey);
-                  }
-                }}
                 onError={() => {
-                  if (__DEV__) {
-                    console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
-                  }
                   handleIconError();
                 }}
               />
@@ -414,20 +407,12 @@ const TopIconWithLabel = React.memo(
               source={{ uri: imageUrl }}
               style={{ width: iconSize, height: iconSize }}
               resizeMode="contain"
-              onLoad={() => {
-                if (__DEV__) {
-                  console.log("[CMS] Module icon loaded:", moduleKey);
-                }
-              }}
               onError={() => {
-                if (__DEV__) {
-                  console.log("[CMS] Module icon failed:", moduleKey, imageUrl);
-                }
                 handleIconError();
               }}
             />
           )
-        ) : null}
+        ) : moduleKey === "dineout" ? <BusBookingIcon width={iconSize} height={iconSize} /> : null}
 
         <Text
           style={[
@@ -505,12 +490,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   // Campaign-driven banner config per tab (falls back to the bundled static
   // images/colors in navbarConstants when the API has no data for a tab).
   const { banners } = useNavbarBanners();
-  React.useEffect(() => {
-    if (!__DEV__) return;
-    console.log("[CMS] Navbar active tab:", activeTab);
-    console.log("[CMS] Navbar banner:", banners[activeTab]);
-    console.log("[CMS] Navbar image URL:", banners[activeTab]?.imageUrl);
-  }, [activeTab, banners]);
 
   // API failure/empty response just yields an empty list — no hardcoded
   // Product/Services/Payments/etc. fallback, per the CMS-only requirement.
@@ -539,20 +518,6 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
     setSelectedModuleKey(activeModuleKeyFromRoute);
   }, [activeModuleKeyFromRoute]);
 
-  React.useEffect(() => {
-    if (!__DEV__) return;
-    console.log("[CMS] Modules:", modules);
-    modules.forEach((module) => {
-      console.log("[CMS] Module:", {
-        module_key: module.module_key,
-        label: module.label,
-        icon_url: module.icon_url,
-        active_icon_url: module.active_icon_url,
-        route_key: module.route_key,
-        is_active: module.is_active,
-      });
-    });
-  }, [modules]);
 
   const activeThemeColor = React.useMemo(
     () => {
