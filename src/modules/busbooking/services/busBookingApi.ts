@@ -1,8 +1,19 @@
 import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import api from "../../common/auth/api/axios";
-import { SERVER_URL } from "../../../config/apiConfig";
+import { API_BASE_URL } from "../../../config/apiConfig";
 
 const BUS_REQUEST_TIMEOUT_MS = 20_000;
+// /book waits on the provider (up to 30s) or on another request that already
+// owns the provider call (up to 40s), so it needs a longer client timeout.
+const BUS_BOOK_TIMEOUT_MS = 60_000;
+const BUS_VERIFY_ATTEMPTS = 3;
+const BUS_VERIFY_RETRY_DELAY_MS = 1_500;
+
+const BUS_BOOKING_PENDING_MESSAGE =
+  "Your payment is safe. We are confirming your ticket with the operator. If it cannot be confirmed, the amount will be refunded to your original payment method.";
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const nativeConsole = globalThis.console;
 
@@ -385,31 +396,58 @@ export type BlockSeatResponse = {
 */
 
 export type BookBusPayload = {
-  traceId: string;
-  srdvIndex: string;
-  resultIndex: string;
+  order_ref: string;
 };
 
 
-export type BookBusResponse = {
-  success: boolean;
+// The backend books with the provider exactly once per paid order, so the
+// app only ever learns where the order ended up:
+// - confirmed: ticket issued
+// - pending:   payment is captured, the backend is still confirming with the
+//              operator (or will retry / escalate from its reconcile cron)
+// - failed:    the provider rejected the booking and a full refund was queued
+export type BusBookingOutcome =
+  | {
+      status: "confirmed";
+      orderRef: string;
+      message: string;
+      bookingId: number | string | null;
+      ticketNo: string | null;
+      travelOperatorPNR: string | null;
+    }
+  | {
+      status: "pending";
+      orderRef: string;
+      message: string;
+    }
+  | {
+      status: "failed";
+      orderRef: string;
+      message: string;
+      refundInitiated: boolean;
+    };
 
-  message: string;
 
-  traceId: string;
-
-  srdvIndex: string;
-
-  resultIndex: string;
-
-  bookingId: number | string;
-
-  bookingStatus: string;
-
-  ticketNo: string;
-
-  travelOperatorPNR: string;
+export type VerifyBusPaymentPayload = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 };
+
+
+export class BusBookingApiError extends Error {
+  status?: number;
+  code?: string;
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = "BusBookingApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export const BUS_SEAT_HOLD_EXPIRED_CODE = "SEAT_HOLD_EXPIRED";
 
 /*
 |--------------------------------------------------------------------------
@@ -457,48 +495,13 @@ export type CreateBusPaymentOrderResponse = {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| IMPORTANT
-|--------------------------------------------------------------------------
-|
-| Physical Android phone:
-| Use your computer's LAN IP.
-|
-| Example:
-| http://192.168.1.100:5000
-|
-| Android Emulator:
-| http://10.0.2.2:5000
-|
-|--------------------------------------------------------------------------
-*/
-
-/*
-|--------------------------------------------------------------------------
-| LOCAL BUS BOOKING BACKEND
-|--------------------------------------------------------------------------
-|
-| Android Emulator:
-| http://10.0.2.2:5000/api/busbooking
-|
-| Physical Android phone:
-| http://YOUR_PC_LAN_IP:5000/api/busbooking
-| Example:
-| http://192.168.1.100:5000/api/busbooking
-|
-| USB-connected Android phone with adb reverse:
-| http://localhost:5000
-|
-| Update this one constant when you want to point bus booking to a local
-| backend instead of the live server.
-|
-|--------------------------------------------------------------------------
-*/
-// Uses the same local/live environment switch as every other app module.
-// local: http://localhost:5000 (with adb reverse on a physical Android phone)
-// live:  https://rewardplanners.com
-export const BUS_BOOKING_BASE_URL = SERVER_URL.replace(/\/$/, "");
+// Uses the same local/live environment switch as every other app module
+// (src/config/apiConfig.ts). The backend mounts this module at
+// /api/busbooking; on live that sits behind the same reverse-proxy prefix as
+// the rest of the API.
+// local: http://<dev machine>:5000/api/busbooking
+// live:  https://rewardplanners.com/api/crm/api/busbooking
+export const BUS_BOOKING_BASE_URL = API_BASE_URL.replace(/\/$/, "");
 
 /*
 |--------------------------------------------------------------------------
@@ -1195,204 +1198,222 @@ export const blockSeatApi =
   };
 /*
 |--------------------------------------------------------------------------
+| Verify Bus Razorpay Payment
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/verify-payment
+|
+| Marks the order paid on the backend, which is what allows /book to run.
+| The call is idempotent, so transient failures are retried.
+|
+| Returns false when the outcome could not be learned (offline, timeout,
+| 5xx). The payment may still have been captured; the backend's Razorpay
+| webhook and reconcile cron then book or refund the order on their own.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const verifyBusPaymentApi = async (
+  payload: VerifyBusPaymentPayload
+): Promise<boolean> => {
+  const requestUrl =
+    `${BUS_BOOKING_BASE_URL}/api/busbooking/verify-payment`;
+
+  for (let attempt = 1; attempt <= BUS_VERIFY_ATTEMPTS; attempt += 1) {
+    let status = 0;
+    let result: any = null;
+
+    try {
+      const response = await api.post(requestUrl, payload, {
+        timeout: BUS_REQUEST_TIMEOUT_MS,
+      });
+      status = response.status;
+      result = response.data;
+    } catch (error: any) {
+      status = Number(error?.response?.status || 0);
+      result = error?.response?.data ?? null;
+
+      console.log("[BusBooking][API][Payment] Verify Error", {
+        attempt,
+        status,
+        message: result?.message || error?.message || error,
+      });
+    }
+
+    if (status >= 200 && status < 300 && result?.success) {
+      return true;
+    }
+
+    // A 4xx is the backend's final answer for this payment; retrying the same
+    // request cannot change it.
+    const isDefinitive =
+      status >= 400 && status < 500 && status !== 408 && status !== 429;
+
+    if (isDefinitive) {
+      throw new BusBookingApiError(
+        status === 401
+          ? "Your login session has expired. Please login again."
+          : result?.message || "Payment could not be verified",
+        status,
+        result?.code
+      );
+    }
+
+    if (attempt < BUS_VERIFY_ATTEMPTS) {
+      await sleep(BUS_VERIFY_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  return false;
+};
+
+/*
+|--------------------------------------------------------------------------
 | Book Bus Ticket
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/book   { order_ref }
+|
+| 200 -> ticket confirmed
+| 202 -> BOOKING_PENDING (still confirming with the operator)
+| 400 -> BOOKING_FAILED  (provider rejected, refund queued)
+|
+| Once the payment is verified, a response the app cannot read (timeout,
+| offline, 5xx, rate limit) never means the booking failed: the backend keeps
+| working on the order, so it is reported as pending.
+|
 |--------------------------------------------------------------------------
 */
 
 export const bookBusTicketApi = async (
   payload: BookBusPayload
-): Promise<BookBusResponse> => {
+): Promise<BusBookingOutcome> => {
+  const orderRef = String(payload?.order_ref || "").trim();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Auth Headers
-  |--------------------------------------------------------------------------
-  */
+  if (!orderRef) {
+    throw new BusBookingApiError(
+      "Bus booking order reference is required"
+    );
+  }
 
-  const authHeaders =
-    await getAuthHeaders();
+  const requestUrl = `${BUS_BOOKING_BASE_URL}/api/busbooking/book`;
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Backend URL
-  |--------------------------------------------------------------------------
-  */
-
-  const requestUrl =
-    `${BUS_BOOKING_BASE_URL}/api/busbooking/book`;
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Request Log
-  |--------------------------------------------------------------------------
-  */
-
-  console.log(
-    "======================================"
-  );
-
-  console.log(
-    "[BusBooking][API][Book] Request",
-    {
-      requestUrl,
-
-      traceId:
-        payload.traceId,
-
-      srdvIndex:
-        payload.srdvIndex,
-
-      resultIndex:
-        payload.resultIndex,
-
-      hasAuthorization:
-        !!authHeaders.Authorization,
-    }
-  );
-
-  console.log(
-    "======================================"
-  );
-
-
-  let response: Response;
-
-  let result: any;
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | API Call
-  |--------------------------------------------------------------------------
-  */
+  let status = 0;
+  let result: any = null;
 
   try {
-
-    response =
-      await fetch(
-        requestUrl,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            ...authHeaders,
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            ),
-        }
-      );
-
-
-    result =
-      await response.json();
-
-
-  } catch (
-    error: any
-  ) {
-
-    console.log(
-      "[BusBooking][API][Book] Network Error",
-      {
-        requestUrl,
-
-        message:
-          error?.message ||
-          error,
-      }
+    const response = await api.post(
+      requestUrl,
+      { order_ref: orderRef },
+      { timeout: BUS_BOOK_TIMEOUT_MS }
     );
+    status = response.status;
+    result = response.data;
+  } catch (error: any) {
+    status = Number(error?.response?.status || 0);
+    result = error?.response?.data ?? null;
 
+    console.log("[BusBooking][API][Book] Error", {
+      status,
+      message: result?.message || error?.message || error,
+    });
+  }
 
-    throw new Error(
-      "Network request failed while booking bus ticket"
+  console.log("[BusBooking][API][Book] Response", {
+    status,
+    success: result?.success,
+    code: result?.code,
+    bookingStatus: result?.bookingStatus,
+    message: result?.message,
+  });
+
+  if (status === 200 && result?.success) {
+    return {
+      status: "confirmed",
+      orderRef: String(result?.orderRef || orderRef),
+      message: String(result?.message || "Bus ticket booked successfully"),
+      bookingId: result?.bookingId ?? null,
+      ticketNo: result?.ticketNo ?? null,
+      travelOperatorPNR: result?.travelOperatorPNR ?? null,
+    };
+  }
+
+  if (result?.code === "BOOKING_FAILED") {
+    return {
+      status: "failed",
+      orderRef: String(result?.orderRef || orderRef),
+      message: String(
+        result?.message ||
+        "Bus booking could not be completed. Your payment will be refunded to the original payment method."
+      ),
+      refundInitiated: Boolean(result?.refundInitiated),
+    };
+  }
+
+  if ([400, 401, 403, 404, 409].includes(status)) {
+    throw new BusBookingApiError(
+      status === 401
+        ? "Your login session has expired. Please login again."
+        : result?.message || "Unable to book bus ticket",
+      status,
+      result?.code
     );
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Response Log
-  |--------------------------------------------------------------------------
-  */
-
-  console.log(
-    "======================================"
-  );
-
-  console.log(
-    "[BusBooking][API][Book] Response",
-    {
-      ok:
-        response.ok,
-
-      status:
-        response.status,
-
-      success:
-        result?.success,
-
-      bookingId:
-        result?.bookingId,
-
-      bookingStatus:
-        result?.bookingStatus,
-
-      ticketNo:
-        result?.ticketNo,
-
-      travelOperatorPNR:
-        result?.travelOperatorPNR,
-
-      message:
-        result?.message,
-    }
-  );
-
-  console.log(
-    "======================================"
-  );
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Error Handling
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    !response.ok ||
-    !result?.success
-  ) {
-
-    console.log(
-      "[BusBooking][API][Book] Error",
-      result
-    );
-
-
-    throw new Error(
-      result?.message ||
-      "Unable to book bus ticket"
-    );
-  }
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Success
-  |--------------------------------------------------------------------------
-  */
-
-  return result;
+  return {
+    status: "pending",
+    orderRef: String(result?.orderRef || orderRef),
+    message: BUS_BOOKING_PENDING_MESSAGE,
+  };
 };
+
+/*
+|--------------------------------------------------------------------------
+| Complete Booking After Razorpay Checkout
+|--------------------------------------------------------------------------
+|
+| Razorpay success -> verify-payment -> book. Shared by every screen that
+| opens the bus checkout so they all treat a captured payment the same way.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const completeBusBookingApi = async (
+  orderRef: string,
+  payment: Partial<VerifyBusPaymentPayload> | null | undefined
+): Promise<BusBookingOutcome> => {
+  const cleanOrderRef = String(orderRef || "").trim();
+
+  const pending: BusBookingOutcome = {
+    status: "pending",
+    orderRef: cleanOrderRef,
+    message: BUS_BOOKING_PENDING_MESSAGE,
+  };
+
+  const razorpayOrderId = String(payment?.razorpay_order_id || "").trim();
+  const razorpayPaymentId = String(payment?.razorpay_payment_id || "").trim();
+  const razorpaySignature = String(payment?.razorpay_signature || "").trim();
+
+  // Checkout reported success without the signed fields, so the app has
+  // nothing to verify with. The backend still learns about the capture from
+  // the Razorpay webhook.
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    return pending;
+  }
+
+  const verified = await verifyBusPaymentApi({
+    razorpay_order_id: razorpayOrderId,
+    razorpay_payment_id: razorpayPaymentId,
+    razorpay_signature: razorpaySignature,
+  });
+
+  if (!verified) {
+    return pending;
+  }
+
+  return bookBusTicketApi({ order_ref: cleanOrderRef });
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1517,12 +1538,20 @@ export const createBusPaymentOrderApi =
       }
 
 
-      throw new Error(
+      // Carries the backend code (e.g. SEAT_HOLD_EXPIRED on HTTP 410) so the
+      // screen can send the user back to seat selection.
+      throw new BusBookingApiError(
         error?.response
           ?.data
           ?.message ||
-        error?.message ||
-        "Unable to create payment order"
+        (error?.response
+          ? "Unable to create payment order"
+          : "Unable to reach the bus booking service. Please try again."),
+        error?.response
+          ?.status,
+        error?.response
+          ?.data
+          ?.code
       );
     }
 

@@ -29,7 +29,6 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import LinearGradient from "react-native-linear-gradient";
-import RazorpayCheckout from "react-native-razorpay";
 import BusBookingStatusPopup, {
   useBusBookingPopup,
 } from "../BusBookingStatusPopup";
@@ -38,9 +37,15 @@ import type {
   BusBookingStackParamList,
 } from "../../navigation/BusBookingStack";
 import {
-  bookBusTicketApi,
   createBusPaymentOrderApi,
 } from "../../services/busBookingApi";
+import type {
+  CreateBusPaymentOrderResponse,
+} from "../../services/busBookingApi";
+import {
+  getBusCheckoutErrorResult,
+  runBusCheckout,
+} from "../../utils/busCheckout";
 import { fetchWalletBalance } from "../../../ecommerce/api/WalleteAPI";
 
 import Selectedseat1 from "../../assets/icons/selectedseat1.svg";
@@ -463,27 +468,6 @@ export default function BusSummaryScreen() {
       0
     );
 
-  const traceId =
-    String(
-      blockResponse
-        ?.traceId ||
-      ""
-    ).trim();
-
-  const srdvIndex =
-    String(
-      blockResponse
-        ?.srdvIndex ||
-      ""
-    ).trim();
-
-  const resultIndex =
-    String(
-      blockResponse
-        ?.resultIndex ||
-      ""
-    ).trim();
-
 
   /*
   |--------------------------------------------------------------------------
@@ -603,30 +587,9 @@ const rewardEarned =
   const openRazorpayCheckout =
     React.useCallback(
       async (
-        order: {
-          data?: {
-            key?: string;
-            orderId?: string;
-            amount?: number;
-            currency?: string;
-          };
-        }
+        order:
+          CreateBusPaymentOrderResponse
       ) => {
-
-        if (
-          !order?.data?.key ||
-          !order?.data?.orderId ||
-          !Number.isFinite(
-            Number(
-              order?.data?.amount
-            )
-          )
-        ) {
-
-          throw new Error(
-            "Razorpay order details are missing."
-          );
-        }
 
         const firstPassenger =
           Array.isArray(
@@ -636,114 +599,37 @@ const rewardEarned =
             ? passengers[0]
             : null;
 
-        const options = {
-          key:
-            order.data.key,
-          amount:
-            Number(
-              order.data.amount
-            ),
-          currency:
-            order.data.currency ||
-            "INR",
-          order_id:
-            order.data.orderId,
-          name:
-            "Rewards Planners",
-          description:
-            `Bus Ticket ${sourceCity} to ${destinationCity}`,
-          prefill: {
-            name:
-              firstPassenger?.fullName ||
-              "Rewards Planners User",
-            contact:
-              firstPassenger?.phone ||
-              "",
-            email:
-              firstPassenger?.email ||
-              "",
-          },
-          theme: {
-            color:
-              "#D31637",
-          },
-        };
-
-        console.log(
-          "[BusBooking][Summary] RAZORPAY OPTIONS",
-          {
-            order_id:
-              options.order_id,
-            amount:
-              options.amount,
-            key:
-              options.key,
-          }
-        );
-
         setProcessingPayment(
           true
         );
 
         try {
-          const paymentResult =
-            await RazorpayCheckout.open(
-              options
-            );
-
-          console.log(
-            "[BusBooking][Summary] RAZORPAY SUCCESS",
-            paymentResult
-          );
-
-          if (
-            !traceId ||
-            !srdvIndex ||
-            !resultIndex
-          ) {
-            throw new Error(
-              "Booking identifiers are missing after payment."
-            );
-          }
-
-          const bookingResponse =
-            await bookBusTicketApi({
-              traceId,
-              srdvIndex,
-              resultIndex,
+          // Razorpay -> verify-payment -> book. Every outcome, including a
+          // cancelled checkout, comes back as a popup to show.
+          const result =
+            await runBusCheckout({
+              order,
+              orderRef,
+              description:
+                `Bus Ticket ${sourceCity} to ${destinationCity}`,
+              prefill: {
+                name:
+                  firstPassenger?.fullName ||
+                  "Rewards Planners User",
+                contact:
+                  firstPassenger?.phone ||
+                  "",
+                email:
+                  firstPassenger?.email ||
+                  "",
+              },
             });
 
-          console.log(
-            "[BusBooking][Summary] BOOK SUCCESS",
-            bookingResponse
-          );
-
           showPopup({
-            title: "Booking Confirmed",
-            message: bookingResponse?.ticketNo
-              ? `Ticket No: ${bookingResponse.ticketNo}`
-              : "Bus ticket booked successfully.",
-            variant: "success",
-            onClose: () => navigation.navigate("BookingHomeScreen"),
-          });
-        } catch (error: any) {
-          console.log(
-            "[BusBooking][Summary] RAZORPAY ERROR",
-            error
-          );
-
-          const message =
-            error?.description ||
-            error?.message ||
-            error?.error?.description ||
-            "Payment was cancelled or failed.";
-
-          showPopup({
-            title: String(message).toLowerCase().includes("cancel")
-              ? "Payment Cancelled"
-              : "Payment Failed",
-            message: String(message),
-            variant: String(message).toLowerCase().includes("cancel") ? "warning" : "error",
+            ...result.popup,
+            onClose: result.leaveCheckout
+              ? () => navigation.popToTop()
+              : undefined,
           });
         } finally {
           setProcessingPayment(
@@ -754,11 +640,10 @@ const rewardEarned =
       [
         destinationCity,
         navigation,
+        orderRef,
         passengers,
-        resultIndex,
+        showPopup,
         sourceCity,
-        srdvIndex,
-        traceId,
       ]
     );
 
@@ -847,14 +732,6 @@ const rewardEarned =
           "======================================"
         );
 
-const orderRef =
-  String(
-    blockResponse
-      ?.orderRef ||
-    ""
-  );
-
-
 if (
   !orderRef
 ) {
@@ -910,12 +787,18 @@ if (
             error
           );
 
+          // An expired seat hold (HTTP 410) cannot be paid for any more, so
+          // that case sends the user back to pick seats again.
+          const result =
+            getBusCheckoutErrorResult(
+              error
+            );
+
           showPopup({
-            title: String(error?.message || "").toLowerCase().includes("token")
-              ? "Session Expired"
-              : "Payment Error",
-            message: error?.message || "Unable to start bus payment.",
-            variant: "error",
+            ...result.popup,
+            onClose: result.leaveCheckout
+              ? () => navigation.popToTop()
+              : undefined,
           });
         } finally {
 
@@ -931,11 +814,12 @@ if (
         finalBoardingPoint,
         finalDroppingPoint,
         localOrderId,
+        navigation,
         openRazorpayCheckout,
         orderRef,
-        passengers,
         processingPayment,
         selectedSeats,
+        showPopup,
         totalAmount,
       ]
     );
@@ -1965,7 +1849,7 @@ if (
                   }
                 >
                   {processingPayment
-                    ? "Opening Payment..."
+                    ? "Processing Payment..."
                     : "Creating Payment..."}
                 </Text>
               </>
