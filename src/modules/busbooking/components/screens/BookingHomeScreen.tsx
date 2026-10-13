@@ -207,6 +207,7 @@ const [cityLoading, setCityLoading] =
   React.useState(false);
 const citySearchRequest = React.useRef(0);
 const citySearchInputRef = React.useRef<TextInput>(null);
+const bookingScrollRef = React.useRef<ScrollView>(null);
 
 
 /*
@@ -483,6 +484,7 @@ const applyRecentSearch = React.useCallback(
     if (matchingChip) {
       setSelectedDateId(matchingChip.id);
     }
+    bookingScrollRef.current?.scrollTo({ y: 0, animated: true });
   },
   [dateChips]
 );
@@ -817,6 +819,7 @@ const handleSearchBuses = async () => {
   return (
     <>
     <ScrollView
+      ref={bookingScrollRef}
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
@@ -1161,13 +1164,12 @@ const handleSearchBuses = async () => {
               </View>
               <View style={styles.historyTextWrap}>
                 <Text style={styles.historyRoute}>
-                  {item.fromCityName} <Text style={styles.routeArrow}>{"->"}</Text> {item.toCityName}
+                  {item.fromCityName} to {item.toCityName}
                 </Text>
                 <Text style={styles.historyMeta}>
                   {formatRecentSearchTime(item.updatedAt)} • {formatJourneyDateLabel(item.journeyDate)}
                 </Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="#374151" />
             </TouchableOpacity>
           ))
         ) : (
@@ -1878,9 +1880,6 @@ const styles = StyleSheet.create({
     color: "#3F3F46",
     fontSize: 15,
     fontWeight: "700",
-  },
-  routeArrow: {
-    color: "#EF4444",
   },
   historyMeta: {
     marginTop: 2,
