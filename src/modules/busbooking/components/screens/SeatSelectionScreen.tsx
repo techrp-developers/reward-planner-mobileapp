@@ -1,4 +1,5 @@
 import React from "react";
+import { countAvailableSeats, isSeatAvailable as toBoolean } from "../../utils/busSeatAvailability";
 import {
   ScrollView,
   StyleSheet,
@@ -70,17 +71,6 @@ type SeatItem = {
 const getFareValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 const formatSeatFareLabel = (fare?: number) => `Rs ${Number(fare || 0).toFixed(0)}/-`;
 
-const toBoolean = (
-  value: unknown
-): boolean => {
-
-  return (
-    value === true ||
-    value === "true" ||
-    value === 1 ||
-    value === "1"
-  );
-};
 const getApiSeatFare = (
   seat: SeatLayoutSeat
 ): number => {
@@ -1293,8 +1283,7 @@ switch (seat.status) {
   }
 >
   {
-    seatLayout
-      ?.availableSeats ?? 0
+    countAvailableSeats(apiSeats)
   } SEATS LEFT
 </Text>
           </View>

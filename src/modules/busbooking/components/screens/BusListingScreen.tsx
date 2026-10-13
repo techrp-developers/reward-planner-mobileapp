@@ -1,4 +1,5 @@
 import React from "react";
+import { countAvailableSeats, formatAvailableSeats as toSeatLabel } from "../../utils/busSeatAvailability";
 
 import {
   ActivityIndicator,
@@ -87,14 +88,6 @@ const toPriceLabel = (value: unknown) => {
   return `Rs ${amount.toLocaleString("en-IN")}`;
 };
 
-const toSeatLabel = (value: unknown) => {
-  const seats = Number(String(value ?? "").replace(/[^\d]/g, ""));
-  if (!Number.isFinite(seats) || seats <= 0) {
-    return "SEATS AVAILABLE";
-  }
-
-  return `${seats} SEATS LEFT`;
-};
 
 // Empty when the provider sends no rating: the card then shows no rating
 // rather than an invented one.
@@ -398,6 +391,7 @@ console.log(
   ] = React.useState<string | null>(null);
 
   const [sortId, setSortId] = React.useState<BusSortId>("departure");
+  const [layoutCounts, setLayoutCounts] = React.useState<Record<string, number>>({});
 
   // Every bus the search returned, before any filter is applied.
   const allBuses = React.useMemo<BusCard[]>(
@@ -662,12 +656,18 @@ const handleOpenSeatSelection =
         |--------------------------------------------------------------------------
         */
 
+        const availableSeats = countAvailableSeats(response.seats);
+        setLayoutCounts(current => ({
+          ...current,
+          [`${traceId}:${bus.id}`]: availableSeats,
+        }));
+
         navigation.navigate(
           "SeatSelectionScreen",
           {
-            bus,
+            bus: { ...bus, seatsLeft: toSeatLabel(availableSeats) },
             seatLayout:
-              response,
+              { ...response, availableSeats },
             isWomenBooking,
           }
         );
@@ -877,7 +877,9 @@ const handleOpenSeatSelection =
                   <View style={styles.cardBottomRow}>
                     <View>
                       <Text style={styles.priceText}>{item.price}</Text>
-                      <Text style={styles.seatsText}>{item.seatsLeft}</Text>
+                      <Text style={styles.seatsText}>{layoutCounts[`${traceId}:${item.id}`] !== undefined
+                        ? toSeatLabel(layoutCounts[`${traceId}:${item.id}`])
+                        : item.seatsLeft}</Text>
                     </View>
 
   <TouchableOpacity
