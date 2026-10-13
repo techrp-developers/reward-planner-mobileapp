@@ -1,4 +1,5 @@
 import RazorpayCheckout from "react-native-razorpay";
+import { API_BASE_URL } from "../../../config/apiConfig";
 
 import {
   BUS_SEAT_HOLD_EXPIRED_CODE,
@@ -143,6 +144,15 @@ export const runBusCheckout = async ({
   }
 
   let payment: any;
+
+  if (__DEV__) {
+    console.info("[BusBooking][Checkout] Razorpay configuration", {
+      apiBaseUrl: API_BASE_URL,
+      mode: order.data.key.startsWith("rzp_test_")
+        ? "test"
+        : order.data.key.startsWith("rzp_live_") ? "live" : "unknown",
+    });
+  }
 
   try {
     payment = await RazorpayCheckout.open({
