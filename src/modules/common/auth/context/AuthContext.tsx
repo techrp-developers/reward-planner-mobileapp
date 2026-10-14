@@ -1,3 +1,4 @@
+import { normalizeAuthUser } from '../utils/normalizeAuthUser';
 import React, {
   createContext,
   useCallback,
@@ -60,13 +61,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const extractUser = (payload: any): AuthUser | null => {
-  const user = payload?.user || payload?.data?.user || payload?.data || null;
-
-  if (!user) return null;
-
-  return user;
-};
+const extractUser = (payload: any): AuthUser | null => normalizeAuthUser(payload);
 
 const generateDeviceId = () => {
   const randomPart = Math.random().toString(36).substring(2, 12);

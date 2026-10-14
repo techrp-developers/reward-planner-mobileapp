@@ -289,7 +289,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   useEffect(() => {
     if (!visible || !activeStatusId || isOwner) return;
     markStatusViewed(activeStatusId).then(result => {
-      queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current => {
+      queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed', currentUserId], current => {
         if (!current) return current;
         return current.map(feedGroup => {
           const statuses = feedGroup.statuses.map(item => (
@@ -305,7 +305,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
         });
       });
     }).catch(() => {});
-  }, [activeStatusId, isOwner, visible]);
+  }, [activeStatusId, currentUserId, isOwner, visible]);
 
   const next = useCallback(() => {
     if (!group) return;
@@ -339,7 +339,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
       const result = await fetchStatusViewers(status.id);
       setViewers(result.viewers);
       setViewerCount(result.viewCount);
-      queryClient.setQueryData<UserStatus[]>(['statuses', 'mine'], current =>
+      queryClient.setQueryData<UserStatus[]>(['statuses', 'mine', currentUserId], current =>
         current?.map(item => item.id === status.id
           ? { ...item, view_count: result.viewCount }
           : item),
@@ -347,7 +347,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     }
     catch (error) { Alert.alert('Could not load views', messageFrom(error)); }
     finally { setBusy(false); }
-  }, [status]);
+  }, [currentUserId, status]);
 
   const remove = useCallback(() => {
     if (!status) return;
@@ -363,16 +363,16 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   }, [onChanged, onClose, status]);
 
   const updateCachedInteraction = useCallback((statusId: number, patch: Partial<UserStatus>) => {
-    queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed'], current =>
+    queryClient.setQueryData<StatusFeedGroup[]>(['statuses', 'feed', currentUserId], current =>
       current?.map(feedGroup => ({
         ...feedGroup,
         statuses: feedGroup.statuses.map(item => item.id === statusId ? { ...item, ...patch } : item),
       })),
     );
-    queryClient.setQueryData<UserStatus[]>(['statuses', 'mine'], current =>
+    queryClient.setQueryData<UserStatus[]>(['statuses', 'mine', currentUserId], current =>
       current?.map(item => item.id === statusId ? { ...item, ...patch } : item),
     );
-  }, []);
+  }, [currentUserId]);
 
   const loadLikes = useCallback(async (append = false) => {
     if (!status || likesLoadingRef.current) return;
@@ -458,7 +458,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
       <View style={[styles.viewer, { backgroundColor: status.background_color || '#050505' }]}>
         <SafeAreaView style={[styles.viewerSafe, replyKeyboardStyle]}>
           <View style={styles.progressRow}>{group.statuses.map((item, position) => <View key={item.id} style={styles.progressTrack}><View style={[styles.progressFill, { width: position <= index ? '100%' : '0%' }]} /></View>)}</View>
-          <View style={styles.viewerHeader}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /><View style={styles.viewerIdentity}><Text style={styles.viewerHeaderName}>{isOwner ? 'My status' : group.user.name || 'Status'}</Text><Text style={styles.viewerHeaderTime}>{new Date(status.created_at).toLocaleString()}</Text></View>{isOwner && <Pressable onPress={remove} hitSlop={10}><MaterialCommunityIcons name="delete-outline" color="#FFF" size={25} /></Pressable>}<Pressable onPress={onClose} hitSlop={10}><MaterialCommunityIcons name="close" color="#FFF" size={27} /></Pressable></View>
+          <View style={styles.viewerHeader}><Avatar key={group.user.id} uri={group.user.image_url} name={group.user.name} size={40} /><View style={styles.viewerIdentity}><Text style={styles.viewerHeaderName}>{isOwner ? 'My status' : group.user.name || 'Status'}</Text><Text style={styles.viewerHeaderTime}>{new Date(status.created_at).toLocaleString()}</Text></View>{isOwner && <Pressable onPress={remove} hitSlop={10}><MaterialCommunityIcons name="delete-outline" color="#FFF" size={25} /></Pressable>}<Pressable onPress={onClose} hitSlop={10}><MaterialCommunityIcons name="close" color="#FFF" size={27} /></Pressable></View>
           <View style={styles.statusStage}>
             {status.type === 'text' && <Text style={[styles.viewerText, status.font_style === 'italic' && { fontStyle: 'italic' }]}>{status.text}</Text>}
             {status.type === 'image' && status.media_url && <Image source={{ uri: status.media_url }} style={styles.viewerMedia} resizeMode="contain" />}
@@ -634,9 +634,14 @@ function StatusTray({ textColor }: { textColor?: string }) {
   const [composerVisible, setComposerVisible] = useState(false);
   const [activeGroup, setActiveGroup] = useState<StatusFeedGroup | null>(null);
   const [viewingOwn, setViewingOwn] = useState(false);
+  useEffect(() => {
+    setActiveGroup(null);
+    setViewingOwn(false);
+    setComposerVisible(false);
+  }, [user?.user_id]);
   const enabled = isAuthenticated;
-  const mineQuery = useQuery({ queryKey: ['statuses', 'mine'], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
-  const feedQuery = useQuery({ queryKey: ['statuses', 'feed'], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
+  const mineQuery = useQuery({ queryKey: ['statuses', 'mine', user?.user_id], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
+  const feedQuery = useQuery({ queryKey: ['statuses', 'feed', user?.user_id], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
   const profileQuery = useQuery({ queryKey: ['statuses', 'profile', user?.user_id], queryFn: fetchStatusProfile, enabled, staleTime: 15000 });
   useFocusEffect(useCallback(() => {
     if (enabled) queryClient.invalidateQueries({ queryKey: ['statuses'] });
@@ -679,14 +684,14 @@ function StatusTray({ textColor }: { textColor?: string }) {
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
-            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /></View>
+            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar key={group.user.id} uri={group.user.image_url} name={group.user.name} size={40} /></View>
             <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>{group.user.name || 'User'}</Text>
           </Pressable>
         ))}
         {(mineQuery.isFetching || feedQuery.isFetching) && <ActivityIndicator size="small" color="#A5B4FC" />}
       </ScrollView>
       <StatusComposer visible={composerVisible} onClose={() => setComposerVisible(false)} onCreated={refresh} />
-      <StatusViewerModal group={activeGroup} own={viewingOwn} currentUserId={user?.user_id} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
+      <StatusViewerModal key={user?.user_id} group={activeGroup} own={viewingOwn} currentUserId={user?.user_id} visible={!!activeGroup} onClose={() => { setActiveGroup(null); refresh(); }} onFinished={finishViewer} onChanged={refresh} />
     </View>
   );
 }
