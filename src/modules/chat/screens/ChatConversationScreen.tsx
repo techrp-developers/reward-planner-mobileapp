@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -51,6 +53,7 @@ import PollBubble from '../components/PollBubble';
 import CreatePollModal from '../components/CreatePollModal';
 import ChatAttachmentSheet from '../components/ChatAttachmentSheet';
 import ChatSettingsSheet from '../components/ChatSettingsSheet';
+import ChatEmojiPanel from '../components/ChatEmojiPanel';
 import { getChatTheme } from '../theme/chatThemes';
 
 type Route = NativeStackScreenProps<
@@ -58,6 +61,10 @@ type Route = NativeStackScreenProps<
   'ChatConversation'
 >['route'];
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
+const isEmojiModifier = (char?: string) => {
+  const code = char?.codePointAt(0) ?? 0;
+  return code === 0x200d || code === 0xfe0f || (code >= 0x1f3fb && code <= 0x1f3ff);
+};
 const clientId = (id?: number) =>
   `${id || 'user'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -80,6 +87,9 @@ export default function ChatConversationScreen() {
   const [pollModal, setPollModal] = useState(false);
   const [attachmentMenu, setAttachmentMenu] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const selection = useRef({ start: 0, end: 0 });
   const [themeSaving, setThemeSaving] = useState(false);
   const [chatThemeKey, setChatThemeKey] = useState<ChatThemeKey>(conversation.theme_key || 'default');
   const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
@@ -240,6 +250,44 @@ export default function ChatConversationScreen() {
       1200,
     );
   };
+  useEffect(() => {
+    if (!emojiOpen) return;
+    // Like the keyboard, Android back closes the emoji panel before leaving the chat.
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setEmojiOpen(false);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [emojiOpen]);
+  const toggleEmojiPanel = () => {
+    if (emojiOpen) {
+      setEmojiOpen(false);
+      inputRef.current?.focus();
+    } else {
+      Keyboard.dismiss();
+      setEmojiOpen(true);
+    }
+  };
+  const replaceSelection = (insert: string, deleteBefore = false) => {
+    let { start, end } = selection.current;
+    start = Math.min(start, text.length);
+    end = Math.min(Math.max(end, start), text.length);
+    if (deleteBefore && start === end) {
+      const chars = Array.from(text.slice(0, start));
+      let removed: string | undefined;
+      // Remove a whole emoji: skin tones, variation selectors and ZWJ sequences.
+      do {
+        removed = chars.pop();
+      } while (chars.length && (isEmojiModifier(removed) || chars[chars.length - 1] === '‍'));
+      start = chars.join('').length;
+    }
+    if ((text.length - (end - start) + insert.length) > 5000) return;
+    const next = text.slice(0, start) + insert + text.slice(end);
+    selection.current = { start: start + insert.length, end: start + insert.length };
+    onChangeText(next);
+  };
+  const insertEmoji = (emoji: string) => replaceSelection(emoji);
+  const deleteBeforeCursor = () => replaceSelection('', true);
   const scrollToLatest = (animated = true) =>
     listRef.current?.scrollToOffset({ offset: 0, animated });
   const addMessage = (message: ChatMessage) => {
@@ -640,15 +688,29 @@ export default function ChatConversationScreen() {
           >
             <MaterialCommunityIcons name="paperclip" size={21} color="#FFF" />
           </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={emojiOpen ? 'Show keyboard' : 'Show emojis'}
+            onPress={toggleEmojiPanel}
+            style={styles.emojiToggle}
+          >
+            <MaterialCommunityIcons
+              name={emojiOpen ? 'keyboard-outline' : 'emoticon-happy-outline'}
+              size={24}
+              color={theme.secondaryText}
+            />
+          </TouchableOpacity>
           <TextInput
+            ref={inputRef}
             value={text}
             onChangeText={onChangeText}
-            onFocus={() =>
-              setTimeout(
-                () => scrollToLatest(),
-                250,
-              )
-            }
+            onSelectionChange={event => {
+              selection.current = event.nativeEvent.selection;
+            }}
+            onFocus={() => {
+              setEmojiOpen(false);
+              setTimeout(() => scrollToLatest(), 250);
+            }}
             placeholder="Message"
             placeholderTextColor={theme.secondaryText}
             style={[styles.input, { color: theme.text }]}
@@ -670,6 +732,9 @@ export default function ChatConversationScreen() {
             )}
           </TouchableOpacity>
         </View>
+        {emojiOpen ? (
+          <ChatEmojiPanel onSelect={insertEmoji} onBackspace={deleteBeforeCursor} />
+        ) : null}
       </View>
       <ChatSettingsSheet
         visible={settingsVisible}
@@ -814,6 +879,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 4,
+  },
+  emojiToggle: {
+    width: 36,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: { flex: 1, maxHeight: 105, paddingVertical: 8, fontSize: 15 },
   send: {
