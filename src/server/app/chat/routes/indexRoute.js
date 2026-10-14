@@ -25,6 +25,7 @@ router.get("/conversations", controller.list);
 router.post("/conversations", controller.create);
 router.get("/conversations/:id/messages", controller.messages);
 router.post("/conversations/:id/messages", controller.send);
+router.delete("/conversations/:id/messages/:messageId", controller.deleteMessage);
 router.post("/conversations/:id/polls", controller.createPoll);
 router.post("/polls/:pollId/votes", controller.votePoll);
 router.post("/conversations/:id/read", controller.read);

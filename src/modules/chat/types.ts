@@ -73,7 +73,7 @@ export type ChatStackParamList = {
 };
 
 export type ChatSocketEvent = {
-  type: 'connected' | 'conversation:available' | 'conversation:theme' | 'message:new' | 'message:read' |
+  type: 'connected' | 'conversation:available' | 'conversation:theme' | 'message:new' | 'message:read' | 'message:deleted' |
     'poll:updated' | 'typing:start' | 'typing:stop' | 'presence' | 'error' |
     // Emitted locally after a reconnect / app resume: refetch to catch missed events.
     'resync';

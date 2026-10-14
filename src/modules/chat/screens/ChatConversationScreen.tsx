@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -28,6 +29,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import {
   createChatPoll,
+  deleteChatMessage,
   fetchChatPresence,
   fetchMessages,
   markConversationRead,
@@ -176,6 +178,14 @@ export default function ChatConversationScreen() {
           markLatestRead(next);
           return next;
         });
+      if (event.type === 'message:deleted')
+        setMessages(current =>
+          current.map(item =>
+            item.message_id === Number(event.data?.message_id)
+              ? { ...item, deleted_at: event.data.deleted_at, body: null, attachment_url: null, attachment_name: null, attachment_mime_type: null, poll: null }
+              : item,
+          ),
+        );
       if (event.type === 'message:read')
         setMessages(current =>
           current.map(item =>
@@ -396,6 +406,30 @@ export default function ChatConversationScreen() {
       ),
     );
   };
+  const markDeleted = (messageId: number, deletedAt: string) =>
+    setMessages(current =>
+      current.map(item =>
+        item.message_id === messageId
+          ? { ...item, deleted_at: deletedAt, body: null, attachment_url: null, attachment_name: null, attachment_mime_type: null, poll: null }
+          : item,
+      ),
+    );
+  const confirmDelete = (message: ChatMessage) =>
+    Alert.alert('Delete message?', 'This message will be deleted for everyone in this chat.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const deleted = await deleteChatMessage(conversation.conversation_id, message.message_id);
+            markDeleted(message.message_id, deleted.deleted_at);
+          } catch (error) {
+            Alert.alert('Message not deleted', chatError(error, 'Please try again.'));
+          }
+        },
+      },
+    ]);
   const votePoll = async (
     messageId: number,
     pollId: number,
@@ -555,17 +589,20 @@ export default function ChatConversationScreen() {
                       {item.sender_name}
                     </Text>
                   ) : null}
-                  <View
+                  <Pressable
+                    onLongPress={mine && !item.deleted_at ? () => confirmDelete(item) : undefined}
+                    delayLongPress={350}
+                    accessibilityHint={mine && !item.deleted_at ? 'Long press to delete' : undefined}
                     style={[
                       styles.bubble,
-                      item.message_type === 'image' && styles.imageBubble,
+                      item.message_type === 'image' && !item.deleted_at && styles.imageBubble,
                       mine
                         ? [styles.mine, { backgroundColor: selectedTheme.accent }]
                         : { backgroundColor: isDark ? selectedTheme.darkOtherBubble : selectedTheme.lightOtherBubble },
                     ]}
                   >
                     {item.deleted_at ? (
-                      <Text style={[styles.messageText, { color: foreground }]}>
+                      <Text style={[styles.messageText, styles.deletedText, { color: foreground }]}>
                         This message was deleted
                       </Text>
                     ) : item.message_type === 'image' && item.attachment_url ? (
@@ -578,6 +615,7 @@ export default function ChatConversationScreen() {
                       <TouchableOpacity
                         style={styles.fileRow}
                         onPress={() => Linking.openURL(item.attachment_url!)}
+                        onLongPress={mine ? () => confirmDelete(item) : undefined}
                       >
                         <MaterialCommunityIcons
                           name="file-document-outline"
@@ -644,7 +682,7 @@ export default function ChatConversationScreen() {
                         />
                       ) : null}
                     </View>
-                  </View>
+                  </Pressable>
                 </View>
               </View>
             );
@@ -847,6 +885,7 @@ const styles = StyleSheet.create({
   fileType: { fontSize: 9, opacity: 0.7, marginTop: 3 },
   mine: { backgroundColor: '#7C3AED', borderBottomRightRadius: 5 },
   messageText: { fontSize: 15, lineHeight: 20 },
+  deletedText: { fontStyle: 'italic', opacity: 0.75 },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -73,7 +73,9 @@ class ChatModel {
   async listConversations(userId) {
     const [rows] = await db.execute(
       `SELECT c.conversation_id, c.type, c.name, c.description, c.updated_at, m.role,
-              lm.message_id AS last_message_id, lm.body AS last_message, lm.message_type AS last_message_type,
+              lm.message_id AS last_message_id,
+              CASE WHEN lm.deleted_at IS NOT NULL THEN 'This message was deleted' ELSE lm.body END AS last_message,
+              CASE WHEN lm.deleted_at IS NOT NULL THEN 'text' ELSE lm.message_type END AS last_message_type,
               lm.created_at AS last_message_at, lm.sender_id AS last_sender_id,
               (SELECT COUNT(*) FROM chat_messages um WHERE um.conversation_id = c.conversation_id
                  AND um.message_id > COALESCE(m.last_read_message_id, 0) AND um.sender_id <> ?) AS unread_count
@@ -218,6 +220,23 @@ class ChatModel {
       const [rows] = await db.execute(`SELECT m.*, u.name AS sender_name, u.user_image AS sender_image FROM chat_messages m JOIN customer u ON u.user_id=m.sender_id WHERE m.sender_id=? AND m.client_message_id=?`, [userId, data.clientMessageId]);
       return { ...rows[0], read_by: [], is_read: false };
     }
+  }
+
+  // Deletes for everyone: the row stays as a "This message was deleted" placeholder,
+  // but its content is wiped so it can never be returned again.
+  async deleteMessage(userId, conversationId, messageId) {
+    if (!await this.assertMember(userId, conversationId)) throw Object.assign(new Error("Conversation not found"), { status: 404 });
+    const [[message]] = await db.execute(
+      `SELECT message_id, sender_id, deleted_at FROM chat_messages WHERE message_id = ? AND conversation_id = ?`, [messageId, conversationId]);
+    if (!message) throw Object.assign(new Error("Message not found"), { status: 404 });
+    if (Number(message.sender_id) !== Number(userId)) throw Object.assign(new Error("You can only delete your own messages"), { status: 403 });
+    if (!message.deleted_at) {
+      await db.execute(
+        `UPDATE chat_messages SET deleted_at = NOW(), body = NULL, attachment_url = NULL, attachment_name = NULL, attachment_mime_type = NULL
+         WHERE message_id = ?`, [messageId]);
+    }
+    const [[deleted]] = await db.execute(`SELECT message_id, conversation_id, deleted_at FROM chat_messages WHERE message_id = ?`, [messageId]);
+    return deleted;
   }
 
   async markRead(userId, conversationId, messageId) {

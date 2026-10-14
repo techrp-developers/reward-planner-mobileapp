@@ -130,6 +130,13 @@ export async function voteChatPoll(pollId: number, optionIds: number[]): Promise
   return response.data.data;
 }
 
+export async function deleteChatMessage(conversationId: number, messageId: number) {
+  const response = await api.delete<DataResponse<{ message_id: number; conversation_id: number; deleted_at: string }>>(
+    chatUrl(`/conversations/${conversationId}/messages/${messageId}`),
+  );
+  return response.data.data;
+}
+
 export async function markConversationRead(conversationId: number, messageId: number) {
   await api.post(chatUrl(`/conversations/${conversationId}/read`), { message_id: messageId });
 }
