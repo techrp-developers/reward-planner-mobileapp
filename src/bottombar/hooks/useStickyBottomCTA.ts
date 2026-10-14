@@ -3,7 +3,7 @@ import { Keyboard, LayoutChangeEvent, Platform } from 'react-native';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TAB_BAR_HEIGHT } from '../BottomTabs';
+import { useBottomTabsInset } from '../BottomTabsInsetContext';
 
 type Options = {
   extraSpacing?: number;
@@ -25,10 +25,13 @@ export function useStickyBottomCTA({
   const [ctaHeight, setCtaHeight] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // MainLayout's overlay tab bar publishes its height via context (0 when it
+  // isn't shown); react-navigation's tab bar uses BottomTabBarHeightContext.
+  const overlayTabBarHeight = useBottomTabsInset();
+
   const safeBottom = Math.max(insets.bottom, MIN_SAFE_BOTTOM);
-  const fallbackTabHeight = TAB_BAR_HEIGHT + safeBottom;
   const tabBarHeight = tabBarAware
-    ? Math.max(Number(tabBarHeightFromContext || 0), fallbackTabHeight)
+    ? Math.max(Number(tabBarHeightFromContext || 0), overlayTabBarHeight)
     : 0;
 
   useEffect(() => {

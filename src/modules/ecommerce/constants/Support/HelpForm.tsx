@@ -36,6 +36,7 @@ import {
 import { useAlert } from '../../components/alerts';
 import type { AppStackParamList } from '../../../../navigation/RootNavigator';
 import { useAppTheme } from '../../../../theme/ThemeContext';
+import { useBottomTabsInset } from '../../../../bottombar/BottomTabsInsetContext';
 
 type HelpFormProps = NativeStackScreenProps<AppStackParamList, 'HelpForm'>;
 type SupportContext = 'general' | 'ecommerce' | 'services' | 'bbps' | 'step_counter';
@@ -90,6 +91,7 @@ const formatOrderDate = (value: string) => {
 
 export default function HelpForm({ navigation, route }: HelpFormProps) {
   const alert = useAlert();
+  const tabBarInset = useBottomTabsInset();
   const { isDark, theme } = useAppTheme();
 
   const [categories, setCategories] = useState<SupportCategory[]>([]);
@@ -388,7 +390,7 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 30 + tabBarInset }]}
           showsVerticalScrollIndicator={false}
         >
           {/* HEADER */}

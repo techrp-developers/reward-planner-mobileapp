@@ -22,6 +22,7 @@ import {
   type SupportTicket,
 } from "../../api/SupportApi";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import { useBottomTabsInset } from '../../../../bottombar/BottomTabsInsetContext';
 
 type TicketFilter = "all" | "open" | "in_progress" | "closed";
 
@@ -264,6 +265,7 @@ const FilterCard = ({
 );
 
 export default function MyTickets({ navigation }: any) {
+  const tabBarInset = useBottomTabsInset();
   const { isDark } = useAppTheme();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,7 +362,7 @@ export default function MyTickets({ navigation }: any) {
             onPreviewImage={setPreviewImageUrl}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 28 + tabBarInset }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

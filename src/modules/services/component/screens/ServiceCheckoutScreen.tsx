@@ -340,7 +340,7 @@ export default function ServiceCheckoutScreen() {
   // paddingBottom on the content wrapper, so the CTA must not also offset by
   // the tab bar height itself (tabBarAware:false) — otherwise it floats above
   // the bottom bar with a visible gap instead of sitting right on top of it.
-  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
+  const stickyCTA = useStickyBottomCTA();
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
   const {
@@ -1006,8 +1006,8 @@ export default function ServiceCheckoutScreen() {
         loading={placing}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
-        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
-        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
+        // Sits above the bottom tab bar, or above the keyboard when it's open.
+        bottomOffset={stickyCTA.bottomOffset}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

@@ -62,11 +62,9 @@ export default function AddressSelectScreen() {
   const { isDark, theme } = useAppTheme();
   const queryClient = useQueryClient();
   const manageOnly = route.params?.manageOnly === true;
-  // MainLayout already reserves space for the bottom navigation bar. Keep this
-  // CTA anchored to that boundary instead of letting the search keyboard lift
-  // it into the middle of the address list.
+  // Anchor the CTA above the bottom tab bar, and don't let the search keyboard
+  // lift it into the middle of the address list.
   const stickyCTA = useStickyBottomCTA({
-    tabBarAware: false,
     keyboardAware: false,
     extraSpacing: 0,
   });
@@ -404,7 +402,7 @@ export default function AddressSelectScreen() {
         <ScrollView
           contentContainerStyle={{
             paddingBottom: manageOnly || !canSubmit
-              ? 16 + insets.bottom
+              ? 16 + Math.max(insets.bottom, stickyCTA.tabBarHeight)
               : stickyCTA.scrollContentPaddingBottom,
           }}
           showsVerticalScrollIndicator={false}

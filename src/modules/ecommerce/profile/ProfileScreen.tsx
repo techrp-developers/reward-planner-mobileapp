@@ -30,6 +30,7 @@ import { fetchGmcDetails } from '../../inssurance/services/inssuranceApi';
 import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import Share from 'react-native-share';
+import { useBottomTabsInset } from '../../../bottombar/BottomTabsInsetContext';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -161,6 +162,7 @@ const ProfileScreen: React.FC = () => {
   const theme = appTheme;
   const { isAuthenticated, user: authUser, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const tabBarInset = useBottomTabsInset();
 
   const [userInfo, setUserInfo]         = useState<UserInfo | null>(null);
   const [gmcDetails, setGmcDetails]     = useState<any | null>(null);
@@ -435,7 +437,7 @@ const ProfileScreen: React.FC = () => {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: rs(56) }}
+        contentContainerStyle={{ paddingBottom: rs(56) + tabBarInset }}
         bounces
       >
         {/* ════════════════════════════════════
