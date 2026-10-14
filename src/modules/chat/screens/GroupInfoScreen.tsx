@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -7,6 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import ChatAvatar from '../components/ChatAvatar';
+import { removeGroupImage, uploadGroupImage } from '../api/chatApi';
+import { chatSocket } from '../services/chatSocket';
+import { chatError } from '../utils';
 import type { ChatMember, ChatStackParamList } from '../types';
 
 type Route = NativeStackScreenProps<ChatStackParamList, 'GroupInfo'>['route'];
@@ -19,6 +23,50 @@ export default function GroupInfoScreen() {
   const { user } = useAuth();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const [imageUrl, setImageUrl] = useState(conversation.image_url || null);
+  const [imageSaving, setImageSaving] = useState(false);
+
+  useEffect(() => chatSocket.subscribe(event => {
+    if (event.type === 'conversation:updated' && Number(event.data?.conversation_id) === Number(conversation.conversation_id)) {
+      setImageUrl(event.data.image_url || null);
+    }
+  }), [conversation.conversation_id]);
+
+  const pickGroupImage = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.9 });
+    const asset = result.assets?.[0];
+    if (result.didCancel || !asset?.uri) return;
+    setImageSaving(true);
+    try {
+      const updated = await uploadGroupImage(conversation.conversation_id, { uri: asset.uri, type: asset.type, fileName: asset.fileName });
+      setImageUrl(updated.image_url);
+    } catch (error) {
+      Alert.alert('Photo not updated', chatError(error, 'Please try again.'));
+    } finally {
+      setImageSaving(false);
+    }
+  };
+
+  const deleteGroupImage = async () => {
+    setImageSaving(true);
+    try {
+      await removeGroupImage(conversation.conversation_id);
+      setImageUrl(null);
+    } catch (error) {
+      Alert.alert('Photo not removed', chatError(error, 'Please try again.'));
+    } finally {
+      setImageSaving(false);
+    }
+  };
+
+  const changeGroupImage = () => {
+    if (imageSaving) return;
+    Alert.alert('Group photo', undefined, [
+      { text: 'Choose from gallery', onPress: () => { pickGroupImage(); } },
+      ...(imageUrl ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => { deleteGroupImage(); } }] : []),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  };
 
   const members = useMemo(() => [...conversation.members].sort((left, right) => {
     const roleOrder = Number(right.role === 'admin') - Number(left.role === 'admin');
@@ -72,7 +120,21 @@ export default function GroupInfoScreen() {
         ListHeaderComponent={
           <>
             <View style={styles.groupSummary}>
-              <ChatAvatar name={conversation.name || 'Group'} size={88} />
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Change group photo"
+                activeOpacity={0.8}
+                onPress={changeGroupImage}
+                disabled={imageSaving}
+              >
+                <ChatAvatar name={conversation.name || 'Group'} uri={imageUrl} size={88} />
+                {imageSaving ? (
+                  <View style={styles.imageOverlay}><ActivityIndicator color="#FFF" /></View>
+                ) : null}
+                <View style={[styles.cameraBadge, { backgroundColor: theme.primary, borderColor: theme.background }]}>
+                  <MaterialCommunityIcons name="camera" size={15} color="#FFF" />
+                </View>
+              </TouchableOpacity>
               <Text style={[styles.groupName, { color: theme.text }]}>{conversation.name || 'Group chat'}</Text>
               <Text style={[styles.memberCount, { color: theme.secondaryText }]}>{members.length} members</Text>
               {conversation.description ? <Text style={[styles.description, { color: theme.secondaryText }]}>{conversation.description}</Text> : null}
@@ -94,6 +156,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '800', marginLeft: 6 },
   content: { paddingBottom: 30 },
   groupSummary: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24 },
+  imageOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 44, backgroundColor: 'rgba(0,0,0,.4)', alignItems: 'center', justifyContent: 'center' },
+  cameraBadge: { position: 'absolute', right: -2, bottom: -2, width: 30, height: 30, borderRadius: 15, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   groupName: { marginTop: 14, fontSize: 23, fontWeight: '800', textAlign: 'center' },
   memberCount: { marginTop: 5, fontSize: 13 },
   description: { marginTop: 13, fontSize: 14, lineHeight: 20, textAlign: 'center' },

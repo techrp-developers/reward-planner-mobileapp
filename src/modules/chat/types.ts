@@ -14,6 +14,7 @@ export type ChatConversation = {
   type: 'direct' | 'group';
   name?: string | null;
   description?: string | null;
+  image_url?: string | null;
   theme_key?: ChatThemeKey;
   updated_at: string;
   role?: string;
@@ -73,7 +74,7 @@ export type ChatStackParamList = {
 };
 
 export type ChatSocketEvent = {
-  type: 'connected' | 'conversation:available' | 'conversation:theme' | 'message:new' | 'message:read' | 'message:deleted' |
+  type: 'connected' | 'conversation:available' | 'conversation:theme' | 'conversation:updated' | 'message:new' | 'message:read' | 'message:deleted' |
     'poll:updated' | 'typing:start' | 'typing:stop' | 'presence' | 'error' |
     // Emitted locally after a reconnect / app resume: refetch to catch missed events.
     'resync';

@@ -52,6 +52,10 @@ export default function ChatInboxScreen() {
         setItems(current => current.map(item => Number(item.conversation_id) === Number(event.data?.conversation_id) ? { ...item, theme_key: event.data.theme_key } : item));
         return;
       }
+      if (event.type === 'conversation:updated') {
+        setItems(current => current.map(item => Number(item.conversation_id) === Number(event.data?.conversation_id) ? { ...item, image_url: event.data.image_url } : item));
+        return;
+      }
       if (event.type === 'message:new' || event.type === 'message:deleted' || event.type === 'conversation:available' || event.type === 'resync') load(true);
     });
   }, [accessToken, load]);
@@ -103,7 +107,7 @@ export default function ChatInboxScreen() {
           const member = otherMember(item, user?.user_id);
           const preview = item.last_message_type === 'image' ? '📷 Photo' : item.last_message_type === 'file' ? '📎 File' : item.last_message || 'No messages yet';
           return <TouchableOpacity style={[styles.row, { borderBottomColor: theme.border }]} onPress={() => navigation.navigate('ChatConversation', { conversation: item })}>
-            <ChatAvatar name={title} uri={item.type === 'direct' ? member?.user_image : undefined} />
+            <ChatAvatar name={title} uri={item.type === 'direct' ? member?.user_image : item.image_url} />
             <View style={styles.rowBody}><View style={styles.rowTop}><Text numberOfLines={1} style={[styles.name, { color: theme.text }]}>{title}</Text><Text style={[styles.time, { color: item.unread_count ? theme.primary : theme.secondaryText }]}>{chatTime(item.last_message_at || item.updated_at)}</Text></View><View style={styles.rowBottom}><Text numberOfLines={1} style={[styles.preview, { color: theme.secondaryText }, item.unread_count > 0 && { color: theme.text, fontWeight: '700' }]}>{preview}</Text>{item.unread_count > 0 ? <View style={[styles.badge, { backgroundColor: theme.primary }]}><Text style={styles.badgeText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text></View> : null}</View></View>
           </TouchableOpacity>;
         }}

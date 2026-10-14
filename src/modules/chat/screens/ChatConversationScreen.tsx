@@ -90,6 +90,7 @@ export default function ChatConversationScreen() {
   const [attachmentMenu, setAttachmentMenu] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [groupImage, setGroupImage] = useState(conversation.image_url || null);
   const inputRef = useRef<TextInput>(null);
   const selection = useRef({ start: 0, end: 0 });
   const [themeSaving, setThemeSaving] = useState(false);
@@ -195,6 +196,8 @@ export default function ChatConversationScreen() {
               : item,
           ),
         );
+      if (event.type === 'conversation:updated' && 'image_url' in (event.data || {}))
+        setGroupImage(event.data.image_url || null);
       if (event.type === 'conversation:theme')
         setChatThemeKey(event.data.theme_key || 'default');
       if (event.type === 'poll:updated')
@@ -499,7 +502,7 @@ export default function ChatConversationScreen() {
           disabled={conversation.type === 'direct' && !peer}
           onPress={() =>
             conversation.type === 'group'
-              ? navigation.navigate('GroupInfo', { conversation })
+              ? navigation.navigate('GroupInfo', { conversation: { ...conversation, image_url: groupImage } })
               : peer && navigation.navigate('MemberProfile', { member: peer })
           }
           activeOpacity={0.72}
@@ -507,7 +510,7 @@ export default function ChatConversationScreen() {
         >
           <ChatAvatar
             name={title}
-            uri={conversation.type === 'direct' ? peer?.user_image : undefined}
+            uri={conversation.type === 'direct' ? peer?.user_image : groupImage}
             size={42}
             online={online}
           />
@@ -571,6 +574,8 @@ export default function ChatConversationScreen() {
               !mine &&
               newestFirst[index + 1]?.sender_id !== item.sender_id;
             const foreground = mine ? '#FFF' : theme.text;
+            const showSenderAvatar = conversation.type === 'group' && !mine;
+            const lastOfRun = newestFirst[index - 1]?.sender_id !== item.sender_id;
             return (
               <View
                 style={[
@@ -578,6 +583,13 @@ export default function ChatConversationScreen() {
                   mine ? styles.mineRow : styles.theirRow,
                 ]}
               >
+                {showSenderAvatar ? (
+                  <View style={styles.senderAvatar}>
+                    {lastOfRun ? (
+                      <ChatAvatar name={item.sender_name} uri={item.sender_image} size={28} />
+                    ) : null}
+                  </View>
+                ) : null}
                 <View
                   style={[
                     styles.bubbleWrap,
@@ -853,7 +865,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 16,
   },
-  messageRow: { width: '100%', flexDirection: 'row' },
+  messageRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-end' },
+  senderAvatar: { width: 28, marginRight: 6, marginBottom: 3 },
   mineRow: { justifyContent: 'flex-end' },
   theirRow: { justifyContent: 'flex-start' },
   bubbleWrap: { maxWidth: '84%', marginVertical: 3 },

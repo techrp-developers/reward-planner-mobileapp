@@ -130,6 +130,30 @@ export async function voteChatPoll(pollId: number, optionIds: number[]): Promise
   return response.data.data;
 }
 
+type GroupImageResponse = { conversation_id: number; image_url: string | null };
+
+export async function uploadGroupImage(
+  conversationId: number,
+  asset: { uri: string; type?: string; fileName?: string },
+): Promise<GroupImageResponse> {
+  const form = new FormData();
+  form.append('image', {
+    uri: asset.uri,
+    type: asset.type || 'image/jpeg',
+    name: asset.fileName || `group-${Date.now()}.jpg`,
+  } as any);
+  const response = await api.post<DataResponse<GroupImageResponse>>(chatUrl(`/conversations/${conversationId}/image`), form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+  return response.data.data;
+}
+
+export async function removeGroupImage(conversationId: number): Promise<GroupImageResponse> {
+  const response = await api.delete<DataResponse<GroupImageResponse>>(chatUrl(`/conversations/${conversationId}/image`));
+  return response.data.data;
+}
+
 export async function deleteChatMessage(conversationId: number, messageId: number) {
   const response = await api.delete<DataResponse<{ message_id: number; conversation_id: number; deleted_at: string }>>(
     chatUrl(`/conversations/${conversationId}/messages/${messageId}`),
