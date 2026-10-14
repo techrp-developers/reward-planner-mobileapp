@@ -62,6 +62,8 @@ export const IMAGE_CDN_URL = IS_LOCAL_ENVIRONMENT ? SERVER_URL : LIVE_IMAGE_CDN_
 export const API_BASE_URL =
   IS_LOCAL_ENVIRONMENT ? SERVER_URL : `${SERVER_URL}/api/crm`;
 export const CHAT_API_BASE_URL = API_BASE_URL;
+// Routed through the same /api/crm proxy as the REST API; the proxy must forward WebSocket upgrades.
+export const CHAT_SOCKET_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws/chat`;
 export const API_V1_URL = `${API_BASE_URL}/v1`;
 export const API_V1_URL_WITH_SLASH = `${API_V1_URL}/`;
 export const UPLOADS_URL = IS_LOCAL_ENVIRONMENT

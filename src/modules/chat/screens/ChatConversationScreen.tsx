@@ -124,22 +124,24 @@ export default function ChatConversationScreen() {
           }
         })
         .catch(() => {});
+    // Merge the latest page so messages missed while disconnected appear.
+    const resync = () =>
+      fetchMessages(conversation.conversation_id)
+        .then(latest => {
+          if (!active) return;
+          setMessages(current => {
+            const byId = new Map(current.map(item => [item.message_id, item]));
+            latest.forEach(item => byId.set(item.message_id, item));
+            const next = [...byId.values()].sort((a, b) => a.message_id - b.message_id);
+            markLatestRead(next);
+            return next;
+          });
+        })
+        .catch(() => {});
     if (accessToken) chatSocket.connect(accessToken);
     const unsubscribe = chatSocket.subscribe(event => {
       if (event.type === 'resync') {
-        // Merge the latest page so messages missed while disconnected appear.
-        fetchMessages(conversation.conversation_id)
-          .then(latest => {
-            if (!active) return;
-            setMessages(current => {
-              const byId = new Map(current.map(item => [item.message_id, item]));
-              latest.forEach(item => byId.set(item.message_id, item));
-              const next = [...byId.values()].sort((a, b) => a.message_id - b.message_id);
-              markLatestRead(next);
-              return next;
-            });
-          })
-          .catch(() => {});
+        resync();
         return;
       }
       if (event.type === 'connected' && peer?.user_id) {
@@ -209,8 +211,13 @@ export default function ChatConversationScreen() {
         if (event.data?.last_seen_at) setLastSeenAt(event.data.last_seen_at);
       }
     });
+    // Fallback while the socket is unavailable: poll for new messages.
+    const poll = setInterval(() => {
+      if (!chatSocket.isConnected()) resync();
+    }, 4000);
     return () => {
       active = false;
+      clearInterval(poll);
       unsubscribe();
       if (typingTimer.current) clearTimeout(typingTimer.current);
       chatSocket.send('typing:stop', conversation.conversation_id);

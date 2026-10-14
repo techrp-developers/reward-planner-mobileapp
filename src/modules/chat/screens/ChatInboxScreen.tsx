@@ -37,7 +37,14 @@ export default function ChatInboxScreen() {
     finally { setLoading(false); setRefreshing(false); }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    // Fallback while the socket is unavailable: poll the list while it is on screen.
+    const poll = setInterval(() => {
+      if (!chatSocket.isConnected()) load(true);
+    }, 10000);
+    return () => clearInterval(poll);
+  }, [load]));
   useEffect(() => {
     if (accessToken) chatSocket.connect(accessToken);
     return chatSocket.subscribe(event => {

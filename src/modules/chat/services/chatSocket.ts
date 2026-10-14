@@ -1,7 +1,7 @@
 import { AppState } from 'react-native';
 import api, { getSessionAccessToken } from '../../common/auth/api/axios';
 import { decodeJwtPayload, isTokenExpiringSoon } from '../../common/auth/utils/jwtUtils';
-import { CHAT_API_BASE_URL, CHAT_SERVER_URL } from '../../../config/apiConfig';
+import { CHAT_API_BASE_URL, CHAT_SOCKET_URL } from '../../../config/apiConfig';
 import type { ChatSocketEvent } from '../types';
 
 type Listener = (event: ChatSocketEvent) => void;
@@ -32,8 +32,7 @@ class ChatSocketClient {
     this.closeSocket();
     this.token = token;
     this.manuallyClosed = false;
-    const origin = CHAT_SERVER_URL.replace(/^http/, 'ws');
-    const socket = new WebSocket(`${origin}/ws/chat?token=${encodeURIComponent(token)}`);
+    const socket = new WebSocket(`${CHAT_SOCKET_URL}?token=${encodeURIComponent(token)}`);
     this.socket = socket;
     socket.onopen = () => {
       this.retryCount = 0;
@@ -61,6 +60,15 @@ class ChatSocketClient {
     this.hasConnected = false;
     this.token = null;
     this.closeSocket();
+  }
+
+  isConnected() {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
+  // Ask open chat screens to refetch, e.g. when a chat push arrives in the foreground.
+  requestResync() {
+    this.emit({ type: 'resync', data: null });
   }
 
   subscribe(listener: Listener) {

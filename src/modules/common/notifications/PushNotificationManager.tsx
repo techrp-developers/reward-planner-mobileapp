@@ -15,6 +15,7 @@ import { getApps } from "@react-native-firebase/app";
 import { useNavigation } from "@react-navigation/native";
 import api from "../auth/api/axios";
 import { useAuth } from "../auth/context/AuthContext";
+import { chatSocket } from "../../chat/services/chatSocket";
 
 const CHANNEL_ID = "reward_planners_general";
 
@@ -107,6 +108,8 @@ export default function PushNotificationManager() {
     if (!firebaseMessaging) return;
 
     const unsubscribeForeground = onMessage(firebaseMessaging, message => {
+      // The push can arrive even when the chat socket is down; refresh open chat screens.
+      if (message.data?.type === "chat_message") chatSocket.requestResync();
       displayForegroundNotification(message).catch(error =>
         __DEV__ && console.warn("[Push] Foreground display failed", error),
       );
