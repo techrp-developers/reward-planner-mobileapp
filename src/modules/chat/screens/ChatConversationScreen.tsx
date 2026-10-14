@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -82,6 +82,7 @@ export default function ChatConversationScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
   const [chatThemeKey, setChatThemeKey] = useState<ChatThemeKey>(conversation.theme_key || 'default');
+  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
   const title = conversationTitle(conversation, user?.user_id);
   const peer = otherMember(conversation, user?.user_id);
 
@@ -239,12 +240,16 @@ export default function ChatConversationScreen() {
       1200,
     );
   };
-  const addMessage = (message: ChatMessage) =>
+  const scrollToLatest = (animated = true) =>
+    listRef.current?.scrollToOffset({ offset: 0, animated });
+  const addMessage = (message: ChatMessage) => {
     setMessages(current =>
       current.some(item => item.message_id === message.message_id)
         ? current
         : [...current, message],
     );
+    scrollToLatest();
+  };
   const send = async () => {
     const body = text.trim();
     if (!body || sending) return;
@@ -464,9 +469,11 @@ export default function ChatConversationScreen() {
           <ActivityIndicator color={theme.primary} />
         </View>
       ) : (
+        // Inverted (newest first) so the chat always opens at, and stays on, the latest message.
         <FlatList
           ref={listRef}
-          data={messages}
+          data={newestFirst}
+          inverted
           keyExtractor={item =>
             String(item.message_id || item.client_message_id)
           }
@@ -475,15 +482,12 @@ export default function ChatConversationScreen() {
           keyboardDismissMode={
             Platform.OS === 'ios' ? 'interactive' : 'on-drag'
           }
-          onContentSizeChange={() =>
-            listRef.current?.scrollToEnd({ animated: false })
-          }
           renderItem={({ item, index }) => {
             const mine = Number(item.sender_id) === Number(user?.user_id);
             const showName =
               conversation.type === 'group' &&
               !mine &&
-              messages[index - 1]?.sender_id !== item.sender_id;
+              newestFirst[index + 1]?.sender_id !== item.sender_id;
             const foreground = mine ? '#FFF' : theme.text;
             return (
               <View
@@ -641,7 +645,7 @@ export default function ChatConversationScreen() {
             onChangeText={onChangeText}
             onFocus={() =>
               setTimeout(
-                () => listRef.current?.scrollToEnd({ animated: true }),
+                () => scrollToLatest(),
                 250,
               )
             }
@@ -741,7 +745,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   messages: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
+    // The list is inverted, so flex-start keeps short chats pinned to the bottom.
+    justifyContent: 'flex-start',
     paddingHorizontal: 13,
     paddingVertical: 16,
   },
