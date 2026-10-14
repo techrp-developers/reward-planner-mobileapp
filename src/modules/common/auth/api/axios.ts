@@ -30,6 +30,9 @@ export const setSessionHandlers = (handlers: SessionHandlers | null) => {
   sessionHandlers = handlers;
 };
 
+// Latest in-memory access token, including one rotated by the refresh interceptor.
+export const getSessionAccessToken = () => sessionHandlers?.getAccessToken?.() ?? null;
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 20000,

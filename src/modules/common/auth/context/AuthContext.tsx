@@ -16,6 +16,7 @@ import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 import { secureDeleteItem, secureGetItem, secureSetItem } from "../services/secureStorage";
+import { chatSocket } from "../../../chat/services/chatSocket";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -126,6 +127,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const clearLocalSession = useCallback(async () => {
+    // Stop the chat socket from reconnecting with the signed-out user's token.
+    chatSocket.disconnect();
     updateAccessToken(null);
     setUser(null);
     setTermsAccepted(null); // reset so next login re-checks

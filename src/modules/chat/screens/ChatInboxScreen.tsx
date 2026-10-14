@@ -45,7 +45,7 @@ export default function ChatInboxScreen() {
         setItems(current => current.map(item => Number(item.conversation_id) === Number(event.data?.conversation_id) ? { ...item, theme_key: event.data.theme_key } : item));
         return;
       }
-      if (event.type === 'message:new' || event.type === 'conversation:available') load(true);
+      if (event.type === 'message:new' || event.type === 'conversation:available' || event.type === 'resync') load(true);
     });
   }, [accessToken, load]);
 

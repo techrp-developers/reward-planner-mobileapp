@@ -126,6 +126,22 @@ export default function ChatConversationScreen() {
         .catch(() => {});
     if (accessToken) chatSocket.connect(accessToken);
     const unsubscribe = chatSocket.subscribe(event => {
+      if (event.type === 'resync') {
+        // Merge the latest page so messages missed while disconnected appear.
+        fetchMessages(conversation.conversation_id)
+          .then(latest => {
+            if (!active) return;
+            setMessages(current => {
+              const byId = new Map(current.map(item => [item.message_id, item]));
+              latest.forEach(item => byId.set(item.message_id, item));
+              const next = [...byId.values()].sort((a, b) => a.message_id - b.message_id);
+              markLatestRead(next);
+              return next;
+            });
+          })
+          .catch(() => {});
+        return;
+      }
       if (event.type === 'connected' && peer?.user_id) {
         setOnline(
           (event.data?.online_user_ids || [])

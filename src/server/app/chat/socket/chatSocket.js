@@ -33,7 +33,10 @@ function setupChatSocket(server, app, isAllowedOrigin) {
     try {
       const url = new URL(request.url, "http://localhost");
       if (url.pathname !== "/ws/chat") return;
-      if (request.headers.origin && !isAllowedOrigin(request.headers.origin)) throw new Error("Origin not allowed");
+      // React Native on Android sends its own server URL as Origin (e.g. http://10.0.2.2:5000 in dev).
+      const origin = request.headers.origin;
+      const sameHost = origin && (() => { try { return new URL(origin).host === request.headers.host; } catch { return false; } })();
+      if (origin && !sameHost && !isAllowedOrigin(origin)) throw new Error("Origin not allowed");
       const authHeader = request.headers.authorization || "";
       const token = url.searchParams.get("token") || (authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "");
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
