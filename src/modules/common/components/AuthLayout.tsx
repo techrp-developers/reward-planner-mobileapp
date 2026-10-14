@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,7 +8,6 @@ import LinearGradient from "react-native-linear-gradient";
 import Logo from "../../../assets/menu/logo.png";
 import logoword from "../../../assets/menu/logo word.png";
 import { useAppTheme } from "../../../theme/ThemeContext";
-import BenefitsShowcase from "./BenefitsShowcase";
 import { AuthEntrance, AuthPressable, useAuthReducedMotion } from "./AuthMotion";
 
 function AmbientOrbs() {
@@ -39,11 +38,18 @@ export function AuthLayout({ children, onBack, welcome = false }: {
   const animateWelcome = welcome && fontScale <= 1.3;
   const logoSize = welcome ? (height < 740 ? 76 : 96) : Math.min(width * 0.32, 156);
   const wordmarkWidth = Math.min(width - 80, 180);
+  const scroll = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (welcome) return;
+    // Keep the input and its button visible above the keyboard.
+    const listener = Keyboard.addListener("keyboardDidShow", () => scroll.current?.scrollToEnd({ animated: true }));
+    return () => listener.remove();
+  }, [welcome]);
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: isDark ? "#100E18" : "#F6F1FC" }]}>
       {welcome && <AmbientOrbs />}
-      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView key={welcome ? `welcome-${fontScale}` : "auth"}
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView ref={scroll} key={welcome ? `welcome-${fontScale}` : "auth"}
           contentContainerStyle={[styles.content, welcome && styles.welcomeContent]}
           keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
           {!welcome && <View style={styles.backRow}>
@@ -70,7 +76,6 @@ export function AuthLayout({ children, onBack, welcome = false }: {
               {children}
             </View>
           </AuthEntrance>
-          {welcome && <BenefitsShowcase />}
           {!welcome && <Text style={[styles.footer, { color: theme.secondaryText }]}>Your benefits. One simple sign-in.</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
