@@ -1,0 +1,22 @@
+diff --git a/node_modules/@react-native-community/cli-config-android/build/config/getMainActivity.js b/node_modules/@react-native-community/cli-config-android/build/config/getMainActivity.js
+--- a/node_modules/@react-native-community/cli-config-android/build/config/getMainActivity.js
++++ b/node_modules/@react-native-community/cli-config-android/build/config/getMainActivity.js
+@@ -48,6 +48,9 @@ function getMainActivity(manifestPath) {
+       } else {
+         activities = activity;
+       }
++      const aliases = application['activity-alias'] || [];
++      activities.push(...(Array.isArray(aliases) ? aliases : [aliases])
++        .filter(alias => String(alias['@_android:enabled']) !== 'false'));
+       const mainActivity = activities.find(act => {
+         let intentFilters = act['intent-filter'];
+         if (!intentFilters) {
+@@ -90,7 +93,7 @@ function getMainActivity(manifestPath) {
+           return false;
+         });
+       });
+-      return mainActivity ? mainActivity['@_android:name'] : null;
++      return mainActivity ? mainActivity['@_android:targetActivity'] || mainActivity['@_android:name'] : null;
+     } else {
+       return null;
+     }
