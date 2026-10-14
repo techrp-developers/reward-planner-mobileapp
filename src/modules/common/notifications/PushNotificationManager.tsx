@@ -49,6 +49,11 @@ const displayForegroundNotification = async (
       importance: AndroidImportance.HIGH,
       pressAction: { id: "default" },
       smallIcon: "ic_launcher",
+      sound: "default",
+    },
+    ios: {
+      sound: "default",
+      foregroundPresentationOptions: { sound: true, banner: true, list: true, badge: true },
     },
   });
 };
