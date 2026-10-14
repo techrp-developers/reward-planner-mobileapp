@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -24,6 +23,7 @@ import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import { getBillFetchErrorMessage } from '../utils/billFetchError';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 const BRAND_END = '#5B47A3';
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -296,7 +296,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Enter Details"
         onBackPress={handleBackPress}
@@ -471,7 +471,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 

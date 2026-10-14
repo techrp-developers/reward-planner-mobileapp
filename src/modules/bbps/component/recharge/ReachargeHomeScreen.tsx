@@ -23,6 +23,7 @@ import { useBbpsTheme } from '../../utils/useBbpsTheme';
 import jio from '../../assets/Sample/jio.png';
 import airtel from '../../assets/Sample/airtel.png';
 import vi from '../../assets/Sample/VI_Card.png';
+import BBPSSafeAreaView from '../../constatnt/BBPSSafeAreaView';
 
 const RECENT_RECHARGES: any[] = [];
 const CONTACTS: any[] = [];
@@ -203,7 +204,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Recharge or Pay Mobile Bill"
         onBackPress={() => navigation.goBack()}
@@ -355,7 +356,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
 
       {/* Location Picker Modal */}
       {renderLocationModal()}
-    </View>
+    </BBPSSafeAreaView>
   );
 }
 

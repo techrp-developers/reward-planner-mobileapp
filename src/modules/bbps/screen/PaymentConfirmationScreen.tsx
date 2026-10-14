@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   ScrollView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,6 +22,8 @@ import {
 import { useAlert } from '../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import { isPositiveAmount, isValidCheckoutOrder } from '../utils/paymentSafety';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
+import { useBottomTabsInset } from '../../../bottombar/BottomTabsInsetContext';
 
 // Premium Design Theme Config
 const BRAND_PRIMARY = '#8665FF';
@@ -129,6 +131,8 @@ const PaymentConfirmationScreenComponent = () => {
   const route = useRoute<any>();
   const alert = useAlert();
   const bbpsTheme = useBbpsTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarInset = useBottomTabsInset();
 
   const [processing, setProcessing] = useState(false);
   const paymentFlowInProgress = useRef(false);
@@ -287,7 +291,7 @@ const PaymentConfirmationScreenComponent = () => {
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* 1. Statically Positioned Header */}
       <BBPSHead title={headerTitle} onBackPress={handleBackPress} />
 
@@ -375,6 +379,10 @@ const PaymentConfirmationScreenComponent = () => {
         style={[
           styles.premiumStickyFooter,
           {
+            // Absolutely positioned, so the container's safe-area padding doesn't
+            // apply — sit above the tab bar, or above the system nav bar without one.
+            bottom: tabBarInset,
+            paddingBottom: 16 + (tabBarInset > 0 ? 0 : insets.bottom),
             backgroundColor: bbpsTheme.colors.surface,
             borderColor: bbpsTheme.colors.border,
           },
@@ -408,7 +416,7 @@ const PaymentConfirmationScreenComponent = () => {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 
@@ -614,7 +622,6 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE_CARD,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
     borderTopWidth: 1,
     borderColor: '#EFEFEF',
     ...Platform.select({

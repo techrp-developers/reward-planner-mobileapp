@@ -25,6 +25,7 @@ import {
 } from '../../api/BillsAPI';
 import { useAlert } from '../../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../../utils/useBbpsTheme';
+import BBPSSafeAreaView from '../../constatnt/BBPSSafeAreaView';
 
 const getPlanId = (plan: RechargePlan) =>
   String(plan.planId || plan.plan_id || plan.id || plan.recharge_plan_id || '');
@@ -313,7 +314,7 @@ function RechargeSection({ navigation, route }: any) {
   };
 
   return (
-    <>
+    <BBPSSafeAreaView style={{ backgroundColor: bbpsTheme.colors.background }}>
     <ScrollView style={[styles.mainContainer, { backgroundColor: bbpsTheme.colors.background }]} stickyHeaderIndices={[0]}>
       <BBPSHead
         user={{
@@ -600,7 +601,7 @@ function RechargeSection({ navigation, route }: any) {
         </View>
       </View>
     </Modal>
-    </>
+    </BBPSSafeAreaView>
   );
 }
 

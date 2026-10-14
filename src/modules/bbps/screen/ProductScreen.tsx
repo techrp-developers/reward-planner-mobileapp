@@ -5,11 +5,11 @@ import {
   StyleSheet,
   FlatList,
   Image,
-  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BBPSHead from '../constatnt/BBPSHead';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 type RewardItem = { id: string; title: string; sub: string; image: string; brand: string };
 
@@ -65,7 +65,7 @@ const ProductScreenComponent = () => {
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* Strict use of custom ScreenHeader */}
       <BBPSHead
         title="Rewards"
@@ -84,7 +84,7 @@ const ProductScreenComponent = () => {
         windowSize={5}
         initialNumToRender={8}
       />
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 

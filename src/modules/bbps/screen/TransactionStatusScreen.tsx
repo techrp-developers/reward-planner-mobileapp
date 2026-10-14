@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, BackHandler, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import BBPSHead from '../constatnt/BBPSHead';
 import { pollTransactionStatus, TERMINAL_TRANSACTION_STATUSES, TransactionStatus } from '../api/BillsAPI';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 const BRAND_SECONDARY = '#5B47A3';
 
@@ -78,7 +79,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
   }, [handleGoHome]));
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead title="Payment Status" onBackPress={handleGoHome} />
 
       <View style={styles.container}>
@@ -129,7 +130,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 

@@ -7,7 +7,6 @@ import {
   TextInput,
   SectionList,
   TouchableOpacity,
-  SafeAreaView,
   Image,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -24,6 +23,7 @@ import {
   Operator,
 } from '../api/BillsAPI';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const SKELETON_GROUPS = [0, 1];
@@ -271,7 +271,7 @@ const BillerSelectScreenComponent = () => {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+      <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
         <BBPSHead
           title={`Pay ${categoryName}`}
           onBackPress={handleBackPress}
@@ -286,12 +286,12 @@ const BillerSelectScreenComponent = () => {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </BBPSSafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title={`Pay ${categoryName}`}
         onBackPress={handleBackPress}
@@ -380,7 +380,7 @@ const BillerSelectScreenComponent = () => {
           initialNumToRender={8}
         />
       )}
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 

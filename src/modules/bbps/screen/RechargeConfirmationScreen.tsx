@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -20,6 +19,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAlert } from '../../ecommerce/components/alerts';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import { isValidCheckoutOrder } from '../utils/paymentSafety';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 // Last successful create-order payload, kept in memory for this session so
 // a failing payload (e.g. a different operator) can be diffed against it —
@@ -246,7 +246,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
   }, [orderFailure]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Plan details"
         onBackPress={() => navigation.goBack()}
@@ -352,7 +352,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 

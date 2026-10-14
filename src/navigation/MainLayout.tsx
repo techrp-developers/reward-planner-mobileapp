@@ -4,7 +4,9 @@ import { useNavigation, useNavigationState, useRoute } from "@react-navigation/n
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import Navbar, { type TopTab } from "../navbar/Navbar";
-import BottomTabs from "../bottombar/BottomTabs";
+import BottomTabs, { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
+import { BottomTabsInsetContext } from "../bottombar/BottomTabsInsetContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
 import { NavbarScrollProvider, useNavbarScroll } from "../navbar/NavbarScrollContext";
@@ -212,6 +214,10 @@ function MainLayoutContent() {
     () => shouldShowBottomTabs(activeMode),
     [activeMode]
   );
+  // Matches the overlay height BottomTabs renders, so module screens can keep
+  // their content clear of it.
+  const insets = useSafeAreaInsets();
+  const bottomTabsInset = showBottomTabs ? TAB_BAR_HEIGHT + Math.max(insets.bottom, 0) : 0;
   // Each module owns its own cart count — add a new entry here (and its
   // hook call above) when a future module (e.g. Health) gets its own cart.
   // Hooks are called unconditionally so this stays rules-of-hooks safe.
@@ -320,38 +326,40 @@ function MainLayoutContent() {
         <Navbar activeModule={activeMode} onModuleChange={handleModuleChange} />
       </View>
       <View style={styles.content}>
-        <ModuleStack.Navigator
-          initialRouteName="ProductModule"
-          screenListeners={moduleScreenListeners}
-          screenOptions={{
-            headerShown: false,
-            animation: "none",
-            gestureEnabled: true,
-            freezeOnBlur: true,
-            contentStyle: { backgroundColor: "transparent" },
-          }}
-        >
-          <ModuleStack.Screen
-            name="ProductModule"
-            getComponent={() => require("../modules/ecommerce/navigation/HomeStack").default}
-            initialParams={{ moduleName: "Product" }}
-          />
-          <ModuleStack.Screen
-            name="ServicesModule"
-            getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
-            initialParams={{ moduleName: "Services" }}
-          />
-          <ModuleStack.Screen
-            name="PaymentsModule"
-            getComponent={() => require("../modules/bbps/navigation/BBPSHomeStack").default}
-            initialParams={{ moduleName: "Payments" }}
-          />
-          <ModuleStack.Screen
-            name="DineOutModule"
-            getComponent={() => require("../modules/busbooking/navigation/BusBookingStack").default}
-            initialParams={{ moduleName: "DineOut" }}
-          />
-        </ModuleStack.Navigator>
+        <BottomTabsInsetContext.Provider value={bottomTabsInset}>
+          <ModuleStack.Navigator
+            initialRouteName="ProductModule"
+            screenListeners={moduleScreenListeners}
+            screenOptions={{
+              headerShown: false,
+              animation: "none",
+              gestureEnabled: true,
+              freezeOnBlur: true,
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          >
+            <ModuleStack.Screen
+              name="ProductModule"
+              getComponent={() => require("../modules/ecommerce/navigation/HomeStack").default}
+              initialParams={{ moduleName: "Product" }}
+            />
+            <ModuleStack.Screen
+              name="ServicesModule"
+              getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
+              initialParams={{ moduleName: "Services" }}
+            />
+            <ModuleStack.Screen
+              name="PaymentsModule"
+              getComponent={() => require("../modules/bbps/navigation/BBPSHomeStack").default}
+              initialParams={{ moduleName: "Payments" }}
+            />
+            <ModuleStack.Screen
+              name="DineOutModule"
+              getComponent={() => require("../modules/busbooking/navigation/BusBookingStack").default}
+              initialParams={{ moduleName: "DineOut" }}
+            />
+          </ModuleStack.Navigator>
+        </BottomTabsInsetContext.Provider>
       </View>
       {showBottomTabs ? (
         <BottomTabs

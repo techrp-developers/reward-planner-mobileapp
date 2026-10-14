@@ -12,6 +12,7 @@ import BBPSOrderFilterSheet, {
 } from './BBPSOrderFilterSheet';
 import { bbpsOrderHistoryQueryKey, fetchOrderHistory, OrderHistoryItem } from '../../api/BillsAPI';
 import { useBbpsTheme } from '../../utils/useBbpsTheme';
+import BBPSSafeAreaView from '../../constatnt/BBPSSafeAreaView';
 
 type TemporaryOrder = {
   id: string;
@@ -168,7 +169,7 @@ function OrderHistory({ navigation }: any) {
   }, [orders, search, statusFilter, timeFilter]);
 
   return (
-    <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <OrderHeading
         title="My Orders"
         onBackPress={() => navigation.goBack()}
@@ -246,7 +247,7 @@ function OrderHistory({ navigation }: any) {
         }}
         bbpsTheme={bbpsTheme}
       />
-    </View>
+    </BBPSSafeAreaView>
   );
 }
 

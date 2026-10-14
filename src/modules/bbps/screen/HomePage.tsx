@@ -1,16 +1,17 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import RechargeBill from '../component/home/ReachargeBill';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import PromotionalBanner from '../../ecommerce/components/home/PromotionalBanner';
 import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 function HomePageComponent() {
   const { colors } = useBbpsTheme();
   const { onScroll } = useNavbarScroll();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <BBPSSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -22,7 +23,7 @@ function HomePageComponent() {
         <PromotionalBanner module="payment" />
         <RechargeBill />
       </ScrollView>
-    </View>
+    </BBPSSafeAreaView>
   );
 }
 
