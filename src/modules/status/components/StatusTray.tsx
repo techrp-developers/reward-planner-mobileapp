@@ -19,7 +19,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
 import { ViewType } from 'react-native-video';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchStatusProfile } from '../api/statusApi';
 import { queryClient } from '../../../query/queryClient';
@@ -33,6 +33,7 @@ import {
   fetchMyStatuses,
   fetchStatusFeed,
   fetchStatusLikes,
+  fetchStatusComments,
   fetchStatusViewers,
   markStatusViewed,
   toggleStatusLike,
@@ -211,6 +212,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   const [commentCount, setCommentCount] = useState(0);
   const [liking, setLiking] = useState(false);
   const [likesVisible, setLikesVisible] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const [likes, setLikes] = useState<StatusLike[]>([]);
   const [likesLoading, setLikesLoading] = useState(false);
   const likesLoadingRef = useRef(false);
@@ -224,6 +226,15 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   const videoTouchWidth = useRef(0);
   const status = group?.statuses[index];
   const activeStatusId = status?.id;
+  const commentsQuery = useInfiniteQuery({
+    queryKey: ['statuses', 'comments', activeStatusId, currentUserId],
+    queryFn: ({ pageParam }) => fetchStatusComments(activeStatusId!, pageParam),
+    initialPageParam: null as number | null,
+    getNextPageParam: page => page.nextBeforeId ?? undefined,
+    enabled: visible && commentsVisible && !!activeStatusId,
+    staleTime: 0,
+  });
+  useEffect(() => { setCommentsVisible(false); }, [activeStatusId, visible]);
   // Derive ownership from the API data too. This keeps owner actions available
   // when a user's own status is opened from a refreshed/cached feed rather than
   // exclusively through the local "My status" navigation flag.
@@ -319,6 +330,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
 
   const showViewers = useCallback(async () => {
     if (!status) return;
+    setCommentsVisible(false);
     Keyboard.dismiss();
     setLikesVisible(false);
     setReplyFocused(false);
@@ -387,6 +399,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
 
   const showLikes = useCallback(() => {
     if (!status) return;
+    setCommentsVisible(false);
     Keyboard.dismiss();
     setViewers(null);
     setReplyFocused(false);
@@ -459,7 +472,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   style={styles.viewerMedia}
                   resizeMode="contain"
                   viewType={ViewType.TEXTURE}
-                  paused={!visible || videoPaused || replyFocused || likesVisible}
+                  paused={!visible || videoPaused || replyFocused || likesVisible || commentsVisible || !!viewers}
                   playInBackground={false}
                   playWhenInactive={false}
                   onEnd={next}
@@ -523,17 +536,57 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   ? <ActivityIndicator color="#FFF" />
                   : <><MaterialCommunityIcons name="eye-outline" color="#FFF" size={20} /><Text style={styles.viewsText}>{viewerCount} views</Text></>}
               </Pressable>
-              <Pressable
-                onPress={remove}
-                disabled={busy}
-                style={styles.deleteButton}
-              >
-                <MaterialCommunityIcons name="delete-outline" color="#FFF" size={20} />
-                <Text style={styles.deleteText}>Delete</Text>
+              <Pressable onPress={showLikes} style={styles.viewsButton} accessibilityLabel={`${likeCount} likes`}>
+                <MaterialCommunityIcons name="heart-outline" color="#FFF" size={20} />
+                <Text style={styles.viewsText}>{likeCount} likes</Text>
+              </Pressable>
+              <Pressable onPress={() => {
+                Keyboard.dismiss();
+                setReplyFocused(false);
+                setViewers(null);
+                setLikesVisible(false);
+                setCommentsVisible(true);
+              }} style={styles.viewsButton} accessibilityLabel={`${commentCount} comments`}>
+                <MaterialCommunityIcons name="comment-outline" color="#FFF" size={20} />
+                <Text style={styles.viewsText}>{commentCount} comments</Text>
               </Pressable>
             </View>
           )}
           {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
+          {commentsVisible && (
+            <View style={styles.viewersSheet}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.commentsHeader}>
+                <Text style={styles.viewersTitle}>Comments ({commentCount})</Text>
+                <Pressable onPress={() => setCommentsVisible(false)} hitSlop={10} accessibilityLabel="Close comments">
+                  <MaterialCommunityIcons name="close" size={24} color="#18181B" />
+                </Pressable>
+              </View>
+              {commentsQuery.isPending ? <ActivityIndicator style={styles.commentsLoader} color="#7C3AED" /> : (
+                <FlatList
+                  data={commentsQuery.data?.pages.flatMap(page => page.comments) ?? []}
+                  keyExtractor={item => String(item.id)}
+                  onEndReached={() => {
+                    if (commentsQuery.hasNextPage && !commentsQuery.isFetching && !commentsQuery.isFetchNextPageError) commentsQuery.fetchNextPage();
+                  }}
+                  ListEmptyComponent={!commentsQuery.isError ? <Text style={styles.emptyViewers}>No comments yet</Text> : null}
+                  ListFooterComponent={commentsQuery.isError
+                    ? <Pressable onPress={() => commentsQuery.isFetchNextPageError ? commentsQuery.fetchNextPage() : commentsQuery.refetch()}><Text style={styles.emptyViewers}>Could not load comments. Tap to retry.</Text></Pressable>
+                    : commentsQuery.isFetchingNextPage ? <ActivityIndicator color="#7C3AED" /> : null}
+                  renderItem={({ item }) => (
+                    <View style={styles.viewerRow}>
+                      <Avatar uri={item.user.image_url} name={item.user.name} size={40} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.viewerName}>{item.user.name || 'User'}</Text>
+                        <Text style={{ color: '#3F3F46', marginTop: 4 }}>{item.text}</Text>
+                        <Text style={styles.viewerTime}>{new Date(item.created_at).toLocaleString()}</Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              )}
+            </View>
+          )}
           {likesVisible && (
             <View style={styles.viewersSheet}>
               <View style={styles.sheetHandle} />
@@ -662,8 +715,8 @@ const styles = StyleSheet.create({
   likeActions: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, marginLeft: 'auto' },
   interactionIconButton: { width: 34, height: 44, alignItems: 'center', justifyContent: 'center' },
   ownerActions: { minHeight: 58, paddingHorizontal: 18, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  viewsButton: { height: 46, flex: 1, borderRadius: 23, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
-  viewsText: { color: '#FFF', fontWeight: '700' },
+  viewsButton: { minHeight: 54, flex: 1, borderRadius: 16, paddingVertical: 6, gap: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.16)' },
+  viewsText: { color: '#FFF', fontWeight: '700', fontSize: 12, textAlign: 'center' },
   deleteButton: { height: 46, paddingHorizontal: 18, borderRadius: 23, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(220,38,38,.92)' },
   deleteText: { color: '#FFF', fontWeight: '800' },
   viewersSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '48%', padding: 18, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }, sheetHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: '#D4D4D8', alignSelf: 'center', marginBottom: 12 }, viewersTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#18181B' }, viewerRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 9 }, likeUserName: { flex: 1, color: '#18181B', fontWeight: '700' }, viewerName: { color: '#18181B', fontWeight: '700' }, viewerTime: { color: '#71717A', fontSize: 11, marginTop: 3 }, emptyViewers: { color: '#71717A', textAlign: 'center', marginTop: 35 },
