@@ -14,6 +14,11 @@ import type {
 
 type DataResponse<T> = { success: boolean; data: T; message?: string };
 
+export async function fetchStatusProfile() {
+  const response = await api.get<DataResponse<{ name?: string; userImage?: string | null }>>('/v1/auth/user-info');
+  return response.data.data;
+}
+
 export type StatusViewResult = {
   id: number;
   viewed: boolean;

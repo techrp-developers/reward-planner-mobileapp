@@ -20,6 +20,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
 import { ViewType } from 'react-native-video';
 import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
+import { fetchStatusProfile } from '../api/statusApi';
 import { queryClient } from '../../../query/queryClient';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
@@ -53,8 +55,9 @@ function messageFrom(error: any) {
 }
 
 function Avatar({ uri, name, size = 54 }: { uri?: string | null; name?: string | null; size?: number }) {
-  return uri ? (
-    <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  return uri && failedUri !== uri ? (
+    <Image key={uri} source={{ uri }} onError={() => setFailedUri(uri)} style={{ width: size, height: size, borderRadius: size / 2 }} />
   ) : (
     <View style={[styles.avatarFallback, { width: size, height: size, borderRadius: size / 2 }]}>
       <Text style={[styles.avatarInitial, { fontSize: size * 0.38 }]}>{initials(name)}</Text>
@@ -581,6 +584,10 @@ function StatusTray({ textColor }: { textColor?: string }) {
   const enabled = isAuthenticated;
   const mineQuery = useQuery({ queryKey: ['statuses', 'mine'], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
   const feedQuery = useQuery({ queryKey: ['statuses', 'feed'], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
+  const profileQuery = useQuery({ queryKey: ['statuses', 'profile', user?.user_id], queryFn: fetchStatusProfile, enabled, staleTime: 15000 });
+  useFocusEffect(useCallback(() => {
+    if (enabled) queryClient.invalidateQueries({ queryKey: ['statuses'] });
+  }, [enabled, user?.user_id]));
   const visibleFeed = useMemo(
     () => (feedQuery.data ?? []).filter(group => Number(group.user.id) !== Number(user?.user_id)),
     [feedQuery.data, user?.user_id],
@@ -612,14 +619,14 @@ function StatusTray({ textColor }: { textColor?: string }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trayContent}>
         <View style={styles.storyItem}>
           <Pressable onPress={() => myGroup ? (setViewingOwn(true), setActiveGroup(myGroup)) : setComposerVisible(true)} onLongPress={() => setComposerVisible(true)} style={[styles.storyRing, myGroup && styles.storyRingActive]}>
-            <Avatar uri={myGroup?.user.image_url} name={user?.name} size={46} />
+            <Avatar uri={profileQuery.data ? profileQuery.data.userImage : myGroup?.user.image_url} name={profileQuery.data?.name || user?.name} size={40} />
             <Pressable onPress={() => setComposerVisible(true)} style={styles.addBadge}><MaterialCommunityIcons name="plus" color="#FFF" size={16} /></Pressable>
           </Pressable>
           <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>My status</Text>
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>
-            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} size={46} /></View>
+            <View style={[styles.storyRing, group.has_unviewed ? styles.storyRingActive : styles.storyRingViewed]}><Avatar uri={group.user.image_url} name={group.user.name} size={40} /></View>
             <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>{group.user.name || 'User'}</Text>
           </Pressable>
         ))}
@@ -636,7 +643,7 @@ export default memo(StatusTray);
 const styles = StyleSheet.create({
   tray: { marginTop: 8, marginBottom: 6 },
   trayContent: { paddingHorizontal: 0, gap: 16, alignItems: 'center' }, storyItem: { width: 56, alignItems: 'center' },
-  storyRing: { width: 56, height: 56, borderRadius: 28, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
+  storyRing: { width: 50, height: 50, borderRadius: 25, padding: 3, borderWidth: 2, borderColor: '#D4D4D8' }, storyRingActive: { borderColor: '#7C3AED' }, storyRingViewed: { borderColor: '#A1A1AA' },
   storyName: { fontSize: 11, marginTop: 5, width: 56, textAlign: 'center' }, addBadge: { position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: '#7C3AED', borderWidth: 2, borderColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   avatarFallback: { backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' }, avatarInitial: { color: '#FFF', fontWeight: '800' },
   composer: { flex: 1 }, composerHeader: { height: 62, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, composerTitle: { color: '#FFF', fontSize: 18, fontWeight: '700' }, composerBody: { flex: 1, justifyContent: 'center', alignItems: 'center' },

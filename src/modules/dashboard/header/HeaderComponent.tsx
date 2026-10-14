@@ -141,21 +141,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
   // ── Search animation ──────────────────────────────────────────────────────
 
-  const openSearch = useCallback(() => {
-    if (searchActive) return;
-    setSearchActive(true);
-    onSearchActiveChange?.(true);
-    searchExpansion.stopAnimation();
-    searchExpansion.setValue(0);
-    Animated.timing(searchExpansion, {
-      toValue: 1,
-      duration: 260,
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) inputRef.current?.focus();
-    });
-  }, [searchActive, searchExpansion, onSearchActiveChange]);
-
   const closeSearch = useCallback(() => {
     if (!searchActive) return;
     inputRef.current?.blur();
@@ -220,7 +205,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   });
   const headerRowHeight = headerCollapse.interpolate({
     inputRange: [0, 1],
-    outputRange: [rs(60), 0],
+    outputRange: [rs(68), 0],
   });
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -247,9 +232,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             ) : (
               <View style={styles.logoPill}><MaterialCommunityIcons name="domain" size={rs(23)} color="#6A00FF" /></View>
             )}
-            <TouchableOpacity onPress={openSearch} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel="Search" activeOpacity={0.75}>
-              <MaterialCommunityIcons name="magnify" size={rs(21)} color={tk.searchTextColor} />
-            </TouchableOpacity>
             <TouchableOpacity onPress={onNotificationPress} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel="Notifications" activeOpacity={0.75}>
               <MaterialCommunityIcons name="bell-outline" size={rs(21)} color={tk.searchTextColor} />
             </TouchableOpacity>
@@ -318,8 +300,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   logoPill: {
-    width: rs(50),
-    height: rs(50),
+    width: rs(64),
+    height: rs(64),
     borderRadius: rs(12),
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
@@ -327,8 +309,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   logoImage: {
-    width: rs(46),
-    height: rs(46),
+    width: rs(60),
+    height: rs(60),
   },
   expandedSearchRow: {
     flexDirection: 'row',
