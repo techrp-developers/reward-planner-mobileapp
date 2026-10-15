@@ -16,7 +16,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
-import ModuleBanner from '../explore/ModuleBanner';
+import PromotionalBanner from '../../ecommerce/components/home/PromotionalBanner';
 import { rs } from '../../../utils/responsive';
 import ServicesModule, { type ExploreServiceTab } from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
@@ -40,7 +40,7 @@ import StatusTray from '../../status/components/StatusTray';
 import GamesDrawer from '../../games/components/GamesDrawer';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
-  'header', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+  'header', 'promotionalBanner', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
 ];
 
 // The CMS only stores one solid color per navbar_background entry — turn it
@@ -80,7 +80,6 @@ let dashboardHeaderCache: DashboardHeaderCache | null = null;
 
 const MemoHomeChart = memo(Home_Chart);
 const MemoServicesModule = memo(ServicesModule);
-const MemoModuleBanner = memo(ModuleBanner);
 const MemoRewardsOverview = memo(RewardsOverview);
 const MemoBirthdayCarousel = memo(BirthdayCarousel);
 const MemoOffersBanner = memo(OffersBanner);
@@ -150,10 +149,6 @@ function Dashbord() {
       ? mobileDashboardBackground.color_value
       : null;
   const mobileDashboardTextColor = mobileDashboardBackground?.text_color ?? null;
-  const hasMobileDashboardOffers =
-    mobileDashboardContent?.offers_banner?.content_type === 'image' &&
-    Array.isArray(mobileDashboardContent.offers_banner.images) &&
-    mobileDashboardContent.offers_banner.images.some((image) => image.is_active === 1 && image.image_url);
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -438,6 +433,8 @@ function Dashbord() {
             case 'header':
               // Rendered fixed above the ScrollView instead — skip here.
               return null;
+            case 'promotionalBanner':
+              return <PromotionalBanner key={key} module="mobile_dashboard" />;
             case 'birthdays':
               return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
             case 'stepProgress':
@@ -447,17 +444,12 @@ function Dashbord() {
             case 'exploreModules':
               return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
             case 'moduleBanner':
-              return hasMobileDashboardOffers ? (
+              return (
                 <MemoOffersBanner
                   key={key}
                   module="mobile_dashboard"
                   moduleContent={mobileDashboardContent}
-                  aspectRatio={2.55}
-                  resizeMode="cover"
-                  wrapperStyle={styles.dashboardOffers}
                 />
-              ) : (
-                <MemoModuleBanner key={key} />
               );
             case 'rewardsOverview':
               return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
@@ -529,11 +521,6 @@ const styles = StyleSheet.create({
   topSectionImage: {
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
-  },
-
-  dashboardOffers: {
-    paddingTop: rs(12),
-    paddingBottom: rs(8),
   },
 
   searchOverlay: {

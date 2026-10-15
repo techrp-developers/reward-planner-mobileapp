@@ -2,6 +2,7 @@ export type DashboardLayoutId = 'main' | 'ecommerce' | 'services' | 'bbps';
 
 export type MainDashboardSectionKey =
   | 'header'
+  | 'promotionalBanner'
   | 'birthdays'
   | 'stepProgress'
   | 'investmentInsurance'
@@ -54,6 +55,7 @@ export const DEFAULT_DASHBOARD_LAYOUTS: Record<DashboardLayoutId, DashboardLayou
     version: 1,
     sections: [
       section('header', 10),
+      section('promotionalBanner', 15),
       section('birthdays', 20),
       section('stepProgress', 30),
       section('investmentInsurance', 35),
