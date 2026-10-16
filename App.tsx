@@ -9,6 +9,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/query/queryClient';
 import { AppThemeProvider } from "./src/theme/ThemeContext";
 import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
+import PushNotificationManager from './src/modules/common/notifications/PushNotificationManager';
 type AuthModalStackParamList = {
   Login: undefined;
   LoginOTP: { identifier: string };
@@ -44,6 +45,7 @@ export default function App() {
               <CartProvider>
                 <NetworkGuard>
                   <NavigationContainer linking={linking}>
+                    <PushNotificationManager />
                     <AlertContainer />
                     <RootNavigator />
                   </NavigationContainer>
