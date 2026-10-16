@@ -31,6 +31,7 @@ import {
   createChatPoll,
   deleteChatMessage,
   fetchChatPresence,
+  fetchConversations,
   fetchMessages,
   markConversationRead,
   sendFileMessage,
@@ -138,8 +139,21 @@ export default function ChatConversationScreen() {
           }
         })
         .catch(() => {});
-    // Merge the latest page so messages missed while disconnected appear.
-    const resync = () =>
+    const refreshConversation = () =>
+      fetchConversations()
+        .then(items => {
+          if (!active) return;
+          const current = items.find(item => Number(item.conversation_id) === Number(conversation.conversation_id));
+          if (current) {
+            setChatThemeKey(current.theme_key || 'default');
+            setGroupImage(current.image_url || null);
+          }
+        })
+        .catch(() => {});
+    refreshConversation();
+    // Refresh shared settings as well as messages after missed socket events.
+    const resync = () => {
+      refreshConversation();
       fetchMessages(conversation.conversation_id)
         .then(latest => {
           if (!active) return;
@@ -152,6 +166,7 @@ export default function ChatConversationScreen() {
           });
         })
         .catch(() => {});
+    };
     if (accessToken) chatSocket.connect(accessToken);
     const unsubscribe = chatSocket.subscribe(event => {
       if (event.type === 'resync') {
@@ -164,6 +179,14 @@ export default function ChatConversationScreen() {
             .map(Number)
             .includes(Number(peer.user_id)),
         );
+        return;
+      }
+      // Presence is user-scoped; the server does not include a conversation ID.
+      if (event.type === 'presence') {
+        if (Number(event.data?.user_id) === Number(peer?.user_id)) {
+          setOnline(Boolean(event.data.online));
+          setLastSeenAt(event.data.last_seen_at || null);
+        }
         return;
       }
       if (
@@ -187,7 +210,7 @@ export default function ChatConversationScreen() {
               : item,
           ),
         );
-      if (event.type === 'message:read')
+      if (event.type === 'message:read' && Number(event.data?.user_id) !== Number(user?.user_id))
         setMessages(current =>
           current.map(item =>
             Number(item.sender_id) === Number(user?.user_id) &&
@@ -212,10 +235,9 @@ export default function ChatConversationScreen() {
                       ...option,
                       selected_by_me:
                         Number(event.data?.voter_id) ===
-                          Number(user?.user_id) &&
-                        event.data.option_ids
-                          .map(Number)
-                          .includes(Number(option.option_id)),
+                          Number(user?.user_id)
+                          ? event.data.option_ids.map(Number).includes(Number(option.option_id))
+                          : Boolean(item.poll?.options.find(previous => Number(previous.option_id) === Number(option.option_id))?.selected_by_me),
                     })),
                   },
                 }
@@ -227,13 +249,6 @@ export default function ChatConversationScreen() {
         Number(event.data?.user_id) !== Number(user?.user_id)
       )
         setTyping(event.type === 'typing:start');
-      if (
-        event.type === 'presence' &&
-        Number(event.data?.user_id) === Number(peer?.user_id)
-      ) {
-        setOnline(Boolean(event.data.online));
-        if (event.data?.last_seen_at) setLastSeenAt(event.data.last_seen_at);
-      }
     });
     // Fallback while the socket is unavailable: poll for new messages.
     const poll = setInterval(() => {

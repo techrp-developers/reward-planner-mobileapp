@@ -1,5 +1,4 @@
 const Chat = require("../models/chatModel");
-const { notifyMessageRecipients } = require("../services/messageNotification");
 const crypto = require("crypto");
 const path = require("path");
 const sharp = require("sharp");
@@ -84,7 +83,6 @@ exports.createPoll = async (req, res) => {
       closesAt, clientMessageId: req.body.client_message_id ? String(req.body.client_message_id).slice(0, 64) : null,
     });
     req.app.locals.chatSocket?.broadcastConversation(conversationId, { type: "message:new", data: message });
-    notifyMessageRecipients(message).catch((error) => console.error("[Chat] Notification failed:", error.message));
     res.status(201).json({ success: true, data: message });
   } catch (error) { fail(res, error); }
 };
@@ -100,7 +98,7 @@ exports.votePoll = async (req, res) => {
     };
     req.app.locals.chatSocket?.broadcastConversation(result.conversationId, {
       type: "poll:updated",
-      data: { message_id: result.message.message_id, poll: publicPoll, voter_id: req.user.user_id, option_ids: optionIds },
+      data: { conversation_id: result.conversationId, message_id: result.message.message_id, poll: publicPoll, voter_id: req.user.user_id, option_ids: optionIds },
     });
     res.json({ success: true, data: result.message.poll });
   } catch (error) { fail(res, error); }
@@ -145,7 +143,6 @@ exports.send = async (req, res) => {
       clientMessageId: req.body.client_message_id ? String(req.body.client_message_id).slice(0, 64) : null,
     });
     req.app.locals.chatSocket?.broadcastConversation(Number(req.params.id), { type: "message:new", data: message });
-    notifyMessageRecipients(message).catch((error) => console.error("[Chat] Notification failed:", error.message));
     res.status(201).json({ success: true, data: message });
   } catch (error) { fail(res, error); }
 };
@@ -204,6 +201,22 @@ exports.removeGroupImage = async (req, res) => {
 
 exports.updateGroup = async (req, res) => {
   try { await Chat.updateGroup(req.user.user_id, Number(req.params.id), req.body); res.json({ success: true }); } catch (error) { fail(res, error); }
+};
+exports.updateTheme = async (req, res) => {
+  try {
+    const themes = new Set(["default", "violet", "ocean", "forest", "sunset"]);
+    const themeKey = String(req.body.theme_key || "").trim().toLowerCase();
+    if (!themes.has(themeKey)) {
+      return res.status(422).json({ success: false, message: "Invalid chat theme" });
+    }
+    const conversationId = Number(req.params.id);
+    const data = await Chat.setTheme(req.user.user_id, conversationId, themeKey);
+    req.app.locals.chatSocket?.broadcastConversation(conversationId, {
+      type: "conversation:theme",
+      data,
+    });
+    res.json({ success: true, data });
+  } catch (error) { fail(res, error); }
 };
 exports.addMembers = async (req, res) => {
   try {
