@@ -28,6 +28,25 @@ export function chatTime(value?: string | null) {
   return date.toLocaleDateString([], { day: '2-digit', month: 'short' });
 }
 
+// WhatsApp-style status: "last seen today at 4:05 pm", "yesterday at …", "on 12 Oct at …".
+export function lastSeenLabel(value?: string | null) {
+  if (!value) return 'status unavailable';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'status unavailable';
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return `last seen today at ${time}`;
+  if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
+  const day = date.toLocaleDateString([], {
+    day: '2-digit',
+    month: 'short',
+    ...(date.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+  });
+  return `last seen on ${day} at ${time}`;
+}
+
 export function chatError(error: any, fallback: string) {
   return error?.response?.data?.message || error?.message || fallback;
 }

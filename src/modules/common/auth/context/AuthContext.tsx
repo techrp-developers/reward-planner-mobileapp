@@ -121,6 +121,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isLoggingOutRef   = useRef(false);
   const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Presence follows the signed-in app session, including screens outside chat.
+  useEffect(() => {
+    if (user && accessToken) chatSocket.connect(accessToken);
+    else chatSocket.disconnect();
+  }, [user, accessToken]);
+
+  useEffect(() => () => chatSocket.disconnect(), []);
+
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
     setAccessToken(nextAccessToken);

@@ -30,7 +30,6 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import {
   createChatPoll,
   deleteChatMessage,
-  fetchChatPresence,
   fetchConversations,
   fetchMessages,
   markConversationRead,
@@ -48,9 +47,11 @@ import {
   chatImageUrl,
   chatTime,
   conversationTitle,
+  lastSeenLabel,
   otherMember,
 } from '../utils';
 import { chatSocket } from '../services/chatSocket';
+import { useChatPresence } from '../hooks/useChatPresence';
 import type { ChatMessage, ChatStackParamList, ChatThemeKey } from '../types';
 import PollBubble from '../components/PollBubble';
 import CreatePollModal from '../components/CreatePollModal';
@@ -85,8 +86,6 @@ export default function ChatConversationScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [online, setOnline] = useState(false);
-  const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const [pollModal, setPollModal] = useState(false);
   const [attachmentMenu, setAttachmentMenu] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -99,6 +98,7 @@ export default function ChatConversationScreen() {
   const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
   const title = conversationTitle(conversation, user?.user_id);
   const peer = otherMember(conversation, user?.user_id);
+  const { online, lastSeenAt } = useChatPresence(conversation.type === 'direct' ? peer?.user_id : undefined);
 
   const markLatestRead = useCallback(
     (list: ChatMessage[]) => {
@@ -130,15 +130,6 @@ export default function ChatConversationScreen() {
         ),
       )
       .finally(() => active && setLoading(false));
-    if (peer?.user_id)
-      fetchChatPresence([peer.user_id])
-        .then(([presence]) => {
-          if (active && presence) {
-            setOnline(presence.online);
-            setLastSeenAt(presence.last_seen_at || null);
-          }
-        })
-        .catch(() => {});
     const refreshConversation = () =>
       fetchConversations()
         .then(items => {
@@ -171,22 +162,6 @@ export default function ChatConversationScreen() {
     const unsubscribe = chatSocket.subscribe(event => {
       if (event.type === 'resync') {
         resync();
-        return;
-      }
-      if (event.type === 'connected' && peer?.user_id) {
-        setOnline(
-          (event.data?.online_user_ids || [])
-            .map(Number)
-            .includes(Number(peer.user_id)),
-        );
-        return;
-      }
-      // Presence is user-scoped; the server does not include a conversation ID.
-      if (event.type === 'presence') {
-        if (Number(event.data?.user_id) === Number(peer?.user_id)) {
-          setOnline(Boolean(event.data.online));
-          setLastSeenAt(event.data.last_seen_at || null);
-        }
         return;
       }
       if (
@@ -460,16 +435,8 @@ export default function ChatConversationScreen() {
       ),
     );
   };
-  const directStatus = online
-    ? 'online'
-    : lastSeenAt
-    ? `last seen ${new Date(lastSeenAt).toLocaleString([], {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`
-    : 'last seen recently';
+  const peerOnline = conversation.type === 'direct' && online;
+  const directStatus = peerOnline ? 'online' : lastSeenLabel(lastSeenAt);
 
   const selectedTheme = getChatTheme(chatThemeKey);
   const changeTheme = async (nextTheme: ChatThemeKey) => {
@@ -527,7 +494,7 @@ export default function ChatConversationScreen() {
             name={title}
             uri={conversation.type === 'direct' ? peer?.user_image : groupImage}
             size={42}
-            online={online}
+            online={peerOnline}
           />
           <View style={styles.headerText}>
             <Text
@@ -537,13 +504,13 @@ export default function ChatConversationScreen() {
               {title}
             </Text>
             <View style={styles.statusRow}>
-              {online && !typing && conversation.type === 'direct' ? (
+              {peerOnline && !typing ? (
                 <View style={styles.onlineDot} />
               ) : null}
               <Text
                 style={[
                   styles.status,
-                  { color: typing || online ? '#22C55E' : theme.secondaryText },
+                  { color: typing || peerOnline ? '#22C55E' : theme.secondaryText },
                 ]}
                 numberOfLines={1}
               >

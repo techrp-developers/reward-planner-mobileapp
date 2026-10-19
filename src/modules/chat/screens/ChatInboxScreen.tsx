@@ -25,6 +25,8 @@ export default function ChatInboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  // Bumped on presence changes so rows re-read chatSocket.isUserOnline().
+  const [presenceVersion, setPresenceVersion] = useState(0);
   const appNavigation = navigation.getParent<any>();
   const handleFooterPress = (tab: TabKey) => {
     if (tab === 'Notes') appNavigation?.navigate('TodoList');
@@ -48,6 +50,10 @@ export default function ChatInboxScreen() {
   useEffect(() => {
     if (accessToken) chatSocket.connect(accessToken);
     return chatSocket.subscribe(event => {
+      if (event.type === 'connected' || event.type === 'presence' || event.type === 'disconnected') {
+        setPresenceVersion(version => version + 1);
+        return;
+      }
       if (event.type === 'conversation:theme') {
         setItems(current => current.map(item => Number(item.conversation_id) === Number(event.data?.conversation_id) ? { ...item, theme_key: event.data.theme_key } : item));
         return;
@@ -100,6 +106,7 @@ export default function ChatInboxScreen() {
         windowSize={9}
         removeClippedSubviews
         keyExtractor={item => String(item.conversation_id)}
+        extraData={presenceVersion}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.primary} />}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + 12 }]}
         renderItem={({ item }) => {
@@ -107,7 +114,7 @@ export default function ChatInboxScreen() {
           const member = otherMember(item, user?.user_id);
           const preview = item.last_message_type === 'image' ? '📷 Photo' : item.last_message_type === 'file' ? '📎 File' : item.last_message || 'No messages yet';
           return <TouchableOpacity style={[styles.row, { borderBottomColor: theme.border }]} onPress={() => navigation.navigate('ChatConversation', { conversation: item })}>
-            <ChatAvatar name={title} uri={item.type === 'direct' ? member?.user_image : item.image_url} />
+            <ChatAvatar name={title} uri={item.type === 'direct' ? member?.user_image : item.image_url} online={item.type === 'direct' && chatSocket.isUserOnline(member?.user_id)} />
             <View style={styles.rowBody}><View style={styles.rowTop}><Text numberOfLines={1} style={[styles.name, { color: theme.text }]}>{title}</Text><Text style={[styles.time, { color: item.unread_count ? theme.primary : theme.secondaryText }]}>{chatTime(item.last_message_at || item.updated_at)}</Text></View><View style={styles.rowBottom}><Text numberOfLines={1} style={[styles.preview, { color: theme.secondaryText }, item.unread_count > 0 && { color: theme.text, fontWeight: '700' }]}>{preview}</Text>{item.unread_count > 0 ? <View style={[styles.badge, { backgroundColor: theme.primary }]}><Text style={styles.badgeText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text></View> : null}</View></View>
           </TouchableOpacity>;
         }}

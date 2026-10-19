@@ -14,12 +14,21 @@ class ChatSocketClient {
   private token: string | null = null;
   private manuallyClosed = false;
   private hasConnected = false;
+  // Company-wide online user IDs, kept from `connected` and `presence` events so
+  // screens opened after the socket connected still know who is online.
+  private onlineIds = new Set<number>();
 
   constructor() {
-    // Sockets can die silently while the app is backgrounded. On return,
-    // reconnect immediately and ask open screens to re-sync missed messages.
     AppState.addEventListener('change', state => {
-      if (state !== 'active' || !this.token || this.manuallyClosed) return;
+      if (!this.token || this.manuallyClosed) return;
+      // Close the socket in the background so coworkers see this user go
+      // offline (and get an accurate last seen) instead of a stale "online".
+      if (state === 'background') {
+        this.closeSocket();
+        return;
+      }
+      if (state !== 'active') return;
+      // On return, reconnect immediately and ask open screens to re-sync missed messages.
       if (this.socket?.readyState !== WebSocket.OPEN && this.socket?.readyState !== WebSocket.CONNECTING) {
         this.reconnectNow();
       }
@@ -32,22 +41,32 @@ class ChatSocketClient {
     this.closeSocket();
     this.token = token;
     this.manuallyClosed = false;
+    if (AppState.currentState === 'background') return;
     const socket = new WebSocket(`${CHAT_SOCKET_URL}?token=${encodeURIComponent(token)}`);
     this.socket = socket;
     socket.onopen = () => {
+      if (this.socket !== socket) return;
       this.retryCount = 0;
       // Anything sent while we were disconnected never reached this client.
       if (this.hasConnected) this.emit({ type: 'resync', data: null });
       this.hasConnected = true;
     };
     socket.onmessage = message => {
+      if (this.socket !== socket) return;
+      let event: ChatSocketEvent;
       try {
-        this.emit(JSON.parse(String(message.data)) as ChatSocketEvent);
-      } catch {}
+        event = JSON.parse(String(message.data)) as ChatSocketEvent;
+      } catch {
+        return;
+      }
+      this.trackPresence(event);
+      this.emit(event);
     };
     socket.onclose = () => {
       if (this.socket !== socket) return;
       this.socket = null;
+      this.onlineIds.clear();
+      this.emit({ type: 'disconnected', data: null });
       if (!this.manuallyClosed && this.token) {
         const delay = Math.min(1000 * 2 ** this.retryCount++, 15000);
         this.retry = setTimeout(() => this.reconnectNow(), delay);
@@ -60,6 +79,10 @@ class ChatSocketClient {
     this.hasConnected = false;
     this.token = null;
     this.closeSocket();
+  }
+
+  isUserOnline(userId?: number | null) {
+    return userId != null && this.onlineIds.has(Number(userId));
   }
 
   isConnected() {
@@ -82,6 +105,15 @@ class ChatSocketClient {
     return true;
   }
 
+  private trackPresence(event: ChatSocketEvent) {
+    if (event.type === 'connected') {
+      this.onlineIds = new Set((event.data?.online_user_ids || []).map(Number));
+    } else if (event.type === 'presence' && event.data?.user_id != null) {
+      if (event.data.online) this.onlineIds.add(Number(event.data.user_id));
+      else this.onlineIds.delete(Number(event.data.user_id));
+    }
+  }
+
   private emit(event: ChatSocketEvent) {
     this.listeners.forEach(listener => listener(event));
   }
@@ -91,7 +123,9 @@ class ChatSocketClient {
     this.retry = null;
     const socket = this.socket;
     this.socket = null;
+    this.onlineIds.clear();
     socket?.close();
+    if (socket) this.emit({ type: 'disconnected', data: null });
   }
 
   private async reconnectNow() {
@@ -108,7 +142,7 @@ class ChatSocketClient {
       }
       token = getSessionAccessToken() || token;
     }
-    if (!token || this.manuallyClosed) return;
+    if (!token || this.manuallyClosed || AppState.currentState === 'background') return;
     this.token = null; // force connect() to open a fresh socket
     this.connect(token);
   }
