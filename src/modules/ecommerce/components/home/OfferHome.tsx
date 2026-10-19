@@ -341,8 +341,8 @@ const FlashOfferProductCard = React.memo(({
       </View>
 
       <View style={styles.infoArea}>
-        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
-        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.productTitle}</Text>
+        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={2}>{displayData.productTitle}</Text>
+        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.brandName}</Text>
 
         <View style={styles.priceRow}>
           <Text style={styles.currentPrice}>₹{displayData.priceText}</Text>

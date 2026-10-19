@@ -79,11 +79,11 @@ export default function OrderItemCard({
           </Text>
 
           <View style={styles.textContainer}>
-            <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>
-              {brand || "Brand"}
+            <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={2}>
+              {title || "Product"}
             </Text>
             <Text style={[styles.productText, { color: theme.secondaryText }]} numberOfLines={1}>
-              {title || "Product"}
+              {brand || "Brand"}
             </Text>
           </View>
 

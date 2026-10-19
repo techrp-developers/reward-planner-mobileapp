@@ -63,12 +63,12 @@ export default function OrderProductCart({ item, cardWidth }: Props) {  const na
 
       {/* Text Section - Left Aligned */}
       <View style={styles.detailsContainer}>
-        <Text style={styles.brand} numberOfLines={1}>
-          {brandText}
+        <Text style={styles.brand} numberOfLines={2}>
+          {titleText}
         </Text>
 
-        <Text style={styles.title} numberOfLines={2}>
-          {titleText}
+        <Text style={styles.title} numberOfLines={1}>
+          {brandText}
         </Text>
 
         {/* Price Row */}

@@ -358,10 +358,18 @@ const ProductCardComponent = ({
       </TouchableOpacity>
 
       <View style={styles.details}>
-        {/* Brand name up front, with rating alongside it */}
+        <Text
+          style={[styles.productTitle, { fontSize: calculations.fontSizeLabel, color: theme.text }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {productNameText}
+        </Text>
+
+        {/* Brand below the product name, with rating alongside it */}
         <View style={styles.brandRow}>
           <Text
-            style={[styles.brandName, { fontSize: calculations.fontSizeLabel, color: theme.text }]}
+            style={[styles.brandName, { fontSize: calculations.fontSizeLabel, color: theme.secondaryText }]}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
@@ -376,18 +384,6 @@ const ProductCardComponent = ({
             )}
           </View>
         </View>
-
-        {/* Product name under the brand name */}
-        <Text
-          style={[
-            styles.productTitle,
-            { fontSize: calculations.fontSizeLabel, color: theme.secondaryText },
-          ]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {productNameText}
-        </Text>
 
         {/* ========== RP PRICE + MRP ROW ========== */}
         <View style={styles.priceRow}>
@@ -529,13 +525,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brandName: {
-    fontWeight: "800",
+    fontWeight: "400",
     flexShrink: 1,
     marginRight: 6,
   },
   productTitle: {
     color: "#374151",
-    fontWeight: "500",
+    fontWeight: "800",
     lineHeight: 17,
     minHeight: 34,
     marginTop: 3,
