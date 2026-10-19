@@ -39,7 +39,6 @@ type SearchSuggestion = {
 
 type SearchHistoryItem = string | { keyword?: string; title?: string; q?: string };
 
-const BRAND_PURPLE = "#852BAF";
 const BRAND_PURPLE_LIGHT = "#A654CD";
 
 function SearchScreen() {
@@ -207,34 +206,23 @@ function SearchScreen() {
                         ) : (
                             suggestions.map((item) => {
                                 const normalizedType = String(item?.type || "product").trim().toLowerCase();
-                                const isCategory = normalizedType === "category";
-                                const isSubcategory = normalizedType === "subcategory";
                                 const isBrand = normalizedType === "brand";
-                                const isCategoryLike = isCategory || isSubcategory;
-                                const tagLabel = isBrand ? "Brand" : isCategory ? "Category" : isSubcategory ? "Subcategory" : "Product";
                                 return (
                                     <TouchableOpacity
                                         key={`${normalizedType}-${item.id}`}
                                         activeOpacity={0.75}
-                                        style={[styles.item, { backgroundColor: theme.card, shadowColor: isDark ? "#000000" : "#5B1E7A" }]}
+                                        style={[styles.item, { borderBottomColor: theme.border }]}
                                         onPress={() => handleSelectSuggestion(item)}
                                     >
-                                        <View style={[styles.imageContainer, { backgroundColor: isDark ? "#111827" : "#F8F7FB" }]}>
-                                            {isBrand ? <MaterialCommunityIcons name="storefront-outline" size={26} color={BRAND_PURPLE} /> : <Image
+                                        <View style={styles.imageContainer}>
+                                            {isBrand || !item.image ? <MaterialCommunityIcons name="magnify" size={22} color={theme.secondaryText} /> : <Image
                                                 source={{ uri: getProductImageUrl(item.image) }}
                                                 style={styles.img}
+                                                resizeMode="contain"
                                             />}
                                         </View>
                                         <View style={styles.textContainer}>
-                                            <Text numberOfLines={1} style={[styles.title, { color: theme.text }]}>{item.title}</Text>
-                                            <View style={[styles.tagPill, isCategoryLike ? styles.tagPillCategory : styles.tagPillProduct]}>
-                                                <Text style={[styles.categoryTag, isCategoryLike && styles.categoryTagCategory]}>
-                                                    {tagLabel}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <View style={styles.arrowCircle}>
-                                            <MaterialCommunityIcons name="arrow-top-left" size={16} color={BRAND_PURPLE_LIGHT} />
+                                            <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>{item.title}</Text>
                                         </View>
                                     </TouchableOpacity>
                                 );
@@ -328,28 +316,19 @@ const styles = StyleSheet.create({
         paddingTop: 10,
     },
     suggestionScrollContent: {
-        paddingHorizontal: 14,
         paddingBottom: 24,
     },
     item: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
+        minHeight: 56,
         paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderRadius: 16,
-        marginBottom: 10,
-        shadowColor: "#5B1E7A",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        elevation: 2,
+        paddingHorizontal: 20,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     imageContainer: {
-        width: 46,
-        height: 46,
-        borderRadius: 14,
-        backgroundColor: "#F8F7FB",
+        width: 32,
+        height: 32,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
@@ -363,41 +342,10 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        fontSize: 15,
+        fontSize: 16,
+        lineHeight: 22,
         color: "#1F1B24",
-        fontWeight: "600",
-    },
-    tagPill: {
-        alignSelf: "flex-start",
-        marginTop: 5,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    tagPillProduct: {
-        backgroundColor: "#F1F0F5",
-    },
-    tagPillCategory: {
-        backgroundColor: "#F3E9FB",
-    },
-    categoryTag: {
-        fontSize: 10.5,
-        fontWeight: "700",
-        color: "#8A8694",
-        textTransform: "uppercase",
-        letterSpacing: 0.3,
-    },
-    categoryTagCategory: {
-        color: BRAND_PURPLE,
-    },
-    arrowCircle: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
-        backgroundColor: "#F3E9FB",
-        alignItems: "center",
-        justifyContent: "center",
-        marginLeft: 8,
+        fontWeight: "400",
     },
     historyHeader: {
         flexDirection: "row",
