@@ -23,8 +23,12 @@ export function useChatPresence(userId?: number) {
         const [presence] = await fetchChatPresence([userId]);
         // A socket event received during this request is newer than its snapshot.
         if (active && revision === startedAtRevision && presence) {
-          setOnline(presence.online);
-          setLastSeenAt(presence.last_seen_at || null);
+          // REST can reach a different server worker, whose socket registry does
+          // not contain this peer. Keep a live socket's online observation until
+          // it receives an offline event or our connection is lost.
+          const liveOnline = chatSocket.isConnected() && chatSocket.isUserOnline(userId);
+          setOnline(liveOnline || presence.online);
+          setLastSeenAt(liveOnline || presence.online ? null : presence.last_seen_at || null);
         }
       } catch {
         // Keep the most recent known state on a transient request failure.
@@ -37,6 +41,7 @@ export function useChatPresence(userId?: number) {
       if (event.type === 'connected') {
         revision += 1;
         setOnline(chatSocket.isUserOnline(userId));
+        if (chatSocket.isUserOnline(userId)) setLastSeenAt(null);
       } else if (event.type === 'presence' && Number(event.data?.user_id) === Number(userId)) {
         revision += 1;
         setOnline(Boolean(event.data.online));

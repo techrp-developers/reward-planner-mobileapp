@@ -50,6 +50,7 @@ test('a delayed offline REST response cannot overwrite a newer online event', as
 });
 
 test('polling recovers missed events and disconnect clears an online status', async () => {
+  (chatSocket.isUserOnline as jest.Mock).mockReturnValue(false);
   fetchPresence.mockResolvedValue([{ user_id: 42, online: false }]);
   await act(async () => { tree = create(<Probe />); });
   expect(state.online).toBe(false);
@@ -60,4 +61,21 @@ test('polling recovers missed events and disconnect clears an online status', as
   expect(state.online).toBeNull();
   await act(async () => listener({ type: 'presence', data: { user_id: 99, online: true } }));
   expect(state.online).toBeNull();
+});
+
+test('later REST polls cannot turn a socket-confirmed online peer into last seen', async () => {
+  fetchPresence.mockResolvedValue([{ user_id: 42, online: false, last_seen_at: new Date().toISOString() }]);
+  await act(async () => { tree = create(<Probe />); });
+  expect(state.online).toBe(true);
+  expect(state.lastSeenAt).toBeNull();
+  await act(async () => { jest.advanceTimersByTime(30000); });
+  expect(state.online).toBe(true);
+  expect(state.lastSeenAt).toBeNull();
+
+  // A real offline event still switches the header to the supplied last seen.
+  const lastSeen = '2026-10-19T10:00:00.000Z';
+  (chatSocket.isUserOnline as jest.Mock).mockReturnValue(false);
+  await act(async () => listener({ type: 'presence', data: { user_id: 42, online: false, last_seen_at: lastSeen } }));
+  expect(state.online).toBe(false);
+  expect(state.lastSeenAt).toBe(lastSeen);
 });
