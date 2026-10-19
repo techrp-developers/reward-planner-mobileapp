@@ -25,8 +25,9 @@ test('brand listing validates input and preserves paginated product response', a
     assert.equal(res.statusCode, 400);
   }
   assert.equal(calls.length, 0);
-  await controller.getProductsByBrand({ query: { brand: '  A & B / Sports  ', page: '2', limit: '20' } }, res);
+  await controller.getProductsByBrand({ query: { brand: '  A & B / Sports  ', search: 'shoes', page: '2', limit: '20' } }, res);
   assert.equal(calls[0].brandName, 'A & B / Sports');
+  assert.equal(calls[0].search, 'shoes');
   assert.equal(calls[0].offset, 20);
   assert.equal(res.body.currentPage, 2);
   assert.equal(res.body.totalPages, 2);
@@ -43,11 +44,13 @@ test('brand filter is parameterized and applied to both results and count', asyn
     } },
   });
   const brandName = "Brand%' OR 1=1 --";
-  await model.getAllProducts({ brandName, limit: 20, offset: 0, sortBy: 'created_at', sortOrder: 'DESC' });
+  await model.getAllProducts({ brandName, search: 'shoes', limit: 20, offset: 0, sortBy: 'created_at', sortOrder: 'DESC' });
   assert.equal(calls.length, 2);
   for (const { sql, params } of calls) {
     assert.match(sql, /LOWER\(TRIM\(p.brand_name\)\) = LOWER\(\?\)/);
     assert.equal(params[0], brandName);
+    assert.equal(params[1], '%shoes%');
+    assert.match(sql, /AND p.product_name LIKE \?/);
     assert.ok(!sql.includes(brandName));
     assert.match(sql, /p.status = 'approved'/);
     assert.match(sql, /p.is_visible = 1/);
