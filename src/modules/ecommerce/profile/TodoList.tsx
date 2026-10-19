@@ -665,18 +665,20 @@ const TodoListScreen = () => {
         style={styles.header}
       >
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => setMenuVisible(true)}>
-            <MaterialCommunityIcons name="view-grid" size={20} color="#fff" />
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={styles.headerActionBtn}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("Dashboard"))}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={21} color="#fff" />
           </TouchableOpacity>
 
           <Text style={styles.headerDate}>{formatHeaderDate(selectedDate)}</Text>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerActionBtn}
-              onPress={() => navigation.navigate("Dashboard")}
-            >
-              <MaterialCommunityIcons name="home" size={21} color="#fff" />
+            <TouchableOpacity style={styles.headerActionBtn} onPress={() => setMenuVisible(true)}>
+              <MaterialCommunityIcons name="view-grid" size={20} color="#fff" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.headerActionBtn} onPress={openAlarmModal}>

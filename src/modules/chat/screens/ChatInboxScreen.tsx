@@ -79,7 +79,15 @@ export default function ChatInboxScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <View><Text style={[styles.title, { color: theme.text }]}>Chats</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>Your company conversations</Text></View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          onPress={() => (appNavigation?.canGoBack() ? appNavigation.goBack() : appNavigation?.navigate('Dashboard'))}
+          style={[styles.backButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={theme.text} />
+        </TouchableOpacity>
+        <View style={styles.headerText}><Text style={[styles.title, { color: theme.text }]}>Chats</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>Your company conversations</Text></View>
       </View>
       <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <MaterialCommunityIcons name="magnify" size={22} color={theme.secondaryText} />
@@ -139,7 +147,8 @@ export default function ChatInboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 }, header: { paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  screen: { flex: 1 }, header: { paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }, headerText: { flex: 1 },
   title: { fontSize: 30, fontWeight: '800' }, subtitle: { marginTop: 3, fontSize: 13 }, newButton: { position: 'absolute', right: 22, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED', elevation: 10, shadowColor: '#4C1D95', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, zIndex: 10 },
   search: { marginHorizontal: 18, marginBottom: 8, height: 48, borderWidth: 1, borderRadius: 16, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, height: 46, paddingVertical: 0, fontSize: 15 },
