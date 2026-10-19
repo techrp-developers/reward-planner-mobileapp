@@ -37,6 +37,7 @@ const appendImageOptimizationParams = (
 export type FetchAllProductsParams = {
   page?: number;
   pageSize?: number;
+  search?: string;
 };
 
 export const fetchProductsByBrand = async (brand: string, page = 1, search = '') => {
@@ -49,7 +50,7 @@ export const fetchProductsByBrand = async (brand: string, page = 1, search = '')
 export const fetchAllProducts = async (params?: FetchAllProductsParams) => {
   const res = await api.get(`/v1/product/all-products`, {
     params: params?.page
-      ? { page: params.page, pageSize: params.pageSize }
+      ? { page: params.page, limit: params.pageSize, search: params.search }
       : undefined,
   });
   return res.data;

@@ -30,8 +30,8 @@ const normalizeOffset = (offset = 0) => {
     return Math.floor(offset);
 };
 
-const buildCacheKey = (endpoint: string, offset: number, requiresAuth: boolean) => {
-    return `${endpoint}|${offset}|${requiresAuth ? "auth" : "public"}`;
+const buildCacheKey = (endpoint: string, offset: number, requiresAuth: boolean, search = "") => {
+    return `${endpoint}|${offset}|${requiresAuth ? "auth" : "public"}|${encodeURIComponent(search)}`;
 };
 
 const getCachedResponse = <T = any>(key: string): PromotionApiResponse<T> | null => {
@@ -87,13 +87,14 @@ const normalizePromotionResponse = <T = any>(payload: any, fallbackOffset = 0): 
     };
 };
 
-const buildRequestConfig = async (offset = 0, requiresAuth = false) => {
+const buildRequestConfig = async (offset = 0, requiresAuth = false, search = "") => {
     const normalizedOffset = normalizeOffset(offset);
     const headers = requiresAuth ? await getAuthHeaders() : undefined;
 
     return {
         ...(headers ? { headers } : {}),
         params: {
+            search,
             offset: normalizedOffset,
             limit: DEFAULT_PAGE_SIZE,
         },
@@ -103,10 +104,11 @@ const buildRequestConfig = async (offset = 0, requiresAuth = false) => {
 const fetchPromotionalProducts = async <T = any>(
     endpoint: string,
     offset = 0,
-    requiresAuth = false
+    requiresAuth = false,
+    search = ""
 ): Promise<PromotionApiResponse<T>> => {
     const normalizedOffset = normalizeOffset(offset);
-    const cacheKey = buildCacheKey(endpoint, normalizedOffset, requiresAuth);
+    const cacheKey = buildCacheKey(endpoint, normalizedOffset, requiresAuth, search);
 
     const cached = getCachedResponse<T>(cacheKey);
     if (cached) {
@@ -119,7 +121,7 @@ const fetchPromotionalProducts = async <T = any>(
     }
 
     const request = (async () => {
-        const config = await buildRequestConfig(normalizedOffset, requiresAuth);
+        const config = await buildRequestConfig(normalizedOffset, requiresAuth, search);
         const res = await axios.get(`${API_BASE_URL}${endpoint}`, config);
         const normalized = normalizePromotionResponse<T>(res.data, normalizedOffset);
         setCachedResponse(cacheKey, normalized);
@@ -135,18 +137,18 @@ const fetchPromotionalProducts = async <T = any>(
     }
 };
 
-export const fetchNewArrivals = async (offset = 0) => {
-    return fetchPromotionalProducts(`/v1/product/new-arrivals`, offset, true);
+export const fetchNewArrivals = async (offset = 0, search = "") => {
+    return fetchPromotionalProducts(`/v1/product/new-arrivals`, offset, true, search);
 };
 
-export const getRecentProducts = async (offset = 0) => {
-    return fetchPromotionalProducts(`/v1/product/recent-products`, offset, true);
+export const getRecentProducts = async (offset = 0, search = "") => {
+    return fetchPromotionalProducts(`/v1/product/recent-products`, offset, true, search);
 };
 
-export const getRecommendedProducts = async (offset = 0) => {
+export const getRecommendedProducts = async (offset = 0, search = "") => {
     const normalizedOffset = normalizeOffset(offset);
     const endpoint = `/v1/product/recommendations`;
-    const cacheKey = buildCacheKey(endpoint, normalizedOffset, true);
+    const cacheKey = buildCacheKey(endpoint, normalizedOffset, true, search);
 
     const cached = getCachedResponse(cacheKey);
     if (cached) {
@@ -159,7 +161,7 @@ export const getRecommendedProducts = async (offset = 0) => {
     }
 
     const request = (async () => {
-        const config = await buildRequestConfig(normalizedOffset, true);
+        const config = await buildRequestConfig(normalizedOffset, true, search);
         const res = await axios.get(`${API_BASE_URL}${endpoint}`, config);
 
         const payload = res.data;
@@ -198,14 +200,14 @@ export const getSimilarProducts = async (product_id: number, offset = 0) => {
 export const getTrendingProducts = async (offset = 0) => {
     return fetchPromotionalProducts(`/v1/product/trending`, offset, true);
 };
-export const fetchBestSellers = async (offset = 0) => {
-    return fetchPromotionalProducts(`/v1/product/best-sellers`, offset, true);
+export const fetchBestSellers = async (offset = 0, search = "") => {
+    return fetchPromotionalProducts(`/v1/product/best-sellers`, offset, true, search);
 };
-export const fetchMostViewedProducts = async (offset = 0) => {
-    return fetchPromotionalProducts(`/v1/product/most-viewed`, offset, true);
+export const fetchMostViewedProducts = async (offset = 0, search = "") => {
+    return fetchPromotionalProducts(`/v1/product/most-viewed`, offset, true, search);
 };
-export const fetchTopRatedProducts = async (offset = 0) => {
-    return fetchPromotionalProducts(`/v1/product/top-rated`, offset, true);
+export const fetchTopRatedProducts = async (offset = 0, search = "") => {
+    return fetchPromotionalProducts(`/v1/product/top-rated`, offset, true, search);
 };
 
 export const getCustomersAlsoBought = async (productId: number, offset = 0) => {

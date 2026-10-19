@@ -1820,7 +1820,7 @@ class ProductModel {
   }
 
   // Get User Recommendations
-  async getUserRecommendations(userId, limit = 10, offset = 0) {
+  async getUserRecommendations(userId, limit = 10, offset = 0, search = '') {
     try {
       const query = `
       SELECT 
@@ -1915,6 +1915,7 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
       HAVING total_score > 0
@@ -1927,6 +1928,8 @@ class ProductModel {
         userId,
         userId,
         userId,
+        search,
+        search,
         limit,
         offset,
       ]);
@@ -2027,7 +2030,7 @@ class ProductModel {
   }
 
   // New Arrivals
-  async getNewArrivals(limit = 10, offset = 0) {
+  async getNewArrivals(limit = 10, offset = 0, search = '') {
     try {
       const query = `
       SELECT
@@ -2101,13 +2104,14 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
       ORDER BY p.created_at DESC
       LIMIT ? OFFSET ?
     `;
 
-      const [rows] = await db.execute(query, [limit, offset]);
+      const [rows] = await db.execute(query, [search, search, limit, offset]);
 
       /* ===============================
        CACHE
@@ -2564,7 +2568,7 @@ class ProductModel {
   }
 
   // Best sellers
-  async getBestSellers(limit = 10, offset = 0, days = 30) {
+  async getBestSellers(limit = 10, offset = 0, days = 30, search = '') {
     try {
       const query = `
       SELECT
@@ -2634,13 +2638,14 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
       ORDER BY total_sold DESC
       LIMIT ? OFFSET ?
     `;
 
-      const [rows] = await db.execute(query, [days, limit, offset]);
+      const [rows] = await db.execute(query, [days, search, search, limit, offset]);
 
       /* ===============================
        CACHE
@@ -2739,7 +2744,7 @@ class ProductModel {
   }
 
   // Get Most viewed products
-  async getMostViewedProducts(limit = 10, offset = 0, days = 30) {
+  async getMostViewedProducts(limit = 10, offset = 0, days = 30, search = '') {
     try {
       const query = `
       SELECT
@@ -2804,13 +2809,14 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
       ORDER BY view_count DESC
       LIMIT ? OFFSET ?
     `;
 
-      const [rows] = await db.execute(query, [days, limit, offset]);
+      const [rows] = await db.execute(query, [days, search, search, limit, offset]);
 
       /* ===============================
           CACHE
@@ -2909,7 +2915,7 @@ class ProductModel {
   }
 
   // Get Rop rated products
-  async getTopRatedProducts(limit = 10, offset = 0) {
+  async getTopRatedProducts(limit = 10, offset = 0, search = '') {
     try {
       const query = `
       SELECT
@@ -2960,6 +2966,7 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
       HAVING total_reviews >= 3
@@ -2967,7 +2974,7 @@ class ProductModel {
       LIMIT ? OFFSET ?
     `;
 
-      const [rows] = await db.execute(query, [limit, offset]);
+      const [rows] = await db.execute(query, [search, search, limit, offset]);
 
       /* ===============================
        CACHE
