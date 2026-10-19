@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React from 'react'
 import {
   View,
@@ -79,8 +80,8 @@ export default function CartItemCard({
             <Text style={styles.returnText}>{returnText}</Text>
 
             <View style={styles.priceRow}>
-              <Text style={[styles.mrp, { color: theme.secondaryText }]}>₹{mrp}</Text>
-              <Text style={[styles.price, { color: theme.text }]}> ₹{price}</Text>
+              <Text style={[styles.mrp, { color: theme.secondaryText }]}>{formatMoney(mrp)}</Text>
+              <Text style={[styles.price, { color: theme.text }]}> {formatMoney(price)}</Text>
               <Text style={styles.discount}> {discountText}</Text>
             </View>
           </View>

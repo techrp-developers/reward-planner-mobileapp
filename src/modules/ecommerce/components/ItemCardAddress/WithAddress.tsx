@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
@@ -87,7 +88,7 @@ const CartRow = React.memo(function CartRow({
       returnText="7 Days Returnable"
       mrp={mrp}
       price={price}
-      discountText={`₹${discount} off`}
+      discountText={`${formatMoney(discount)} off`}
       quantity={item.quantity}
       attributes={item.attributes || item.variant_attributes}
       onPress={() =>

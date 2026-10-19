@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React, { useEffect, useMemo } from 'react'
 import { View, Text, StyleSheet, Switch } from 'react-native'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
@@ -24,7 +25,7 @@ type Props = {
   onPayableChange?: (amount: number) => void
 }
 
-const formatAmount = (amount: number) => `₹${Math.max(0, Number(amount || 0))}`
+const formatAmount = formatMoney
 
 export default function BillDetailsCard({
   cartTotal,
