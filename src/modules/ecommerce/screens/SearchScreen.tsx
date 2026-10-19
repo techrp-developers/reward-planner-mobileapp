@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Alert,
     Animated,
@@ -20,7 +20,7 @@ import SkeletonBox from "../../services/component/constant/SkeletonBox";
 import { useAppTheme } from "../../../theme/ThemeContext";
 
 type SearchSuggestion = {
-    id: number;
+    id: number | string;
     title: string;
     image?: string;
     type?: "product" | "category" | "subcategory" | string;
@@ -29,7 +29,8 @@ type SearchSuggestion = {
     subcategory_id?: number;
     subcategory_name?: string;
     navigation?: {
-        destination: "category_products" | "subcategory_products" | "product_details";
+        destination: "category_products" | "subcategory_products" | "product_details" | "brand_products";
+        brand_name?: string;
         category_id?: number;
         subcategory_id?: number;
         product_id?: number;
@@ -94,7 +95,11 @@ function SearchScreen() {
         setSearch(item.title);
         const destination = item?.navigation?.destination;
 
-        if (destination === "category_products") {
+        if (destination === "brand_products" || item.type === "brand") {
+            navigation.navigate("BrandProducts", {
+                brandName: item.navigation?.brand_name || item.title,
+            });
+        } else if (destination === "category_products") {
             navigation.navigate("Category", {
                 categoryId: Number(item.navigation?.category_id ?? item.id),
                 title: item.title,
@@ -142,6 +147,7 @@ function SearchScreen() {
                     const flattened: SearchSuggestion[] = Array.isArray(grouped)
                         ? grouped
                         : [
+                              ...(grouped.brands || []),
                               ...(grouped.categories || []),
                               ...(grouped.subcategories || []),
                               ...(grouped.products || []),
@@ -203,8 +209,9 @@ function SearchScreen() {
                                 const normalizedType = String(item?.type || "product").trim().toLowerCase();
                                 const isCategory = normalizedType === "category";
                                 const isSubcategory = normalizedType === "subcategory";
+                                const isBrand = normalizedType === "brand";
                                 const isCategoryLike = isCategory || isSubcategory;
-                                const tagLabel = isCategory ? "Category" : isSubcategory ? "Subcategory" : "Product";
+                                const tagLabel = isBrand ? "Brand" : isCategory ? "Category" : isSubcategory ? "Subcategory" : "Product";
                                 return (
                                     <TouchableOpacity
                                         key={`${normalizedType}-${item.id}`}
@@ -213,10 +220,10 @@ function SearchScreen() {
                                         onPress={() => handleSelectSuggestion(item)}
                                     >
                                         <View style={[styles.imageContainer, { backgroundColor: isDark ? "#111827" : "#F8F7FB" }]}>
-                                            <Image
+                                            {isBrand ? <MaterialCommunityIcons name="storefront-outline" size={26} color={BRAND_PURPLE} /> : <Image
                                                 source={{ uri: getProductImageUrl(item.image) }}
                                                 style={styles.img}
-                                            />
+                                            />}
                                         </View>
                                         <View style={styles.textContainer}>
                                             <Text numberOfLines={1} style={[styles.title, { color: theme.text }]}>{item.title}</Text>
