@@ -12,6 +12,7 @@ export type ProductCollectionSource =
 
 export type HomeStackParamList = {
   Home: undefined;
+  BrandProducts: { brandName: string };
   Category: {
     categoryId: number | string;
     title: string;

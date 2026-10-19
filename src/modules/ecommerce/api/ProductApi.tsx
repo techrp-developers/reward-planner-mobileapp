@@ -39,6 +39,13 @@ export type FetchAllProductsParams = {
   pageSize?: number;
 };
 
+export const fetchProductsByBrand = async (brand: string, page = 1) => {
+  const res = await api.get('/v1/product/by-brand', {
+    params: { brand, page, limit: 20 },
+  });
+  return res.data;
+};
+
 export const fetchAllProducts = async (params?: FetchAllProductsParams) => {
   const res = await api.get(`/v1/product/all-products`, {
     params: params?.page

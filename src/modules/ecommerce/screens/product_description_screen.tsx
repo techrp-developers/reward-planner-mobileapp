@@ -574,9 +574,17 @@ export default function
         <View style={styles.descriptionWrap}>
           {/* Brand + Product in one row */}
           <View style={styles.titleRow}>
-            <Text style={[styles.productTitle, { color: theme.text }]}>
-              {product.brand_name}
-            </Text>
+            {typeof product.brand_name === 'string' && product.brand_name.trim() ? (
+              <TouchableOpacity
+                accessibilityRole="link"
+                accessibilityLabel={`Shop all ${product.brand_name.trim()} products`}
+                onPress={() => navigation.push('BrandProducts', { brandName: product.brand_name.trim() })}
+              >
+                <Text style={[styles.productTitle, { color: theme.text, textDecorationLine: 'underline' }]}>
+                  {product.brand_name.trim()}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
 
             <Text style={[styles.productName, { color: theme.text }]}>
               {product.product_name}
