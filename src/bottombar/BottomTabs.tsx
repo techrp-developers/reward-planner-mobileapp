@@ -312,7 +312,7 @@ function BottomTabs({
       <View pointerEvents="box-none" style={[styles.dashboardWrap, { paddingBottom: bottomInset + 8 }]}>
         <View style={[styles.referenceBar, { backgroundColor: dashboardPillBackground, borderColor: dashboardPillBorder }]}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Todo List" onPress={() => handleDashboardPress("Notes")} style={styles.referenceSide}>
-            <MaterialCommunityIcons name="compass-outline" size={26} color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor} />
+            <MaterialCommunityIcons name="note-text-outline" size={26} color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor} />
             <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>Todo List</Text>
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dashboard" onPress={() => handleDashboardPress("Home")} style={[styles.referenceLogoRing, { backgroundColor: dashboardIndicatorBackground }]}>
