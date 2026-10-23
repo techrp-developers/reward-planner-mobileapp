@@ -28,9 +28,9 @@ import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
 import CrackerCelebration, { type CrackerCelebrationHandle } from '../birthday/CrackerCelebration';
+import { fetchTodayBirthdayWishes } from '../birthday/birthdayAPI';
 import type { BirthdayEmployee, BirthdayWishesReceived } from '../birthday/types';
 import { useChatUnreadCount } from '../../chat/hooks/useChatUnreadCount';
-import { chatSocket } from '../../chat/services/chatSocket';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
@@ -360,25 +360,31 @@ function Dashbord() {
     return () => { cancelled = true; };
   }, [birthdayWishes, isFocused, isMyBirthday, user?.user_id]);
 
-  // Live wishes: the chat endpoint tags them with `birthday-wish:<recipient>:<day>`.
+  const refreshBirthdayWishes = useCallback(async () => {
+    try {
+      const next = await fetchTodayBirthdayWishes();
+      setBirthdayWishes((prev) => (
+        prev.count === next.count && prev.senders.join() === next.senders.join() ? prev : next
+      ));
+      if (dashboardHeaderCache) dashboardHeaderCache = { ...dashboardHeaderCache, birthdayWishes: next };
+    } catch { }
+  }, []);
+
+  // A wish is a chat message, so re-check wishes whenever the unread count rises —
+  // that signal already arrives via socket, foreground push, or the fallback poll.
+  const prevChatUnreadRef = useRef(chatUnreadCount);
   useEffect(() => {
-    const userId = user?.user_id;
-    if (!userId) return;
-    const prefix = `birthday-wish:${userId}:`;
-    return chatSocket.subscribe((event) => {
-      if (event.type !== 'message:new') return;
-      const message = event.data;
-      if (!String(message?.client_message_id ?? '').startsWith(prefix)) return;
-      setBirthdayWishes((prev) => {
-        const next = {
-          count: prev.count + 1,
-          senders: [message.sender_name, ...prev.senders].filter(Boolean).slice(0, 3),
-        };
-        if (dashboardHeaderCache) dashboardHeaderCache = { ...dashboardHeaderCache, birthdayWishes: next };
-        return next;
-      });
-    });
-  }, [user?.user_id]);
+    const increased = chatUnreadCount > prevChatUnreadRef.current;
+    prevChatUnreadRef.current = chatUnreadCount;
+    if (isMyBirthday && increased) refreshBirthdayWishes();
+  }, [chatUnreadCount, isMyBirthday, refreshBirthdayWishes]);
+
+  // The user-info cache can be up to 10 minutes old; re-check on every visit.
+  useFocusEffect(
+    useCallback(() => {
+      if (isMyBirthday) refreshBirthdayWishes();
+    }, [isMyBirthday, refreshBirthdayWishes]),
+  );
 
   const dismissSearch = useCallback(() => {
     if (!isSearchOpen) return;

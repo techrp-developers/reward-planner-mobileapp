@@ -1762,6 +1762,22 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
       }
     }
 
+    // Birthday wishes received today (lightweight poll for the dashboard celebration)
+    async getTodayBirthdayWishes(req, res) {
+      try {
+        res.set("Cache-Control", "no-store");
+        const userId = req.user?.user_id;
+        if (!userId) {
+          return res.status(401).json({ success: false, message: "Unauthorized user" });
+        }
+        const data = await AuthModel.getTodayBirthdayWishesReceived(userId);
+        return res.json({ success: true, data });
+      } catch (error) {
+        console.error("Get Birthday Wishes Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch birthday wishes" });
+      }
+    }
+
     async getVisitCardQr(req, res) {
       try {
         const userId = req.user?.user_id;

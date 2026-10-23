@@ -99,6 +99,9 @@ router.get("/user-info", auth, authController.getUserInfo);
 
 router.get("/visit-card/qr", auth, authController.getVisitCardQr);
 
+// birthday wishes received today
+router.get("/birthday-wishes/today", auth, authController.getTodayBirthdayWishes);
+
 // update profile information
 router.put(
   "/profile",
