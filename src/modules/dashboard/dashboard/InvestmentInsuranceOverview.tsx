@@ -10,9 +10,10 @@ import { useAppTheme } from "../../../theme/ThemeContext";
 // placeholder figures until a real investments/insurance summary API is
 // wired up. Replace PORTFOLIO_VALUE/PORTFOLIO_GROWTH_PERCENT/ACTIVE_POLICIES
 // with live data once that API exists.
-const PORTFOLIO_VALUE = "₹8,64,350";
-const PORTFOLIO_GROWTH_PERCENT = "12.4%";
-const ACTIVE_POLICIES = 6;
+// Temporarily zeroed until the real data is available.
+const PORTFOLIO_VALUE = "₹0";
+const PORTFOLIO_GROWTH_PERCENT = "0%";
+const ACTIVE_POLICIES = 0;
 
 const GREEN = "#16A34A";
 const GREEN_BG = "#DCFCE7";
@@ -114,7 +115,7 @@ const InvestmentInsuranceOverview: React.FC = () => {
           <View style={styles.growthRow}>
             <View style={styles.statusDot} />
             <Text style={[styles.growthMuted, { color: theme.secondaryText }]}>
-              All policies are active
+              {ACTIVE_POLICIES > 0 ? "All policies are active" : "No active policies"}
             </Text>
           </View>
 
