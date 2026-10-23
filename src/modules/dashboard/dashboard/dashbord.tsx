@@ -82,18 +82,12 @@ type DashboardHeaderCache = {
 
 const NO_BIRTHDAY_WISHES: BirthdayWishesReceived = { count: 0, senders: [] };
 
-// Local calendar day, used to remember which received wishes were already celebrated.
+// Local calendar day, used to celebrate the user's own birthday only once.
 const todayKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const wishesSeenStorageKey = (userId: number | string) => `birthday_wishes_seen:${userId}:${todayKey()}`;
-
-const describeWishes = ({ count, senders }: BirthdayWishesReceived) => {
-  const first = senders[0] ?? 'A colleague';
-  if (count <= 1) return `🎂 ${first} wished you a Happy Birthday!`;
-  return `🎂 ${first} and ${count - 1} ${count - 1 === 1 ? 'other' : 'others'} wished you a Happy Birthday!`;
-};
+const birthdayCelebratedStorageKey = (userId: number | string) => `birthday_celebrated:${userId}:${todayKey()}`;
 
 const DASHBOARD_HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
 let dashboardHeaderCache: DashboardHeaderCache | null = null;
@@ -343,22 +337,24 @@ function Dashbord() {
     celebrationRef.current?.fire(`🎉 Wishes sent to ${firstName}!`);
   }, []);
 
-  // Birthday person: celebrate wishes received since they last saw the dashboard.
-  // Waits for focus so a wish that lands while they're in chat plays on return.
+  // Birthday person: celebrate once, the first time they see the dashboard on their birthday.
+  // Later wishes don't replay it; they only update the "N Wishes" chip.
   useEffect(() => {
     const userId = user?.user_id;
-    if (!userId || !isFocused || !isMyBirthday || birthdayWishes.count === 0) return;
+    if (!userId || !isFocused || !isMyBirthday) return;
     let cancelled = false;
     (async () => {
-      const key = wishesSeenStorageKey(userId);
-      let seen = 0;
-      try { seen = Number(await AsyncStorage.getItem(key)) || 0; } catch { }
-      if (cancelled || birthdayWishes.count <= seen) return;
-      celebrationRef.current?.fire(describeWishes(birthdayWishes));
-      try { await AsyncStorage.setItem(key, String(birthdayWishes.count)); } catch { }
+      const key = birthdayCelebratedStorageKey(userId);
+      try {
+        if (await AsyncStorage.getItem(key)) return;
+      } catch { }
+      if (cancelled) return;
+      const firstName = headerUserName.trim().split(/\s+/)[0] || headerUserName;
+      celebrationRef.current?.fire(`🎂 Happy Birthday, ${firstName}!`);
+      try { await AsyncStorage.setItem(key, '1'); } catch { }
     })();
     return () => { cancelled = true; };
-  }, [birthdayWishes, isFocused, isMyBirthday, user?.user_id]);
+  }, [headerUserName, isFocused, isMyBirthday, user?.user_id]);
 
   const refreshBirthdayWishes = useCallback(async () => {
     try {
@@ -370,8 +366,8 @@ function Dashbord() {
     } catch { }
   }, []);
 
-  // A wish is a chat message, so re-check wishes whenever the unread count rises —
-  // that signal already arrives via socket, foreground push, or the fallback poll.
+  // Keeps the "N Wishes" chip current. A wish is a chat message, so re-check whenever the
+  // unread count rises — that signal arrives via socket, foreground push, or the fallback poll.
   const prevChatUnreadRef = useRef(chatUnreadCount);
   useEffect(() => {
     const increased = chatUnreadCount > prevChatUnreadRef.current;
