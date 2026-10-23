@@ -14,11 +14,12 @@ export interface SendBirthdayWishResponse {
 
 // Posts a birthday wish straight into the direct chat with the employee.
 // The server allows one wish per recipient per day, so retries are safe.
-export const sendBirthdayWish = async (employeeId: string | number) => {
+export const sendBirthdayWish = async (employeeId: string | number, body?: string) => {
   const headers = await getAuthHeaders();
   const res = await axios.post<SendBirthdayWishResponse>(
     `${API_V1_URL}/chat/birthday-wishes`,
-    { employee_id: employeeId },
+    // No client_message_id: the server's per-day key is what marks someone as "wished".
+    body ? { employee_id: employeeId, body } : { employee_id: employeeId },
     { headers },
   );
   return res.data;
