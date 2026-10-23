@@ -14,6 +14,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { rs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import BirthdayCard, { type WishStatus } from './BirthdayCard';
@@ -80,6 +81,7 @@ interface Props {
 
 const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
   const { isDark } = useAppTheme();
+  const navigation = useNavigation<any>();
   const scrollRef     = useRef<ScrollView>(null);
   const currentIdxRef = useRef(0);
   const intervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -95,9 +97,16 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
     const key = String(employee.id);
     setWishStatus(prev => ({ ...prev, [key]: 'sending' }));
     try {
-      const res = await sendBirthdayWish(employee.id);
+      await sendBirthdayWish(employee.id);
       setWishStatus(prev => ({ ...prev, [key]: 'sent' }));
-      if (res?.message) Alert.alert(res.alreadyWished ? 'Already wished' : '🎉 Wishes sent', res.message);
+      Alert.alert(
+        '🎉 Wishes sent',
+        `Your birthday wish was sent to ${employee.name}'s chat.`,
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Open Chat', onPress: () => navigation.navigate('Chat') },
+        ],
+      );
     } catch (error: any) {
       setWishStatus(prev => ({ ...prev, [key]: 'idle' }));
       Alert.alert(
@@ -105,7 +114,7 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         error?.response?.data?.message ?? 'Please try again in a moment.',
       );
     }
-  }, []);
+  }, [navigation]);
 
   // Append clone of first item so the last → first wrap is invisible
   const loopData = useMemo<BirthdayEmployee[]>(() => {
