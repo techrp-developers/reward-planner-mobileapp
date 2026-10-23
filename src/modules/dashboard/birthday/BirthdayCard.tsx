@@ -135,6 +135,23 @@ const WishButton = memo(({
   );
 });
 
+// ─── Wishes received chip (own birthday) ──────────────────────────────────────
+
+const WishesReceivedChip = memo(({ count, onPress }: { count: number; onPress?: () => void }) => (
+  <Pressable
+    onPress={onPress}
+    hitSlop={rs(8)}
+    accessibilityRole="button"
+    accessibilityLabel={`${count} birthday ${count === 1 ? 'wish' : 'wishes'} received, open chat`}
+    style={({ pressed }) => [styles.wishButton, styles.wishButtonSent, pressed && styles.wishButtonPressed]}
+  >
+    <MaterialCommunityIcons name="gift-outline" size={fs(12)} color="#A7F3D0" />
+    <Text style={[styles.wishButtonText, styles.wishButtonTextSent]}>
+      {count} {count === 1 ? 'Wish' : 'Wishes'}
+    </Text>
+  </Pressable>
+));
+
 // ─── BirthdayCard ─────────────────────────────────────────────────────────────
 
 const BirthdayCard = memo(({
@@ -142,11 +159,15 @@ const BirthdayCard = memo(({
   isDark,
   wishStatus = 'idle',
   onSendWish,
+  wishesReceived = 0,
+  onOpenChat,
 }: {
   employee:    BirthdayEmployee;
   isDark:      boolean;
   wishStatus?: WishStatus;
   onSendWish?: (employee: BirthdayEmployee) => void;
+  wishesReceived?: number;
+  onOpenChat?: () => void;
 }) => {
   const { width } = useWindowDimensions();
   const cardWidth = width - rs(32);  // matches dashboard horizontal padding
@@ -206,6 +227,9 @@ const BirthdayCard = memo(({
             </View>
             {!employee.isSelf && onSendWish && (
               <WishButton status={wishStatus} onPress={() => onSendWish(employee)} />
+            )}
+            {employee.isSelf && wishesReceived > 0 && (
+              <WishesReceivedChip count={wishesReceived} onPress={onOpenChat} />
             )}
           </View>
 

@@ -9,6 +9,12 @@ export interface BirthdayEmployee {
   wished?: boolean;
 }
 
+export interface BirthdayWishesReceived {
+  count: number;
+  // Most recent senders first, at most 3
+  senders: string[];
+}
+
 export interface BirthdayAPIResponse {
   success: boolean;
   data: BirthdayEmployee[];

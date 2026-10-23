@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import HeaderComponent, { type SearchOverlayState } from '../header/HeaderComponent';
 import SearchDropdown from '../header/SearchDropdown';
 import { useAuth } from '../../common/auth/context/AuthContext';
@@ -25,8 +25,12 @@ import { useCart } from '../../ecommerce/context/CartContext';
 import type { TabKey } from '../../../bottombar/BottomTabs';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
-import type { BirthdayEmployee } from '../birthday/types';
+import CrackerCelebration, { type CrackerCelebrationHandle } from '../birthday/CrackerCelebration';
+import type { BirthdayEmployee, BirthdayWishesReceived } from '../birthday/types';
+import { useChatUnreadCount } from '../../chat/hooks/useChatUnreadCount';
+import { chatSocket } from '../../chat/services/chatSocket';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
@@ -72,7 +76,23 @@ type DashboardHeaderCache = {
   thought: string;
   stepGoal: number;
   birthdays: BirthdayEmployee[];
+  birthdayWishes: BirthdayWishesReceived;
   fetchedAt: number;
+};
+
+const NO_BIRTHDAY_WISHES: BirthdayWishesReceived = { count: 0, senders: [] };
+
+// Local calendar day, used to remember which received wishes were already celebrated.
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const wishesSeenStorageKey = (userId: number | string) => `birthday_wishes_seen:${userId}:${todayKey()}`;
+
+const describeWishes = ({ count, senders }: BirthdayWishesReceived) => {
+  const first = senders[0] ?? 'A colleague';
+  if (count <= 1) return `🎂 ${first} wished you a Happy Birthday!`;
+  return `🎂 ${first} and ${count - 1} ${count - 1 === 1 ? 'other' : 'others'} wished you a Happy Birthday!`;
 };
 
 const DASHBOARD_HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -124,6 +144,13 @@ function Dashbord() {
     () => dashboardHeaderCache?.birthdays ?? [],
   );
   const hasBirthdays = birthdays.length > 0;
+  const [birthdayWishes, setBirthdayWishes] = useState<BirthdayWishesReceived>(
+    () => dashboardHeaderCache?.birthdayWishes ?? NO_BIRTHDAY_WISHES,
+  );
+  const isMyBirthday = useMemo(() => birthdays.some((b) => b.isSelf), [birthdays]);
+  const celebrationRef = useRef<CrackerCelebrationHandle>(null);
+  const chatUnreadCount = useChatUnreadCount(isAuthenticated);
+  const isFocused = useIsFocused();
   const { data: walletBalanceResponse } = useQuery({
     queryKey: ['dashboard', 'header-wallet-balance'],
     queryFn: fetchWalletBalance,
@@ -163,6 +190,7 @@ function Dashbord() {
       setThought(dashboardHeaderCache.thought);
       setStepGoal(dashboardHeaderCache.stepGoal);
       setBirthdays(dashboardHeaderCache.birthdays);
+      setBirthdayWishes(dashboardHeaderCache.birthdayWishes);
       return;
     }
 
@@ -203,6 +231,14 @@ function Dashbord() {
           JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays
         ));
 
+        const nextWishes: BirthdayWishesReceived = {
+          count: Number(d.birthday_wishes_received?.count) || 0,
+          senders: Array.isArray(d.birthday_wishes_received?.senders) ? d.birthday_wishes_received.senders : [],
+        };
+        setBirthdayWishes((prev) => (
+          prev.count === nextWishes.count && prev.senders.join() === nextWishes.senders.join() ? prev : nextWishes
+        ));
+
         dashboardHeaderCache = {
           userName: d.name || headerUserName,
           userImage: nextUserImage ?? headerUserImage,
@@ -213,6 +249,7 @@ function Dashbord() {
               ? Number(d.steps.goal_steps)
               : stepGoal,
           birthdays: mappedBirthdays,
+          birthdayWishes: nextWishes,
           fetchedAt: Date.now(),
         };
       }
@@ -299,6 +336,49 @@ function Dashbord() {
   const handleCenterPress = useCallback(() => {
     navigation.navigate('Dashboard');
   }, [navigation]);
+
+  // ── Birthday celebrations ───────────────────────────────────────────────────
+  const handleWishSent = useCallback((employee: BirthdayEmployee) => {
+    const firstName = employee.name.trim().split(/\s+/)[0] || employee.name;
+    celebrationRef.current?.fire(`🎉 Wishes sent to ${firstName}!`);
+  }, []);
+
+  // Birthday person: celebrate wishes received since they last saw the dashboard.
+  // Waits for focus so a wish that lands while they're in chat plays on return.
+  useEffect(() => {
+    const userId = user?.user_id;
+    if (!userId || !isFocused || !isMyBirthday || birthdayWishes.count === 0) return;
+    let cancelled = false;
+    (async () => {
+      const key = wishesSeenStorageKey(userId);
+      let seen = 0;
+      try { seen = Number(await AsyncStorage.getItem(key)) || 0; } catch { }
+      if (cancelled || birthdayWishes.count <= seen) return;
+      celebrationRef.current?.fire(describeWishes(birthdayWishes));
+      try { await AsyncStorage.setItem(key, String(birthdayWishes.count)); } catch { }
+    })();
+    return () => { cancelled = true; };
+  }, [birthdayWishes, isFocused, isMyBirthday, user?.user_id]);
+
+  // Live wishes: the chat endpoint tags them with `birthday-wish:<recipient>:<day>`.
+  useEffect(() => {
+    const userId = user?.user_id;
+    if (!userId) return;
+    const prefix = `birthday-wish:${userId}:`;
+    return chatSocket.subscribe((event) => {
+      if (event.type !== 'message:new') return;
+      const message = event.data;
+      if (!String(message?.client_message_id ?? '').startsWith(prefix)) return;
+      setBirthdayWishes((prev) => {
+        const next = {
+          count: prev.count + 1,
+          senders: [message.sender_name, ...prev.senders].filter(Boolean).slice(0, 3),
+        };
+        if (dashboardHeaderCache) dashboardHeaderCache = { ...dashboardHeaderCache, birthdayWishes: next };
+        return next;
+      });
+    });
+  }, [user?.user_id]);
 
   const dismissSearch = useCallback(() => {
     if (!isSearchOpen) return;
@@ -438,7 +518,7 @@ function Dashbord() {
             case 'promotionalBanner':
               return <PromotionalBanner key={key} module="mobile_dashboard" />;
             case 'birthdays':
-              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
+              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} wishesReceived={birthdayWishes.count} onWishSent={handleWishSent} /></Pressable> : null;
             case 'stepProgress':
               return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
             case 'investmentInsurance':
@@ -483,10 +563,12 @@ function Dashbord() {
         isDashboard
         activeTabKey="Home"
         cartCount={totalQuantity}
+        chatUnreadCount={chatUnreadCount}
         onTabPress={handleTabPress}
         onCenterPress={handleCenterPress}
       />
       {!isSearchOpen && <GamesDrawer />}
+      <CrackerCelebration ref={celebrationRef} />
     </LinearGradient>
   );
 }

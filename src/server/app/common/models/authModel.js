@@ -630,6 +630,28 @@ class authModel {
     }));
   }
 
+  // Birthday wishes the user received today through chat (see chat sendBirthdayWish).
+  async getTodayBirthdayWishesReceived(userId) {
+    const [rows] = await db.execute(
+      `
+    SELECT u.name
+    FROM chat_members cm
+    INNER JOIN chat_messages m ON m.conversation_id = cm.conversation_id
+    INNER JOIN customer u ON u.user_id = m.sender_id
+    WHERE cm.user_id = ?
+      AND m.client_message_id = CONCAT('birthday-wish:', ?, ':', DATE_FORMAT(CURDATE(), '%Y-%m-%d'))
+      AND m.deleted_at IS NULL
+    ORDER BY m.message_id DESC
+    `,
+      [userId, userId],
+    );
+
+    return {
+      count: rows.length,
+      senders: rows.slice(0, 3).map((row) => row.name),
+    };
+  }
+
   // Delete Customer — soft delete only. The account and its cart/wishlist/
   // addresses/notifications are kept for a 30-day grace period so the user
   // can get everything back by simply logging in again (see

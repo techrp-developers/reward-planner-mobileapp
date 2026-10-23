@@ -26,6 +26,7 @@ type Props = {
   activeMode?: AppMode;
   onTabPress?: (tab: TabKey) => void;
   cartCount?: number;
+  chatUnreadCount?: number;
   isDashboard?: boolean;
   activeTabKey?: TabKey;
   layoutMode?: "overlay" | "navigator";
@@ -233,6 +234,7 @@ function BottomTabs({
   isDashboard = false,
   activeTabKey,
   cartCount = 0,
+  chatUnreadCount = 0,
   onCenterPress,
   layoutMode = "overlay",
 }: Props) {
@@ -321,19 +323,26 @@ function BottomTabs({
          
 <TouchableOpacity
   accessibilityRole="button"
-  accessibilityLabel="Chat"
+  accessibilityLabel={chatUnreadCount > 0 ? `Chat, ${chatUnreadCount} unread` : "Chat"}
   onPress={() => handleDashboardPress("Chat")}
   style={styles.referenceSide}
 >
-  <MaterialCommunityIcons
-    name="chat-outline"
-    size={26}
-    color={
-      activeTab === "Chat"
-        ? dashboardActiveColor
-        : dashboardInactiveColor
-    }
-  />
+  <View>
+    <MaterialCommunityIcons
+      name="chat-outline"
+      size={26}
+      color={
+        activeTab === "Chat"
+          ? dashboardActiveColor
+          : dashboardInactiveColor
+      }
+    />
+    {chatUnreadCount > 0 && (
+      <View style={[styles.badge, styles.chatBadge, isDark ? { borderColor: theme.card } : styles.chatBadgeLight]}>
+        <Text style={styles.badgeText}>{chatUnreadCount > 9 ? "9+" : chatUnreadCount}</Text>
+      </View>
+    )}
+  </View>
   <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>
     Chat
   </Text>
@@ -534,6 +543,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "#fff",
+  },
+  chatBadge: {
+    paddingHorizontal: 4,
+  },
+  chatBadgeLight: {
+    borderColor: "#FFFFFF",
   },
   badgeText: {
     color: "#fff",

@@ -77,9 +77,12 @@ const PaginationDot = memo(({
 
 interface Props {
   birthdays: BirthdayEmployee[];
+  // Wishes the logged-in user received today (shown on their own card)
+  wishesReceived?: number;
+  onWishSent?: (employee: BirthdayEmployee) => void;
 }
 
-const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
+const BirthdayCarousel: React.FC<Props> = ({ birthdays, wishesReceived = 0, onWishSent }) => {
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const scrollRef     = useRef<ScrollView>(null);
@@ -99,14 +102,7 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
     try {
       await sendBirthdayWish(employee.id);
       setWishStatus(prev => ({ ...prev, [key]: 'sent' }));
-      Alert.alert(
-        '🎉 Wishes sent',
-        `Your birthday wish was sent to ${employee.name}'s chat.`,
-        [
-          { text: 'OK', style: 'cancel' },
-          { text: 'Open Chat', onPress: () => navigation.navigate('Chat') },
-        ],
-      );
+      onWishSent?.(employee);
     } catch (error: any) {
       setWishStatus(prev => ({ ...prev, [key]: 'idle' }));
       Alert.alert(
@@ -114,7 +110,9 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         error?.response?.data?.message ?? 'Please try again in a moment.',
       );
     }
-  }, [navigation]);
+  }, [onWishSent]);
+
+  const handleOpenChat = useCallback(() => navigation.navigate('Chat'), [navigation]);
 
   // Append clone of first item so the last → first wrap is invisible
   const loopData = useMemo<BirthdayEmployee[]>(() => {
@@ -226,6 +224,8 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
                 isDark={isDark}
                 wishStatus={status}
                 onSendWish={handleSendWish}
+                wishesReceived={employee.isSelf ? wishesReceived : 0}
+                onOpenChat={handleOpenChat}
               />
             </View>
           );

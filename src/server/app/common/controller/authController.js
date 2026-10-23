@@ -1720,10 +1720,11 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const randomThought =
           thoughts[Math.floor(Math.random() * thoughts.length)];
 
-        const [userInfo, todaySummary, birthdayEmployees] = await Promise.all([
+        const [userInfo, todaySummary, birthdayEmployees, birthdayWishes] = await Promise.all([
           AuthModel.getUserInfo(userId),
           FitnessService.getTodaySummary(userId),
           AuthModel.getTodayBirthdayEmployees(userId),
+          AuthModel.getTodayBirthdayWishesReceived(userId),
         ]);
 
         if (!userInfo) {
@@ -1744,6 +1745,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             },
             thought: randomThought,
             birthday_employees: birthdayEmployees || [],
+            birthday_wishes_received: birthdayWishes,
             visit_card: {
               qr_code_url: "/v1/auth/visit-card/qr",
               format: "vcard",
