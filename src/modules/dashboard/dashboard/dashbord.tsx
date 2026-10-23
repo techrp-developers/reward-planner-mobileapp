@@ -196,6 +196,8 @@ function Dashbord() {
           designation: b.role,
           department:  b.department,
           photo:       normalizeLocalCmsImageUrl(b.image) ?? null,
+          isSelf:      Boolean(b.isSelf),
+          wished:      Boolean(b.wished),
         }));
         setBirthdays((prev) => (
           JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays

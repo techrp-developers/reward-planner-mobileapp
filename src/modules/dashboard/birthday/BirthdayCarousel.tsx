@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   ScrollView,
@@ -15,8 +16,9 @@ import {
 } from 'react-native';
 import { rs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BirthdayCard from './BirthdayCard';
+import BirthdayCard, { type WishStatus } from './BirthdayCard';
 import type { BirthdayEmployee } from './types';
+import { sendBirthdayWish } from './birthdayAPI';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,25 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
   const jumpPendingRef = useRef(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Wish status keyed by real employee id (shared by the loop clone)
+  const [wishStatus, setWishStatus] = useState<Record<string, WishStatus>>({});
+
+  const handleSendWish = useCallback(async (employee: BirthdayEmployee) => {
+    const key = String(employee.id);
+    setWishStatus(prev => ({ ...prev, [key]: 'sending' }));
+    try {
+      const res = await sendBirthdayWish(employee.id);
+      setWishStatus(prev => ({ ...prev, [key]: 'sent' }));
+      if (res?.message) Alert.alert(res.alreadyWished ? 'Already wished' : '🎉 Wishes sent', res.message);
+    } catch (error: any) {
+      setWishStatus(prev => ({ ...prev, [key]: 'idle' }));
+      Alert.alert(
+        'Could not send wishes',
+        error?.response?.data?.message ?? 'Please try again in a moment.',
+      );
+    }
+  }, []);
 
   // Append clone of first item so the last → first wrap is invisible
   const loopData = useMemo<BirthdayEmployee[]>(() => {
@@ -185,11 +206,21 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         onMomentumScrollEnd={onMomentumScrollEnd}
         nestedScrollEnabled
       >
-        {loopData.map((item, index) => (
-          <View key={`${item.id}-${index}`} style={styles.itemWrap}>
-            <BirthdayCard employee={item} isDark={isDark} />
-          </View>
-        ))}
+        {loopData.map((item, index) => {
+          // The trailing loop clone represents the first real employee
+          const employee = index >= birthdays.length ? birthdays[0] : item;
+          const status = wishStatus[String(employee.id)] ?? (employee.wished ? 'sent' : 'idle');
+          return (
+            <View key={`${item.id}-${index}`} style={styles.itemWrap}>
+              <BirthdayCard
+                employee={employee}
+                isDark={isDark}
+                wishStatus={status}
+                onSendWish={handleSendWish}
+              />
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Pagination dots — only shown for multiple birthdays */}

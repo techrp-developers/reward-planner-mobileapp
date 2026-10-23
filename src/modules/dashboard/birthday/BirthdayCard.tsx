@@ -1,9 +1,11 @@
 import React, { memo, useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Image,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -89,14 +91,62 @@ const SparkDot = memo(({
   );
 });
 
+// ─── Send wishes button ───────────────────────────────────────────────────────
+
+export type WishStatus = 'idle' | 'sending' | 'sent';
+
+const WishButton = memo(({
+  status,
+  onPress,
+}: {
+  status:  WishStatus;
+  onPress: () => void;
+}) => {
+  const sent    = status === 'sent';
+  const sending = status === 'sending';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={sent || sending}
+      hitSlop={rs(8)}
+      accessibilityRole="button"
+      accessibilityLabel={sent ? 'Wishes sent' : 'Send birthday wishes'}
+      accessibilityState={{ disabled: sent || sending, busy: sending }}
+      style={({ pressed }) => [
+        styles.wishButton,
+        sent && styles.wishButtonSent,
+        pressed && styles.wishButtonPressed,
+      ]}
+    >
+      {sending ? (
+        <ActivityIndicator size="small" color="#FFFFFF" style={styles.wishSpinner} />
+      ) : (
+        <MaterialCommunityIcons
+          name={sent ? 'check-circle' : 'party-popper'}
+          size={fs(12)}
+          color={sent ? '#A7F3D0' : '#FFFFFF'}
+        />
+      )}
+      <Text style={[styles.wishButtonText, sent && styles.wishButtonTextSent]}>
+        {sent ? 'Wished' : sending ? 'Sending…' : 'Send Wishes'}
+      </Text>
+    </Pressable>
+  );
+});
+
 // ─── BirthdayCard ─────────────────────────────────────────────────────────────
 
 const BirthdayCard = memo(({
   employee,
   isDark,
+  wishStatus = 'idle',
+  onSendWish,
 }: {
-  employee: BirthdayEmployee;
-  isDark:   boolean;
+  employee:    BirthdayEmployee;
+  isDark:      boolean;
+  wishStatus?: WishStatus;
+  onSendWish?: (employee: BirthdayEmployee) => void;
 }) => {
   const { width } = useWindowDimensions();
   const cardWidth = width - rs(32);  // matches dashboard horizontal padding
@@ -154,6 +204,9 @@ const BirthdayCard = memo(({
               <MaterialCommunityIcons name="cake-variant" size={fs(12)} color="#C7D2FE" />
               <Text style={styles.chipText}>Happy Birthday!</Text>
             </View>
+            {!employee.isSelf && onSendWish && (
+              <WishButton status={wishStatus} onPress={() => onSendWish(employee)} />
+            )}
           </View>
 
           {/* Main content row: avatar left, info right */}
@@ -263,6 +316,8 @@ const styles = StyleSheet.create({
   // ── Celebration chip ─────────────────────────────────────────────────────────
   chipRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: rs(10),
   },
   chip: {
@@ -282,6 +337,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#C7D2FE',
     letterSpacing: 0.2,
+  },
+
+  // ── Send wishes button ───────────────────────────────────────────────────────
+  wishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(5),
+    backgroundColor: '#4F46E5',
+    borderRadius: rs(20),
+    paddingHorizontal: rs(11),
+    paddingVertical: rs(5),
+    borderWidth: 1,
+    borderColor: 'rgba(199,210,254,0.45)',
+  },
+  wishButtonSent: {
+    backgroundColor: 'rgba(16,185,129,0.18)',
+    borderColor: 'rgba(167,243,208,0.45)',
+  },
+  wishButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.97 }],
+  },
+  wishSpinner: {
+    transform: [{ scale: 0.6 }],
+    width: fs(12),
+    height: fs(12),
+  },
+  wishButtonText: {
+    fontSize: fs(11),
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  wishButtonTextSent: {
+    color: '#A7F3D0',
   },
 
   // ── Content row ──────────────────────────────────────────────────────────────

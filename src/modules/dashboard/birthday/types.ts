@@ -5,6 +5,8 @@ export interface BirthdayEmployee {
   department: string;
   photo?: string | null;
   message?: string | null;
+  isSelf?: boolean;
+  wished?: boolean;
 }
 
 export interface BirthdayAPIResponse {
