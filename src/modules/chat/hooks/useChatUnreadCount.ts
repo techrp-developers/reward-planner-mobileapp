@@ -14,6 +14,8 @@ const REFRESH_EVENTS = new Set<ChatSocketEvent['type']>([
 ]);
 
 const REFRESH_DEBOUNCE_MS = 500;
+// Fallback while the socket is unavailable (same cadence as the chat inbox).
+const FALLBACK_POLL_MS = 10000;
 
 // Total unread chat messages across all conversations, kept live via the chat socket.
 export function useChatUnreadCount(enabled: boolean) {
@@ -29,9 +31,15 @@ export function useChatUnreadCount(enabled: boolean) {
   }, []);
 
   // Refetch whenever the screen regains focus, e.g. returning from the chat inbox.
+  // While focused, poll if the socket is down so new messages still show up.
   useFocusEffect(
     useCallback(() => {
-      if (enabled) refresh();
+      if (!enabled) return;
+      refresh();
+      const poll = setInterval(() => {
+        if (!chatSocket.isConnected()) refresh();
+      }, FALLBACK_POLL_MS);
+      return () => clearInterval(poll);
     }, [enabled, refresh]),
   );
 
