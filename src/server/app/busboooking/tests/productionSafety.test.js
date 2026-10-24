@@ -1,50 +1,66 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const {
+const PROVIDER_URL_KEYS = [
+  "SRDV_SEARCH_URL",
+  "SRDV_SEAT_LAYOUT_URL",
+  "SRDV_BOARDING_DROPPING_URL",
+  "SRDV_BLOCK_URL",
+  "SRDV_BOOK_URL",
+  "SRDV_BOOKING_DETAILS_URL",
+  "SRDV_CANCEL_URL",
+  "SRDV_BALANCE_URL",
+  "SRDV_BALANCE_LOG_URL",
+];
+
+const REQUIRED_KEYS = [
+  ...PROVIDER_URL_KEYS,
+  "SRDV_API_TOKEN",
+  "RAZOR_API_KEY",
+  "RAZOR_SECRET_KEY",
+  "RAZORPAY_WEBHOOK_SECRET",
+  "ACCESS_TOKEN_SECRET",
+];
+
+function getProductionConfigurationErrors(env) {
+  if (String(env.NODE_ENV).toLowerCase() !== "production") return [];
+
+  const errors = [];
+  for (const key of REQUIRED_KEYS) {
+    if (!String(env[key] || "").trim()) errors.push(`${key} is required`);
+  }
+
+  for (const key of PROVIDER_URL_KEYS) {
+    const value = String(env[key] || "").trim();
+    if (!value) continue;
+
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:") errors.push(`${key} must use HTTPS`);
+      if (/srdvtest/i.test(url.hostname)) {
+        errors.push(`${key} must not use the SRDV test host`);
+      }
+    } catch {
+      errors.push(`${key} must be a valid absolute URL`);
+    }
+  }
+
+  if (/^rzp_test_/i.test(String(env.RAZOR_API_KEY || ""))) {
+    errors.push("RAZOR_API_KEY must not be a Razorpay test key");
+  }
+
+  if (String(env.SRDV_EXCHANGE_LOG || "").toLowerCase() === "true") {
+    errors.push("SRDV_EXCHANGE_LOG must be disabled in production");
+  }
+
+  return errors;
+}
+
+function assertProductionConfiguration(env = process.env) {
+  const errors = getProductionConfigurationErrors(env);
+  if (errors.length) {
+    throw new Error(`Unsafe bus-booking production configuration: ${errors.join("; ")}`);
+  }
+}
+
+module.exports = {
   getProductionConfigurationErrors,
-} = require("../config/productionSafety");
-
-const productionEnv = {
-  NODE_ENV: "production",
-  SRDV_SEARCH_URL: "https://bus.example.com/v9/rest/Search",
-  SRDV_SEAT_LAYOUT_URL: "https://bus.example.com/v9/rest/GetSeatLayOut",
-  SRDV_BOARDING_DROPPING_URL: "https://bus.example.com/v9/rest/GetBoardingPointDetails",
-  SRDV_BLOCK_URL: "https://bus.example.com/v9/rest/Block",
-  SRDV_BOOK_URL: "https://bus.example.com/v9/rest/Book",
-  SRDV_CANCEL_URL: "https://bus.example.com/v9/rest/Cancel",
-  SRDV_BALANCE_URL: "https://bus.example.com/v9/rest/Balance",
-  SRDV_BALANCE_LOG_URL: "https://bus.example.com/v9/rest/BalanceLog",
-  SRDV_API_TOKEN: "token",
-  SRDV_CLIENT_ID: "client",
-  SRDV_USERNAME: "user",
-  SRDV_PASSWORD: "password",
-  SRDV_END_USER_IP: "203.0.113.1",
-  RAZOR_API_KEY: "rzp_live_example",
-  RAZOR_SECRET_KEY: "secret",
-  RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
-  ACCESS_TOKEN_SECRET: "access-secret",
+  assertProductionConfiguration,
 };
-
-test("production configuration accepts HTTPS live endpoints and live payment keys", () => {
-  assert.deepEqual(getProductionConfigurationErrors(productionEnv), []);
-});
-
-test("production configuration rejects test providers, test keys, and missing secrets", () => {
-  const errors = getProductionConfigurationErrors({
-    ...productionEnv,
-    SRDV_SEARCH_URL: "https://bus.srdvtest.com/v9/rest/Search",
-    RAZOR_API_KEY: "rzp_test_example",
-    SRDV_API_TOKEN: "",
-  });
-
-  assert.ok(errors.some((error) => error.includes("SRDV_API_TOKEN is required")));
-  assert.ok(errors.some((error) => error.includes("SRDV test host")));
-  assert.ok(errors.some((error) => error.includes("Razorpay test key")));
-});
-
-test("non-production environments may intentionally use test services", () => {
-  assert.deepEqual(
-    getProductionConfigurationErrors({ NODE_ENV: "development" }),
-    [],
-  );
-});
