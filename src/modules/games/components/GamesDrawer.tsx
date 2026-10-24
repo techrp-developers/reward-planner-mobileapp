@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Modal from 'react-native-modal';
+import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -14,12 +15,26 @@ export type DrawerGame = {
   category: string;
   icon: string;
   color: string;
+  // Glossy card background, light -> deep. Falls back to CARD_PALETTE by position.
+  gradient?: GameGradient;
   onPlay?: () => void;
 };
 
+type GameGradient = [string, string, string];
+
+// Distinct glossy colours for games without their own gradient.
+const CARD_PALETTE: GameGradient[] = [
+  ['#FDBA74', '#F97316', '#C2410C'], // orange
+  ['#F9A8D4', '#EC4899', '#9D174D'], // pink
+  ['#6EE7B7', '#10B981', '#047857'], // green
+  ['#FDE68A', '#F59E0B', '#B45309'], // amber
+];
+
+const GLOSS_COLORS = ['rgba(255,255,255,0.42)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)'];
+
 // Add onPlay only after a playable screen is connected.
 const DEFAULT_GAMES: DrawerGame[] = [
-  { id: 'sudoku', title: 'Sudoku', description: 'A little focus. A fresh challenge. Fill the grid and sharpen your mind.', category: 'Puzzle', icon: 'grid', color: '#B9A0FF' },
+  { id: 'sudoku', title: 'Sudoku', description: 'A little focus. A fresh challenge. Fill the grid and sharpen your mind.', category: 'Puzzle', icon: 'grid', color: '#B9A0FF', gradient: ['#D8B4FE', '#8B5CF6', '#4C1D95'] },
 ];
 
 type Props = { games?: DrawerGame[] };
@@ -27,7 +42,7 @@ type Props = { games?: DrawerGame[] };
 export default function GamesDrawer({ games: customGames }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const games = customGames ?? [
-    { id: 'quiz', title: 'Quiz', description: 'Five questions. A new challenge. Test your knowledge with Quivio.', category: 'Trivia', icon: 'head-question-outline', color: '#72DEEF', onPlay: () => navigation.navigate('Quiz') },
+    { id: 'quiz', title: 'Quiz', description: 'Five questions. A new challenge. Test your knowledge with Quivio.', category: 'Trivia', icon: 'head-question-outline', color: '#72DEEF', gradient: ['#67E8F9', '#0EA5E9', '#1E3A8A'], onPlay: () => navigation.navigate('Quiz') },
     ...DEFAULT_GAMES,
   ];
   const [visible, setVisible] = useState(false);
@@ -105,34 +120,45 @@ export default function GamesDrawer({ games: customGames }: Props) {
               <Text accessibilityRole="header" style={styles.sectionTitle}>All games</Text>
             </View>
             {games.length === 0 && <Text style={styles.secondary}>New games will appear here when they are added.</Text>}
-            {games.map(game => (
-              <View key={game.id} style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={[styles.gameIcon, { backgroundColor: game.color }]}>
-                    <MaterialCommunityIcons name={game.icon} size={38} color="#171719" />
-                  </View>
-                  <Text style={styles.category}>{game.category}</Text>
+            {games.map((game, index) => {
+              const gradient = game.gradient ?? CARD_PALETTE[index % CARD_PALETTE.length];
+              const deep = gradient[2];
+              return (
+                <View key={game.id} style={[styles.cardShadow, { shadowColor: gradient[1] }]}>
+                  <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+                    {/* Gloss: soft sheen over the top half plus a light rim */}
+                    <LinearGradient colors={GLOSS_COLORS} style={styles.gloss} pointerEvents="none" />
+                    <View style={styles.glossOrb} pointerEvents="none" />
+                    <View style={styles.cardTop}>
+                      <View style={styles.gameIcon}>
+                        <MaterialCommunityIcons name={game.icon} size={38} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.categoryChip}>
+                        <Text style={styles.category}>{game.category}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.gameTitle}>{game.title}</Text>
+                    <Text style={styles.cardDescription}>{game.description}</Text>
+                    {game.onPlay ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Play ${game.title}`}
+                        onPress={() => { setPendingGame(game); close(); }}
+                        style={({ pressed }) => [styles.playButton, pressed && styles.playPressed]}
+                      >
+                        <Text style={[styles.playText, { color: deep }]}>Play now</Text>
+                        <MaterialCommunityIcons name="arrow-right" size={20} color={deep} />
+                      </Pressable>
+                    ) : (
+                      <View style={styles.soonBadge}>
+                        <MaterialCommunityIcons name="clock-outline" size={16} color="#FFFFFF" />
+                        <Text style={styles.soonText}>Coming soon</Text>
+                      </View>
+                    )}
+                  </LinearGradient>
                 </View>
-                <Text style={styles.gameTitle}>{game.title}</Text>
-                <Text style={styles.secondary}>{game.description}</Text>
-                {game.onPlay ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Play ${game.title}`}
-                    onPress={() => { setPendingGame(game); close(); }}
-                    style={styles.playButton}
-                  >
-                    <Text style={styles.playText}>Play now</Text>
-                    <MaterialCommunityIcons name="arrow-right" size={20} color="#102419" />
-                  </Pressable>
-                ) : (
-                  <View style={styles.soonBadge}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color="#C8C8CD" />
-                    <Text style={styles.soonText}>Coming soon</Text>
-                  </View>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
         </View>
       </Modal>
@@ -158,13 +184,26 @@ const styles = StyleSheet.create({
   secondary: { color: '#BDBDC5', fontSize: 14, lineHeight: 21 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   sectionTitle: { color: '#F5F5F5', fontSize: 22, fontWeight: '600' },
-  card: { backgroundColor: '#212123', borderRadius: 24, padding: 20, gap: 12 },
+  // Shadow lives on a wrapper because the gradient card clips its gloss layers.
+  cardShadow: {
+    borderRadius: 24,
+    ...Platform.select({
+      ios: { shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.45, shadowRadius: 18 },
+      android: { elevation: 8 },
+    }),
+  },
+  card: { borderRadius: 24, padding: 20, gap: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' },
+  gloss: { position: 'absolute', top: 0, left: 0, right: 0, height: '55%' },
+  glossOrb: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -90, right: -50, backgroundColor: 'rgba(255,255,255,0.16)' },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  gameIcon: { width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  category: { color: '#C8C8CD', fontSize: 12, flexShrink: 1 },
-  gameTitle: { color: '#FAFAFA', fontSize: 23, fontWeight: '600' },
-  soonBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, borderRadius: 16, backgroundColor: '#323235', paddingHorizontal: 12, paddingVertical: 8, marginTop: 4 },
-  soonText: { color: '#C8C8CD', fontSize: 12, fontWeight: '600' },
-  playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 14, backgroundColor: '#BDF7D4', marginTop: 4 },
-  playText: { color: '#102419', fontSize: 14, fontWeight: '700' },
+  gameIcon: { width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)' },
+  categoryChip: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(0,0,0,0.18)', flexShrink: 1 },
+  category: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  gameTitle: { color: '#FFFFFF', fontSize: 23, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  cardDescription: { color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 21 },
+  soonBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.22)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 12, paddingVertical: 8, marginTop: 4 },
+  soonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 14, backgroundColor: 'rgba(255,255,255,0.94)', marginTop: 4 },
+  playPressed: { opacity: 0.85 },
+  playText: { fontSize: 14, fontWeight: '700' },
 });
