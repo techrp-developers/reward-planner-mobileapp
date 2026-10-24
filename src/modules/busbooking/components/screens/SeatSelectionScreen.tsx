@@ -609,6 +609,26 @@ const busTypeText =
   React.useMemo<SeatLayoutSeat[]>(
     () => {
 
+      // Seats from the provider's ResultUpperSeat block are upper deck even
+      // when the seat itself does not carry IsUpper.
+      const upperLayout: SeatLayoutSeat[][] =
+        Array.isArray(seatLayout?.upperLayout)
+          ? seatLayout.upperLayout
+          : [];
+
+      if (
+        upperLayout.length > 0 &&
+        Array.isArray(seatLayout?.layout)
+      ) {
+        return [
+          ...seatLayout.layout.flat(),
+          ...upperLayout.flat().map((seat) => ({
+            ...seat,
+            IsUpper: true,
+          })),
+        ];
+      }
+
       if (
         Array.isArray(
           seatLayout?.seats
@@ -1016,9 +1036,6 @@ const handleContinue =
       const traceId =
         seatLayout?.traceId;
 
-      const srdvIndex =
-        seatLayout?.srdvIndex;
-
       const resultIndex =
         seatLayout?.resultIndex;
 
@@ -1030,8 +1047,6 @@ const handleContinue =
 
           traceId,
 
-          srdvIndex,
-
           resultIndex,
         }
       );
@@ -1039,7 +1054,6 @@ const handleContinue =
 
       if (
         !traceId ||
-        !srdvIndex ||
         !resultIndex
       ) {
 
@@ -1064,11 +1078,6 @@ const handleContinue =
           traceId:
             String(
               traceId
-            ),
-
-          srdvIndex:
-            String(
-              srdvIndex
             ),
 
           resultIndex:

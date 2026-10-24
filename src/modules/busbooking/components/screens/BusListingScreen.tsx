@@ -358,7 +358,6 @@ export default function BusListingScreen() {
   sourceCityCode,
   destinationCityCode,
   journeyDate,
-  journeyTime,
   isWomenBooking,
 } = route.params;
 console.log(
@@ -370,7 +369,6 @@ console.log(
     sourceCityCode,
     destinationCityCode,
     journeyDate,
-    journeyTime,
   }
 );
 
@@ -488,11 +486,6 @@ const handleOpenSeatSelection =
         bus.raw || {};
 
 
-      const srdvIndex =
-        rawBus?.SrdvIndex ??
-        rawBus?.srdvIndex;
-
-
       const resultIndex =
         rawBus?.ResultIndex ??
         rawBus?.resultIndex;
@@ -517,11 +510,6 @@ const handleOpenSeatSelection =
       );
 
       console.log(
-        "SrdvIndex:",
-        srdvIndex
-      );
-
-      console.log(
         "ResultIndex:",
         resultIndex
       );
@@ -542,22 +530,6 @@ const handleOpenSeatSelection =
         showPopup({
           title: "Seat Layout Error",
           message: "TraceId is missing. Please search buses again.",
-          variant: "error",
-        });
-
-        return;
-      }
-
-
-      if (
-        srdvIndex === undefined ||
-        srdvIndex === null ||
-        String(srdvIndex).trim() === ""
-      ) {
-
-        showPopup({
-          title: "Seat Layout Error",
-          message: "SrdvIndex is missing for this bus.",
           variant: "error",
         });
 
@@ -591,9 +563,6 @@ const handleOpenSeatSelection =
 
         traceId:
           String(traceId),
-
-        srdvIndex:
-          String(srdvIndex),
 
         resultIndex:
           String(resultIndex),
@@ -640,9 +609,6 @@ const handleOpenSeatSelection =
 
             traceId:
               response.traceId,
-
-            srdvIndex:
-              response.srdvIndex,
 
             resultIndex:
               response.resultIndex,

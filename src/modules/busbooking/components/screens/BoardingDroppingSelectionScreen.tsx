@@ -118,7 +118,7 @@ export default function BoardingDroppingSelectionScreen() {
   |--------------------------------------------------------------------------
   */
 
-  const { bus, passengers, selectedSeats, totalFare, traceId, srdvIndex, resultIndex, isWomenBooking } =
+  const { bus, passengers, selectedSeats, totalFare, traceId, resultIndex, isWomenBooking } =
     route.params;
 
   /*
@@ -175,7 +175,7 @@ export default function BoardingDroppingSelectionScreen() {
     let isMounted = true;
 
     const loadPoints = async () => {
-      if (!traceId || !srdvIndex || !resultIndex) {
+      if (!traceId || !resultIndex) {
         setPointsError('Missing boarding point identifiers');
         setLoadingPoints(false);
         return;
@@ -187,8 +187,6 @@ export default function BoardingDroppingSelectionScreen() {
 
       const payload = {
         traceId: String(traceId),
-
-        srdvIndex: String(srdvIndex),
 
         resultIndex: String(resultIndex),
       };
@@ -280,7 +278,7 @@ export default function BoardingDroppingSelectionScreen() {
     return () => {
       isMounted = false;
     };
-  }, [destinationCity, resultIndex, sourceCity, srdvIndex, traceId]);
+  }, [destinationCity, resultIndex, sourceCity, traceId]);
   /*
 |--------------------------------------------------------------------------
 | Selected / Active Points
@@ -331,8 +329,6 @@ export default function BoardingDroppingSelectionScreen() {
 
           traceId,
 
-          srdvIndex,
-
           resultIndex,
         }
       );
@@ -368,9 +364,6 @@ export default function BoardingDroppingSelectionScreen() {
           traceId:
             String(traceId),
 
-          srdvIndex:
-            String(srdvIndex),
-
           resultIndex:
             String(resultIndex),
 
@@ -388,7 +381,6 @@ export default function BoardingDroppingSelectionScreen() {
       selectedSeats,
       totalFare,
       traceId,
-      srdvIndex,
       resultIndex,
       isWomenBooking,
     ]

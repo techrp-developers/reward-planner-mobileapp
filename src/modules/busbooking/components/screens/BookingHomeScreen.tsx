@@ -38,6 +38,7 @@ import {
   formatBusAmount,
   formatBusTime,
   getBusJourneyDayLabel,
+  parseBusDateTime,
 } from "../../utils/busOrderFormat";
 import {
   loadRecentSearches,
@@ -493,18 +494,21 @@ const handleSearchBuses = async () => {
   const now = new Date();
   const todayId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  let computedJourneyTime = "00:00";
-  if (selectedDateId === todayId) {
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    computedJourneyTime = `${hours}:${minutes}`;
-  }
+  // Search is by date only, so for today drop buses that have already left.
+  const isUpcomingBus = (bus: any) => {
+    if (selectedDateId !== todayId) {
+      return true;
+    }
+
+    // Hermes cannot parse "YYYY-MM-DD HH:mm:ss", so use the shared parser.
+    const departure = parseBusDateTime(bus?.DepartureTime);
+    return !departure || departure >= now;
+  };
 
   console.log("[BusBooking][Home] Search button pressed", {
     fromCity,
     toCity,
     selectedDateId,
-    journeyTime: computedJourneyTime,
   });
 
   /*
@@ -564,18 +568,6 @@ const handleSearchBuses = async () => {
   }
 
 
-  if (!computedJourneyTime) {
-
-    showPopup({
-      title: "Select Time",
-      message: "Please select journey time.",
-      variant: "warning",
-    });
-
-    return;
-  }
-
-
   /*
   |--------------------------------------------------------------------------
   | DEBUG FRONTEND VALUES
@@ -589,7 +581,6 @@ const handleSearchBuses = async () => {
   console.log("From code:", fromCity?.id);
   console.log("To code:", toCity?.id);
   console.log("Journey Date:", selectedDateId);
-  console.log("Journey Time:", computedJourneyTime);
   console.log("==================================");
   try {
 
@@ -612,9 +603,6 @@ const handleSearchBuses = async () => {
 
       journeyDate:
         selectedDateId,
-
-      journeyTime:
-        computedJourneyTime,
     };
 
 
@@ -644,7 +632,6 @@ const handleSearchBuses = async () => {
       toCityName: toCity.city_name,
       toStateName: toCity.state_name || "",
       journeyDate: selectedDateId,
-      journeyTime: computedJourneyTime,
       updatedAt: new Date().toISOString(),
     };
 
@@ -664,10 +651,11 @@ const handleSearchBuses = async () => {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      !response.buses ||
-      response.buses.length === 0
-    ) {
+    const upcomingBuses = Array.isArray(response.buses)
+      ? response.buses.filter(isUpcomingBus)
+      : [];
+
+    if (upcomingBuses.length === 0) {
       console.log("[BusBooking][Home] No buses found", {
         payload,
         response,
@@ -678,8 +666,10 @@ const handleSearchBuses = async () => {
         {
           buses: [],
           emptyStateMessage:
-            response.message ||
-            "Buses not found for this route.",
+            response.buses?.length
+              ? "All buses for today have already departed."
+              : response.message ||
+                "Buses not found for this route.",
           traceId:
             response.traceId,
           sourceCity:
@@ -692,8 +682,6 @@ const handleSearchBuses = async () => {
             String(toCity.id),
           journeyDate:
             selectedDateId,
-          journeyTime:
-            computedJourneyTime,
           isWomenBooking:
             isWomenBooking,
         }
@@ -714,7 +702,7 @@ const handleSearchBuses = async () => {
       {
 
         buses:
-          response.buses,
+          upcomingBuses,
 
         traceId:
           response.traceId,
@@ -734,21 +722,17 @@ const handleSearchBuses = async () => {
         journeyDate:
           selectedDateId,
 
-        journeyTime:
-          computedJourneyTime,
-
         isWomenBooking:
           isWomenBooking,
       }
     );
 
     console.log("[BusBooking][Home] Navigate to listing", {
-      busCount: response.buses.length,
+      busCount: upcomingBuses.length,
       traceId: response.traceId,
       sourceCity: fromCity.city_name,
       destinationCity: toCity.city_name,
       journeyDate: selectedDateId,
-      journeyTime: computedJourneyTime,
     });
 
 
@@ -770,8 +754,9 @@ const handleSearchBuses = async () => {
     );
 
     if (
-      normalizedErrorMessage.includes("no data found for this route") ||
-      normalizedErrorMessage.includes("no buses found")
+      // The provider words this differently across versions, e.g.
+      // "No data found for this route." or "No bus found for this route."
+      /no (data|bus|buses) found/.test(normalizedErrorMessage)
     ) {
       navigation.navigate(
         "BusListingScreen",
@@ -792,8 +777,6 @@ const handleSearchBuses = async () => {
             String(toCity?.id || ""),
           journeyDate:
             selectedDateId,
-          journeyTime:
-            computedJourneyTime,
           isWomenBooking:
             isWomenBooking,
         }

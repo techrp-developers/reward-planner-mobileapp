@@ -39,20 +39,21 @@ const fetch: typeof globalThis.fetch = async (input, init = {}) => {
   }
 };
 
+// `id` and `city_code` both carry the SRDV CityId as a string.
 export type City = {
   id: number | string;
+  city_code?: string;
   city_name: string;
+  district_name?: string | null;
   state_name?: string;
+  state_code?: string | null;
   city_type?: string;
-  latitude?: string | number;
-  longitude?: string | number;
 };
 
 export type BusSearchPayload = {
   sourceCityCode: string;
   destinationCityCode: string;
   journeyDate: string;
-  journeyTime: string;
 };
 
 export type BusSearchResponse = {
@@ -71,7 +72,6 @@ export type BusSearchResponse = {
     };
 
     journeyDate: string;
-    journeyTime: string;
   };
 
   traceId?: string | number | null;
@@ -84,6 +84,7 @@ export type BusSearchResponse = {
 };
 
 export type BusProviderBalance = {
+  availableBalance: number | null;
   balance: number;
   creditLimit: number;
 };
@@ -138,9 +139,11 @@ export type SeatLayoutSeat = {
 
 
 export type SeatLayoutPayload = {
-  traceId: string;
-  srdvIndex: string;
+  traceId: string | number;
   resultIndex: string;
+  // Optional, but must be sent together.
+  boardingPointId?: string;
+  droppingPointId?: string;
 };
 
 
@@ -149,11 +152,13 @@ export type SeatLayoutResponse = {
 
   message: string;
 
-  traceId: string;
+  traceId: string | number;
 
-  srdvIndex: string;
+  srdvIndex?: string | null;
 
   resultIndex: string;
+
+  providerAvailableSeats?: number | string | null;
 
   paxIdRequired?: string | null;
 
@@ -164,6 +169,8 @@ export type SeatLayoutResponse = {
   seats: SeatLayoutSeat[];
 
   layout?: SeatLayoutSeat[][];
+
+  upperLayout?: SeatLayoutSeat[][];
 };
 
 /*
@@ -192,9 +199,7 @@ export type BoardingDroppingPoint = {
 
 
 export type BoardingDroppingPayload = {
-  traceId: string;
-
-  srdvIndex: string;
+  traceId: string | number;
 
   resultIndex: string;
 };
@@ -205,9 +210,9 @@ export type BoardingDroppingResponse = {
 
   message: string;
 
-  traceId: string;
+  traceId: string | number;
 
-  srdvIndex: string;
+  srdvIndex?: string | null;
 
   resultIndex: string;
 
@@ -231,10 +236,12 @@ export type BoardingDroppingResponse = {
 |--------------------------------------------------------------------------
 */
 
+// Mirrors the backend's validateBlockRequest: Email is mandatory, Gender is
+// "1" (male) or "2" (female), and exactly one LeadPassenger is true.
 export type BlockPassenger = {
 
   Title:
-    string;
+    "Mr" | "Mrs" | "Ms" | "Miss";
 
   FirstName:
     string;
@@ -243,10 +250,10 @@ export type BlockPassenger = {
     string;
 
   Gender:
-    string;
+    "1" | "2";
 
   Age:
-    string;
+    number;
 
   Email:
     string;
@@ -255,7 +262,7 @@ export type BlockPassenger = {
     string;
 
   LeadPassenger:
-    string;
+    boolean;
 
   IdNumber:
     string;
@@ -268,6 +275,18 @@ export type BlockPassenger = {
 
   SeatName:
     string;
+
+  GSTCompanyName?:
+    string | null;
+
+  GSTNumber?:
+    string | null;
+
+  GSTCompanyAddress?:
+    string | null;
+
+  GSTCompanyEmail?:
+    string | null;
 };
 
 
@@ -280,10 +299,7 @@ export type BlockPassenger = {
 export type BlockSeatPayload = {
 
   traceId:
-    string;
-
-  srdvIndex:
-    string;
+    string | number;
 
   resultIndex:
     string;
@@ -326,7 +342,7 @@ export type BlockSeatResponse = {
     string;
 
   srdvIndex:
-    string;
+    string | null;
 
   resultIndex:
     string;
@@ -438,6 +454,9 @@ export type VerifyBusPaymentPayload = {
 export class BusBookingApiError extends Error {
   status?: number;
   code?: string;
+  // Set by /cancel when the operator only allows cancelling every remaining
+  // seat together.
+  remainingSeatNames?: string[];
 
   constructor(message: string, status?: number, code?: string) {
     super(message);
@@ -549,6 +568,10 @@ export const getBusBalanceApi = async (): Promise<BusProviderBalanceResponse> =>
     throw new Error(result?.message || "Unable to fetch bus provider balance");
   }
 
+  const availableBalance =
+    result?.data?.availableBalance == null
+      ? NaN
+      : Number(result.data.availableBalance);
   const balance = Number(result?.data?.balance ?? result?.Balance);
   const creditLimit = Number(
     result?.data?.creditLimit ?? result?.data?.credit_limit ?? result?.CreditLimit
@@ -562,6 +585,7 @@ export const getBusBalanceApi = async (): Promise<BusProviderBalanceResponse> =>
     success: true,
     message: String(result?.message || "Bus provider balance fetched successfully"),
     data: {
+      availableBalance: Number.isFinite(availableBalance) ? availableBalance : null,
       balance,
       creditLimit,
     },
@@ -1005,9 +1029,6 @@ export const blockSeatApi =
 
         traceId:
           payload.traceId,
-
-        srdvIndex:
-          payload.srdvIndex,
 
         resultIndex:
           payload.resultIndex,
@@ -1742,22 +1763,39 @@ export type BusPopularRoute = {
   startingFare: number;
 };
 
-export type CancelBusSeatPayload = {
+export type CancelBusSeatsPayload = {
   order_ref: string;
-  seatName: string;
+  seatNames: string[];
   remarks: string;
 };
 
-export type CancelBusSeatResult = {
-  // false while the provider has not confirmed the cancellation yet.
+export type CancelBusSeatsResult = {
+  // true only when every requested seat was already cancelled; a new request
+  // is always confirmed later through the cancellation status endpoint.
   completed: boolean;
+  // false when the provider outcome is unknown and our team verifies it.
+  trackable: boolean;
   message: string;
-  refundAmount: number;
-  refundStatus: string;
+  cancelId: string | null;
+  status: string;
 };
 
-const toBusApiError = (error: any, fallback: string) =>
-  new BusBookingApiError(
+export type BusProviderCancellation = {
+  CancelId?: number | string;
+  Status?: string;
+  RefundStatus?: string;
+  RefundAmount?: number | string;
+  ErrorMessage?: string;
+  [key: string]: any;
+};
+
+export type BusCancellationStatus = {
+  cancellation: BusProviderCancellation | null;
+  terminal: boolean;
+};
+
+const toBusApiError = (error: any, fallback: string) => {
+  const apiError = new BusBookingApiError(
     Number(error?.response?.status) === 401
       ? "Your login session has expired. Please login again."
       : error?.response?.data?.message ||
@@ -1767,6 +1805,14 @@ const toBusApiError = (error: any, fallback: string) =>
     error?.response?.status,
     error?.response?.data?.code
   );
+
+  const remainingSeatNames = error?.response?.data?.remainingSeatNames;
+  if (Array.isArray(remainingSeatNames)) {
+    apiError.remainingSeatNames = remainingSeatNames.map(String);
+  }
+
+  return apiError;
+};
 
 export const getBusOrdersApi = async (
   page = 1,
@@ -1810,20 +1856,21 @@ export const getBusOrderDetailApi = async (
 
 /*
 |--------------------------------------------------------------------------
-| Cancel A Booked Seat
+| Cancel Booked Seats
 |--------------------------------------------------------------------------
 |
-| POST /api/busbooking/cancel   { order_ref, seatName, remarks }
+| POST /api/busbooking/cancel   { order_ref, seatNames, remarks }
 |
-| 200 -> cancelled, refund queued
-| 202 -> provider has not confirmed yet; the backend keeps tracking it
+| 200 -> every requested seat was already cancelled
+| 202 -> cancellation requested; poll /cancellation-status with the cancelId
+| 400 -> rejected; remainingSeatNames is set when all seats must go together
 |
 |--------------------------------------------------------------------------
 */
 
-export const cancelBusSeatApi = async (
-  payload: CancelBusSeatPayload
-): Promise<CancelBusSeatResult> => {
+export const cancelBusSeatsApi = async (
+  payload: CancelBusSeatsPayload
+): Promise<CancelBusSeatsResult> => {
   try {
     const response = await api.post(
       `${BUS_BOOKING_BASE_URL}/api/busbooking/cancel`,
@@ -1835,20 +1882,72 @@ export const cancelBusSeatApi = async (
 
     if (!result?.success) {
       throw new BusBookingApiError(
-        result?.message || "Unable to cancel bus seat",
+        result?.message || "Unable to cancel bus seats",
         response.status
       );
     }
 
+    const status = String(result?.data?.status || "");
+    const cancelId = result?.data?.cancelId;
+
     return {
       completed: response.status === 200,
-      message: String(result?.message || "Bus seat cancelled successfully"),
-      refundAmount: Number(result?.data?.refundAmount || 0),
-      refundStatus: String(result?.data?.refundStatus || "not_requested"),
+      trackable: cancelId != null && status !== "MANUAL_CHECK_REQUIRED",
+      message: String(result?.message || "Bus cancellation is in process"),
+      cancelId: cancelId == null ? null : String(cancelId),
+      status,
     };
   } catch (error: any) {
     if (error instanceof BusBookingApiError) throw error;
-    throw toBusApiError(error, "Unable to cancel bus seat");
+    throw toBusApiError(error, "Unable to cancel bus seats");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Provider Booking Details / Cancellation Status
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/booking-details       { order_ref }
+| POST /api/busbooking/cancellation-status   { order_ref, cancel_id }
+|
+| Both fetch the provider's booking details, and the backend applies any
+| cancellation and refund updates from them to the order before replying.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const syncBusBookingDetailsApi = async (
+  orderRef: string
+): Promise<void> => {
+  try {
+    await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/booking-details`,
+      { order_ref: orderRef },
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to refresh this bus booking");
+  }
+};
+
+export const getBusCancellationStatusApi = async (
+  orderRef: string,
+  cancelId: string
+): Promise<BusCancellationStatus> => {
+  try {
+    const response = await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/cancellation-status`,
+      { order_ref: orderRef, cancel_id: cancelId },
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return {
+      cancellation: response.data?.cancellation ?? null,
+      terminal: Boolean(response.data?.cancellationTerminal),
+    };
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to check the cancellation status");
   }
 };
 

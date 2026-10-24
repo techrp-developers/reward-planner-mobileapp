@@ -30,7 +30,8 @@ import {
   type StoredPassengerProfile,
 } from "../../utils/busBookingStorage";
 
-type Gender = "M" | "F" | "O";
+// The provider only accepts male ("1") or female ("2").
+type Gender = "M" | "F";
 
 type PassengerForm = {
   sourceProfileId: string;
@@ -93,17 +94,19 @@ const splitPassengerName = (fullName: string) => {
   };
 };
 
-const mapGenderToProvider = (gender: Gender) => {
-  switch (gender) {
-    case "M":
-      return "1";
-    case "F":
-      return "2";
-    case "O":
-      return "3";
-    default:
-      return "1";
+const mapGenderToProvider = (gender: Gender): BlockPassenger["Gender"] =>
+  gender === "F" ? "2" : "1";
+
+const FEMALE_TITLES: BlockPassenger["Title"][] = ["Mrs", "Ms", "Miss"];
+
+// The form has no title picker, so keep a saved female title when it still
+// matches the gender and otherwise derive one from it.
+const getProviderTitle = (passenger: PassengerForm): BlockPassenger["Title"] => {
+  if (passenger.gender === "M") {
+    return "Mr";
   }
+
+  return FEMALE_TITLES.find((title) => title === passenger.title) || "Ms";
 };
 
 const getInitials = (fullName: string) =>
@@ -121,7 +124,7 @@ const mapProfileToForm = (profile: StoredPassengerProfile): PassengerForm => ({
   firstName: profile.firstName ?? splitPassengerName(profile.fullName || "").firstName,
   lastName: profile.lastName ?? splitPassengerName(profile.fullName || "").lastName,
   age: profile.age || "",
-  gender: profile.gender || "M",
+  gender: profile.gender === "F" ? "F" : "M",
   email: profile.email || "",
   phone: profile.phone || "",
   idNumber: profile.idNumber || "",
@@ -174,7 +177,6 @@ export default function PassengerDetailsScreen() {
     boardingPoint,
     droppingPoint,
     traceId,
-    srdvIndex,
     resultIndex,
     isWomenBooking,
   } = route.params;
@@ -367,7 +369,16 @@ export default function PassengerDetailsScreen() {
         return false;
       }
 
-      if (passenger.email.trim() && !emailPattern.test(passenger.email.trim())) {
+      if (!passenger.email.trim()) {
+        showPopup({
+          title: "Passenger Details",
+          message: `Please enter email address for Passenger ${index + 1}.`,
+          variant: "warning",
+        });
+        return false;
+      }
+
+      if (!emailPattern.test(passenger.email.trim())) {
         showPopup({
           title: "Passenger Details",
           message: `Please enter a valid email address for Passenger ${index + 1}.`,
@@ -432,17 +443,17 @@ export default function PassengerDetailsScreen() {
       const passenger = passengers[index];
 
       return {
-        Title: passenger?.title || "Mr",
+        Title: getProviderTitle(passenger),
         FirstName: passenger?.firstName.trim() || "",
         LastName: passenger?.lastName.trim() || "",
         Gender: mapGenderToProvider(passenger?.gender || "M"),
-        Age: String(passenger?.age || ""),
-        Email: String(passenger?.email || ""),
+        Age: Number(passenger?.age || 0),
+        Email: String(passenger?.email || "").trim(),
         PhoneNo: String(passenger?.phone || ""),
-        LeadPassenger: index === 0 ? "true" : "false",
-        IdNumber: String(passenger?.idNumber || ""),
-        IdType: String(passenger?.idType || ""),
-        Address: String(passenger?.address || ""),
+        LeadPassenger: index === 0,
+        IdNumber: String(passenger?.idNumber || "").trim(),
+        IdType: String(passenger?.idType || "").trim(),
+        Address: String(passenger?.address || "").trim(),
         SeatName: String(seat),
       };
     });
@@ -457,7 +468,7 @@ export default function PassengerDetailsScreen() {
       return;
     }
 
-    if (!traceId || !srdvIndex || !resultIndex) {
+    if (!traceId || !resultIndex) {
       showPopup({
         title: "Booking Error",
         message: "Booking information is missing. Please search for the bus again.",
@@ -490,7 +501,6 @@ export default function PassengerDetailsScreen() {
 
     const payload = {
       traceId: String(traceId),
-      srdvIndex: String(srdvIndex),
       resultIndex: String(resultIndex),
       boardingPointId: String(boardingPoint.Id),
       droppingPointId: String(droppingPoint.Id),
@@ -561,7 +571,6 @@ export default function PassengerDetailsScreen() {
     passengers,
     resultIndex,
     selectedSeats,
-    srdvIndex,
     traceId,
     validatePassengers,
   ]);
@@ -727,7 +736,7 @@ export default function PassengerDetailsScreen() {
                   <View style={styles.genderField}>
                     <Text style={styles.fieldLabel}>*Gender</Text>
                     <View style={styles.genderRow}>
-                      {(["M", "F", "O"] as Gender[]).map((gender) => {
+                      {(["M", "F"] as Gender[]).map((gender) => {
                         const isActive = passenger.gender === gender;
 
                         return (
@@ -752,10 +761,7 @@ export default function PassengerDetailsScreen() {
                   </View>
                 </View>
 
-                <View style={styles.labelRow}>
-                  <Text style={styles.fieldLabel}>Email ID</Text>
-                  <Text style={styles.optionalLabel}>Optional</Text>
-                </View>
+                <Text style={styles.fieldLabel}>*Email ID</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
                     value={passenger.email}
@@ -1177,20 +1183,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   fieldLabel: {
     color: "#59535D",
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  optionalLabel: {
-    color: "#9C95A0",
-    fontSize: 12,
     fontWeight: "600",
     marginBottom: 8,
   },
