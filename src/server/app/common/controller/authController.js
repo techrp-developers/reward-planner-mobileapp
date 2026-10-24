@@ -61,6 +61,32 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     return digits;
   }
 
+  // Dummy/test accounts allowed to skip the real OTP during login/activation.
+  // Configure in .env:
+  //   OTP_BYPASS_IDENTIFIERS=test@example.com,9876543210  (emails and/or phones, comma-separated)
+  //   OTP_BYPASS_CODE=123456                              (the fixed code those accounts type in)
+  // Leave OTP_BYPASS_IDENTIFIERS empty in production to disable the bypass entirely.
+  const otpBypassIdentifiers = new Set(
+    (process.env.OTP_BYPASS_IDENTIFIERS || "")
+      .split(",")
+      .map((raw) => {
+        const value = raw.trim();
+        if (!value) return "";
+        return value.includes("@") ? normalizeEmail(value) : normalizePhone(value);
+      })
+      .filter(Boolean),
+  );
+
+  const OTP_BYPASS_CODE = String(process.env.OTP_BYPASS_CODE || "123456");
+
+  function isOtpBypass(otpKey, otp) {
+    return (
+      otpBypassIdentifiers.size > 0 &&
+      otpBypassIdentifiers.has(otpKey) &&
+      String(otp) === OTP_BYPASS_CODE
+    );
+  }
+
   function escapeVCardValue(value) {
     return String(value ?? "")
       .replace(/\\/g, "\\\\")
@@ -450,24 +476,27 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
+        // Whitelisted dummy/test accounts skip the real OTP lookup entirely.
+        if (!isOtpBypass(identity.otpKey, otp)) {
+          const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
 
-        if (attempt && attempt.attempt_count >= 5) {
-          return res.status(429).json({
-            success: false,
-            message: "Too many OTP attempts. Try again later.",
-          });
-        }
+          if (attempt && attempt.attempt_count >= 5) {
+            return res.status(429).json({
+              success: false,
+              message: "Too many OTP attempts. Try again later.",
+            });
+          }
 
-        const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
+          const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
 
-        if (!otpRecord) {
-          await AuthModel.incrementOtpAttempts(identity.otpKey);
+          if (!otpRecord) {
+            await AuthModel.incrementOtpAttempts(identity.otpKey);
 
-          return res.status(400).json({
-            success: false,
-            message: "Invalid or expired OTP",
-          });
+            return res.status(400).json({
+              success: false,
+              message: "Invalid or expired OTP",
+            });
+          }
         }
 
         const employee = await findEmployeeForActivation(identity);
