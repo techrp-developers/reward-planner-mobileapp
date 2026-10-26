@@ -15,6 +15,8 @@ function StickyBottomCTA({ children, bottomOffset = 0, onLayout, style }: Props)
     <View
       onLayout={onLayout}
       pointerEvents="box-none"
+
+      
       style={[styles.container, { bottom: bottomOffset }, style]}
     >
       {children}
