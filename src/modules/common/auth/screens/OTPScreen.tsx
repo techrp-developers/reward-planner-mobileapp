@@ -7,13 +7,15 @@ import { useAppTheme } from "../../../../theme/ThemeContext";
 import { AuthButton, AuthLayout, authStyles } from "../../components/AuthLayout";
 import { OTP_LENGTH, OTP_RESEND_COOLDOWN_SECONDS } from "../constants/otp";
 import { useOtpTimer } from "../hooks/useOtpTimer";
-import { authErrorMessage, emptyOtp, rateLimitDelay, updateOtpDigits } from "../utils/otpInput";
+import { authErrorMessage, emptyOtp, isUserInactiveError, rateLimitDelay, updateOtpDigits } from "../utils/otpInput";
+import { useAlert } from "../../../ecommerce/components/alerts";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "LoginOTP">;
 
 export default function OTPScreen({ route, navigation }: Props) {
   const { verifyLoginOtp, requestLoginOtp } = useAuth();
   const { theme, isDark } = useAppTheme();
+  const alert = useAlert();
   const { identifier, resendAvailableAt } = route.params;
   const isPhone = !identifier.includes("@");
   const destination = isPhone ? `+91 ${identifier.slice(0, 5)} ${identifier.slice(5)}` : identifier;
@@ -62,6 +64,10 @@ export default function OTPScreen({ route, navigation }: Props) {
       verified.current = true;
     } catch (failure) {
       if (!mounted.current) return;
+      if (isUserInactiveError(failure)) {
+        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        return;
+      }
       const retryAfter = rateLimitDelay(failure);
       if (retryAfter) {
         rateLimit.reset(retryAfter);
@@ -104,6 +110,10 @@ export default function OTPScreen({ route, navigation }: Props) {
       setNotice(isPhone ? "A new code was requested on WhatsApp. Use the latest code." : "A new code was requested by email. Use the latest code.");
     } catch (failure) {
       if (!mounted.current) return;
+      if (isUserInactiveError(failure)) {
+        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        return;
+      }
       const retryAfter = rateLimitDelay(failure);
       if (retryAfter) {
         cooldown.reset(retryAfter);

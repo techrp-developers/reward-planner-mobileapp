@@ -61,32 +61,6 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     return digits;
   }
 
-  // Dummy/test accounts allowed to skip the real OTP during login/activation.
-  // Configure in .env:
-  //   OTP_BYPASS_IDENTIFIERS=test@example.com,9876543210  (emails and/or phones, comma-separated)
-  //   OTP_BYPASS_CODE=123456                              (the fixed code those accounts type in)
-  // Leave OTP_BYPASS_IDENTIFIERS empty in production to disable the bypass entirely.
-  const otpBypassIdentifiers = new Set(
-    (process.env.OTP_BYPASS_IDENTIFIERS || "")
-      .split(",")
-      .map((raw) => {
-        const value = raw.trim();
-        if (!value) return "";
-        return value.includes("@") ? normalizeEmail(value) : normalizePhone(value);
-      })
-      .filter(Boolean),
-  );
-
-  const OTP_BYPASS_CODE = String(process.env.OTP_BYPASS_CODE || "123456");
-
-  function isOtpBypass(otpKey, otp) {
-    return (
-      otpBypassIdentifiers.size > 0 &&
-      otpBypassIdentifiers.has(otpKey) &&
-      String(otp) === OTP_BYPASS_CODE
-    );
-  }
-
   function escapeVCardValue(value) {
     return String(value ?? "")
       .replace(/\\/g, "\\\\")
@@ -151,6 +125,16 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     if (email) return AuthModel.findEmployeeByEmail(email);
     if (phone) return AuthModel.findEmployeeByPhone(phone);
     return null;
+  }
+
+  const USER_INACTIVE_MESSAGE = "User inactive. Please contact your HR.";
+
+  function sendUserInactive(res) {
+    return res.status(403).json({
+      success: false,
+      code: "USER_INACTIVE",
+      message: USER_INACTIVE_MESSAGE,
+    });
   }
 
   function sendActivationOtpNotifications({ email, employee, otp }) {
@@ -382,6 +366,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
           return res.json({
             success: true,
             message: "If your employee account is eligible, a code has been sent.",
@@ -429,6 +417,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
           return res.json({
             success: true,
             message: "If your employee account is eligible, a code has been sent.",
@@ -476,31 +468,32 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        // Whitelisted dummy/test accounts skip the real OTP lookup entirely.
-        if (!isOtpBypass(identity.otpKey, otp)) {
-          const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
+        const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
 
-          if (attempt && attempt.attempt_count >= 5) {
-            return res.status(429).json({
-              success: false,
-              message: "Too many OTP attempts. Try again later.",
-            });
-          }
+        if (attempt && attempt.attempt_count >= 5) {
+          return res.status(429).json({
+            success: false,
+            message: "Too many OTP attempts. Try again later.",
+          });
+        }
 
-          const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
+        const otpRecord = await AuthModel.verifyOTP(identity.otpKey, otp);
 
-          if (!otpRecord) {
-            await AuthModel.incrementOtpAttempts(identity.otpKey);
+        if (!otpRecord) {
+          await AuthModel.incrementOtpAttempts(identity.otpKey);
 
-            return res.status(400).json({
-              success: false,
-              message: "Invalid or expired OTP",
-            });
-          }
+          return res.status(400).json({
+            success: false,
+            message: "Invalid or expired OTP",
+          });
         }
 
         const employee = await findEmployeeForActivation(identity);
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
           return res.status(401).json({
             success: false,
             message: "Invalid or expired OTP",
@@ -517,12 +510,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             existingCustomer.deleted_at,
           );
 
-          if (!reactivated) {
-            return res.status(403).json({
-              success: false,
-              message: "Account inactive",
-            });
-          }
+          if (!reactivated) return sendUserInactive(res);
         }
 
         const { deviceId, deviceName } = readDeviceFields(req.body);
@@ -859,10 +847,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             user.deleted_at,
           );
 
-          if (!reactivated)
-            return res
-              .status(403)
-              .json({ success: false, message: "Account inactive" });
+          if (!reactivated) return sendUserInactive(res);
 
           user.status = 1;
         }
@@ -1749,11 +1734,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const randomThought =
           thoughts[Math.floor(Math.random() * thoughts.length)];
 
-        const [userInfo, todaySummary, birthdayEmployees, birthdayWishes] = await Promise.all([
+        const [userInfo, todaySummary, birthdayEmployees] = await Promise.all([
           AuthModel.getUserInfo(userId),
           FitnessService.getTodaySummary(userId),
           AuthModel.getTodayBirthdayEmployees(userId),
-          AuthModel.getTodayBirthdayWishesReceived(userId),
         ]);
 
         if (!userInfo) {
@@ -1774,7 +1758,6 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             },
             thought: randomThought,
             birthday_employees: birthdayEmployees || [],
-            birthday_wishes_received: birthdayWishes,
             visit_card: {
               qr_code_url: "/v1/auth/visit-card/qr",
               format: "vcard",
@@ -1788,22 +1771,6 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           success: false,
           message: "Failed to fetch user info",
         });
-      }
-    }
-
-    // Birthday wishes received today (lightweight poll for the dashboard celebration)
-    async getTodayBirthdayWishes(req, res) {
-      try {
-        res.set("Cache-Control", "no-store");
-        const userId = req.user?.user_id;
-        if (!userId) {
-          return res.status(401).json({ success: false, message: "Unauthorized user" });
-        }
-        const data = await AuthModel.getTodayBirthdayWishesReceived(userId);
-        return res.json({ success: true, data });
-      } catch (error) {
-        console.error("Get Birthday Wishes Error:", error);
-        return res.status(500).json({ success: false, message: "Failed to fetch birthday wishes" });
       }
     }
 

@@ -3,7 +3,11 @@ export const authErrorMessage = (error: unknown, fallback: string): string => {
   const failure = error as { response?: { data?: { message?: string } }; message?: string };
   return failure?.response?.data?.message || failure?.message || fallback;
 };
-export const rateLimitDelay = (error: unknown): number => {
+export const isUserInactiveError = (error: unknown): boolean => {
+  const failure = error as { response?: { data?: { code?: string } } };
+  return failure?.response?.data?.code === 'USER_INACTIVE';
+};
+export const rateLimitDelay =(error: unknown): number => {
   const failure = error as { response?: { status?: number; headers?: Record<string, string> } };
   if (failure?.response?.status !== 429) return 0;
   const value = failure.response.headers?.['retry-after'];

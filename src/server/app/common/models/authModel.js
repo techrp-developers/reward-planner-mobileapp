@@ -189,6 +189,20 @@ class authModel {
     return rows[0];
   }
 
+  // Employee that exists but was deactivated by HR.
+  async isEmployeeInactive({ email, phone }) {
+    if (!email && !phone) return false;
+
+    const [rows] = await db.execute(
+      email
+        ? `SELECT id FROM company_users WHERE email = ? AND status != 1 LIMIT 1`
+        : `SELECT id FROM company_users WHERE TRIM(contact) = ? AND status != 1 LIMIT 1`,
+      [email ? email.toLowerCase() : phone],
+    );
+
+    return rows.length > 0;
+  }
+
   async storeActivationOTP(email, otp) {
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     const hashedOtp = await bcrypt.hash(otp.toString(), 10);
@@ -628,28 +642,6 @@ class authModel {
       isSelf: Boolean(emp.is_self),
       wished: Boolean(emp.wished),
     }));
-  }
-
-  // Birthday wishes the user received today through chat (see chat sendBirthdayWish).
-  async getTodayBirthdayWishesReceived(userId) {
-    const [rows] = await db.execute(
-      `
-    SELECT u.name
-    FROM chat_members cm
-    INNER JOIN chat_messages m ON m.conversation_id = cm.conversation_id
-    INNER JOIN customer u ON u.user_id = m.sender_id
-    WHERE cm.user_id = ?
-      AND m.client_message_id = CONCAT('birthday-wish:', ?, ':', DATE_FORMAT(CURDATE(), '%Y-%m-%d'))
-      AND m.deleted_at IS NULL
-    ORDER BY m.message_id DESC
-    `,
-      [userId, userId],
-    );
-
-    return {
-      count: rows.length,
-      senders: rows.slice(0, 3).map((row) => row.name),
-    };
   }
 
   // Delete Customer — soft delete only. The account and its cart/wishlist/
