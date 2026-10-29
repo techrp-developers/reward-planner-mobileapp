@@ -96,6 +96,19 @@ OrderConfirmedScreen: {
   ItemCancellationDetails: {
     orderItemId: number;
   };
+  ItemReturnRequest: {
+    orderItemId: number;
+    orderId: number;
+    orderRef?: string;
+    productTitle?: string;
+    productMeta?: string;
+    canReturn: boolean;
+    canReplace: boolean;
+    windowEndsAt?: string | null;
+  };
+  ItemReturnDetails: {
+    orderItemId: number;
+  };
   EditProfile: undefined;
   Settings: undefined;
   Privacy: undefined;
