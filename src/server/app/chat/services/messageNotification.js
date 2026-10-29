@@ -1,39 +1,40 @@
 const db = require("../../../config/database");
-const { notifyUser } = require("../../common/utils/notification");
-
-const PREVIEW_LENGTH = 120;
-
-function messagePreview(message) {
-  if (message.message_type === "image") return "Sent a photo";
-  if (message.message_type === "file") return `Sent a file${message.attachment_name ? `: ${message.attachment_name}` : ""}`;
-  if (message.message_type === "poll") return `Poll: ${message.body || "New poll"}`;
-  const body = String(message.body || "").trim();
-  if (!body) return "You received a new message.";
-  return body.length > PREVIEW_LENGTH ? `${body.slice(0, PREVIEW_LENGTH - 1)}…` : body;
-}
+const { notifyUserAndWait } = require("../../common/utils/notification");
 
 async function notifyMessageRecipients(message) {
-  if (!message?.message_id || !message.conversation_id) return;
-  const [members] = await db.execute(
-    `SELECT user_id FROM chat_members
-     WHERE conversation_id = ? AND left_at IS NULL AND user_id <> ?`,
+  if (!message?.message_id || !message.conversation_id || !message.sender_id || message.deleted_at) return;
+
+  const [recipients] = await db.execute(
+    `SELECT DISTINCT m.user_id FROM chat_members m
+     JOIN chat_conversations conv ON conv.conversation_id = m.conversation_id
+     JOIN customer c ON c.user_id = m.user_id
+     JOIN company_users cu ON cu.id = c.company_user_id
+     WHERE m.conversation_id = ? AND m.user_id <> ? AND m.left_at IS NULL
+       AND c.status = 1 AND cu.status = 1 AND cu.company_id = conv.company_id`,
     [message.conversation_id, message.sender_id],
   );
-  const preview = messagePreview(message);
-  for (const member of members) {
-    notifyUser({
-      userId: member.user_id,
-      module: "common",
-      type: "chat_message",
-      title: message.sender_name || "New chat message",
-      message: preview,
-      reference_type: "none",
-      reference_id: message.conversation_id,
-      // One push per message per recipient, even if the sender retries with the same client_message_id.
-      idempotency_key: `chat:${message.message_id}:${member.user_id}`,
-      priority: "high",
-    }, "chat_message_notification");
-  }
+
+  const results = await Promise.allSettled(recipients.map(({ user_id }) => notifyUserAndWait({
+    userId: user_id,
+    module: "chat",
+    type: "chat_message",
+    title: message.sender_name || "New chat message",
+    message: String(message.body || "You received a new message").slice(0, 500),
+    icon: "message-circle",
+    reference_type: "conversation",
+    reference_id: String(message.conversation_id),
+    idempotency_key: `chat-message:${message.message_id}:${user_id}`,
+    action_url: "/notifications",
+    screen: "Notifications",
+    metadata: {
+      conversation_id: message.conversation_id,
+      message_id: message.message_id,
+      sender_user_id: message.sender_id,
+    },
+  })));
+  const failed = results.find((result) => result.status === "rejected");
+  if (failed) throw failed.reason;
+  return results;
 }
 
 module.exports = { notifyMessageRecipients };

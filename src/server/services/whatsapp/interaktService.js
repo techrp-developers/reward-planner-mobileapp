@@ -50,10 +50,35 @@ async function sendTemplateMessage({
     });
     return res.data;
   } catch (err) {
-    console.log("❌ Interakt 400 payload:", JSON.stringify(payload));
+    console.log("❌ Interakt request failed:", JSON.stringify(payload));
     console.log("❌ Interakt error response:", err.response?.status, err.response?.data);
     throw err;
   }
 }
 
-module.exports = { sendTemplateMessage };
+async function sendTextMessage({ phone, message, callbackData }) {
+  const fullPhoneNumber = normalizeIndianMobile(phone);
+  if (!fullPhoneNumber) throw new Error("INTERAKT_PHONE_INVALID");
+  if (!process.env.INTERAKT_API_KEY || !process.env.INTERAKT_BASE_URL) {
+    throw new Error("INTERAKT_CONFIG_MISSING");
+  }
+  // Same recipient shape as sendTemplateMessage, which is proven against this Interakt account.
+  const { data } = await axios.post(process.env.INTERAKT_BASE_URL, {
+    countryCode: "+91",
+    phoneNumber: fullPhoneNumber.slice(3),
+    ...(callbackData ? { callbackData } : {}),
+    type: "Text",
+    data: { message },
+  }, {
+    headers: { Authorization: `Basic ${process.env.INTERAKT_API_KEY}`, "Content-Type": "application/json" },
+    timeout: 15000,
+  });
+  if (data?.result !== true) {
+    const error = new Error("INTERAKT_MESSAGE_REJECTED");
+    error.providerData = data;
+    throw error;
+  }
+  return data;
+}
+
+module.exports = { sendTemplateMessage, sendTextMessage };
