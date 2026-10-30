@@ -5,9 +5,9 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 const PRIMARY = "#4F46E5";
 
 type Meridiem = "AM" | "PM";
-type Field = "hour" | "minute" | "meridiem";
+type Field = "hour" | "minute" | "second" | "meridiem";
 
-type ReminderParts = { hour: string; minute: string; meridiem: Meridiem };
+type ReminderParts = { hour: string; minute: string; second: string; meridiem: Meridiem };
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
@@ -18,20 +18,21 @@ export const parseReminderParts = (value?: string | null): ReminderParts => {
   const match = String(value || "")
     .trim()
     .replace(/[  ]/g, " ")
-    .match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)?$/i);
+    .match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?$/i);
 
   if (match) {
     let hour = Number(match[1]);
     const minute = Number(match[2]);
-    let meridiem = match[3]?.toUpperCase() as Meridiem | undefined;
+    const second = Number(match[3] || 0);
+    let meridiem = match[4]?.toUpperCase() as Meridiem | undefined;
 
     if (!meridiem) {
       meridiem = hour >= 12 ? "PM" : "AM";
       hour = hour % 12 || 12;
     }
 
-    if (hour >= 1 && hour <= 12 && minute <= 59) {
-      return { hour: String(hour), minute: String(minute).padStart(2, "0"), meridiem };
+    if (hour >= 1 && hour <= 12 && minute <= 59 && second <= 59) {
+      return { hour: String(hour), minute: String(minute).padStart(2, "0"), second: String(second).padStart(2, "0"), meridiem };
     }
   }
 
@@ -40,21 +41,24 @@ export const parseReminderParts = (value?: string | null): ReminderParts => {
   return {
     hour: String(hours24 % 12 || 12),
     minute: String(soon.getMinutes()).padStart(2, "0"),
+    second: "00",
     meridiem: hours24 >= 12 ? "PM" : "AM",
   };
 };
 
-export const formatReminderParts = ({ hour, minute, meridiem }: ReminderParts) =>
-  `${hour}:${minute} ${meridiem}`;
+export const formatReminderParts = ({ hour, minute, second, meridiem }: ReminderParts, showSeconds = false) =>
+  `${hour}:${minute}${showSeconds ? `:${second}` : ""} ${meridiem}`;
 
 type Props = {
   value: string;
   onChange: (value: string) => void;
   isDark: boolean;
   textColor: string;
+  showSeconds?: boolean;
+  previewLabel?: string;
 };
 
-const ReminderTimePicker = ({ value, onChange, isDark, textColor }: Props) => {
+const ReminderTimePicker = ({ value, onChange, isDark, textColor, showSeconds = false, previewLabel = "Alarm at" }: Props) => {
   const [openField, setOpenField] = useState<Field | null>(null);
   const parts = useMemo(() => parseReminderParts(value), [value]);
 
@@ -67,7 +71,7 @@ const ReminderTimePicker = ({ value, onChange, isDark, textColor }: Props) => {
   };
 
   const select = (field: Field, option: string) => {
-    onChange(formatReminderParts({ ...parts, [field]: option }));
+    onChange(formatReminderParts({ ...parts, [field]: option }, showSeconds));
     setOpenField(null);
   };
 
@@ -131,10 +135,11 @@ const ReminderTimePicker = ({ value, onChange, isDark, textColor }: Props) => {
       <View style={styles.row}>
         {renderDropdown("hour", "Hour", HOURS)}
         {renderDropdown("minute", "Minute", MINUTES)}
+        {showSeconds && renderDropdown("second", "Second", MINUTES)}
         {renderDropdown("meridiem", "AM / PM", MERIDIEMS)}
       </View>
       <Text style={[styles.preview, { color: colors.label }]}>
-        Alarm at <Text style={{ color: textColor, fontWeight: "700" }}>{formatReminderParts(parts)}</Text>
+        {previewLabel} <Text style={{ color: textColor, fontWeight: "700" }}>{formatReminderParts(parts, showSeconds)}</Text>
       </Text>
     </View>
   );
@@ -158,7 +163,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

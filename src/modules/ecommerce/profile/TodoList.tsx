@@ -103,28 +103,6 @@ const getDayName = (date: Date) => {
   return date.toLocaleDateString("en-US", { weekday: "short" });
 };
 
-const buildTimeOptions = () => {
-  const options: string[] = [];
-
-  for (let hour = 6; hour <= 23; hour++) {
-    ["00", "30"].forEach(min => {
-      const date = new Date();
-      date.setHours(hour);
-      date.setMinutes(Number(min));
-
-      options.push(
-        date.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
-      );
-    });
-  }
-
-  return options;
-};
-
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
   const handleFooterPress = useCallback((tab: TabKey) => {
@@ -159,6 +137,7 @@ const TodoListScreen = () => {
   const [alarmModalVisible, setAlarmModalVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [timeTarget, setTimeTarget] = useState<TimeTarget>("start");
+  const [draftTime, setDraftTime] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState("");
@@ -171,7 +150,6 @@ const TodoListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const timeOptions = useMemo(() => buildTimeOptions(), []);
   const themed = useMemo(
     () =>
       StyleSheet.create({
@@ -613,6 +591,7 @@ const TodoListScreen = () => {
 
   const openTimePicker = (target: TimeTarget) => {
     setTimeTarget(target);
+    setDraftTime(formatReminderParts(parseReminderParts(target === "start" ? startTime : endTime), true));
     setTimePickerVisible(true);
   };
 
@@ -1148,31 +1127,33 @@ const TodoListScreen = () => {
         </View>
       </Modal>
 
-      <Modal visible={timePickerVisible} transparent animationType="fade">
+      <Modal visible={timePickerVisible} transparent animationType="fade" onRequestClose={() => setTimePickerVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.timePickerModal, themed.surface]}>
             <Text style={[styles.modalTitle, themed.text]}>
               Select {timeTarget === "start" ? "Start" : "End"} Time
             </Text>
 
-            <ScrollView style={styles.timeList}>
-              {timeOptions.map(item => (
-                <TouchableOpacity
-                  key={item}
-                  style={[styles.timeOption, themed.divider]}
-                  onPress={() => selectTime(item)}
-                >
-                  <Text style={[styles.timeOptionText, themed.text]}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <ReminderTimePicker
+              value={draftTime}
+              onChange={setDraftTime}
+              isDark={isDark}
+              textColor={theme.text}
+              showSeconds
+              previewLabel={timeTarget === "start" ? "Starts at" : "Ends at"}
+            />
 
-            <TouchableOpacity
-              style={[styles.cancelFullButton, themed.softButton]}
-              onPress={() => setTimePickerVisible(false)}
-            >
-              <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setTimePickerVisible(false)}
+              >
+                <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={() => selectTime(draftTime)}>
+                <Text style={styles.saveText}>Set Time</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

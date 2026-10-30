@@ -8,10 +8,10 @@ const {
   deleteReminderScheduleByTodoIds,
 } = require("../../../services/Todo/todoReminderService");
 
-function formatTodoTime(value) {
+function formatTodoTime(value, showSeconds = false) {
   if (!value) return null;
 
-  const match = String(value).match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  const match = String(value).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (!match) return value;
 
   const hours24 = Number(match[1]);
@@ -19,7 +19,7 @@ function formatTodoTime(value) {
   const meridiem = hours24 >= 12 ? "PM" : "AM";
   const hours12 = hours24 % 12 || 12;
 
-  return `${hours12}:${minutes} ${meridiem}`;
+  return `${hours12}:${minutes}${showSeconds ? `:${match[3] || "00"}` : ""} ${meridiem}`;
 }
 
 function normalizeTodoTime(value) {
@@ -192,8 +192,8 @@ function resolveReminderEntries(payload, baseStartTime, fallbackReminderInputs =
 }
 
 const formatTodoForFrontend = (todo) => {
-  const startTime = formatTodoTime(todo.start_time);
-  const endTime = formatTodoTime(todo.end_time);
+  const startTime = formatTodoTime(todo.start_time, true);
+  const endTime = formatTodoTime(todo.end_time, true);
   const reminder = formatTodoTime(todo.reminder_time);
 
   return {
