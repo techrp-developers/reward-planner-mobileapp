@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1022648603789",
-    "project_id": "rewardplanners-ebbe4",
-    "storage_bucket": "rewardplanners-ebbe4.firebasestorage.app"
+    "project_number": "1072834182730",
+    "project_id": "reward-planners-2324d",
+    "storage_bucket": "reward-planners-2324d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1022648603789:android:16c83d2901b84bf2593ec4",
+        "mobilesdk_app_id": "1:1072834182730:android:333b39b619d5df456cf0b3",
         "android_client_info": {
           "package_name": "com.rewardsplanners"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCCIqXWTUthHpRpUdfkVm8URK18VXgQ9yE"
+          "current_key": "AIzaSyDsBjPiZ3YjPeucGbdL5AZnTLsGE2gcXUw"
         }
       ],
       "services": {
