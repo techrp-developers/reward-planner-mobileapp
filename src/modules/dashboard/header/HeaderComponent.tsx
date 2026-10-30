@@ -16,7 +16,10 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import { useQuery } from '@tanstack/react-query';
 import { useGlobalSearch } from './useGlobalSearch';
+import { useAuth } from '../../common/auth/context/AuthContext';
+import { getNotificationBadge } from '../notification/NotificationAPI';
 import type { SearchData } from '../api/GlobalSearchAPI';
 import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import { rs } from '../../../utils/responsive';
@@ -80,6 +83,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onSearchOverlayChange,
 }) => {
   const { isDark }   = useAppTheme();
+  const { isAuthenticated } = useAuth();
+  // Same query key/options as the ecommerce Navbar, so both bells share one
+  // cached request and every push/read invalidation updates them together.
+  // This is the general notification count only, never chat unread messages.
+  const { data: notificationBadge } = useQuery({
+    queryKey: ['notification', 'badge'],
+    queryFn: getNotificationBadge,
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+  const unreadNotifications = notificationBadge?.success ? notificationBadge.count : 0;
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery,  setSearchQuery]  = useState('');
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -232,8 +246,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             ) : (
               <View style={styles.logoPill}><MaterialCommunityIcons name="domain" size={rs(23)} color="#6A00FF" /></View>
             )}
-            <TouchableOpacity onPress={onNotificationPress} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel="Notifications" activeOpacity={0.75}>
+            <TouchableOpacity onPress={onNotificationPress} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'} activeOpacity={0.75}>
               <MaterialCommunityIcons name="bell-outline" size={rs(21)} color={tk.searchTextColor} />
+              {unreadNotifications > 0 ? (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           </View>
           ) : (
@@ -298,6 +317,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: rs(2),
+    right: rs(1),
+    minWidth: rs(17),
+    height: rs(17),
+    paddingHorizontal: rs(4),
+    borderRadius: rs(9),
+    backgroundColor: '#DC2626',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: rs(9),
+    fontWeight: '800',
   },
   logoPill: {
     width: rs(64),

@@ -37,7 +37,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:supportsRtl="true">
 
         <!-- Google Maps API key - replace with your key from Google Cloud Console -->
@@ -49,9 +49,14 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="reward_planners_general"
             tools:replace="android:value" />
+        <!-- Status-bar icons must be monochrome; the launcher icon renders as a blank square. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_stat_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent"
+            tools:replace="android:resource" />
 
         <!-- Main Activity -->
         <activity

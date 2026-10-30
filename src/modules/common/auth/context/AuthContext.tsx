@@ -17,6 +17,8 @@ import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
 import { secureDeleteItem, secureGetItem, secureSetItem } from "../services/secureStorage";
 import { chatSocket } from "../../../chat/services/chatSocket";
+import { getPushTokenForLogout } from "../../notifications/pushRegistration";
+import { resetPushSession } from "../../notifications/pushSession";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -144,6 +146,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await Promise.all([
       clearAuthToken(),
       secureDeleteItem(REFRESH_TOKEN_KEY),
+      resetPushSession(),
     ]);
   }, [updateAccessToken]);
 
@@ -194,15 +197,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const requestLoginOtp = useCallback(async (identifier: string) => {
     setLoading(true);
     try {
+      // Logcat is readable by anything on adb: never log the raw phone/email or the response body.
+      const maskedLogin = identifier.length > 4 ? `***${identifier.slice(-4)}` : "***";
       if (__DEV__) {
         console.log("[Auth] Request login OTP:", {
           url: `${API_BASE_URL}/v1/auth/request-otp`,
-          login: identifier,
+          login: maskedLogin,
         });
       }
       const response = await api.post("/v1/auth/request-otp", { login: identifier });
       if (__DEV__) {
-        console.log("[Auth] Request login OTP success:", response.data);
+        console.log("[Auth] Request login OTP success for", maskedLogin);
       }
       return response.data;
     } finally {
@@ -389,10 +394,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
 
     try {
-      const refreshToken = await secureGetItem(REFRESH_TOKEN_KEY);
+      const [refreshToken, fcmToken] = await Promise.all([
+        secureGetItem(REFRESH_TOKEN_KEY),
+        getPushTokenForLogout(),
+      ]);
 
+      // With fcm_token the backend unlinks only this device; without it, it
+      // would sign every one of the user's devices out of push.
       await api.post("/v1/auth/logout", {
         refreshToken: refreshToken || undefined,
+        fcm_token: fcmToken || undefined,
       });
     } catch {
       // logout local session even if API fails

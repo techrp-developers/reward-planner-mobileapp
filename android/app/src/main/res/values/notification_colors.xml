@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Accent tint for the notification icon/app name in the tray. Matches the
+         in-app primary purple and stays readable on light and dark shades. -->
+    <color name="notification_accent">#6D5AE6</color>
+</resources>

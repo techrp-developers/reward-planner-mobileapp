@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -23,10 +23,25 @@ import {
   getMyNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  NOTIFICATION_PAGE_SIZE,
+  reportNotificationOpened,
   type NotificationItem,
 } from "./NotificationAPI";
+import { queryClient } from "../../../query/queryClient";
+import { resolveNotificationTarget } from "../../common/notifications/notificationRouting";
+import { subscribeNotificationsChanged } from "../../common/notifications/notificationEvents";
+import { openConversationIfOwned } from "../../common/notifications/chatNotificationTarget";
 
 type Nav = NativeStackNavigationProp<any>;
+
+// Keeps the navbar bell in step with changes made on this screen.
+const refreshBellBadge = () =>
+  queryClient.invalidateQueries({ queryKey: ["notification", "badge"] });
+
+const mergeById = (current: NotificationItem[], next: NotificationItem[]) => {
+  const seen = new Set(current.map(item => item.notification_id));
+  return [...current, ...next.filter(item => !seen.has(item.notification_id))];
+};
 
 const ICON_MAP: Record<string, string> = {
   "shopping-bag": "shopping-outline",
@@ -111,6 +126,11 @@ function Notification() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [badgeCount, setBadgeCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Only the latest list request may write state, so a slow older response
+  // cannot overwrite newer data (e.g. focus reload racing a push refresh).
+  const requestIdRef = useRef(0);
   const themed = useMemo(
     () =>
       StyleSheet.create({
@@ -135,6 +155,7 @@ function Notification() {
   );
 
   const loadNotifications = useCallback(async (refresh = false) => {
+    const requestId = ++requestIdRef.current;
     if (refresh) setRefreshing(true);
     else setLoading(true);
     setError("");
@@ -144,31 +165,73 @@ function Notification() {
         getMyNotifications(),
         getNotificationBadge(),
       ]);
+      if (requestId !== requestIdRef.current) return;
       const fetched = notificationsRes.success ? notificationsRes.data : [];
 
       setNotifications(fetched);
+      setHasMore(fetched.length >= NOTIFICATION_PAGE_SIZE);
       setBadgeCount(
         badgeRes.success ? badgeRes.count : fetched.filter(isUnread).length
       );
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) return;
       setError(err?.message || "Failed to load notifications");
       setNotifications([]);
+      setHasMore(false);
       setBadgeCount(0);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  const loadMoreNotifications = useCallback(async () => {
+    const lastId = notifications[notifications.length - 1]?.notification_id;
+    if (!hasMore || loadingMore || loading || refreshing || !lastId) return;
+
+    const requestId = requestIdRef.current;
+    setLoadingMore(true);
+    try {
+      const res = await getMyNotifications({ beforeId: lastId });
+      if (requestId !== requestIdRef.current) return;
+      const page = res.success ? res.data : [];
+      const merged = mergeById(notifications, page);
+      setNotifications(merged);
+      // Older backends ignore before_id and resend page one; stop when nothing new arrives.
+      setHasMore(page.length >= NOTIFICATION_PAGE_SIZE && merged.length > notifications.length);
+    } catch {
+      // Keep what is already shown; the next scroll to the end retries.
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loading, loadingMore, notifications, refreshing]);
 
   useFocusEffect(
     useCallback(() => {
       loadNotifications();
+      // A push received while this screen is open should appear without a manual refresh.
+      return subscribeNotificationsChanged(() => loadNotifications(true));
     }, [loadNotifications])
   );
 
   const handleNotificationPress = (item: NotificationItem) => {
-    const actionUrl = String(item.action_url || "").trim();
-    const referenceId = String(item.reference_id || "").trim();
+    const target = resolveNotificationTarget({
+      module: item.module || "",
+      type: item.type || "",
+      referenceType: String(item.reference_type || ""),
+      referenceId: String(item.reference_id || ""),
+      actionUrl: String(item.action_url || ""),
+      screen: "",
+      metadata: item.metadata,
+    });
+
+    reportNotificationOpened(item.notification_id, {
+      app_state: "inbox",
+      outcome: target.isFallback ? "fallback" : "opened_target",
+      destination_type: target.destinationType,
+    }).catch(() => undefined);
 
     if (isUnread(item)) {
       setNotifications(prev =>
@@ -179,38 +242,18 @@ function Notification() {
         )
       );
       setBadgeCount(prev => Math.max(0, prev - 1));
-      markNotificationAsRead(item.notification_id).catch(() => loadNotifications(true));
+      markNotificationAsRead(item.notification_id)
+        .then(refreshBellBadge)
+        .catch(() => loadNotifications(true));
     }
 
-    if (actionUrl === "/wallet") {
-      navigation.navigate("WalletHistory");
-      return;
-    }
-
-    const ecommerceOrderMatch = actionUrl.match(/\/orders\/order-details\/(\d+)/);
-    if (ecommerceOrderMatch?.[1]) {
-      navigation.navigate("OrderConfirmedScreen", {
-        order_id: Number(ecommerceOrderMatch[1]),
-      });
-      return;
-    }
-
-    const serviceOrderMatch = actionUrl.match(/\/service-orders\/([^/]+)/);
-    const serviceDocsMatch = actionUrl.match(
-      /\/service-order-documents\/parent-documents\/([^/]+)/
-    );
-    const parentOrderId = serviceOrderMatch?.[1] || serviceDocsMatch?.[1];
-
-    if (parentOrderId || item.reference_type === "service_order") {
-      navigation.navigate("ServiceStack", {
-        screen: "ServiceOrderDetail",
-        params: { parent_order_id: parentOrderId || referenceId },
-      });
-      return;
-    }
-
-    if (actionUrl === "/fitness") {
-      navigation.navigate("RewardStack");
+    // Unknown destinations resolve to this inbox, so there is nowhere to go.
+    const route: string = target.route;
+    if (route !== "Notification") navigation.navigate(route, target.params);
+    if (target.conversationId) {
+      openConversationIfOwned(target.conversationId, (next, params) =>
+        navigation.navigate(next, params),
+      ).catch(() => undefined);
     }
   };
 
@@ -227,6 +270,7 @@ function Notification() {
 
     try {
       await markAllNotificationsAsRead();
+      refreshBellBadge();
     } catch {
       setNotifications(previousNotifications);
       setBadgeCount(previousBadgeCount);
@@ -256,6 +300,7 @@ function Notification() {
 
             try {
               await deleteNotification(item.notification_id);
+              if (isUnread(item)) refreshBellBadge();
             } catch {
               setNotifications(previousNotifications);
               setBadgeCount(previousBadgeCount);
@@ -360,6 +405,13 @@ function Notification() {
           renderItem={renderNotification}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onEndReached={loadMoreNotifications}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator style={styles.footerLoader} color="#6D5AE6" />
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -393,6 +445,15 @@ function Notification() {
                       : "You are all caught up"}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Notification settings"
+                  activeOpacity={0.78}
+                  style={[styles.summaryIcon, styles.settingsButton]}
+                  onPress={() => navigation.navigate("NotificationSettings")}
+                >
+                  <MaterialCommunityIcons name="cog-outline" size={21} color="#FFFFFF" />
+                </TouchableOpacity>
               </LinearGradient>
               {notifications.length > 0 ? (
                 <View style={styles.sectionHeader}>
@@ -666,5 +727,12 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "700",
+  },
+  footerLoader: {
+    paddingVertical: 14,
+  },
+  settingsButton: {
+    marginRight: 0,
+    marginLeft: 10,
   },
 });

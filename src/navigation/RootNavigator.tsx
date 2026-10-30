@@ -5,6 +5,8 @@ import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { checkAppVersion } from "../modules/common/versionupdate/checkAppVersion";
 import { AppUpdateModal } from "../modules/common/versionupdate/AppUpdateModal";
 import { RewardModal } from "../modules/common/reward/RewardModal";
+import { shouldOfferPermissionPrompt } from "../modules/common/notifications/pushPermission";
+import { NotificationPermissionPrompt } from "../modules/common/notifications/NotificationPermissionPrompt";
 
 // import Dashbord from "../modules/dashboard/dashboard";
 import { StepTrackerProvider } from "../modules/step_counter/context/StepTrackerContext";
@@ -41,6 +43,7 @@ export type AppStackParamList = {
   GlobalSearchScreen: undefined;
   TrackOrders: undefined;
   Notification: undefined;
+  NotificationSettings: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
@@ -288,7 +291,13 @@ function AppNavigator() {
           require("../modules/dashboard/notification/Notification").default
         }
       />
-      
+      <AppStack.Screen
+        name="NotificationSettings"
+        getComponent={() =>
+          require("../modules/dashboard/notification/NotificationSettings").default
+        }
+      />
+
 
     </AppStack.Navigator>
     </StepTrackerProvider>
@@ -376,6 +385,26 @@ export default function RootNavigator() {
   const showRewardModal =
     !showSplash && biometricCleared && isAuthenticated && termsAccepted === true && firstLoginReward !== null;
 
+  // Explain notifications only once the user is inside the app, never over
+  // Splash/Terms/biometric gates, the first-login reward or an update notice.
+  const canPromptForNotifications =
+    !showSplash && biometricCleared && isAuthenticated && termsAccepted === true &&
+    firstLoginReward === null && !versionModal.visible;
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  useEffect(() => {
+    if (!canPromptForNotifications) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      shouldOfferPermissionPrompt()
+        .then(offer => { if (!cancelled && offer) setShowPermissionPrompt(true); })
+        .catch(() => undefined);
+    }, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [canPromptForNotifications]);
+
   const navigator = showSplash ? (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
       <RootStack.Screen name="Splash" component={SplashScreen} />
@@ -436,6 +465,10 @@ export default function RootNavigator() {
         visible={showRewardModal}
         points={firstLoginReward ?? 0}
         onClose={markFirstLoginRewardShown}
+      />
+      <NotificationPermissionPrompt
+        visible={showPermissionPrompt && canPromptForNotifications}
+        onDone={() => setShowPermissionPrompt(false)}
       />
     </>
   );

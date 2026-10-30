@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { PermissionsAndroid, Platform } from "react-native";
+import { useEffect, useRef } from "react";
+import { AppState } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 import {
   getInitialNotification,
   getMessaging,
@@ -7,140 +8,149 @@ import {
   onMessage,
   onNotificationOpenedApp,
   onTokenRefresh,
-  registerDeviceForRemoteMessages,
-  type RemoteMessage,
 } from "@react-native-firebase/messaging";
-import notifee, { AndroidImportance, EventType } from "@notifee/react-native";
-import { getApps } from "@react-native-firebase/app";
-import { useNavigation } from "@react-navigation/native";
-import api from "../auth/api/axios";
+import notifee, { EventType } from "@notifee/react-native";
 import { useAuth } from "../auth/context/AuthContext";
-import { chatSocket } from "../../chat/services/chatSocket";
+import { isAppStackMounted, navigationRef } from "../../../navigation/navigationRef";
+import {
+  getRuntimeFirebaseProjectId,
+  isFirebaseConfigured,
+  isPrimaryFirebaseProject,
+  maskToken,
+} from "./pushConfig";
+import { ensureNotificationChannels } from "./pushDisplay";
+import { handleForegroundMessage, queueLocalOpen, queueRemoteOpen } from "./pushHandlers";
+import {
+  performNotificationOpen,
+  setActivePushUser,
+  subscribePendingOpen,
+  takePendingOpen,
+} from "./pushNavigation";
+import { pushRegistrar } from "./pushRegistration";
+import { notifyNotificationsChanged } from "./notificationEvents";
 
-const CHANNEL_ID = "reward_planners_general";
+const warn = (label: string) => (error: unknown) =>
+  __DEV__ && console.warn(`[Push] ${label}`, error);
 
-const openNotificationCenter = (navigation: any) => {
-  try {
-    navigation.navigate("Notification");
-  } catch (error) {
-    __DEV__ && console.warn("[Push] Unable to open notification screen", error);
-  }
-};
-
-const syncToken = async (token: string) => {
-  if (!token) return;
-  await api.post("/v1/auth/update-fcm-token", {
-    fcm_token: token,
-    device_platform: Platform.OS,
-  });
-};
-
-const displayForegroundNotification = async (
-  message: RemoteMessage,
-) => {
-  const title = message.notification?.title || message.data?.title || "Reward Planners";
-  const body = message.notification?.body || message.data?.message || "You have a new notification";
-
-  await notifee.displayNotification({
-    title: String(title),
-    body: String(body),
-    data: message.data,
-    android: {
-      channelId: CHANNEL_ID,
-      importance: AndroidImportance.HIGH,
-      pressAction: { id: "default" },
-      smallIcon: "ic_launcher",
-      sound: "default",
-    },
-    ios: {
-      sound: "default",
-      foregroundPresentationOptions: { sound: true, banner: true, list: true, badge: true },
-    },
-  });
-};
-
+// Single owner of every push listener in the app. Mounted once inside the
+// NavigationContainer; screens must not register FCM/Notifee listeners.
 export default function PushNotificationManager() {
-  const { isAuthenticated } = useAuth();
-  const navigation = useNavigation<any>();
-  const initialNotificationHandled = useRef(false);
-  const firebaseMessaging = useMemo(
-    () => (getApps().length > 0 ? getMessaging() : null),
-    [],
-  );
+  const { user, isAuthenticated, isInitializing, termsAccepted } = useAuth();
+  const userId = isAuthenticated ? user?.user_id ?? null : null;
+  const firebaseReady = isFirebaseConfigured();
+  const initialChecked = useRef(false);
 
   useEffect(() => {
-    notifee.createChannel({
-      id: CHANNEL_ID,
-      name: "General notifications",
-      importance: AndroidImportance.HIGH,
-      vibration: true,
-      sound: "default",
-    }).catch(error => __DEV__ && console.warn("[Push] Channel setup failed", error));
+    ensureNotificationChannels().catch(warn("Channel setup failed"));
 
-    if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
-        .catch(error => __DEV__ && console.warn("[Push] Permission request failed", error));
+    if (__DEV__) {
+      const projectId = getRuntimeFirebaseProjectId();
+      console.log(`[Push] Firebase project: ${projectId ?? "not configured"}`);
+      if (projectId && !isPrimaryFirebaseProject(projectId)) {
+        console.warn("[Push] google-services.json is not the primary Firebase project");
+      }
+      // QA aid: proves token retrieval works before login. Masked; never the full token.
+      if (projectId) {
+        getToken(getMessaging())
+          .then(token => console.log(`[Push] FCM token available: ${maskToken(token)}`))
+          .catch(error => console.warn("[Push] FCM token unavailable", error?.message || error));
+      }
     }
   }, []);
 
+  // Register this device for the signed-in user; re-runs on account switch.
   useEffect(() => {
-    if (!isAuthenticated || !firebaseMessaging) return;
-
-    let active = true;
-    registerDeviceForRemoteMessages(firebaseMessaging)
-      .then(() => getToken(firebaseMessaging))
-      .then(token => active && syncToken(token))
-      .catch(error => __DEV__ && console.warn("[Push] Token registration failed", error));
-
-    const unsubscribeRefresh = onTokenRefresh(firebaseMessaging, token => {
-      syncToken(token).catch(error =>
-        __DEV__ && console.warn("[Push] Token refresh sync failed", error),
-      );
-    });
-
-    return () => {
-      active = false;
-      unsubscribeRefresh();
-    };
-  }, [firebaseMessaging, isAuthenticated]);
-
-  useEffect(() => {
-    if (!firebaseMessaging) return;
-
-    const unsubscribeForeground = onMessage(firebaseMessaging, message => {
-      // The push can arrive even when the chat socket is down; refresh open chat screens.
-      if (message.data?.type === "chat_message") chatSocket.requestResync();
-      displayForegroundNotification(message).catch(error =>
-        __DEV__ && console.warn("[Push] Foreground display failed", error),
-      );
-    });
-
-    const unsubscribeOpened = onNotificationOpenedApp(firebaseMessaging, () => {
-      openNotificationCenter(navigation);
-    });
-
-    const unsubscribeNotifee = notifee.onForegroundEvent(({ type }) => {
-      if (type === EventType.PRESS) openNotificationCenter(navigation);
-    });
-
-    if (!initialNotificationHandled.current) {
-      initialNotificationHandled.current = true;
-      getInitialNotification(firebaseMessaging).then(message => {
-        if (message) setTimeout(() => openNotificationCenter(navigation), 250);
-      });
-      notifee.getInitialNotification().then(initial => {
-        if (initial?.notification) {
-          setTimeout(() => openNotificationCenter(navigation), 250);
-        }
-      });
+    setActivePushUser(userId);
+    if (!firebaseReady || userId === null) {
+      pushRegistrar.stop();
+      return;
     }
+
+    pushRegistrar.start(userId);
+    const unsubscribeRefresh = onTokenRefresh(getMessaging(), token =>
+      pushRegistrar.handleTokenRefresh(token),
+    );
+    return unsubscribeRefresh;
+  }, [firebaseReady, userId]);
+
+  useEffect(() => {
+    if (!firebaseReady) return;
+    const messaging = getMessaging();
+
+    const unsubscribeForeground = onMessage(messaging, message => {
+      handleForegroundMessage(message).catch(warn("Foreground display failed"));
+    });
+    const unsubscribeOpened = onNotificationOpenedApp(messaging, message => {
+      queueRemoteOpen(message, "background");
+    });
+    // Background presses are handled by notifee.onBackgroundEvent in index.js.
+    const unsubscribeNotifee = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.PRESS) queueLocalOpen(detail.notification, "foreground");
+    });
 
     return () => {
       unsubscribeForeground();
       unsubscribeOpened();
       unsubscribeNotifee();
     };
-  }, [firebaseMessaging, navigation]);
+  }, [firebaseReady]);
+
+  // Cold start from a tap: wait for session restore so the tap is attributed
+  // to the right user (or to nobody) before it is queued.
+  useEffect(() => {
+    if (!firebaseReady || isInitializing || initialChecked.current) return;
+    initialChecked.current = true;
+
+    getInitialNotification(getMessaging())
+      .then(message => queueRemoteOpen(message, "terminated"))
+      .catch(warn("Initial FCM notification failed"));
+    notifee
+      .getInitialNotification()
+      .then(initial => queueLocalOpen(initial?.notification, "terminated"))
+      .catch(warn("Initial local notification failed"));
+  }, [firebaseReady, isInitializing]);
+
+  // Open queued taps once the authenticated App stack is actually mounted.
+  const canOpen = !isInitializing && isAuthenticated && termsAccepted === true;
+  useEffect(() => {
+    if (!canOpen || userId === null) return;
+
+    const tryOpen = () => {
+      if (!isAppStackMounted()) return;
+      const open = takePendingOpen(userId);
+      if (open) performNotificationOpen(open);
+    };
+
+    tryOpen();
+    const unsubscribePending = subscribePendingOpen(tryOpen);
+    const unsubscribeState = navigationRef.addListener("state", tryOpen);
+    return () => {
+      unsubscribePending();
+      unsubscribeState();
+    };
+  }, [canOpen, userId]);
+
+  // Resume / reconnect: refresh the bell and recover a missed registration.
+  useEffect(() => {
+    if (userId === null) return;
+
+    let wasConnected = true;
+    const appStateSubscription = AppState.addEventListener("change", state => {
+      if (state !== "active") return;
+      notifyNotificationsChanged();
+      pushRegistrar.revalidate();
+    });
+    const unsubscribeNetInfo = NetInfo.addEventListener(state => {
+      const connected = Boolean(state.isConnected);
+      if (connected && !wasConnected) pushRegistrar.retryIfPending();
+      wasConnected = connected;
+    });
+
+    return () => {
+      appStateSubscription.remove();
+      unsubscribeNetInfo();
+    };
+  }, [userId]);
 
   return null;
 }

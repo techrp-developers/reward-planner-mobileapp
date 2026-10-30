@@ -11,6 +11,7 @@ import { queryClient } from './src/query/queryClient';
 import { AppThemeProvider } from "./src/theme/ThemeContext";
 import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
 import PushNotificationManager from './src/modules/common/notifications/PushNotificationManager';
+import { navigationRef } from './src/navigation/navigationRef';
 import { useFestivalIcon } from './src/hooks/useFestivalIcon';
 type AuthModalStackParamList = {
   Login: undefined;
@@ -48,7 +49,7 @@ export default function App() {
               <CartProvider>
                 <CmsAppShellProvider>
                   <NetworkGuard>
-                    <NavigationContainer linking={linking}>
+                    <NavigationContainer ref={navigationRef} linking={linking}>
                       <PushNotificationManager />
                       <AlertContainer />
                       <RootNavigator />
