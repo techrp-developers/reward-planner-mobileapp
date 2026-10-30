@@ -16,6 +16,11 @@ import { useNavigation } from "@react-navigation/native";
 import api from "../auth/api/axios";
 import { useAuth } from "../auth/context/AuthContext";
 import { chatSocket } from "../../chat/services/chatSocket";
+import {
+  TODO_ALARM_DISMISS_ACTION,
+  ensureTodoAlarmChannel,
+  syncTodoAlarmsSafely,
+} from "./todoAlarms";
 
 const CHANNEL_ID = "reward_planners_general";
 
@@ -25,6 +30,23 @@ const openNotificationCenter = (navigation: any) => {
   } catch (error) {
     __DEV__ && console.warn("[Push] Unable to open notification screen", error);
   }
+};
+
+const openTodoList = (navigation: any) => {
+  try {
+    navigation.navigate("Home", {
+      screen: "ProductModule",
+      params: { screen: "TodoList" },
+    });
+  } catch (error) {
+    __DEV__ && console.warn("[Push] Unable to open todo list", error);
+    openNotificationCenter(navigation);
+  }
+};
+
+const openFromNotification = (navigation: any, data?: Record<string, unknown>) => {
+  if (data?.type === "todo_alarm") openTodoList(navigation);
+  else openNotificationCenter(navigation);
 };
 
 const syncToken = async (token: string) => {
@@ -76,6 +98,8 @@ export default function PushNotificationManager() {
       vibration: true,
       sound: "default",
     }).catch(error => __DEV__ && console.warn("[Push] Channel setup failed", error));
+    ensureTodoAlarmChannel()
+      .catch(error => __DEV__ && console.warn("[TodoAlarm] Channel setup failed", error));
 
     if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
       PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
@@ -91,6 +115,9 @@ export default function PushNotificationManager() {
       .then(() => getToken(firebaseMessaging))
       .then(token => active && syncToken(token))
       .catch(error => __DEV__ && console.warn("[Push] Token registration failed", error));
+
+    // Re-arm on-device todo alarms (reinstall, new device, edits made elsewhere).
+    syncTodoAlarmsSafely();
 
     const unsubscribeRefresh = onTokenRefresh(firebaseMessaging, token => {
       syncToken(token).catch(error =>
@@ -119,8 +146,17 @@ export default function PushNotificationManager() {
       openNotificationCenter(navigation);
     });
 
-    const unsubscribeNotifee = notifee.onForegroundEvent(({ type }) => {
-      if (type === EventType.PRESS) openNotificationCenter(navigation);
+    const unsubscribeNotifee = notifee.onForegroundEvent(({ type, detail }) => {
+      if (
+        type === EventType.ACTION_PRESS &&
+        detail.pressAction?.id === TODO_ALARM_DISMISS_ACTION
+      ) {
+        if (detail.notification?.id) notifee.cancelNotification(detail.notification.id);
+        return;
+      }
+      if (type === EventType.PRESS) {
+        openFromNotification(navigation, detail.notification?.data);
+      }
     });
 
     if (!initialNotificationHandled.current) {
@@ -129,8 +165,8 @@ export default function PushNotificationManager() {
         if (message) setTimeout(() => openNotificationCenter(navigation), 250);
       });
       notifee.getInitialNotification().then(initial => {
-        if (initial?.notification) {
-          setTimeout(() => openNotificationCenter(navigation), 250);
+        if (initial?.notification && initial.pressAction?.id !== TODO_ALARM_DISMISS_ACTION) {
+          setTimeout(() => openFromNotification(navigation, initial.notification.data), 250);
         }
       });
     }

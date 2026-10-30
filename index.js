@@ -8,6 +8,8 @@ import App from './App';
 import { name as appName } from './app.json';
 import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { getApps } from '@react-native-firebase/app';
+import notifee, { EventType } from '@notifee/react-native';
+import { TODO_ALARM_DISMISS_ACTION } from './src/modules/common/notifications/todoAlarms';
 
 if (getApps().length > 0) {
   setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
@@ -16,6 +18,18 @@ if (getApps().length > 0) {
     if (__DEV__) console.log('[Push] Background message:', remoteMessage.messageId);
   });
 }
+
+// Handles notification actions while the app is killed or in the background,
+// e.g. "Dismiss" on a ringing todo alarm, which must stop the looping sound.
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (
+    type === EventType.ACTION_PRESS &&
+    detail.pressAction?.id === TODO_ALARM_DISMISS_ACTION &&
+    detail.notification?.id
+  ) {
+    await notifee.cancelNotification(detail.notification.id);
+  }
+});
 
 enableScreens(true);
 enableFreeze(true);

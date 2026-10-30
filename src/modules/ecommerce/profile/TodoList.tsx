@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   Share,
@@ -31,6 +32,15 @@ import {
   deleteTodoApi,
   deleteMultipleTodosApi,
 } from "../api/ProfileApi";
+import {
+  canUseDeviceAlarms,
+  openTodoAlarmSettings,
+  syncTodoAlarmsSafely,
+} from "../../common/notifications/todoAlarms";
+import ReminderTimePicker, {
+  formatReminderParts,
+  parseReminderParts,
+} from "./ReminderTimePicker";
 
 type Todo = {
   id: string;
@@ -371,6 +381,21 @@ const TodoListScreen = () => {
     setModalVisible(true);
   };
 
+  // Device alarms can't ring without notification + exact-alarm access, so
+  // offer the settings screen instead of silently falling back to push only.
+  const warnIfAlarmsBlocked = (deviceAlarm: boolean, hasReminder: boolean) => {
+    if (Platform.OS !== "android" || deviceAlarm || !hasReminder) return;
+
+    Alert.alert(
+      "Allow alarms",
+      "Allow notifications and \"Alarms & reminders\" so this reminder rings on your phone. You'll still get a push notification until then.",
+      [
+        { text: "Not now", style: "cancel" },
+        { text: "Open settings", onPress: () => { openTodoAlarmSettings().catch(() => {}); } },
+      ]
+    );
+  };
+
   const saveTodo = async () => {
     try {
       if (!title.trim()) {
@@ -385,6 +410,7 @@ const TodoListScreen = () => {
 
       setSaving(true);
 
+      const deviceAlarm = reminderTime ? await canUseDeviceAlarms() : false;
       const payload = {
         created_by: createdBy,
         task_date: selectedDate,
@@ -393,6 +419,7 @@ const TodoListScreen = () => {
         title: title.trim(),
         subtitle: subtitle.trim(),
         reminder_time: reminderTime || null,
+        device_alarm: deviceAlarm,
       };
 
       if (editingId) {
@@ -404,6 +431,8 @@ const TodoListScreen = () => {
       setModalVisible(false);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
+      warnIfAlarmsBlocked(deviceAlarm, Boolean(reminderTime));
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -429,6 +458,7 @@ const TodoListScreen = () => {
             await deleteTodoApi(selectedTodo.id, createdBy);
             resetSelection();
             await fetchTodos();
+            syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
               "Todo",
@@ -455,6 +485,7 @@ const TodoListScreen = () => {
             await deleteMultipleTodosApi(selectedTodoIds, createdBy);
             resetSelection();
             await fetchTodos();
+            syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
               "Todo",
@@ -493,6 +524,7 @@ const TodoListScreen = () => {
       await completeTodoApi(selectedTodo.id, createdBy);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -510,6 +542,7 @@ const TodoListScreen = () => {
       await completeMultipleTodosApi(selectedTodoIds, createdBy);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -545,7 +578,9 @@ const TodoListScreen = () => {
       return;
     }
 
-    setReminderTime(selectedTodo.reminder || "");
+    // Start from the saved reminder, or a few minutes from now, so the
+    // dropdowns always hold a complete time.
+    setReminderTime(formatReminderParts(parseReminderParts(selectedTodo.reminder)));
     setAlarmModalVisible(true);
   };
 
@@ -553,14 +588,19 @@ const TodoListScreen = () => {
     if (!selectedTodo) return;
 
     try {
+      const deviceAlarm = reminderTime ? await canUseDeviceAlarms() : false;
+
       await updateTodoReminder(
         selectedTodo.id,
         createdBy,
-        reminderTime || "No reminder time"
+        reminderTime || "No reminder time",
+        deviceAlarm
       );
 
       setAlarmModalVisible(false);
       await fetchTodos();
+      syncTodoAlarmsSafely();
+      warnIfAlarmsBlocked(deviceAlarm, Boolean(reminderTime));
     } catch (error: any) {
       Alert.alert(
         "Reminder",
@@ -1142,12 +1182,11 @@ const TodoListScreen = () => {
           <View style={[styles.modalCard, themed.surface]}>
             <Text style={[styles.modalTitle, themed.text]}>Set Alarm Reminder</Text>
 
-            <TextInput
-              placeholder="Reminder time e.g. 10:30 AM"
-              placeholderTextColor={placeholderColor}
+            <ReminderTimePicker
               value={reminderTime}
-              onChangeText={setReminderTime}
-              style={[styles.input, themed.surface, themed.text]}
+              onChange={setReminderTime}
+              isDark={isDark}
+              textColor={theme.text}
             />
 
             <View style={styles.modalActions}>
