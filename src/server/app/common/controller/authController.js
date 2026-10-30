@@ -61,11 +61,12 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     return digits;
   }
 
-  // Dummy/test accounts allowed to skip the real OTP during login/activation.
+  // Dummy/test accounts that always use the fixed OTP below — no email/WhatsApp
+  // code is generated or sent for them, and the fixed code always verifies.
   // Configure in .env:
   //   OTP_BYPASS_IDENTIFIERS=test@example.com,9876543210  (emails and/or phones, comma-separated)
-  //   OTP_BYPASS_CODE=123456                              (the fixed code those accounts type in)
-  // Leave OTP_BYPASS_IDENTIFIERS empty in production to disable the bypass entirely.
+  //   OTP_BYPASS_CODE=123456                              (the fixed code these accounts enter)
+  // Leave OTP_BYPASS_IDENTIFIERS empty in production to disable this entirely.
   const otpBypassIdentifiers = new Set(
     (process.env.OTP_BYPASS_IDENTIFIERS || "")
       .split(",")
@@ -79,12 +80,14 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
   const OTP_BYPASS_CODE = String(process.env.OTP_BYPASS_CODE || "123456");
 
+  // True for a whitelisted dummy/test account (regardless of the code entered).
+  function isOtpBypassIdentifier(otpKey) {
+    return otpBypassIdentifiers.size > 0 && otpBypassIdentifiers.has(otpKey);
+  }
+
+  // True when a whitelisted account entered the fixed bypass code.
   function isOtpBypass(otpKey, otp) {
-    return (
-      otpBypassIdentifiers.size > 0 &&
-      otpBypassIdentifiers.has(otpKey) &&
-      String(otp) === OTP_BYPASS_CODE
-    );
+    return isOtpBypassIdentifier(otpKey) && String(otp) === OTP_BYPASS_CODE;
   }
 
   function escapeVCardValue(value) {
@@ -151,6 +154,23 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
     if (email) return AuthModel.findEmployeeByEmail(email);
     if (phone) return AuthModel.findEmployeeByPhone(phone);
     return null;
+  }
+
+  const USER_INACTIVE_MESSAGE = "User inactive. Please contact your HR.";
+
+  // Deactivated by the platform (RM). Self-deleted accounts (deleted_at set) are
+  // not blocked here: they can still be reactivated within the grace period.
+  async function isAccountDeactivated(employeeId) {
+    const customer = await AuthModel.findByCompanyUserId(employeeId);
+    return !!customer && Number(customer.status) !== 1 && !customer.deleted_at;
+  }
+
+  function sendUserInactive(res) {
+    return res.status(403).json({
+      success: false,
+      code: "USER_INACTIVE",
+      message: USER_INACTIVE_MESSAGE,
+    });
   }
 
   function sendActivationOtpNotifications({ email, employee, otp }) {
@@ -382,6 +402,21 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
+          return res.json({
+            success: true,
+            message: "If your employee account is eligible, a code has been sent.",
+          });
+        }
+
+        if (await isAccountDeactivated(employee.id)) return sendUserInactive(res);
+
+        // Dummy/test account: no code is generated or sent — the fixed
+        // OTP_BYPASS_CODE will verify directly in verifyActivationOTP.
+        if (isOtpBypassIdentifier(identity.otpKey)) {
           return res.json({
             success: true,
             message: "If your employee account is eligible, a code has been sent.",
@@ -429,9 +464,24 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const employee = await findEmployeeForActivation(identity);
 
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
           return res.json({
             success: true,
             message: "If your employee account is eligible, a code has been sent.",
+          });
+        }
+
+        if (await isAccountDeactivated(employee.id)) return sendUserInactive(res);
+
+        // Dummy/test account: nothing to resend — the fixed OTP_BYPASS_CODE
+        // always verifies in verifyActivationOTP.
+        if (isOtpBypassIdentifier(identity.otpKey)) {
+          return res.json({
+            success: true,
+            message: "OTP resent successfully",
           });
         }
 
@@ -476,7 +526,8 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           });
         }
 
-        // Whitelisted dummy/test accounts skip the real OTP lookup entirely.
+        // Whitelisted dummy/test accounts verify with the fixed bypass code
+        // and skip the real OTP lookup (no code was ever generated for them).
         if (!isOtpBypass(identity.otpKey, otp)) {
           const attempt = await AuthModel.getOtpAttempts(identity.otpKey);
 
@@ -501,6 +552,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
 
         const employee = await findEmployeeForActivation(identity);
         if (!employee) {
+          if (await AuthModel.isEmployeeInactive(identity)) {
+            return sendUserInactive(res);
+          }
+
           return res.status(401).json({
             success: false,
             message: "Invalid or expired OTP",
@@ -517,12 +572,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             existingCustomer.deleted_at,
           );
 
-          if (!reactivated) {
-            return res.status(403).json({
-              success: false,
-              message: "Account inactive",
-            });
-          }
+          if (!reactivated) return sendUserInactive(res);
         }
 
         const { deviceId, deviceName } = readDeviceFields(req.body);
@@ -859,10 +909,7 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             user.deleted_at,
           );
 
-          if (!reactivated)
-            return res
-              .status(403)
-              .json({ success: false, message: "Account inactive" });
+          if (!reactivated) return sendUserInactive(res);
 
           user.status = 1;
         }
@@ -877,6 +924,11 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           : await AuthModel.findEmployeeByEmail(user.email);
 
         if (!employee) {
+          const employmentInactive = await AuthModel.isEmployeeInactive(
+            user.company_user_id ? { id: user.company_user_id } : { email: user.email },
+          );
+          if (employmentInactive) return sendUserInactive(res);
+
           return res.status(404).json({
             success: false,
             message: "Employee not found",
@@ -1749,11 +1801,10 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
         const randomThought =
           thoughts[Math.floor(Math.random() * thoughts.length)];
 
-        const [userInfo, todaySummary, birthdayEmployees, birthdayWishes] = await Promise.all([
+        const [userInfo, todaySummary, birthdayEmployees] = await Promise.all([
           AuthModel.getUserInfo(userId),
           FitnessService.getTodaySummary(userId),
           AuthModel.getTodayBirthdayEmployees(userId),
-          AuthModel.getTodayBirthdayWishesReceived(userId),
         ]);
 
         if (!userInfo) {
@@ -1774,7 +1825,6 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
             },
             thought: randomThought,
             birthday_employees: birthdayEmployees || [],
-            birthday_wishes_received: birthdayWishes,
             visit_card: {
               qr_code_url: "/v1/auth/visit-card/qr",
               format: "vcard",
@@ -1788,22 +1838,6 @@ const { FIRST_LOGIN_REWARD_COINS } = require("../constants/rewards");
           success: false,
           message: "Failed to fetch user info",
         });
-      }
-    }
-
-    // Birthday wishes received today (lightweight poll for the dashboard celebration)
-    async getTodayBirthdayWishes(req, res) {
-      try {
-        res.set("Cache-Control", "no-store");
-        const userId = req.user?.user_id;
-        if (!userId) {
-          return res.status(401).json({ success: false, message: "Unauthorized user" });
-        }
-        const data = await AuthModel.getTodayBirthdayWishesReceived(userId);
-        return res.json({ success: true, data });
-      } catch (error) {
-        console.error("Get Birthday Wishes Error:", error);
-        return res.status(500).json({ success: false, message: "Failed to fetch birthday wishes" });
       }
     }
 

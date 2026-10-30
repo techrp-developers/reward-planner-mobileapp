@@ -7,6 +7,7 @@ const {
   isBlockExpired,
   isAmbiguousProviderError,
   classifyBookOutcome,
+  classifyCancellationEntry,
   getRefundableAmount,
 } = require("../utils/workflowPolicy");
 
@@ -133,4 +134,20 @@ test("refunds never exceed what was paid and not yet refunded", () => {
   assert.equal(getRefundableAmount({ requested: 400, paid: 500, alreadyRefunded: 500 }), 0);
   assert.equal(getRefundableAmount({ requested: -5, paid: 500 }), 0);
   assert.equal(getRefundableAmount({ requested: "abc", paid: 500 }), 0);
+});
+
+test("cancellation status becomes refundable only after the provider refund is final", () => {
+  assert.deepEqual(classifyCancellationEntry({
+    Status: "CANCELLED",
+    RefundStatus: "MANUAL_PENDING",
+  }), { localStatus: "succeeded", terminal: false, refundReady: false });
+  assert.deepEqual(classifyCancellationEntry({
+    Status: "CANCELLED",
+    RefundStatus: "REFUNDED",
+  }), { localStatus: "succeeded", terminal: true, refundReady: true });
+  assert.deepEqual(classifyCancellationEntry({
+    Status: "FAILED",
+    RefundStatus: "REJECTED",
+  }), { localStatus: "failed", terminal: true });
+  assert.equal(classifyCancellationEntry({ Status: "IN_PROCESS" }).localStatus, "processing");
 });

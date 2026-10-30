@@ -81,6 +81,20 @@ export const fetchOrderReceipt = async (orderId: number) => {
   }
 };
 
+export type OrderItemReturnRequest = {
+  can_return: boolean;
+  can_replace: boolean;
+  window_ends_at: string | null;
+  video_required: { return: boolean; replacement: boolean };
+  is_returnable: boolean;
+  is_replaceable: boolean;
+  return_window_days: number;
+  request_id: number | null;
+  request_type: "return" | "replacement" | null;
+  status: string | null;
+  vendor_note: string | null;
+};
+
 export type OrderDetailsResponse = {
   success: boolean;
 
@@ -140,6 +154,8 @@ export type OrderDetailsResponse = {
       submitted: boolean;
       review_id: number | null;
     };
+    open_box_delivery?: boolean;
+    return_request?: OrderItemReturnRequest;
   }>;
 
   shipments?: Array<{
@@ -342,6 +358,86 @@ export const fetchItemCancellationDetails = async (
     return res.data;
   } catch (error) {
     console.error("Item cancellation details error", error);
+    return { success: false };
+  }
+};
+
+export type ReturnRequestType = "return" | "replacement";
+
+export type ReturnEvidenceVideo = {
+  uri: string;
+  type?: string;
+  fileName?: string;
+};
+
+export const requestItemReturn = async (
+  orderItemId: number,
+  payload: { request_type: ReturnRequestType; reason: string; video?: ReturnEvidenceVideo | null }
+) => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const formData = new FormData();
+    formData.append("request_type", payload.request_type);
+    formData.append("reason", payload.reason);
+    if (payload.video?.uri) {
+      formData.append("video", {
+        uri: payload.video.uri,
+        type: payload.video.type || "video/mp4",
+        name: payload.video.fileName || `return-${orderItemId}-${Date.now()}.mp4`,
+      } as any);
+    }
+
+    const res = await axios.post(
+      `${API_BASE_URL}/v1/orders/items/${orderItemId}/return-request`,
+      formData,
+      { headers: { ...headers, "Content-Type": "multipart/form-data" } }
+    );
+
+    return res.data;
+  } catch (error: any) {
+    console.error("Return request error:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Unable to submit request",
+    };
+  }
+};
+
+export type ItemReturnDetails = {
+  success: boolean;
+  data?: {
+    request_id: number;
+    request_type: ReturnRequestType;
+    reason: string;
+    status: string;
+    vendor_note?: string | null;
+    created_at: string;
+    updated_at?: string;
+    order_item_id: number;
+    quantity: number;
+    order_id: number;
+    order_ref?: string;
+    product_name: string;
+    has_video: boolean;
+    video_url: string | null;
+  };
+};
+
+export const fetchItemReturnDetails = async (
+  orderItemId: number
+): Promise<ItemReturnDetails> => {
+  try {
+    const headers = await getAuthHeaders();
+
+    const res = await axios.get(
+      `${API_BASE_URL}/v1/orders/items/${orderItemId}/return-request`,
+      { headers }
+    );
+
+    return res.data;
+  } catch (error) {
+    console.error("Return request details error", error);
     return { success: false };
   }
 };

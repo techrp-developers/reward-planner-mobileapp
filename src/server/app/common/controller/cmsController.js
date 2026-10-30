@@ -1,4 +1,6 @@
+const { motionValues } = require('../../../utils/contentMotion');
 const db = require('../../../config/database');
+const { contentNavigation, contentTargetIds } = require('../../../utils/contentNavigation');
 const ContentZoneModel = require('../../../models/contentZoneModel');
 const ModuleIconModel = require('../../../models/moduleIconModel');
 const { getContentImageUrl } = require('../../../utils/contentPublicUrl');
@@ -9,6 +11,8 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require('../../ecommerce/v1/utils/rewardCalculate');
+const { getOfferCandidates, pickOffer } = require('../../ecommerce/v1/utils/activeOffers');
+const { attachServiceOffers } = require('../../service/v1/utils/serviceOffers');
 
 const SUPPORTED_LAYOUTS = {
   main: ['header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview'],
@@ -23,18 +27,8 @@ const parseConfig = (value) => {
 };
 
 const MOBILE_CONTENT_MODULES = ['mobile_dashboard', 'product', 'service', 'payment', 'dineout'];
-const contentAssetUrl = (path) => path?.startsWith('/uploads/') ? getContentImageUrl(path) : getPublicUrl(path);
-
-const targetIds = (entry) => {
-  let ids = entry.target_ids;
-  if (typeof ids === 'string') {
-    try { ids = JSON.parse(ids); } catch { ids = []; }
-  }
-  if (!Array.isArray(ids)) ids = [];
-  const normalized = ids.map(Number).filter((id) => Number.isInteger(id) && id > 0);
-  if (!normalized.length && entry.target_id != null) normalized.push(Number(entry.target_id));
-  return [...new Set(normalized)];
-};
+const IMAGE_GALLERY_ZONES = ['offers_banner', 'promotional_banner', 'brand_promotional_banner'];
+const contentAssetUrl = (path) => /^\/?uploads\//i.test(path || '') ? getContentImageUrl(path) : getPublicUrl(path);
 
 const publicModule = (row) => ({
   moduleKey: row.module_key,
@@ -49,17 +43,27 @@ const publicModule = (row) => ({
   sortOrder: Number(row.sort_order || 0),
 });
 
-const publicImage = (row) => ({
+const publicImage = (row, entry) => {
+  const target = row.target_type ? { ...entry, target_type: row.target_type, target_id: row.target_id, target_ids: row.target_ids } : entry;
+  const navigation = contentNavigation(target);
+  return ({
   imageId: row.image_id,
   imageUrl: contentAssetUrl(row.image_url),
   sortOrder: Number(row.sort_order || 0),
+  targetType: target.target_type || null,
+  targetId: target.target_id == null ? null : Number(target.target_id),
+  targetIds: ['product', 'service'].includes(target.target_type) ? contentTargetIds(target) : [],
+  navigation: navigation ? { ...navigation, imageId: Number(row.image_id) } : null,
 });
+};
 
 const publicContentEntry = async (entry) => {
   if (!entry) return null;
 
   const response = {
     contentId: entry.content_id,
+    ...motionValues(entry),
+    displayMode: entry.display_mode || 'carousel',
     module: entry.module,
     zone: entry.zone,
     type: entry.content_type,
@@ -68,7 +72,8 @@ const publicContentEntry = async (entry) => {
     redirectLink: entry.redirect_link,
     targetType: entry.target_type || null,
     targetId: entry.target_id == null ? null : Number(entry.target_id),
-    targetIds: entry.target_type === 'product' ? targetIds(entry) : [],
+    targetIds: ['product', 'service'].includes(entry.target_type) ? contentTargetIds(entry) : [],
+    navigation: contentNavigation(entry),
     colorValue: entry.content_type === 'color' ? entry.color_value : null,
     imageUrl: entry.content_type === 'image' ? contentAssetUrl(entry.image_url) : null,
     status: entry.status,
@@ -77,9 +82,15 @@ const publicContentEntry = async (entry) => {
     endAt: entry.end_at,
   };
 
-  if (entry.zone === 'offers_banner' && entry.content_type === 'image') {
-    const images = await ContentZoneModel.getImagesByContentId(entry.content_id);
-    response.images = images.length ? images.map(publicImage) : response.imageUrl ? [{
+  if (IMAGE_GALLERY_ZONES.includes(entry.zone) && entry.content_type === 'image') {
+    const allBrandImages = entry.zone === 'brand_promotional_banner'
+      ? await ContentZoneModel.getAllImagesByContentId(entry.content_id)
+      : null;
+    const images = allBrandImages
+      ? allBrandImages.filter(image => Number(image.is_active) === 1).sort((a, b) => a.sort_order - b.sort_order)
+      : await ContentZoneModel.getImagesByContentId(entry.content_id);
+    if (allBrandImages?.length && !images.length) response.imageUrl = null;
+    response.images = images.length ? images.map(image => publicImage(image, entry)) : response.imageUrl ? [{
       imageId: null,
       imageUrl: response.imageUrl,
       sortOrder: 0,
@@ -101,26 +112,52 @@ const getRequestedModules = (queryValue) => {
 };
 
 class CmsController {
+  async getContentServices(req, res) {
+    try {
+      const entry = await ContentZoneModel.getImageTargetEntry(req.params.id, req.query?.imageId ?? null);
+      if (entry.module !== 'service' || entry.target_type !== 'service' || !IMAGE_GALLERY_ZONES.includes(entry.zone)) {
+        return res.status(400).json({ success: false, message: 'Content must target services' });
+      }
+      if (entry.status !== 'active') return res.status(404).json({ success: false, message: 'Service offer is not active' });
+      const rows = await ContentZoneModel.getContentServices(entry.content_id, req.query?.imageId ?? null);
+      // offer_price is the lowest live variant offer on any banner ("from ₹x"),
+      // the same price service details, cart and checkout charge.
+      await attachServiceOffers(rows);
+      const services = rows.map(service => ({
+        ...service,
+        service_image: getPublicUrl(service.service_image, service.updated_at),
+        content_id: service.content_id ?? Number(entry.content_id),
+        original_price: Number(service.price),
+      }));
+      return res.json({ success: true, count: services.length, data: { content: await publicContentEntry(entry), services } });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    }
+  }
+
   async getContentProducts(req, res) {
     try {
-      const entry = await ContentZoneModel.getEntryById(req.params.id);
-      if (entry.zone !== 'promotional_banner') {
-        return res.status(400).json({ success: false, message: 'Content must be a promotional banner' });
+      const entry = await ContentZoneModel.getImageTargetEntry(req.params.id, req.query?.imageId ?? null);
+      if (!IMAGE_GALLERY_ZONES.includes(entry.zone)) {
+        return res.status(400).json({ success: false, message: 'Content must be a promotional, offer, or brand banner' });
       }
       if (entry.status !== 'active') {
         return res.status(404).json({ success: false, message: 'Promotional content is not active' });
       }
 
-      const rows = await ContentZoneModel.getContentProducts(entry.content_id);
+      const rows = await ContentZoneModel.getContentProducts(entry.content_id, req.query?.imageId ?? null);
       const rewardCache = new Map();
+      const offers = await getOfferCandidates(rows.map((product) => product.variant_id));
       const products = await Promise.all(rows.map(async (product) => {
         const originalSalePrice = Number(product.sale_price || 0);
-        const offerPrice = product.offer_price == null ? null : Number(product.offer_price);
+        // Lowest live offer wins, matching what cart and checkout will charge.
+        const best = pickOffer(offers.get(Number(product.variant_id)));
+        const offerPrice = best ? best.price : product.offer_price == null ? null : Number(product.offer_price);
         const salePrice = offerPrice ?? originalSalePrice;
         const mrp = Number(product.mrp || 0);
         const cacheKey = `${product.product_id}_${product.variant_id}_${salePrice}`;
-        let rules = offerPrice !== null ? [] : rewardCache.get(cacheKey);
-        if (offerPrice === null && !rules) {
+        let rules = rewardCache.get(cacheKey);
+        if (!rules) {
           rules = await RewardModel.getProductRewards(
             product.product_id, product.variant_id, product.category_id,
             product.subcategory_id, salePrice, product.is_discount_eligible,
@@ -129,7 +166,7 @@ class CmsController {
         }
         const rewardCoins = rules.length ? calculateReward(salePrice, rules) : 0;
         const redeemCoins = calculateRedeemableCoins(salePrice, resolveRedemption(salePrice, rules));
-        const canRedeem = rules.some((rule) => rule.can_redeem_reward) && redeemCoins > 0;
+        const canRedeem = offerPrice === null && rules.some((rule) => rule.can_redeem_reward) && redeemCoins > 0;
 
         return {
           id: Number(product.product_id),
@@ -185,7 +222,7 @@ class CmsController {
       const content = {};
       for (const [moduleKey, zones] of zoneResults) {
         content[moduleKey] = {};
-        for (const zone of ['navbar_background', 'promotional_banner', 'offers_banner']) {
+        for (const zone of ['navbar_background', 'promotional_banner', 'offers_banner', 'brand_promotional_banner']) {
           content[moduleKey][zone] = await publicContentEntry(zones[zone]);
         }
       }

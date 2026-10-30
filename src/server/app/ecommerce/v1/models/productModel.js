@@ -7,6 +7,7 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
+const { applyActiveOffers } = require("../utils/activeOffers");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path, updatedAt) {
@@ -751,7 +752,7 @@ class ProductModel {
         AND c.campaign_type = 'flash_sale'
         AND c.status = 'active'
         AND NOW() BETWEEN c.start_at AND c.end_at
-        AND ci.offer_price IS NOT NULL
+        AND ci.offer_price > 0 AND ci.max_qty > COALESCE(ci.sold_qty, 0)
       `,
       [campaignId, productId],
     );
@@ -764,10 +765,10 @@ class ProductModel {
   async getActiveContentOfferPrices(contentId, productId) {
     const [rows] = await db.execute(
       `SELECT cpo.variant_id, cpo.offer_price
-       FROM content_product_offers cpo
+       FROM content_effective_product_offers cpo
        JOIN content_zone_entries cze ON cze.content_id = cpo.content_id
        WHERE cpo.content_id = ? AND cpo.product_id = ?
-         AND cze.zone = 'promotional_banner' AND cze.target_type = 'product'
+         AND cze.zone IN ('promotional_banner', 'offers_banner', 'brand_promotional_banner') AND cze.module = 'product'
          AND cze.is_published = 1
          AND (cze.start_at IS NULL OR cze.start_at <= NOW())
          AND (cze.end_at IS NULL OR cze.end_at >= NOW())`,
@@ -1384,6 +1385,7 @@ class ProductModel {
           created_at: row.created_at,
           avg_rating: Number(row.avg_rating).toFixed(1),
           rating_count: Number(row.total_reviews),
+          variant_id: row.variant_id,
           mrp: row.mrp,
           sale_price: row.sale_price,
           images,
@@ -1713,13 +1715,12 @@ class ProductModel {
         ON c.category_id = p.category_id
        AND c.status = 1
 
-      INNER JOIN sub_categories sc
+      /* Subcategory / sub-subcategory are optional on a product */
+      LEFT JOIN sub_categories sc
         ON sc.subcategory_id = p.subcategory_id
-       AND sc.status = 1
 
-      INNER JOIN sub_sub_categories ssc
+      LEFT JOIN sub_sub_categories ssc
         ON ssc.sub_subcategory_id = p.sub_subcategory_id
-       AND ssc.status = 1
 
       INNER JOIN product_variants v
         ON v.variant_id = (
@@ -1750,6 +1751,8 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (sc.subcategory_id IS NULL OR sc.status = 1)
+        AND (ssc.sub_subcategory_id IS NULL OR ssc.status = 1)
         AND p.product_id != ?
         AND (
           p.category_id = ?
@@ -1770,6 +1773,7 @@ class ProductModel {
         limit,
         offset,
       ]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE OBJECT (IMPORTANT)
@@ -1827,7 +1831,7 @@ class ProductModel {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -1984,6 +1988,7 @@ class ProductModel {
         limit,
         offset,
       ]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -2036,7 +2041,7 @@ class ProductModel {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -2117,13 +2122,12 @@ class ProductModel {
         ON c.category_id = p.category_id
        AND c.status = 1
 
-      INNER JOIN sub_categories sc
+      /* Subcategory / sub-subcategory are optional on a product */
+      LEFT JOIN sub_categories sc
         ON sc.subcategory_id = p.subcategory_id
-       AND sc.status = 1
 
-      INNER JOIN sub_sub_categories ssc
+      LEFT JOIN sub_sub_categories ssc
         ON ssc.sub_subcategory_id = p.sub_subcategory_id
-       AND ssc.status = 1
 
       /* Lowest visible variant */
       INNER JOIN product_variants v
@@ -2155,6 +2159,8 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (sc.subcategory_id IS NULL OR sc.status = 1)
+        AND (ssc.sub_subcategory_id IS NULL OR ssc.status = 1)
         AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
 
       GROUP BY p.product_id
@@ -2163,6 +2169,7 @@ class ProductModel {
     `;
 
       const [rows] = await db.execute(query, [search, search, limit, offset]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -2215,7 +2222,7 @@ class ProductModel {
           /* ===============================
                 REDEMPTION (rule-based)
               =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -2349,6 +2356,7 @@ class ProductModel {
         limit,
         offset,
       ]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -2401,7 +2409,7 @@ class ProductModel {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -2521,6 +2529,7 @@ class ProductModel {
     `;
 
       const [rows] = await db.execute(query, [days, limit, offset]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -2573,7 +2582,7 @@ class ProductModel {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -2697,6 +2706,7 @@ class ProductModel {
     `;
 
       const [rows] = await db.execute(query, [days, search, search, limit, offset]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -2749,7 +2759,7 @@ class ProductModel {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -2868,6 +2878,7 @@ class ProductModel {
     `;
 
       const [rows] = await db.execute(query, [days, search, search, limit, offset]);
+      await applyActiveOffers(rows);
 
       /* ===============================
           CACHE
@@ -2920,7 +2931,7 @@ class ProductModel {
           /* ===============================
             REDEMPTION (rule-based)
           =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -3026,6 +3037,7 @@ class ProductModel {
     `;
 
       const [rows] = await db.execute(query, [search, search, limit, offset]);
+      await applyActiveOffers(rows);
 
       /* ===============================
        CACHE
@@ -3078,7 +3090,7 @@ class ProductModel {
           /* ===============================
                 REDEMPTION (rule-based)
               =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 

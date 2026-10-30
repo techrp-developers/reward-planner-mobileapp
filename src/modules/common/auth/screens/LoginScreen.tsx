@@ -6,7 +6,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useAuth } from "../context/AuthContext";
 import type { AuthStackParamList } from "../navigation/types";
 import { normalizeIndianMobile, parseLoginIdentifier } from "../utils/loginIdentifier";
-import { authErrorMessage, rateLimitDelay } from "../utils/otpInput";
+import { authErrorMessage, isUserInactiveError, rateLimitDelay } from "../utils/otpInput";
+import { useAlert } from "../../../ecommerce/components/alerts";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 import { AuthButton, AuthLayout, authStyles } from "../../components/AuthLayout";
 import { AuthPressable } from "../../components/AuthMotion";
@@ -20,6 +21,7 @@ type Method = "phone" | "email";
 export default function LoginScreen({ navigation }: Props) {
   const { requestLoginOtp } = useAuth();
   const { theme, isDark } = useAppTheme();
+  const alert = useAlert();
   const [method, setMethod] = useState<Method | null>(null);
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
@@ -91,6 +93,10 @@ export default function LoginScreen({ navigation }: Props) {
       lastSent.current = { identifier: parsed.normalized, deadline };
       navigation.navigate("LoginOTP", { identifier: parsed.normalized, resendAvailableAt: deadline });
     } catch (failure) {
+      if (isUserInactiveError(failure)) {
+        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        return;
+      }
       const retryAfter = rateLimitDelay(failure);
       if (retryAfter) limiter.reset(retryAfter);
       setError(authErrorMessage(failure, "We couldn't send your code. Please try again."));

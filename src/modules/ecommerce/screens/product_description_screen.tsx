@@ -631,6 +631,7 @@ export default function
           is_returnable={product?.is_returnable}
           is_replaceable={product?.is_replaceable}
           return_window_days={product?.return_window_days}
+          open_box_delivery={product?.open_box_delivery}
         />
         <ProductInfoAccordions
           productDescription={productDescription}

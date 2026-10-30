@@ -46,6 +46,10 @@ function getProductionConfigurationErrors(env) {
     errors.push("RAZOR_API_KEY must not be a Razorpay test key");
   }
 
+  if (String(env.SRDV_EXCHANGE_LOG || "").toLowerCase() === "true") {
+    errors.push("SRDV_EXCHANGE_LOG must be disabled in production");
+  }
+
   return errors;
 }
 
