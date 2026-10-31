@@ -41,6 +41,8 @@ import {
   addCartOrder,
 } from '../../api/CheckoutApi';
 import { fetchAllAddress } from '../../api/AddressApi';
+import type { DeliveryChoice, DeliveryPreference } from '../../api/CheckoutApi';
+import { formatMoney } from '../../utils/formatMoney';
 import {
   createPaymentOrder,
   verifyPayment,
@@ -182,6 +184,7 @@ export default function OrderStepUI() {
   const [items, setItems] = useState<any[]>([]);
   // const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [useRewards, setUseRewards] = useState(true);
+  const [deliveryPreference, setDeliveryPreference] = useState<DeliveryPreference>('cheapest');
   const [placing, setPlacing] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const isCreatingOrder = useRef(false);
@@ -324,6 +327,7 @@ export default function OrderStepUI() {
       return {
         items: normalizedItems,
         summary,
+        deliveryChoices: (Array.isArray(data.deliveryChoices) ? data.deliveryChoices : []) as DeliveryChoice[],
       };
     },
     [normalizeCheckoutItem],
@@ -340,20 +344,6 @@ export default function OrderStepUI() {
     );
   }, []);
 
-  const checkoutQueryKey = useMemo(
-    () =>
-      checkoutPreviewQueryKey({
-        mode,
-        product_id,
-        variant_id,
-        qty: buyNowQty,
-        campaign_id,
-        content_id,
-        use_rewards: useRewards,
-      }),
-    [mode, product_id, variant_id, buyNowQty, campaign_id, content_id, useRewards],
-  );
-
   const {
     data: address,
     isFetching: isAddressFetching,
@@ -366,6 +356,23 @@ export default function OrderStepUI() {
     gcTime: THIRTY_MINUTES,
     select: selectAddress,
   });
+  const previewAddressId = Number(address?.address_id ?? address?.id) || undefined;
+
+  const checkoutQueryKey = useMemo(
+    () =>
+      checkoutPreviewQueryKey({
+        mode,
+        product_id,
+        variant_id,
+        qty: buyNowQty,
+        campaign_id,
+        content_id,
+        use_rewards: useRewards,
+        delivery_preference: deliveryPreference,
+        address_id: previewAddressId,
+      }),
+    [mode, product_id, variant_id, buyNowQty, campaign_id, content_id, useRewards, deliveryPreference, previewAddressId],
+  );
 
   const {
     data: checkoutData,
@@ -380,15 +387,16 @@ export default function OrderStepUI() {
           variant_id,
           buyNowQty,
           useRewards,
-          undefined,
+          previewAddressId,
           campaign_id == null ? null : Number(campaign_id),
           content_id == null ? null : Number(content_id),
+          deliveryPreference,
         );
       }
-      return fetchCheckoutCart(useRewards);
+      return fetchCheckoutCart(useRewards, previewAddressId, deliveryPreference);
     },
     enabled: isAuthenticated && isBuyNowValid,
-    staleTime: TEN_MINUTES,
+    staleTime: 0,
     gcTime: THIRTY_MINUTES,
     // Reward toggles change the query key. Retain the current checkout preview
     // while the reward totals refresh so shipping and delivery details do not
@@ -401,6 +409,14 @@ export default function OrderStepUI() {
     },
     throwOnError: false,
   });
+
+  useEffect(() => {
+    if (!isCheckoutFetching && !checkoutError && checkoutData &&
+        deliveryPreference === 'fastest' &&
+        !checkoutData.deliveryChoices.some(choice => choice.preference === 'fastest')) {
+      setDeliveryPreference('cheapest');
+    }
+  }, [checkoutData, checkoutError, deliveryPreference, isCheckoutFetching]);
 
   // An addressless preview has no shipping charge. When an address is added,
   // removed, or changed, force a fresh preview so shipping and EDD are not
@@ -654,6 +670,7 @@ export default function OrderStepUI() {
   }, [navigation]);
 
   const handlePlaceOrder = async () => {
+    if (isCheckoutFetching || isAddressFetching || checkoutError || addressError) return;
     if (isCreatingOrder.current) {
       __DEV__ &&
         console.log('⏸️ Order creation already in progress (ref guard)');
@@ -781,13 +798,22 @@ export default function OrderStepUI() {
               safeToNumber(selectedAddressId),
               campaign_id == null ? null : Number(campaign_id),
               content_id == null ? null : Number(content_id),
+              deliveryPreference,
             );
           }
-          return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId));
+          return fetchCheckoutCart(useRewards, safeToNumber(selectedAddressId), deliveryPreference);
         },
         staleTime: 0,
       });
-      const latestSummary = parseCheckoutResponse(latestCheckoutData).summary;
+      const latestPreview = parseCheckoutResponse(latestCheckoutData);
+      if (deliveryPreference === 'fastest' && !latestPreview.deliveryChoices.some(choice => choice.preference === 'fastest')) {
+        setDeliveryPreference('cheapest');
+        isCreatingOrder.current = false;
+        setPlacing(false);
+        alert.info('Delivery updated', 'Fastest delivery is no longer available. Please review standard delivery before placing your order.');
+        return;
+      }
+      const latestSummary = latestPreview.summary;
       const expectedPrice = getCheckoutPayableAmount(latestSummary);
 
       __DEV__ &&
@@ -813,6 +839,7 @@ export default function OrderStepUI() {
             ? safeToNumber(latestSummary.reward?.redeemCoins)
             : 0,
           use_rewards: useRewards,
+          delivery_preference: deliveryPreference,
         };
         __DEV__ && console.log('📤 Buy Now order payload:', buyNowOrderPayload);
         orderRes = await addBuyNowOrder(buyNowOrderPayload);
@@ -824,6 +851,7 @@ export default function OrderStepUI() {
             ? safeToNumber(latestSummary.reward?.redeemCoins)
             : 0,
           use_rewards: useRewards,
+          delivery_preference: deliveryPreference,
         };
         __DEV__ && console.log('📤 Cart order payload:', cartOrderPayload);
         orderRes = await addCartOrder(cartOrderPayload);
@@ -1428,6 +1456,36 @@ export default function OrderStepUI() {
           </View>
 
           {/* Select/Remove Row */}
+          {address && checkoutData?.deliveryChoices.length ? (
+            <View style={[styles.card, styles.deliveryCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <Text style={[styles.title, { color: theme.text }]}>Delivery options</Text>
+              {checkoutData.deliveryChoices.map(choice => (
+                <TouchableOpacity
+                  key={choice.preference}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: deliveryPreference === choice.preference, disabled: placing || isCheckoutFetching }}
+                  disabled={placing || isCheckoutFetching}
+                  onPress={() => setDeliveryPreference(choice.preference)}
+                  style={styles.deliveryOption}
+                >
+                  <MaterialCommunityIcons name={deliveryPreference === choice.preference ? 'radiobox-marked' : 'radiobox-blank'} size={24} color={PURPLE_1} />
+                  <View style={styles.cardContent}>
+                    <Text style={[styles.title, { color: theme.text }]}>{choice.label}</Text>
+                    <Text style={[styles.address, { color: theme.secondaryText }]}>
+                      {choice.delivery_days ? `Estimated in ${choice.delivery_days} ${choice.delivery_days === 1 ? 'day' : 'days'}` : 'Delivery estimate unavailable'}
+                    </Text>
+                  </View>
+                  <Text style={{ color: theme.text }}>{Number(choice.shipping_total) === 0 ? 'Free' : formatMoney(Number(choice.shipping_total))}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+          {isCheckoutFetching && checkoutData ? <Text style={[styles.address, { color: theme.secondaryText }]}>Updating delivery and total...</Text> : null}
+          {checkoutError ? (
+            <TouchableOpacity onPress={() => queryClient.invalidateQueries({ queryKey: checkoutQueryKey })}>
+              <Text style={[styles.address, { color: theme.secondaryText }]}>Could not update checkout. Tap to retry.</Text>
+            </TouchableOpacity>
+          ) : null}
           {mode !== 'buy_now' && items.length > 0 && (
             <View style={styles.actionsRow}>
               <TouchableOpacity onPress={removeAll}>
@@ -1512,8 +1570,9 @@ export default function OrderStepUI() {
         total={checkoutPayableAmount}
         count={checkoutItemCount}
         loading={placing}
+        disabled={isCheckoutFetching || isAddressFetching || Boolean(checkoutError) || Boolean(addressError)}
         onPlaceOrder={handlePlaceOrder}
-        bottomOffset={0}
+        bottomOffset={stickyCTA.bottomOffset}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>
@@ -1550,6 +1609,8 @@ const Step = ({ status, label }: { status: StepStatus; label: string }) => {
 const Line = () => <View style={styles.line} />;
 
 const styles = StyleSheet.create({
+  deliveryCard: { marginTop: 12 },
+  deliveryOption: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14 },
   container: { flex: 1, backgroundColor: BG },
   scrollContent: { paddingTop: 14, paddingBottom: 24 },
   stepRow: {
