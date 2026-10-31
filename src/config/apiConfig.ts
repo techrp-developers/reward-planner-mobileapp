@@ -20,11 +20,11 @@ const IS_LOCAL_ENVIRONMENT = isLocalEnvironment(API_ENVIRONMENT);
 // renewal, new Wi-Fi network, etc). Run `ipconfig` (Windows) / `ifconfig`
 // (Mac/Linux) to find it — physical devices need this because 'localhost'
 // on-device points back at the device itself, not your PC.
-export const LOCAL_API_HOST = '192.168.1.225';
+export const LOCAL_API_HOST = '192.168.1.138';
 
 // Physical Android devices should use the dev machine's LAN IP by default.
 // Set this to true only when `adb reverse tcp:5000 tcp:5000` is running.
-export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = false;
+export const USE_ADB_REVERSE_FOR_ANDROID_PHYSICAL = true;
 
 // Resolve the right local host per target automatically:
 // - Android emulator: 10.0.2.2 is the AVD's alias for the host machine.
