@@ -122,14 +122,12 @@ function Dashbord() {
     return Number.isFinite(initialGoal) && initialGoal > 0 ? initialGoal : 5000;
   });
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
-  const lastScrollY = useRef(0);
   const handleDashboardScroll = useCallback((event: import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>) => {
     const y = Math.max(0, event.nativeEvent.contentOffset.y);
-    const delta = y - lastScrollY.current;
+    // Resizing the header can adjust the scroll offset, especially near the
+    // bottom. Do not mistake those small corrections for an upward gesture.
     if (y < 16) setHeaderCollapsed(false);
-    else if (delta > 6 && y > 80) setHeaderCollapsed(true);
-    else if (delta < -6) setHeaderCollapsed(false);
-    if (Math.abs(delta) > 6) lastScrollY.current = y;
+    else if (y > 160) setHeaderCollapsed(true);
   }, []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
@@ -509,7 +507,7 @@ function Dashbord() {
         scrollEventThrottle={16}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         bounces
       >
         {dashboardLayout.sections.map(({ key }) => {

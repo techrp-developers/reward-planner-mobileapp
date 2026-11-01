@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   InteractionManager,
-  Platform,
   StyleSheet,
   View,
   ViewToken,
@@ -255,14 +254,6 @@ function HomeScreen() {
     [layout.sections],
   );
   const homeSectionKeys = useMemo(() => homeSections.map(({ key }) => key), [homeSections]);
-  const sectionOffsets = useMemo(() => {
-    let offset = 0;
-    return homeSections.reduce((result, section) => {
-      result[section.key] = offset;
-      offset += SECTION_HEIGHTS[section.key];
-      return result;
-    }, {} as Partial<Record<SectionKey, number>>);
-  }, [homeSections]);
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(INITIAL_VISIBLE_SECTION_SET),
   );
@@ -380,17 +371,6 @@ function HomeScreen() {
     [readySections]
   );
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
-  const getItemLayout = useCallback(
-    (_: ArrayLike<HomeSection> | null | undefined, index: number) => {
-      const key = homeSections[index].key;
-      return {
-        length: SECTION_HEIGHTS[key],
-        offset: sectionOffsets[key] ?? 0,
-        index,
-      };
-    },
-    [homeSections, sectionOffsets],
-  );
 
   return (
     <ThemedHomeSurface>
@@ -404,12 +384,11 @@ function HomeScreen() {
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={48}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        getItemLayout={getItemLayout}
         ListFooterComponent={ListFooterSpacer}
       />
     </ThemedHomeSurface>
