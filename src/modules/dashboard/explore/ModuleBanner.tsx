@@ -4,15 +4,19 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  TouchableOpacity,
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import { openCampaignPoster } from '../../ecommerce/utils/campaignNavigation';
 import { rs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { getCampaignHome } from '../../../modules/ecommerce/api/CampaignAPI';
 
 export default function ModuleBanner() {
+  const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -24,7 +28,7 @@ export default function ModuleBanner() {
 
   const { data: campaignHome } = useQuery({
     queryKey: ['ecommerce', 'home', 'campaign-home'],
-    queryFn: getCampaignHome,
+    queryFn: () => getCampaignHome(),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnMount: false,
@@ -79,13 +83,19 @@ export default function ModuleBanner() {
         }}
       >
         {banners.map((banner) => (
-          <View key={banner.campaign_id} style={[styles.banner, { width }]}>
+          <TouchableOpacity key={banner.campaign_id} style={[styles.banner, { width }]}
+            onPress={() => openCampaignPoster({ navigate: (screen: string, params: unknown) => {
+              navigation.navigate('Home', {
+                screen: banner.module === 'service' ? 'ServicesModule' : 'ProductModule',
+                params: { screen, params },
+              });
+            } }, banner)}>
             <Image
               source={{ uri: banner.banner_image }}
               style={[styles.bannerImage, { height: bannerHeight }]}
               resizeMode="cover"
             />
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 

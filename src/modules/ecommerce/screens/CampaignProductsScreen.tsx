@@ -37,7 +37,7 @@ const normalizeCampaignProducts = (response: any) => {
     campaign_item_id: product.id,
     title: product.product_name,
     brand: product.brand_name,
-    price: product.offer_price ?? product.price ?? product.final_price,
+    price: product.price ?? product.sale_price ?? product.final_price,
     originalPrice: product.originalPrice ?? product.original_sale_price ?? product.original_price ?? product.mrp,
     image: product.image,
   }));
@@ -86,7 +86,7 @@ export default function CampaignProductsScreen() {
         <FlatList
           data={products}
           numColumns={2}
-          keyExtractor={(item: any, index) => String(item?.id ?? item?.product_id ?? index)}
+          keyExtractor={(item: any) => `${item.id}:${item.variant_id}`}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

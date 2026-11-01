@@ -16,6 +16,7 @@ export default function ServiceHomeStack() {
             }}
         >
             <Stack.Screen name="Home" getComponent={() => require("../component/screens/HomeScreen").default} />
+            <Stack.Screen name="ServiceCampaign" getComponent={() => require("../component/screens/ServiceCampaignScreen").default} />
             <Stack.Screen name="ServiceSearch" getComponent={() => require("../component/screens/ServiceSearchScreen").default} />
             <Stack.Screen name="Health" getComponent={() => require("../component/insurance/Health").default} />
             <Stack.Screen name="SuperTopUp" getComponent={() => require("../component/insurance/SuperTop").default} />

@@ -10,6 +10,15 @@ import {
 ========================================================= */
 
 export interface CampaignPoster {
+  module?: 'product' | 'service';
+  redirect_ids?: number[];
+  navigation?: {
+    destination: string;
+    targetId?: number;
+    targetIds?: number[];
+    campaignId?: number;
+    url?: string;
+  } | null;
   campaign_id: number;
   title: string;
   banner_image: string;
@@ -27,6 +36,7 @@ export interface FlashSaleCampaign {
 }
 
 export interface CampaignHomeData {
+  show_flash_sale?: boolean;
   posters: CampaignPoster[];
   dashboard_posters: CampaignPoster[];
   flash_sales: FlashSaleCampaign[];
@@ -41,12 +51,12 @@ export interface CampaignHomeResponse {
    GET CAMPAIGN HOME
 ========================================================= */
 
-export const getCampaignHome = async (): Promise<CampaignHomeResponse> => {
+export const getCampaignHome = async (module: 'product' | 'service' = 'product'): Promise<CampaignHomeResponse> => {
   try {
     const headers = await getAuthHeaders();
 
     const res = await axios.get(
-      `${BASE_API_URL}/campaign/home`,
+      `${BASE_API_URL}/${module === 'service' ? 'service-campaign' : 'campaign'}/home`,
       { headers }
     );
 
@@ -96,6 +106,8 @@ export interface CampaignProductReward {
 }
 
 export interface CampaignProduct {
+  campaign_id?: number | null;
+  content_id?: number | null;
   id: number;
   product_id: number;
   product_name: string;
@@ -122,6 +134,7 @@ export interface CampaignProduct {
 }
 
 export interface CampaignProductsResponse {
+  show_section?: boolean;
   success: boolean;
   count: number;
   data: CampaignProduct[];

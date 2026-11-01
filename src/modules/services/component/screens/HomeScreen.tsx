@@ -9,6 +9,7 @@ import MostBookedServices from '../home/MostBookedServices';
 import QuickServices from '../home/QuickServices';
 import BundleService from '../home/BundleService';
 import ExclusiveOffers from '../home/ExclusiveOffers';
+import ServiceCampaigns from '../home/ServiceCampaigns';
 import PromotionalBanner from '../../../ecommerce/components/home/PromotionalBanner';
 import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 import { useServicesTheme } from '../../utils/useServicesTheme';
@@ -17,6 +18,7 @@ import { useModuleContent } from '../../../common/cms/useModuleContent';
 
 type ServiceSectionKey =
   | 'offersBanner'
+  | 'campaigns'
   | 'banner'
   | 'services'
   | 'slider'
@@ -29,6 +31,7 @@ type ServiceSectionKey =
 const SERVICE_SECTIONS: Array<{ key: ServiceSectionKey }> = [
   { key: 'services' },
   { key: 'offersBanner' },
+  { key: 'campaigns' },
   { key: 'banner' },
   { key: 'slider' },
   { key: 'mostBooked' },
@@ -57,6 +60,7 @@ const ServiceSection = React.memo(({
 
   switch (sectionKey) {
     case 'offersBanner': return <OffersBanner module="service" />;
+    case 'campaigns': return <ServiceCampaigns />;
     case 'banner': return <Banner />;
     case 'services': return <ServicesHome />;
     case 'slider': return <BannerSliderManual />;

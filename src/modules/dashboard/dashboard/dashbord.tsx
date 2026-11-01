@@ -42,6 +42,7 @@ import OffersBanner from '../../ecommerce/components/home/OffersBanner';
 import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
 import StatusTray from '../../status/components/StatusTray';
 import GamesDrawer from '../../games/components/GamesDrawer';
+import ModuleBanner from '../explore/ModuleBanner';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
   'header', 'promotionalBanner', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
@@ -527,11 +528,13 @@ function Dashbord() {
               return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
             case 'moduleBanner':
               return (
+                <View key={key}>
+                <ModuleBanner />
                 <MemoOffersBanner
-                  key={key}
                   module="mobile_dashboard"
                   moduleContent={mobileDashboardContent}
                 />
+                </View>
               );
             case 'rewardsOverview':
               return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;

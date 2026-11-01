@@ -100,11 +100,11 @@
         useEffect(() => {
             if (serviceData?.variants?.length) {
                 unstable_batchedUpdates(() => {
-                    setSelectedVariant(serviceData.variants[0]);
+                    setSelectedVariant(serviceData.variants.find(variant => variant.id === route.params.variantId) ?? serviceData.variants[0]);
                     setFormValues({});
                 });
             }
-        }, [serviceData]);
+        }, [serviceData, route.params.variantId]);
 
         const activeVariant = selectedVariant ?? serviceData?.variants?.[0] ?? null;
         const hideAddToCart = shouldHideAddToCartForService(
