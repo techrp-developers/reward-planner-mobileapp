@@ -857,10 +857,12 @@ export default function ServiceCheckoutScreen() {
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
         <EmptyCart
+          variant="services"
+          onBrowse={() => navigation.goBack()}
           message={
             isBuyNow
               ? 'Unable to load the selected item. Please login and try again.'
-              : 'Your cart is empty. Add products to continue.'
+              : 'Your service cart is empty. Add services to continue.'
           }
         />
       </View>

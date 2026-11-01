@@ -443,6 +443,7 @@ function CartScreen() {
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart
+          variant="services"
           onBrowse={() => navigation.goBack()}
           message="Your service cart is empty. Browse services to get started."
         />

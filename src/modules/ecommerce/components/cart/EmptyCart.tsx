@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import EmptyCartImage from "../../../../assets/product/EmptyCart.svg";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 
@@ -9,16 +10,26 @@ const { width } = Dimensions.get("window");
 type EmptyCartProps = {
   onBrowse?: () => void;
   message?: string;
+  variant?: 'products' | 'services';
 };
 
-export default function EmptyCart({ onBrowse, message }: EmptyCartProps) {
+export default function EmptyCart({ onBrowse, message, variant = 'products' }: EmptyCartProps) {
   const { theme } = useAppTheme();
+  const isServiceCart = variant === 'services';
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <EmptyCartImage width={180} height={180} />
+      {isServiceCart ? (
+        <View style={styles.serviceIllustration}>
+          <MaterialCommunityIcons name="briefcase-outline" size={88} color="#6D50C7" />
+        </View>
+      ) : (
+        <EmptyCartImage width={180} height={180} />
+      )}
 
-      <Text style={[styles.title, { color: theme.text }]}>Your cart looks a little lonely 🛒</Text>
+      <Text style={[styles.title, { color: theme.text }]}>
+        {isServiceCart ? 'Your service cart is empty' : 'Your cart looks a little lonely 🛒'}
+      </Text>
 
       <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
         {message ?? "Add a few favourites and watch this space glow up. ✨"}
@@ -31,7 +42,7 @@ export default function EmptyCart({ onBrowse, message }: EmptyCartProps) {
           end={{ x: 1, y: 0 }}
           style={styles.button}
         >
-          <Text style={styles.buttonText}>Browse products</Text>
+          <Text style={styles.buttonText}>{isServiceCart ? 'Browse services' : 'Browse products'}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -44,6 +55,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     backgroundColor: "#FFFF",
+  },
+
+  serviceIllustration: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#EDE7FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   title: {
