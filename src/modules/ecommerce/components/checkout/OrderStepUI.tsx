@@ -137,17 +137,7 @@ const safeToNumber = (value: any, defaultValue = 0): number => {
   return Number.isFinite(num) ? num : defaultValue;
 };
 
-const isPaymentVerified = (res: any) => {
-  const status = String(res?.status ?? res?.payment_status ?? '').toLowerCase();
-  return (
-    res?.success === true ||
-    res?.verified === true ||
-    status === 'paid' ||
-    status === 'captured' ||
-    status === 'success' ||
-    status === 'verified'
-  );
-};
+import { isPaymentVerified } from '../../utils/paymentStatus';
 
 const wait = (milliseconds: number) =>
   new Promise<void>(resolve => setTimeout(resolve, milliseconds));

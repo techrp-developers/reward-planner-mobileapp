@@ -19,6 +19,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary, type Asset as PickerAsset } from 'react-native-image-picker';
 import type { HomeStackParamList } from '../../navigation/type';
+import ReturnHomeButton from '../../../common/order/ReturnHomeButton';
 import {
   fetchParentOrderDocuments,
   submitParentOrderDocuments,
@@ -585,6 +586,7 @@ const DocumentUpload = () => {
   return (
     <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
       <ScreenHeader title="Documents Required" onBackPress={() => navigation.goBack()} />
+      <ReturnHomeButton />
 
       {loading ? (
         <View style={styles.centeredWrap}>

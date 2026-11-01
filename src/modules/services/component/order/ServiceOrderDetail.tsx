@@ -26,6 +26,7 @@ import OrderItemCard from '../../../../modules/common/order/OrderItemCard';
 
 // ── Service-specific components ──────────────────────────────────────────────
 import ServiceOrderItemCard from './ServiceOrderItemCard';
+import ReturnHomeButton from '../../../common/order/ReturnHomeButton';
 import ServiceBundleCard from './ServiceBundleCard';
 import YouMayNeedServicesCarousel from '../constant/YouMayNeedServicesCarousel';
 import RecommendedServicesCarousel from '../constant/RecommendedServicesCarousel';
@@ -364,6 +365,7 @@ export default function ServiceOrderDetail() {
           />
         }
       >
+        <ReturnHomeButton />
         <OrderItemCard
           image={
             primaryImage ? (

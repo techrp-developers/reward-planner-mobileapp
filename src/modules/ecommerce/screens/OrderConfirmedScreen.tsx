@@ -13,6 +13,7 @@ import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderSta
 import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
 import PriceDetailsCard from "../../common/order/PriceDetailsCard";
 import OfferDetails from '../../common/order/OfferDetails';
+import ReturnHomeButton from '../../common/order/ReturnHomeButton';
 import type { AppliedOffer } from '../../common/order/appliedOffer';
 import InvoiceAndServiceBanner from "../../common/order/InvoiceAndServiceBanner";
 import ProductCarousel from "../components/order/ProductCarousel";
@@ -490,6 +491,7 @@ export default function OrderConfirmedScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Product Card */}
+                <ReturnHomeButton />
                 <OrderItemCard
                     image={
                         firstItem?.image ? (
