@@ -56,7 +56,11 @@ const THIRTY_MINUTES = 30 * 60 * 1000;
 //   },
 // ];
 
+import { getAppliedOffer } from '../../../common/order/appliedOffer';
+import OfferDetails from '../../../common/order/OfferDetails';
+
 type ServicePreviewItem = {
+  offer?: import('../../../common/order/appliedOffer').AppliedOffer | null;
   id: number | string;
   service_id: number | null;
   variant_id: number | null;
@@ -263,7 +267,8 @@ function normalizePreview(
         description: String(entry?.description ?? entry?.short_description ?? '').trim(),
 
         price: parseMoney(entry?.price),
-        mrp: parseMoney(entry?.mrp ?? entry?.price),
+        mrp: parseMoney(entry?.regular_price ?? entry?.original_price ?? entry?.mrp ?? entry?.price),
+        offer: getAppliedOffer(entry),
 
         imageUrl: getFirstImage(entry, ['image_url', 'variant_image']),
 
@@ -953,6 +958,7 @@ export default function ServiceCheckoutScreen() {
               </View>
             </View>
 
+            <OfferDetails item={item} />
             {item.documents.length > 0 && (
               <View style={[styles.docsSection, { borderTopColor: servicesTheme.colors.divider }]}>
                 <Text style={[styles.docsTitle, { color: servicesTheme.colors.textStrong }]} >Documents Required</Text>

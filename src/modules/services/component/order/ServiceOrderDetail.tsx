@@ -507,6 +507,7 @@ export default function ServiceOrderDetail() {
         {/* ── Price summary (reused ecommerce component) ────────────── */}
         <SectionCard title="Payment Summary">
           <PriceDetailsCard
+            offerSavings={allServiceItems.reduce((sum, item) => sum + Number(item.offer?.savings || 0), 0)}
             itemTotal={itemSubtotal}
             deliveryFee={0}
             bagDiscount={0}

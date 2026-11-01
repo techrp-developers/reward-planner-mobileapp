@@ -1,5 +1,6 @@
 // api/orders.ts
 import axios from "axios";
+import type { AppliedOffer } from '../../common/order/appliedOffer';
 import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import { API_BASE_URL } from '../../../config/apiConfig';
 
@@ -127,6 +128,7 @@ export type OrderDetailsResponse = {
   };
 
   items?: Array<{
+    offer?: AppliedOffer | null;
     order_item_id: number;
     vendor_order_id?: number | null;
     shipment_id?: number | null;

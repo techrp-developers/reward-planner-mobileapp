@@ -254,6 +254,7 @@ function ServiceOrderRow({
             </Text>
           </View>
           <Text style={styles.actionText}>
+            {Number(order.offer_item_count) > 0 ? `${order.offer_item_count} on offer · ` : ''}
             View Order
           </Text>
         </View>

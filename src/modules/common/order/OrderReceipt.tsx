@@ -16,6 +16,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { fetchOrderReceipt } from "../../ecommerce/api/OrderApi";
 import { getProductImageUrl } from "../../ecommerce/api/ProductApi";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import OfferDetails from './OfferDetails';
+import type { AppliedOffer } from './appliedOffer';
 
 interface OrderReceiptProps {
   orderId: number;
@@ -111,8 +113,9 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
                 name={item.product_name}
                 image={item.image}
                 qty={item.quantity}
-                price={item.final_price || item.price}
-                originalPrice={item.price}
+                price={item.final_price ?? item.item_total ?? Number(item.price) * Number(item.quantity)}
+                originalPrice={Number(item.price) * Number(item.quantity)}
+                offer={item.offer}
                 rewardDiscount={item.reward_discount}
               />
             ))}
@@ -152,6 +155,7 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
                 {Number(bill.bag_discount || 0) > 0 && (
                   <Row label="Bag Discount" value={`-₹${Number(bill.bag_discount)}`} color="#22C55E" />
                 )}
+                {Number(bill.offer_savings) > 0 && <Row label="Offer savings (included)" value={`₹${Number(bill.offer_savings)}`} color="#22C55E" />}
                 <Row label="Reward Discount" value={`-₹${Number(bill.reward_discount || 0)}`} color="#22C55E" />
                 {rewardsUsed > 0 && (
                   <Row label="Rewards Used" value={`${rewardsUsed} coins`} color="#7A63FF" />
@@ -183,6 +187,7 @@ interface ProductRowProps {
   qty: number;
   price: number;
   originalPrice?: number;
+  offer?: AppliedOffer | null;
   rewardDiscount?: number;
 }
 
@@ -192,6 +197,7 @@ const ProductRow = ({
   qty,
   price,
   originalPrice,
+  offer,
   rewardDiscount,
 }: ProductRowProps) => {
   const { theme } = useAppTheme();
@@ -218,6 +224,7 @@ const ProductRow = ({
           <Text style={[styles.qty, { color: theme.secondaryText }]}>× {Number(qty || 1)}</Text>
         </View>
 
+        <OfferDetails item={{ offer }} />
         {rewardDiscount && Number(rewardDiscount) > 0 ? (
           <Text style={styles.rewardSave}>
             Saved ₹{Number(rewardDiscount)} using rewards

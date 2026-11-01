@@ -4,6 +4,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Props = {
+  offerSavings?: number;
   itemTotal: number;
   deliveryFee: number;
   bagDiscount: number;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export default function PriceDetailsCard({
+  offerSavings = 0,
   itemTotal,
   deliveryFee,
   bagDiscount,
@@ -53,6 +55,7 @@ export default function PriceDetailsCard({
         </View>
       ) : null}
 
+      {offerSavings > 0 && <Row label="Offer savings (included)" value={`₹${offerSavings.toFixed(2)}`} valueStyle={styles.negative} />}
       {/* Price rows */}
       <Row label="Item Total" value={`₹${itemTotal}`} />
       <Row label="Delivery Fee" value={`₹${deliveryFee}`} />

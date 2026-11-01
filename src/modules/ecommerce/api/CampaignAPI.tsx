@@ -118,7 +118,7 @@ export interface CampaignProduct {
   variant_id: number;
   mrp: string;
   original_price: string;
-  final_price: string;
+  final_price: string | number;
   sale_price?: string | number;
   original_sale_price?: string | number;
   offer_price?: string | number | null;
