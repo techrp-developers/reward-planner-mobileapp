@@ -1,5 +1,6 @@
 import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import api from "../../common/auth/api/axios";
+import { API_BASE_URL } from "../../../config/apiConfig";
 
 export type City = {
   id: number | string;
@@ -457,7 +458,7 @@ export type CreateBusPaymentOrderResponse = {
 |
 |--------------------------------------------------------------------------
 */
-export const BUS_BOOKING_BASE_URL = "http://localhost:5000";
+export const BUS_BOOKING_BASE_URL = API_BASE_URL;
 
 
 /*
@@ -501,7 +502,7 @@ export const searchCitiesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Check whether your local backend is running on http://localhost:5000 or adb reverse is missing"
+      "Network request failed. Please check your internet connection and ensure backend services are running"
     );
   }
 
@@ -572,7 +573,7 @@ export const searchBusesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Check whether your local backend is running on http://localhost:5000 or adb reverse is missing"
+      "Network request failed. Please check your internet connection and ensure backend services are running"
     );
   }
 
@@ -1293,6 +1294,80 @@ export const bookBusTicketApi = async (
 | Create Bus Razorpay Order
 |--------------------------------------------------------------------------
 */
+
+
+/*
+|--------------------------------------------------------------------------
+| Verify Bus Payment
+|--------------------------------------------------------------------------
+*/
+
+export type VerifyBusPaymentPayload = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+export type VerifyBusPaymentResponse = {
+  success: boolean;
+  message: string;
+  data?: {
+    order_ref?: string;
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+  };
+};
+
+export const verifyBusPaymentApi = async (
+  payload: VerifyBusPaymentPayload
+): Promise<VerifyBusPaymentResponse> => {
+  const authHeaders = await getAuthHeaders();
+  const requestUrl = `${BUS_BOOKING_BASE_URL}/api/busbooking/verify-payment`;
+
+  console.log("[BusBooking][API][VerifyPayment] Request", {
+    requestUrl,
+    razorpay_order_id: payload.razorpay_order_id,
+    razorpay_payment_id: payload.razorpay_payment_id,
+    hasAuthorization: !!authHeaders.Authorization,
+  });
+
+  let response: Response;
+  let result: any;
+
+  try {
+    response = await fetch(requestUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    result = await response.json();
+  } catch (error: any) {
+    console.log("[BusBooking][API][VerifyPayment] Network Error", {
+      requestUrl,
+      message: error?.message || error,
+    });
+
+    throw new Error(
+      error?.message || "Network request failed while verifying payment."
+    );
+  }
+
+  console.log("[BusBooking][API][VerifyPayment] Response", {
+    ok: response.ok,
+    status: response.status,
+    result,
+  });
+
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || "Payment verification failed.");
+  }
+
+  return result;
+};
 
 export const createBusPaymentOrderApi =
   async (

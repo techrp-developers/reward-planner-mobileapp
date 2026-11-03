@@ -42,6 +42,7 @@ import type {
 import {
   createBusPaymentOrderApi,
   bookBusTicketApi,
+  verifyBusPaymentApi,
 } from "../../services/busBookingApi";
 
 import type {
@@ -365,8 +366,21 @@ export default function PaymentScreen() {
             );
           }
 
+          try {
+            await verifyBusPaymentApi({
+              razorpay_order_id: paymentResult.razorpay_order_id,
+              razorpay_payment_id: paymentResult.razorpay_payment_id,
+              razorpay_signature: paymentResult.razorpay_signature,
+            });
+            console.log("[BusBooking][Payment] PAYMENT VERIFIED");
+          } catch (verifyErr: any) {
+            console.log("[BusBooking][Payment] PAYMENT VERIFY WARNING:", verifyErr?.message);
+          }
+
           const bookingResponse =
             await bookBusTicketApi({
+              orderRef,
+              order_ref: orderRef,
               traceId,
               srdvIndex,
               resultIndex,

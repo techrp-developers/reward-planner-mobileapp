@@ -40,6 +40,7 @@ import type {
 import {
   bookBusTicketApi,
   createBusPaymentOrderApi,
+  verifyBusPaymentApi,
 } from "../../services/busBookingApi";
 import { fetchWalletBalance } from "../../../ecommerce/api/WalleteAPI";
 
@@ -451,8 +452,10 @@ export default function BusSummaryScreen() {
 
   const orderRef =
     String(
-      blockResponse
-        ?.orderRef ||
+      blockResponse?.orderRef ||
+      blockResponse?.order_ref ||
+      blockResponse?.data?.orderRef ||
+      blockResponse?.data?.order_ref ||
       ""
     ).trim();
 
@@ -706,8 +709,21 @@ const rewardEarned =
             );
           }
 
+          try {
+            await verifyBusPaymentApi({
+              razorpay_order_id: paymentResult.razorpay_order_id,
+              razorpay_payment_id: paymentResult.razorpay_payment_id,
+              razorpay_signature: paymentResult.razorpay_signature,
+            });
+            console.log("[BusBooking][Summary] PAYMENT VERIFIED");
+          } catch (verifyErr: any) {
+            console.log("[BusBooking][Summary] PAYMENT VERIFY WARNING:", verifyErr?.message);
+          }
+
           const bookingResponse =
             await bookBusTicketApi({
+              orderRef,
+              order_ref: orderRef,
               traceId,
               srdvIndex,
               resultIndex,
@@ -849,10 +865,12 @@ const rewardEarned =
 
 const orderRef =
   String(
-    blockResponse
-      ?.orderRef ||
+    blockResponse?.orderRef ||
+    blockResponse?.order_ref ||
+    blockResponse?.data?.orderRef ||
+    blockResponse?.data?.order_ref ||
     ""
-  );
+  ).trim();
 
 
 if (
