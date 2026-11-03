@@ -153,7 +153,7 @@ const getQuickSelectKey = (
   return "";
 };
 
-const BLOCK_TEST_REF_ID = "35";
+const generateBlockRefId = () => `RPB${Date.now()}`;
 
 export default function PassengerDetailsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
@@ -486,7 +486,7 @@ export default function PassengerDetailsScreen() {
       resultIndex: String(resultIndex),
       boardingPointId: String(boardingPoint.Id),
       droppingPointId: String(droppingPoint.Id),
-      refId: BLOCK_TEST_REF_ID,
+      refId: generateBlockRefId(),
       passengers: blockPassengers,
       sourceCity,
       destinationCity,
