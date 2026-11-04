@@ -289,6 +289,7 @@ export default function PaymentScreen() {
 
           showPopup({
             ...result.popup,
+            buttonText: result.leaveCheckout ? 'Go to Home' : result.popup.buttonText,
             onClose: result.leaveCheckout
               ? () => navigation.popToTop()
               : undefined,
@@ -546,6 +547,7 @@ export default function PaymentScreen() {
 
           showPopup({
             ...result.popup,
+            buttonText: result.leaveCheckout ? 'Go to Home' : result.popup.buttonText,
             onClose: result.leaveCheckout
               ? () => navigation.popToTop()
               : undefined,

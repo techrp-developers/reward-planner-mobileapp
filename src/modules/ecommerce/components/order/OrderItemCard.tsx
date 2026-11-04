@@ -26,6 +26,7 @@ type Props = {
   orderRef?: string;
   orderedOn?: string;
   itemCount?: number;
+  offerItemCount?: number;
   actionText: string;
   courierName?: string;
   awbNumber?: string;
@@ -45,6 +46,7 @@ export default function OrderItemCard({
   orderRef,
   orderedOn,
   itemCount,
+  offerItemCount,
   actionText,
   courierName,
   awbNumber,
@@ -87,6 +89,7 @@ export default function OrderItemCard({
             </Text>
           </View>
 
+          {!!offerItemCount && <Text style={[styles.metaText, { color: theme.primary }]}>{offerItemCount} {offerItemCount === 1 ? 'item' : 'items'} bought on offer</Text>}
           {(orderRef || orderedOn || itemCount) ? (
             <View style={styles.metaWrap}>
               {orderRef ? (

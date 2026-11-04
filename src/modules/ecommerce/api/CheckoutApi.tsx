@@ -2,8 +2,18 @@
 import api from "../../common/auth/api/axios";
 
 /* ================= TYPES ================= */
+export type DeliveryPreference = "cheapest" | "fastest";
+export type DeliveryChoice = {
+  preference: DeliveryPreference;
+  label: string;
+  shipping_total: number;
+  payable_amount: number;
+  delivery_days: number | null;
+  estimated_delivery_date: string | null;
+};
 
 export type CartOrderPayload = {
+  delivery_preference?: DeliveryPreference;
   address_id: number;
   expected_total: number;
   expected_redeemable: number;
@@ -11,6 +21,7 @@ export type CartOrderPayload = {
 };
 
 export type BuyNowPayload = {
+  delivery_preference?: DeliveryPreference;
   product_id: number;
   variant_id: number;
   quantity: number;
@@ -36,10 +47,10 @@ export const addCartOrder = async (payload?: CartOrderPayload) => {
 /**
  * Fetch cart checkout preview
  */
-export const fetchCheckoutCart = async (useRewards = true, addressId?: number) => {
+export const fetchCheckoutCart = async (useRewards = true, addressId?: number, deliveryPreference: DeliveryPreference = "cheapest") => {
   try {
     const res = await api.get("/v1/checkout/get-cart", {
-      params: { use_rewards: useRewards, address_id: addressId },
+      params: { use_rewards: useRewards, address_id: addressId, delivery_preference: deliveryPreference },
     });
     return res.data;
   } catch (error: any) {
@@ -79,6 +90,7 @@ export const fetchBuyNowCheckout = async (
   addressId?: number,
   campaignId?: number | null,
   contentId?: number | null,
+  deliveryPreference: DeliveryPreference = "cheapest",
 ) => {
   const res = await api.get("/v1/checkout/get-buy-now", {
     params: {
@@ -89,6 +101,7 @@ export const fetchBuyNowCheckout = async (
       content_id: contentId ?? undefined,
       use_rewards: useRewards,
       address_id: addressId,
+      delivery_preference: deliveryPreference,
     },
   });
   return res.data;

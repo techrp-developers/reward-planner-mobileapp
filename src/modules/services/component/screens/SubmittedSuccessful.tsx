@@ -5,6 +5,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../navigation/type';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Successfully from '../constant/Successfully';
+import ReturnHomeButton from '../../../common/order/ReturnHomeButton';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type SubmittedSuccessfulRoute = RouteProp<HomeStackParamList, 'SubmittedSuccessful'>;
@@ -65,6 +66,7 @@ function SubmittedSuccessful({ navigation }: any) {
             Redirecting to home in {secondsLeft}s…
           </Text>
         )}
+        <ReturnHomeButton />
 
         {/* APP RATING CARD */}
         <View style={[styles.wrapper, { backgroundColor: servicesTheme.isDark ? '#181811' : '#FFFADF' }]}>

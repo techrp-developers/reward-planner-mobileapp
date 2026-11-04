@@ -203,6 +203,7 @@ export default function MyOrder() {
                                     orderRef={orderRef}
                                     orderedOn={formatDisplayDate(order.created_at)}
                                     itemCount={itemCount || undefined}
+                                    offerItemCount={Number(order.offer_item_count || 0)}
                                     actionText="View Order"
                                     onPress={() =>
                                         navigation.navigate("OrderConfirmedScreen", {

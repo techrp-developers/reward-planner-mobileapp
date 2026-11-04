@@ -12,6 +12,9 @@ import { HomeStackParamList } from "../navigation/types";
 import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderStatusJourney";
 import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
 import PriceDetailsCard from "../../common/order/PriceDetailsCard";
+import OfferDetails from '../../common/order/OfferDetails';
+import ReturnHomeButton from '../../common/order/ReturnHomeButton';
+import type { AppliedOffer } from '../../common/order/appliedOffer';
 import InvoiceAndServiceBanner from "../../common/order/InvoiceAndServiceBanner";
 import ProductCarousel from "../components/order/ProductCarousel";
 import { fetchOrderDetails, OrderItemReturnRequest } from "../api/OrderApi";
@@ -50,6 +53,7 @@ type OrderDetailsResponse = {
         landmark?: string;
     };
     items?: Array<{
+        offer?: AppliedOffer | null;
         order_item_id: number;
         vendor_order_id?: number | null;
         shipment_id?: number | null;
@@ -487,6 +491,7 @@ export default function OrderConfirmedScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Product Card */}
+                <ReturnHomeButton />
                 <OrderItemCard
                     image={
                         firstItem?.image ? (
@@ -555,6 +560,7 @@ export default function OrderConfirmedScreen() {
                                         <Text style={[styles.reviewItemMeta, { color: theme.secondaryText }]} numberOfLines={1}>
                                             {meta}
                                         </Text>
+                                        <OfferDetails item={item} />
                                         {item.shipping_status ? (
                                             <Text style={[styles.reviewItemStatus, { color: theme.secondaryText }]} numberOfLines={1}>
                                                 {toTitleCase(item.shipping_status)}
@@ -663,6 +669,7 @@ export default function OrderConfirmedScreen() {
                     phone={orderData.address?.phone || "-"}
                 />
                 <PriceDetailsCard
+                    offerSavings={(orderData.items ?? []).reduce((sum, item) => sum + Number(item.offer?.savings || 0), 0)}
                     itemTotal={itemTotal}
                     deliveryFee={shippingTotal}
                     bagDiscount={bagDiscount}

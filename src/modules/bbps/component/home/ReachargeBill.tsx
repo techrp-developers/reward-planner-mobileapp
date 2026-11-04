@@ -525,7 +525,7 @@ function RechargeBill() {
           <Text style={[styles.sectionDisplayTitle, { color: ui.text, marginBottom: 0 }]}>Others</Text>
         </View>
         <TouchableOpacity style={[styles.otherRow, { borderBottomColor: ui.divider }]} onPress={() => navigation.navigate('OrderHistory')}>
-          <View style={[styles.otherIcon, { backgroundColor: ui.rowIcon, borderColor: ui.rowIconBorder }]}><MaterialCommunityIcons name="receipt-text-outline" size={20} color={ui.text} /></View>
+          <View style={[styles.otherIcon, { backgroundColor: ui.rowIcon, borderColor: ui.rowIconBorder }]}><MaterialCommunityIcons name="history" size={20} color={ui.text} /></View>
           <Text style={[styles.otherLabel, { color: ui.text }]}>Recharges & bill payment history</Text>
           <MaterialCommunityIcons name="chevron-right" size={22} color={ui.arrow} />
         </TouchableOpacity>

@@ -3,6 +3,7 @@ import { fetchProductDetailsByID } from "../api/ProductApi";
 import { fetchCartItems } from "../api/CartApi";
 import { fetchAllAddress } from "../api/AddressApi";
 import { fetchBuyNowCheckout, fetchCheckoutCart } from "../api/CheckoutApi";
+import type { DeliveryPreference } from "../api/CheckoutApi";
 
 const PRODUCT_DETAILS_STALE_TIME = 5 * 60 * 1000;
 const CART_STALE_TIME = 10 * 60 * 1000;
@@ -13,6 +14,8 @@ export const cartSummaryQueryKey = (useRewards: boolean) =>
   ["ecommerce", "cart-summary", useRewards] as const;
 
 export const checkoutPreviewQueryKey = (params?: {
+  delivery_preference?: DeliveryPreference;
+  address_id?: number;
   mode?: "buy_now" | "cart";
   product_id?: number | string;
   variant_id?: number | string;
@@ -34,10 +37,12 @@ export const checkoutPreviewQueryKey = (params?: {
       String(params?.campaign_id ?? ""),
       String(params?.content_id ?? ""),
       useRewards,
+      params?.delivery_preference ?? 'cheapest',
+      params?.address_id ?? null,
     ] as const;
   }
 
-  return ["ecommerce", "checkout-preview", "cart", useRewards] as const;
+  return ["ecommerce", "checkout-preview", "cart", useRewards, params?.delivery_preference ?? 'cheapest', params?.address_id ?? null] as const;
 };
 
 export const productDetailsQueryKey = (

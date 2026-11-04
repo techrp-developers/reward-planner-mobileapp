@@ -11,9 +11,9 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -23,6 +23,7 @@ import {
   fetchProductDetailsByID,
 } from "../../api/ProductApi";
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
+import { openCampaignPoster } from '../../utils/campaignNavigation';
 import { getPromotionalContent } from "../../api/ContentOfferAPI";
 import { queryClient } from "../../../../query/queryClient";
 import { HomeStackParamList } from "../../navigation/types";
@@ -48,10 +49,6 @@ const CAMPAIGN_HOME_QUERY_KEY = ["ecommerce", "home", "campaign-home"] as const;
 const PROMOTIONAL_CONTENT_QUERY_KEY = ["ecommerce", "home", "promotional-content"] as const;
 const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
   ["ecommerce", "home", "flash-products", campaignId] as const;
-// The campaign-home endpoint can omit flash_sales even while the dedicated
-// flash-sale campaign remains available. Keep the configured campaign visible
-// until the API starts returning an active flash sale again.
-const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -247,7 +244,7 @@ const FlashOfferProductCard = React.memo(({
         rpPriceValue > 0
           ? `₹${rpPriceValue.toLocaleString()}`
           : null,
-      brandName: item.brand || "brand_name",
+      brandName: item.brand || item.brand_name || '',
       productTitle: item.title || item.product_name || "Product Title",
       imageUrl: getProductImageUrl(Array.isArray(item.images) ? item.images[0] : item.image),
     };
@@ -261,9 +258,10 @@ const FlashOfferProductCard = React.memo(({
           productId: String(productId),
           variantId: variantId == null ? undefined : String(variantId),
           campaignId: item.campaign_id,
+          contentId: item.content_id,
         }),
-        queryKey: productDetailsQueryKey(String(productId), item.campaign_id),
-        queryFn: () => fetchProductDetailsByID(String(productId), item.campaign_id),
+        queryKey: productDetailsQueryKey(String(productId), item.campaign_id, item.content_id),
+        queryFn: () => fetchProductDetailsByID(String(productId), item.campaign_id, item.content_id),
     });
   };
 
@@ -387,6 +385,7 @@ type Props = {
 // logic and is intentionally NOT parameterized by module.
 export default function OfferHome({ module = "product" }: Props) {
   const navigation = useNavigation<Nav>();
+  const focused = useIsFocused();
   const { theme } = useAppTheme();
   const { moduleContent } = useModuleContent(module);
   const cmsOffersBanner = moduleContent?.offers_banner ?? null;
@@ -397,8 +396,9 @@ export default function OfferHome({ module = "product" }: Props) {
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
-    queryFn: getCampaignHome,
-    staleTime: 10 * 60 * 1000,
+    queryFn: () => getCampaignHome(),
+    staleTime: 30 * 1000,
+    refetchInterval: focused ? 30 * 1000 : false,
   });
   const { data: promotionalContent } = useQuery({
     queryKey: PROMOTIONAL_CONTENT_QUERY_KEY,
@@ -406,33 +406,37 @@ export default function OfferHome({ module = "product" }: Props) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const flashCampaignId =
-    campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
+  const flashSales = campaignHome?.data?.show_flash_sale === false ? [] : campaignHome?.data?.flash_sales ?? [];
+  const flashCampaignId = flashSales[0]?.campaign_id;
 
-  const { data: products = [], isLoading: isProductsLoading } = useQuery({
-    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId!),
-    queryFn: () => getCampaignProducts(flashCampaignId!),
-    enabled: flashCampaignId != null,
-    staleTime: 5 * 60 * 1000,
-    select: (res) =>
-      (res.data ?? []).map((p) => ({
+  const flashQueries = useQueries({ queries: flashSales.map(sale => ({
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(sale.campaign_id),
+    queryFn: () => getCampaignProducts(sale.campaign_id),
+    staleTime: 30 * 1000,
+    refetchInterval: focused ? 30 * 1000 : false,
+    select: (res: Awaited<ReturnType<typeof getCampaignProducts>>) =>
+      (res.show_section === false ? [] : res.data ?? []).map((p) => ({
         id: p.id,
+        sale_campaign_id: sale.campaign_id,
         product_id: p.product_id,
         variant_id: p.variant_id,
-        campaign_id: flashCampaignId,
+        campaign_id: p.campaign_id ?? undefined,
+        content_id: p.content_id ?? undefined,
         product_name: p.product_name,
         title: p.product_name,
         brand: p.brand_name || '',
-        price: p.offer_price ?? p.price ?? p.final_price,
+        price: p.price ?? p.sale_price ?? p.final_price,
         mrp: p.mrp,
         originalPrice: p.original_sale_price ?? p.originalPrice ?? p.mrp,
         discount: p.discount,
         rp_price: p.rp_price,
         image: p.image || null,
         images: p.image ? [p.image] : [],
-        is_wishlisted: false,
+        is_wishlisted: p.is_wishlisted ?? p.is_wishlist ?? false,
       })),
-  });
+  })) });
+  const products = flashQueries.flatMap(query => query.data ?? []);
+  const isProductsLoading = flashQueries.some(query => query.isLoading);
 
   const banner = useMemo(() => {
     const campaignBanners = (campaignHome?.data?.posters ?? []).map(p => ({
@@ -444,6 +448,7 @@ export default function OfferHome({ module = "product" }: Props) {
       redirectType: p.redirect_type,
       redirectId: p.redirect_id,
       redirectUrl: p.redirect_url,
+      poster: p,
     }));
     if (!promotionalContent?.contentId || !promotionalContent.imageUrl) return campaignBanners;
     return [...campaignBanners, {
@@ -455,6 +460,7 @@ export default function OfferHome({ module = "product" }: Props) {
       redirectType: null,
       redirectId: null,
       redirectUrl: null,
+      poster: undefined,
     }];
   }, [campaignHome, promotionalContent]);
 
@@ -492,11 +498,16 @@ export default function OfferHome({ module = "product" }: Props) {
     cmsOffersSlides.length > 0 || hasCmsOffersColor;
 
   const flashSalesPoster = useMemo(() => {
+    if (campaignHome?.data?.flash_sales?.length !== 1) return null;
     const flash = campaignHome?.data?.flash_sales?.[0];
     return flash?.banner_image ?? null;
   }, [campaignHome]);
 
   const handleBannerPress = (offer: typeof banner[number]) => {
+    if (offer.poster) {
+      openCampaignPoster(navigation, offer.poster);
+      return;
+    }
     if (offer.campaignId != null || offer.contentId != null) {
       navigation.navigate('CampaignProducts', {
         campaignId: offer.campaignId,
@@ -553,7 +564,8 @@ export default function OfferHome({ module = "product" }: Props) {
             />
           )}
         </ScrollView>
-      ) : banner.length > 0 ? (
+      ) : null}
+      {banner.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -573,7 +585,7 @@ export default function OfferHome({ module = "product" }: Props) {
       ) : null}
 
       {/* Flash Sales Section */}
-      <View style={styles.flashSectionContainer}>
+      {flashCampaignId != null && products.length > 0 && <View style={styles.flashSectionContainer}>
         <BgSales style={StyleSheet.absoluteFillObject} preserveAspectRatio="xMidYMid slice" />
         <View style={styles.flashContentRow}>
           <View style={styles.flashLeft}>
@@ -600,7 +612,7 @@ export default function OfferHome({ module = "product" }: Props) {
           >
             {products.map((item: any, index: number) => (
               <View
-                key={String(item?.id ?? item?.product_id ?? index)}
+                key={`${item.sale_campaign_id}:${item.product_id}:${item.variant_id}`}
                 style={index < products.length - 1 ? styles.flashProductItem : undefined}
               >
                 <FlashOfferProductCard item={item} shouldLoadImage />
@@ -608,7 +620,7 @@ export default function OfferHome({ module = "product" }: Props) {
             ))}
           </ScrollView>
         </View>
-      </View>
+      </View>}
     </View>
   );
 }
@@ -622,12 +634,12 @@ export const prefetchOfferHomeSection = async (module: CmsModuleKey = "product")
 
   const campaignHome = await queryClient.fetchQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
-    queryFn: getCampaignHome,
+    queryFn: () => getCampaignHome(),
     staleTime: 10 * 60 * 1000,
   });
 
   const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
-  if (flashCampaignId == null) return;
+  if (campaignHome?.data?.show_flash_sale === false || flashCampaignId == null) return;
 
   await queryClient.prefetchQuery({
     queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId),

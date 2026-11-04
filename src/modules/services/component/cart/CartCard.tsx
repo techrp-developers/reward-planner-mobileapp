@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import OfferDetails from '../../../common/order/OfferDetails';
+import type { AppliedOffer } from '../../../common/order/appliedOffer';
 import {
   View,
   Text,
@@ -20,6 +22,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 export type CartCardProps = {
+  offer?: AppliedOffer | null;
 id: string | number;
   serviceName: string;
   variantName: string;
@@ -37,6 +40,7 @@ id: string | number;
 };
 
 const CartCard = ({
+  offer,
   serviceName,
   variantName,
   description,
@@ -99,6 +103,7 @@ const CartCard = ({
             {!!description && (
               <Text style={[styles.description, { color: servicesTheme.colors.muted }]} numberOfLines={2}>{description}</Text>
             )}
+            <OfferDetails item={{ offer }} />
             <View style={styles.priceRow}>
               <Text style={styles.price}>₹{price.toLocaleString('en-IN')}</Text>
               {mrp > price && (
