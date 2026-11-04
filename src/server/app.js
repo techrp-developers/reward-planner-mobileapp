@@ -21,6 +21,8 @@ require("./app/busboooking/config/productionSafety")
 if (String(process.env.RUN_SCHEDULED_JOBS ?? "true").toLowerCase() === "true") {
   require("./services/ExpressBees/cron/shipmentCron");
   require("./services/Status/statusCleanupCron");
+  require("./services/rewards/transactionRewardCron");
+  require("./services/promotions/worker");
 } else {
   console.warn(
     "[COURIER_BOOKING] Cron OFF: RUN_SCHEDULED_JOBS is not true, so this process will not book or track shipments",
@@ -140,6 +142,7 @@ app.use(
       "X-Session-Token",
       "Idempotency-Key",
       "X-CSRF-Token",
+      "X-CMS-Module-Version",
     ],
   }),
 );

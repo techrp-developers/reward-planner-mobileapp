@@ -1,3 +1,5 @@
+const { settleTransactionReward } = require("../../../services/rewards/transactionRewardService");
+const { sendTransactionSuccessEmail } = require("../../../services/mailBuilder/transactionSuccess");
 const srdvClient = require("../utils/srdvClient");
 const db = require("../../../config/database");
 const { sendOpsAlert } = require("../../../services/alertService");
@@ -98,7 +100,7 @@ async function callProviderBook(order) {
 }
 
 async function markConfirmed(orderId, booking, rawResponse) {
-  await db.execute(
+  const [updated] = await db.execute(
     `UPDATE busbooking_orders
         SET status = 'confirmed',
             provider_booking_id = ?,
@@ -116,6 +118,8 @@ async function markConfirmed(orderId, booking, rawResponse) {
       orderId,
     ],
   );
+  if (updated.affectedRows) void sendTransactionSuccessEmail("bus", orderId);
+  await settleTransactionReward("busbooking", orderId);
 }
 
 // A booking that definitely did not happen: record it and the full refund it
