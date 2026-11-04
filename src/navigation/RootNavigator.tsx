@@ -13,6 +13,7 @@ import { StepTrackerProvider } from "../modules/step_counter/context/StepTracker
 
 import MainLayout from "./MainLayout";
 import SplashScreen from "../modules/common/auth/screens/SplashScreen";
+import { LaunchPresentationProvider, useLaunchPresentation } from "../modules/common/cms/splash/launchPresentation";
 import TermsGateScreen from "../modules/common/auth/screens/TermsGateScreen";
 import LoginScreen from "../modules/common/auth/screens/LoginScreen";
 import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScreen";
@@ -321,6 +322,7 @@ function AppNavigator() {
 //    └─ TermsGate  (first-time acceptance; back gesture + hardware back locked)
 //
 //  isAuthenticated = true, termsAccepted = true
+//    └─ Splash  (launch promotion resolving/visible, bounded; see launchPresentation)
 //    └─ App  (normal app flow)
 
 type VersionModalState = {
@@ -342,7 +344,7 @@ const MODAL_HIDDEN: VersionModalState = {
 // const BYPASS_LOGIN_SCREEN = true;
 
 export default function RootNavigator() {
-  const { isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
+  const { user, accessToken, isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
   const [versionModal, setVersionModal] = useState<VersionModalState>(MODAL_HIDDEN);
   const [biometricCleared, setBiometricCleared] = useState(false);
 
@@ -379,16 +381,28 @@ export default function RootNavigator() {
   const showSplash = isInitializing || isCheckingTerms;
   // const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
 
+  // CMS launch promotion: when the user is about to enter the app, the Splash
+  // route is held while the campaign resolves and is shown inside it, so the
+  // dashboard never mounts underneath it. Login and terms are never delayed.
+  const launch = useLaunchPresentation({
+    isInitializing,
+    hasSession: Boolean(accessToken),
+    destination: showSplash ? "pending" : isAuthenticated && termsAccepted ? "app" : "other",
+    userId: user?.user_id ?? null,
+    interrupted: versionModal.visible,
+  });
+  const showLaunch = showSplash || launch.holding;
+
   // Only surface the first-login reward popup once the user has actually
   // reached the authenticated app (past Splash/TermsGate/biometric lock),
   // so it doesn't stack on top of those gates.
   const showRewardModal =
-    !showSplash && biometricCleared && isAuthenticated && termsAccepted === true && firstLoginReward !== null;
+    !showLaunch && biometricCleared && isAuthenticated && termsAccepted === true && firstLoginReward !== null;
 
   // Explain notifications only once the user is inside the app, never over
   // Splash/Terms/biometric gates, the first-login reward or an update notice.
   const canPromptForNotifications =
-    !showSplash && biometricCleared && isAuthenticated && termsAccepted === true &&
+    !showLaunch && biometricCleared && isAuthenticated && termsAccepted === true &&
     firstLoginReward === null && !versionModal.visible;
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   useEffect(() => {
@@ -405,7 +419,7 @@ export default function RootNavigator() {
     };
   }, [canPromptForNotifications]);
 
-  const navigator = showSplash ? (
+  const navigator = showLaunch ? (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
       <RootStack.Screen name="Splash" component={SplashScreen} />
     </RootStack.Navigator>
@@ -445,12 +459,12 @@ export default function RootNavigator() {
 
   return (
     <>
-      {navigator}
+      <LaunchPresentationProvider value={launch}>{navigator}</LaunchPresentationProvider>
       <BiometricLockScreen
         // The biometric gate protects an existing authenticated session. Showing
         // it over the logged-out auth stack can leave users on its dark modal
         // while the native biometric availability check is still pending.
-        visible={!showSplash && isAuthenticated && !biometricCleared}
+        visible={!showLaunch && isAuthenticated && !biometricCleared}
         onSuccess={() => setBiometricCleared(true)}
         onUseFallback={() => setBiometricCleared(true)}
       />
