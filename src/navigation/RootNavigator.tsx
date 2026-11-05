@@ -41,6 +41,7 @@ export type AppStackParamList = {
   GlobalSearchScreen: undefined;
   TrackOrders: undefined;
   Notification: undefined;
+  NotificationSettings: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
@@ -281,6 +282,10 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/dashboard/globalorder/TrackOrderScreen").default
         }
+      />
+      <AppStack.Screen
+        name="NotificationSettings"
+        getComponent={() => require("../modules/dashboard/notification/NotificationSettings").default}
       />
       <AppStack.Screen
         name="Notification"

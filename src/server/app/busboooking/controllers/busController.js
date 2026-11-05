@@ -289,11 +289,13 @@ const searchBuses = async (req, res) => {
 
         /*
         |--------------------------------------------------------------------------
-        | Journey Time Validation
+        | Past Journey Date Validation
         |--------------------------------------------------------------------------
         */
 
+
         if (journeyDate < getTodayDate()) {
+
 
             return res
                 .status(400)
@@ -313,6 +315,37 @@ const searchBuses = async (req, res) => {
         |--------------------------------------------------------------------------
         */
 
+        // Check the provider setup before any database work. This is a
+        // server deployment problem, so answer 503 and log the key names;
+        // clients only see them outside production (never the values).
+        const missingConfig =
+            getMissingSearchConfig();
+
+        if (missingConfig.length > 0) {
+
+            console.error(
+                "[BusBooking][Search] Provider not configured; missing env:",
+                missingConfig.join(", ")
+            );
+
+            return res
+                .status(503)
+                .json({
+
+                    success: false,
+
+                    code:
+                        "BUS_PROVIDER_NOT_CONFIGURED",
+
+                    message:
+                        "Bus booking provider configuration is missing",
+
+                    ...(String(process.env.NODE_ENV).toLowerCase() !== "production"
+                        ? { missingConfig }
+                        : {})
+                });
+        }
+
         const sourceCity =
             await getOptionalCityDetails(
                 fromCityCode
@@ -328,24 +361,6 @@ const searchBuses = async (req, res) => {
                 success: false,
                 message: "Source or destination city code is not present in the current bus city list",
             });
-        }
-
-        const missingConfig =
-            getMissingSearchConfig();
-
-        if (missingConfig.length > 0) {
-
-            return res
-                .status(500)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Bus booking provider configuration is missing",
-
-                    missingConfig
-                });
         }
 
 
@@ -418,6 +433,21 @@ const searchBuses = async (req, res) => {
                 apiData.Error.ErrorCode
             ) !== 0
         ) {
+            const errCode = Number(apiData.Error.ErrorCode);
+            const errMsg = String(apiData.Error.ErrorMessage || "");
+            if (errCode === 100 || /no (data|bus) found/i.test(errMsg)) {
+                return res.status(200).json({
+                    success: true,
+                    count: 0,
+                    buses: [],
+                    message: "No buses found for this route and date",
+                    search: {
+                        sourceCity: sourceCity?.city_name || String(sourceCityCode),
+                        destinationCity: destinationCity?.city_name || String(destinationCityCode),
+                        journeyDate,
+                    }
+                });
+            }
 
             return res
                 .status(400)
@@ -620,12 +650,11 @@ const getSeatLayout = async (req, res) => {
         |--------------------------------------------------------------------------
         */
 
-        const {
-            traceId,
-            resultIndex,
-            boardingPointId,
-            droppingPointId
-        } = req.body;
+        const traceId = req.body?.traceId;
+        const srdvIndex = req.body?.srdvIndex || req.body?.resultIndex;
+        const resultIndex = req.body?.resultIndex || req.body?.srdvIndex;
+        const boardingPointId = req.body?.boardingPointId;
+        const droppingPointId = req.body?.droppingPointId;
 
         const normalizedTraceId = parsePositiveInteger(traceId);
         const normalizedResultIndex = String(resultIndex ?? "").trim();
@@ -1166,10 +1195,9 @@ const getBoardingDroppingPoints = async (
     |--------------------------------------------------------------------------
     */
 
-    const {
-      traceId,
-      resultIndex,
-    } = req.body;
+    const traceId = req.body?.traceId;
+    const srdvIndex = req.body?.srdvIndex || req.body?.resultIndex;
+    const resultIndex = req.body?.resultIndex || req.body?.srdvIndex;
 
     const normalizedTraceId = parsePositiveInteger(traceId);
     const normalizedResultIndex = String(resultIndex ?? "").trim();
@@ -1761,19 +1789,6 @@ const blockSeat =
           });
       }
 
-
-      /*
-      |--------------------------------------------------------------------------
-      | Normalize Passenger Contact Data
-      |--------------------------------------------------------------------------
-      |
-      | Passenger Email is optional.
-      |
-      | If frontend sends a top-level email, reuse it for passengers that do not
-      | include their own Email field.
-      |
-      |--------------------------------------------------------------------------
-      */
 
       /*
       |--------------------------------------------------------------------------
@@ -3575,7 +3590,21 @@ await connection
 */
 
 const bookBusTicket = async (req, res) => {
-  const orderRef = String(req.body?.order_ref || "").trim();
+  let orderRef = String(req.body?.order_ref || req.body?.orderRef || "").trim();
+
+  if (!orderRef && req.body?.traceId && req.body?.resultIndex && req.user?.user_id) {
+    try {
+      const [[latestOrder]] = await db.execute(
+        'SELECT order_ref FROM busbooking_orders WHERE user_id = ? AND trace_id = ? AND result_index = ? ORDER BY id DESC LIMIT 1',
+        [req.user.user_id, String(req.body.traceId).trim(), String(req.body.resultIndex).trim()]
+      );
+      if (latestOrder?.order_ref) {
+        orderRef = latestOrder.order_ref;
+      }
+    } catch (lookupErr) {
+      console.warn('[BusBooking][Book] OrderRef lookup error:', lookupErr.message);
+    }
+  }
 
   if (!orderRef) {
     return res.status(400).json({
