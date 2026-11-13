@@ -9,17 +9,17 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
-  type ImageStyle,
+  Easing,
+  useWindowDimensions,
   type LayoutChangeEvent,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import Logo from '../../../assets/menu/logo.png';
-import RewardIcon from '../../../assets/product/rewards.svg';
 import { useGlobalSearch } from './useGlobalSearch';
 import type { SearchData } from '../api/GlobalSearchAPI';
+import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
+import { rs } from '../../../utils/responsive';
 
 const ANDROID_STATUS_BAR = StatusBar.currentHeight ?? 24;
 const IOS_FALLBACK_TOP   = 50;
@@ -41,8 +41,16 @@ interface HeaderProps {
   userImageUri?:          string;
   companyLogoUri?:        string;
   surface?:               'solid' | 'transparent';
+  // CMS-driven text color for the header strip (greeting name, subtitle,
+  // search placeholder/icon tints, bell icon) — used when a CMS
+  // navbar_background image/color is active, since the theme-based
+  // light/dark text tokens can't know if that background is readable
+  // against them. Leave unset to keep the normal theme-aware colors
+  // (e.g. the default no-CMS-content fallback background).
+  textColor?:             string;
   dismissSignal?:         number;
   onNotificationPress?:   () => void;
+  onProfilePress?:        () => void;
   onAIToggle?:            (value: boolean) => void;
   onSearchSubmit?:        (query: string) => void;
   onSearchActiveChange?:  (active: boolean) => void;
@@ -50,43 +58,60 @@ interface HeaderProps {
   onSearchOverlayChange?: (state: SearchOverlayState) => void;
   showRewardPoints?:      boolean;
   rewardPoints?:          number;
+  statusContent?:         React.ReactNode;
+  collapsed?:             boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 const HeaderComponent: React.FC<HeaderProps> = ({
   userName = 'User',
-  userImageUri,
   companyLogoUri,
+  statusContent,
+  collapsed = false,
   surface = 'solid',
+  textColor,
   dismissSignal = 0,
   onNotificationPress,
+  onProfilePress,
   onSearchSubmit,
   onSearchActiveChange,
   onSearchDropdownChange,
   onSearchOverlayChange,
-  showRewardPoints = false,
-  rewardPoints = 0,
 }) => {
   const { isDark }   = useAppTheme();
-  const navigation   = useNavigation<any>();
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery,  setSearchQuery]  = useState('');
   const [headerHeight, setHeaderHeight] = useState(0);
-
-  // All animations use native driver (opacity + transform only)
-  const dateFade    = useRef(new Animated.Value(1)).current;
-  const searchFade  = useRef(new Animated.Value(0)).current;
-  const searchSlide = useRef(new Animated.Value(28)).current;
-  const searchScale = useRef(new Animated.Value(0.94)).current;
-  const searchSweep = useRef(new Animated.Value(0)).current;
+  const [companyLogoFailed, setCompanyLogoFailed] = useState(false);
+  const searchExpansion = useRef(new Animated.Value(0)).current;
+  const headerCollapse = useRef(new Animated.Value(collapsed ? 1 : 0)).current;
   const lastDismissSignal = useRef(dismissSignal);
   const inputRef    = useRef<TextInput>(null);
+  const { width: screenWidth } = useWindowDimensions();
 
   const insets  = useSafeAreaInsets();
   const safeTop = insets.top > 0
     ? insets.top
     : Platform.OS === 'android' ? ANDROID_STATUS_BAR : IOS_FALLBACK_TOP;
+  const normalizedCompanyLogoUri = useMemo(
+    () => normalizeLocalCmsImageUrl(companyLogoUri),
+    [companyLogoUri],
+  );
+  const firstName = useMemo(() => userName.trim().split(/\s+/)[0] || 'User', [userName]);
+
+  useEffect(() => {
+    setCompanyLogoFailed(false);
+  }, [normalizedCompanyLogoUri]);
+
+  useEffect(() => {
+    Animated.timing(headerCollapse, {
+      toValue: collapsed ? 1 : 0,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [collapsed, headerCollapse]);
 
   // ── Global search hook ────────────────────────────────────────────────────
 
@@ -96,26 +121,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   // ── Theme tokens ──────────────────────────────────────────────────────────
 
   const tk = useMemo(() => ({
-    headerBg:         surface === 'transparent' ? 'transparent' : '#111827',
-    helloColor:       isDark ? '#A1A1AA' : '#C7D2FE',
-    nameColor:        '#FFFFFF',
-    logoPillBg:       'rgba(255,255,255,0.92)',
-    avatarRingBg:     isDark ? 'rgba(79,70,229,0.22)'  : 'rgba(255,255,255,0.18)',
-    dateColor:        isDark ? '#C7D2FE' : '#E0E7FF',
-    iconBg:           isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)',
-    iconTint:         '#FFFFFF',
-    searchBg:         '#09090B',
-    searchBorder:     isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.22)',
-    searchTextColor:  '#FFFFFF',
-    placeholderColor: isDark ? '#A1A1AA'  : '#C7D2FE',
-  }), [isDark, surface]);
-
-  const formattedDate = useMemo(() => {
-    const n = new Date();
-    const D = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${D[n.getDay()]}, ${n.getDate()} ${M[n.getMonth()]}`;
-  }, []);
+    headerBg:         surface === 'transparent' ? 'transparent' : isDark ? '#09090B' : '#FFFFFF',
+    nameColor:        textColor ?? (isDark ? '#F8FAFC' : '#0F172A'),
+    searchBg:         isDark ? 'rgba(15,23,42,0.88)' : '#F1F5F9',
+    // Search pill keeps its own fixed light/dark background regardless of
+    // the header's dynamic textColor, so its text must stay theme-based too
+    // — following textColor here would make it unreadable (e.g. white text
+    // on the pill's light gray background) whenever a CMS text_color is set.
+    searchTextColor:  isDark ? '#F8FAFC' : '#0F172A',
+    placeholderColor: isDark ? '#94A3B8' : '#64748B',
+  }), [isDark, surface, textColor]);
 
   // ── Layout measurement — drives dropdown top position ─────────────────────
 
@@ -126,40 +141,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
   // ── Search animation ──────────────────────────────────────────────────────
 
-  const openSearch = useCallback(() => {
-    setSearchActive(true);
-    onSearchActiveChange?.(true);
-    searchSweep.stopAnimation();
-    searchSweep.setValue(0);
-    Animated.timing(searchSweep, {
-      toValue: 1,
-      duration: 1800,
-      useNativeDriver: true,
-    }).start();
-    Animated.parallel([
-      Animated.timing(dateFade,    { toValue: 0, duration: 160, useNativeDriver: true }),
-      Animated.timing(searchFade,  { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.timing(searchSlide, { toValue: 0, duration: 260, useNativeDriver: true }),
-      Animated.spring(searchScale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 10 }),
-    ]).start(() => inputRef.current?.focus());
-  }, [dateFade, searchFade, searchSlide, searchScale, searchSweep, onSearchActiveChange]);
-
   const closeSearch = useCallback(() => {
     if (!searchActive) return;
     inputRef.current?.blur();
-    searchSweep.stopAnimation();
+    searchExpansion.stopAnimation();
     onSearchActiveChange?.(false);
-    Animated.parallel([
-      Animated.timing(dateFade,    { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(searchFade,  { toValue: 0, duration: 140, useNativeDriver: true }),
-      Animated.timing(searchSlide, { toValue: 28, duration: 200, useNativeDriver: true }),
-      Animated.timing(searchScale, { toValue: 0.94, duration: 180, useNativeDriver: true }),
-    ]).start(() => {
-      setSearchActive(false);
-      setSearchQuery('');
-      reset();
-    });
-  }, [dateFade, searchActive, searchFade, searchSlide, searchScale, searchSweep, reset, onSearchActiveChange]);
+    setSearchQuery('');
+    reset();
+    Animated.timing(searchExpansion, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: false,
+    }).start(() => setSearchActive(false));
+  }, [searchActive, searchExpansion, reset, onSearchActiveChange]);
 
   useEffect(() => {
     onSearchDropdownChange?.(showDropdown);
@@ -205,9 +199,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     onSearchSubmit?.(q);
   }, [searchQuery, closeSearch, onSearchSubmit]);
 
-  const sweepTranslateX = searchSweep.interpolate({
+  const searchWidth = searchExpansion.interpolate({
     inputRange: [0, 1],
-    outputRange: [-90, 360],
+    outputRange: [rs(42), Math.max(rs(180), screenWidth - rs(88))],
+  });
+  const headerRowHeight = headerCollapse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [rs(68), 0],
   });
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -218,171 +216,37 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     <View style={styles.wrapper}>
 
       <View
-        style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10 }]}
+        style={[styles.headerSurface, { backgroundColor: tk.headerBg, paddingTop: safeTop + 10, paddingBottom: statusContent ? rs(4) : rs(10) }]}
         onLayout={handleHeaderLayout}
       >
-        {/* ── Row 1 : Avatar | Greeting | Logo ── */}
-        <View style={styles.topRow}>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Profile', { context: 'dashboard' })}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.avatarRing, { backgroundColor: tk.avatarRingBg }]}>
-              {userImageUri ? (
-                <Image
-                  source={{ uri: userImageUri }}
-                  style={styles.avatarImg as ImageStyle}
-                  resizeMode="cover"
-                />
-              ) : (
-                <MaterialCommunityIcons name="account-circle" size={32} color="#FFFFFF" />
-              )}
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.greetWrap}>
-            <Text style={[styles.helloText, { color: tk.helloColor }]}>Hello,</Text>
-            <Text style={[styles.nameText, { color: tk.nameColor }]} numberOfLines={1}>
-              {userName}
-            </Text>
-          </View>
-
-          <View style={[styles.logoPill, { backgroundColor: tk.logoPillBg }]}>
-            <View style={styles.logoImageWrap}>
-              <Image
-                source={companyLogoUri ? { uri: companyLogoUri } : Logo}
-                style={styles.logoImage as ImageStyle}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-
-        </View>
-
-        {/* ── Row 2 : Date ←→ Search | Actions ── */}
-        <View style={styles.bottomRow}>
-
-          {/*
-           * flexZone: two absolutely-stacked children
-           *   1. Date label — fades out when search opens
-           *   2. Search pill — slides in from the right
-           */}
-          <View style={styles.flexZone}>
-
-            {/* Date */}
-            <Animated.View
-              style={[StyleSheet.absoluteFill, styles.dateCentered, { opacity: dateFade }]}
-              pointerEvents={searchActive ? 'none' : 'auto'}
-            >
-              <MaterialCommunityIcons
-                name="calendar-month-outline"
-                size={13}
-                color={tk.dateColor}
-                style={styles.calIcon}
-              />
-              <Text style={[styles.dateText, { color: tk.dateColor }]} numberOfLines={1}>
-                {formattedDate}
-              </Text>
-            </Animated.View>
-
-            {/* Search pill */}
-            <Animated.View
-              style={[
-                StyleSheet.absoluteFill,
-                styles.searchPill,
-                {
-                  backgroundColor: tk.searchBg,
-                  borderColor:     tk.searchBorder,
-                  opacity:         searchFade,
-                  transform: [{ translateX: searchSlide }, { scale: searchScale }],
-                },
-              ]}
-              pointerEvents={searchActive ? 'auto' : 'none'}
-            >
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.searchSweep,
-                  {
-                    transform: [
-                      { translateX: sweepTranslateX },
-                      { rotate: '16deg' },
-                    ],
-                  },
-                ]}
-              />
-              <MaterialCommunityIcons
-                name="magnify"
-                size={16}
-                color={tk.placeholderColor}
-                style={styles.searchIcon}
-              />
-              <TextInput
-                ref={inputRef}
-                placeholder="Search products, services…"
-                placeholderTextColor={tk.placeholderColor}
-                value={searchQuery}
-                onChangeText={handleQueryChange}
-                onSubmitEditing={handleSubmit}
-                style={[styles.searchInput, { color: tk.searchTextColor }]}
-                editable={searchActive}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => { setSearchQuery(''); reset(); }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <MaterialCommunityIcons name="close-circle" size={16} color={tk.placeholderColor} />
-                </TouchableOpacity>
-              )}
-            </Animated.View>
-
-          </View>
-
-          {/* Icon buttons */}
-          <View style={styles.actionRow}>
-            {showRewardPoints ? (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('WalletHistory')}
-                style={[styles.rewardPointsPill, { backgroundColor: tk.iconBg }]}
-                activeOpacity={0.75}
-              >
-                <RewardIcon width={14} height={24} />
-                <View>
-                  <Text style={styles.rewardPointsValue} numberOfLines={1}>
-                    {rewardPoints.toLocaleString('en-IN')}
-                  </Text>
-                  <Text style={styles.rewardPointsLabel}>Reward points</Text>
-                </View>
-              </TouchableOpacity>
+        <Animated.View style={[styles.collapsibleRow, { height: headerRowHeight, opacity: headerCollapse.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }), transform: [{ translateY: headerCollapse.interpolate({ inputRange: [0, 1], outputRange: [0, -12] }) }] }]} pointerEvents={collapsed ? 'none' : 'auto'}>
+          {!searchActive ? (
+          <View style={styles.topRow}>
+            <TouchableOpacity style={styles.greetWrap} onPress={onProfilePress} disabled={!onProfilePress} accessibilityRole="button" accessibilityLabel={`Open profile for ${userName}`}>
+              <Text style={[styles.nameText, { color: tk.nameColor }]} numberOfLines={1}>Hi, {firstName}</Text>
+            </TouchableOpacity>
+            {normalizedCompanyLogoUri && !companyLogoFailed ? (
+              <View style={styles.logoPill}>
+                <Image source={{ uri: normalizedCompanyLogoUri }} style={styles.logoImage} resizeMode="contain" onError={() => setCompanyLogoFailed(true)} />
+              </View>
             ) : (
-              <TouchableOpacity
-                onPress={searchActive ? closeSearch : openSearch}
-                style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
-                activeOpacity={0.75}
-              >
-                <MaterialCommunityIcons
-                  name={searchActive ? 'close' : 'magnify'}
-                  size={19}
-                  color={tk.iconTint}
-                />
-              </TouchableOpacity>
+              <View style={styles.logoPill}><MaterialCommunityIcons name="domain" size={rs(23)} color="#6A00FF" /></View>
             )}
-
-            {(!searchActive || showRewardPoints) && (
-              <TouchableOpacity
-                onPress={onNotificationPress}
-                style={[styles.iconBtn, { backgroundColor: tk.iconBg }]}
-                activeOpacity={0.75}
-              >
-                <MaterialCommunityIcons name="bell-outline" size={19} color={tk.iconTint} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={onNotificationPress} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel="Notifications" activeOpacity={0.75}>
+              <MaterialCommunityIcons name="bell-outline" size={rs(21)} color={tk.searchTextColor} />
+            </TouchableOpacity>
           </View>
-
-        </View>
+          ) : (
+          <View style={styles.expandedSearchRow}>
+            <Animated.View style={[styles.expandedSearch, { width: searchWidth, backgroundColor: tk.searchBg }]}>
+              <MaterialCommunityIcons name="magnify" size={rs(19)} color={tk.placeholderColor} />
+              <TextInput ref={inputRef} placeholder="Search for rewards, services & more..." placeholderTextColor={tk.placeholderColor} value={searchQuery} onChangeText={handleQueryChange} onSubmitEditing={handleSubmit} style={[styles.searchInput, { color: tk.searchTextColor }]} returnKeyType="search" />
+            </Animated.View>
+            <TouchableOpacity onPress={closeSearch} style={styles.closeButton} accessibilityLabel="Close search"><MaterialCommunityIcons name="close" size={rs(24)} color={tk.nameColor} /></TouchableOpacity>
+          </View>
+          )}
+        </Animated.View>
+        {statusContent}
       </View>
 
       {/* ── Search Dropdown ─────────────────────────────────────────────────
@@ -402,182 +266,80 @@ const styles = StyleSheet.create({
   },
 
   headerSurface: {
-    paddingHorizontal: 18,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 34,
-    borderBottomRightRadius: 34,
+    paddingHorizontal: rs(16),
+    paddingBottom: rs(10),
     overflow: 'hidden',
+  },
+  collapsibleRow: {
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
   // ── Row 1 ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    marginBottom: 16,
-  },
-  avatarRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.78)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
+    gap: rs(8),
+    minHeight: rs(44),
   },
   greetWrap: {
     flex: 1,
-  },
-  helloText: {
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 17,
-    letterSpacing: 0.2,
+    minWidth: 0,
   },
   nameText: {
-    fontSize: 18,
+    fontSize: rs(15),
     fontWeight: '800',
-    lineHeight: 24,
+    lineHeight: rs(20),
     letterSpacing: 0,
   },
-  logoPill: {
-    borderRadius: 18,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    minWidth: 120,
+  actionButton: {
+    width: rs(40),
+    height: rs(40),
+    borderRadius: rs(20),
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.75)',
   },
-  logoImageWrap: {
-    width: 106,
-    height: 34,
-    borderRadius: 12,
+  logoPill: {
+    width: rs(64),
+    height: rs(64),
+    borderRadius: rs(12),
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
+    flexShrink: 0,
   },
   logoImage: {
-    width: 100,
-    height: 30,
+    width: rs(60),
+    height: rs(60),
   },
-
-  // ── Row 2 ──
-  bottomRow: {
+  expandedSearchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    height: 50,
+    gap: rs(8),
+    minHeight: rs(44),
   },
-  flexZone: {
-    flex: 1,
-    position: 'relative',
-    height: 50,
-  },
-
-  // Date
-  dateCentered: {
+  expandedSearch: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  calIcon: {
-    marginRight: 5,
-  },
-  dateText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-    flexShrink: 1,
-  },
-
-  // Search pill
-  searchPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 15,
-    height: 50,
-    gap: 9,
+    height: rs(44),
+    borderRadius: rs(22),
+    paddingHorizontal: rs(12),
+    gap: rs(8),
     overflow: 'hidden',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 6,
   },
-  searchSweep: {
-    position: 'absolute',
-    top: -18,
-    bottom: -18,
-    left: 0,
-    width: 58,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-  },
-  searchIcon: {},
   searchInput: {
     flex: 1,
-    fontSize: 13,
-    paddingVertical: 0,
-    height: 50,
-  },
-
-  // Action buttons
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 0,
-  },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  rewardPointsPill: {
-    minWidth: 112,
-    height: 42,
-    borderRadius: 21,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  rewardPointsValue: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 16,
-    fontWeight: '800',
-  },
-  rewardPointsLabel: {
-    color: '#C7D2FE',
-    fontSize: 9,
-    lineHeight: 11,
+    fontSize: rs(14),
     fontWeight: '600',
+    paddingVertical: 0,
+    height: rs(44),
+    minWidth: 0,
+  },
+  closeButton: {
+    width: rs(40),
+    height: rs(40),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Dropdown container — absolute, overlays content below header

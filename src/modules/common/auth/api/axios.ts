@@ -30,6 +30,9 @@ export const setSessionHandlers = (handlers: SessionHandlers | null) => {
   sessionHandlers = handlers;
 };
 
+// Latest in-memory access token, including one rotated by the refresh interceptor.
+export const getSessionAccessToken = () => sessionHandlers?.getAccessToken?.() ?? null;
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 20000,
@@ -102,6 +105,19 @@ const isAuthEndpoint = (url?: string) => {
 api.interceptors.request.use((config) => {
   const nextConfig = applyNoStoreHeaders(config);
   const token = sessionHandlers?.getAccessToken?.();
+  const isAuthRequest = isAuthEndpoint(nextConfig.url);
+
+  if (isAuthRequest) {
+    const headers: any = nextConfig.headers;
+    if (headers && typeof headers.delete === "function") {
+      headers.delete("Authorization");
+    } else if (headers) {
+      delete headers.Authorization;
+      delete headers.authorization;
+    }
+
+    return nextConfig;
+  }
 
   if (token) {
     const headers: any = nextConfig.headers;

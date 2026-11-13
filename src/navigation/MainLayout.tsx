@@ -2,14 +2,14 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { useNavigation, useNavigationState, useRoute } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Navbar, { type TopTab } from "../navbar/Navbar";
-import BottomTabs from "../bottombar/BottomTabs";
-import { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
+import BottomTabs, { TAB_BAR_HEIGHT } from "../bottombar/BottomTabs";
+import { BottomTabsInsetContext } from "../bottombar/BottomTabsInsetContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../modules/ecommerce/context/CartContext";
 import { useServiceCartCount } from "../modules/services/hooks/useServiceCartCount";
-import { useAppTheme } from "../theme/ThemeContext";
+import { NavbarScrollProvider, useNavbarScroll } from "../navbar/NavbarScrollContext";
 
 export type ModuleStackParamList = {
   ProductModule: { moduleName?: string } | undefined;
@@ -35,17 +35,6 @@ type RouteStateLike = {
 };
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
-
-const ThemedSurface = React.memo(function ThemedSurface({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: any;
-}) {
-  const { theme } = useAppTheme();
-  return <View style={[style, { backgroundColor: theme.background }]}>{children}</View>;
-});
 
 const MODULE_MODE_BY_ROUTE: Record<keyof ModuleStackParamList, AppMode> = {
   ProductModule: "Product",
@@ -142,11 +131,19 @@ const shouldShowBottomTabs = (activeMode: AppMode): boolean => {
 };
 
 function MainLayout() {
+  return (
+    <NavbarScrollProvider>
+      <MainLayoutContent />
+    </NavbarScrollProvider>
+  );
+}
+
+function MainLayoutContent() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const navigationState = useNavigationState((state) => state);
-  const insets = useSafeAreaInsets();
   const moduleNavigationRef = React.useRef<any>(null);
+  const { resetScroll } = useNavbarScroll();
 
   const routeChain = React.useMemo(
     () => getActiveRouteChain(navigationState as unknown as RouteStateLike),
@@ -165,6 +162,13 @@ function MainLayout() {
   React.useLayoutEffect(() => {
     if (requestedMode) setActiveMode(requestedMode);
   }, [requestedMode]);
+
+  // A module frozen mid-scroll (freezeOnBlur) doesn't refire onScroll on
+  // return, so the shared scrollY would otherwise keep Navbar collapsed
+  // when switching into a module screen that hasn't scrolled at all yet.
+  React.useEffect(() => {
+    resetScroll();
+  }, [activeMode, resetScroll]);
 
   const moduleScreenListeners = React.useCallback(
     ({
@@ -210,8 +214,10 @@ function MainLayout() {
     () => shouldShowBottomTabs(activeMode),
     [activeMode]
   );
-  const bottomInset = Math.max(insets.bottom, 8);
-
+  // Matches the overlay height BottomTabs renders, so module screens can keep
+  // their content clear of it.
+  const insets = useSafeAreaInsets();
+  const bottomTabsInset = showBottomTabs ? TAB_BAR_HEIGHT + Math.max(insets.bottom, 0) : 0;
   // Each module owns its own cart count — add a new entry here (and its
   // hook call above) when a future module (e.g. Health) gets its own cart.
   // Hooks are called unconditionally so this stays rules-of-hooks safe.
@@ -250,7 +256,6 @@ function MainLayout() {
     [navigation],
   );
 
-  const contentBottomSpacing = showBottomTabs ? TAB_BAR_HEIGHT + bottomInset : 0;
   const handleBottomTabPress = React.useCallback(
     (tab: "Home" | "Search" | "Notes" | "Cart" | "History" | "Profile") => {
       if (tab === "History") {
@@ -316,44 +321,46 @@ function MainLayout() {
 
 
   return (
-    <ThemedSurface style={styles.container}>
+    <View style={styles.container}>
       <View style={showNavbar ? styles.navbarSlot : styles.navbarSlotHidden}>
         <Navbar activeModule={activeMode} onModuleChange={handleModuleChange} />
       </View>
-      <ThemedSurface style={[styles.content, { paddingBottom: contentBottomSpacing }]}>
-        <ModuleStack.Navigator
-          initialRouteName="ProductModule"
-          screenListeners={moduleScreenListeners}
-          screenOptions={{
-            headerShown: false,
-            animation: "none",
-            gestureEnabled: true,
-            freezeOnBlur: true,
-            contentStyle: { backgroundColor: "transparent" },
-          }}
-        >
-          <ModuleStack.Screen
-            name="ProductModule"
-            getComponent={() => require("../modules/ecommerce/navigation/HomeStack").default}
-            initialParams={{ moduleName: "Product" }}
-          />
-          <ModuleStack.Screen
-            name="ServicesModule"
-            getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
-            initialParams={{ moduleName: "Services" }}
-          />
-          <ModuleStack.Screen
-            name="PaymentsModule"
-            getComponent={() => require("../modules/bbps/navigation/BBPSHomeStack").default}
-            initialParams={{ moduleName: "Payments" }}
-          />
-          <ModuleStack.Screen
-            name="DineOutModule"
-            getComponent={() => require("../modules/busbooking/navigation/BusBookingStack").default}
-            initialParams={{ moduleName: "DineOut" }}
-          />
-        </ModuleStack.Navigator>
-      </ThemedSurface>
+      <View style={styles.content}>
+        <BottomTabsInsetContext.Provider value={bottomTabsInset}>
+          <ModuleStack.Navigator
+            initialRouteName="ProductModule"
+            screenListeners={moduleScreenListeners}
+            screenOptions={{
+              headerShown: false,
+              animation: "none",
+              gestureEnabled: true,
+              freezeOnBlur: true,
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          >
+            <ModuleStack.Screen
+              name="ProductModule"
+              getComponent={() => require("../modules/ecommerce/navigation/HomeStack").default}
+              initialParams={{ moduleName: "Product" }}
+            />
+            <ModuleStack.Screen
+              name="ServicesModule"
+              getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
+              initialParams={{ moduleName: "Services" }}
+            />
+            <ModuleStack.Screen
+              name="PaymentsModule"
+              getComponent={() => require("../modules/bbps/navigation/BBPSHomeStack").default}
+              initialParams={{ moduleName: "Payments" }}
+            />
+            <ModuleStack.Screen
+              name="DineOutModule"
+              getComponent={() => require("../modules/busbooking/navigation/BusBookingStack").default}
+              initialParams={{ moduleName: "DineOut" }}
+            />
+          </ModuleStack.Navigator>
+        </BottomTabsInsetContext.Provider>
+      </View>
       {showBottomTabs ? (
         <BottomTabs
           activeMode={activeMode}
@@ -362,7 +369,7 @@ function MainLayout() {
           onTabPress={handleBottomTabPress}
           onCenterPress={handleCenterPress}
         />) : null}
-    </ThemedSurface>
+    </View>
   );
 }
 
@@ -371,6 +378,7 @@ export default React.memo(MainLayout);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   navbarSlot: {
     display: "flex",
@@ -380,5 +388,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: "transparent",
   },
 });

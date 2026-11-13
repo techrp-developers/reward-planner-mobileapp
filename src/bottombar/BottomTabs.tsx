@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Animated, Image, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIsFocused } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -11,17 +11,22 @@ import ExploreIcon from "../assets/menu/Explore.svg";
 import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
 import { useAppTheme } from "../theme/ThemeContext";
+import RewardIcon from "../assets/menu/logo.png";
 
-export const TAB_BAR_HEIGHT = 68;
+const FLOATING_BOTTOM_GAP = 10;
+const FLOATING_BAR_HEIGHT = 64;
+const CENTER_BUTTON_SIZE = 58;
+export const TAB_BAR_HEIGHT = FLOATING_BAR_HEIGHT + FLOATING_BOTTOM_GAP + 24;
 
 type AppMode = "Product" | "Services" | "Payments" | "DineOut";
 
-export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search";
+export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search" | "Chat";
 
 type Props = {
   activeMode?: AppMode;
   onTabPress?: (tab: TabKey) => void;
   cartCount?: number;
+  chatUnreadCount?: number;
   isDashboard?: boolean;
   activeTabKey?: TabKey;
   layoutMode?: "overlay" | "navigator";
@@ -52,8 +57,6 @@ type TabItemProps = {
 // Defined outside render — stable reference, no allocation per press.
 const HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 } as const;
 const NOOP = () => {};
-const DASHBOARD_SLOT_WIDTH = 62;
-const DASHBOARD_INDICATOR_LEFT = 9;
 
 // Tab config is identical across modes — the parent's onTabPress handler
 // (MainLayout / Dashbord) decides where each generic tab key actually
@@ -85,46 +88,42 @@ const DASHBOARD_TABS: TabConfig[] = [
 const INACTIVE_COLOR = "#9CA3AF";
 const TAB_ICON_THEME: Record<AppMode, { activeIcon: string; activeLabel: string }> = {
   Product: {
-    activeIcon: "#D69A33",
+    activeIcon: "#C58A16",
     activeLabel: "#111827",
   },
   Services: {
-    activeIcon: "#1D4ED8",
+    activeIcon: "#2563EB",
     activeLabel: "#06111F",
   },
   Payments: {
-    activeIcon: "#7C3AED",
+    activeIcon: "#9333EA",
     activeLabel: "#120A24",
   },
   DineOut: {
-    activeIcon: "#DC2626",
-    activeLabel: "#1F0A0A",
+    activeIcon: "#E91E63",
+    activeLabel: "#1F0A13",
   },
 };
-const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; icon: string; shadow: string }> = {
+const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; shadow: string }> = {
   Product: {
-    background: "#111827",
-    border: "#FACC15",
-    icon: "#FACC15",
-    shadow: "#FACC15",
+    background: "#C58A16",
+    border: "#FFF4C2",
+    shadow: "#C58A16",
   },
   Services: {
-    background: "#06111F",
-    border: "#1D4ED8",
-    icon: "#BFDBFE",
-    shadow: "#1D4ED8",
+    background: "#2563EB",
+    border: "#DBEAFE",
+    shadow: "#2563EB",
   },
   Payments: {
-    background: "#120A24",
-    border: "#7C3AED",
-    icon: "#DDD6FE",
-    shadow: "#7C3AED",
+    background: "#9333EA",
+    border: "#F3E8FF",
+    shadow: "#9333EA",
   },
   DineOut: {
-    background: "#1F0A0A",
-    border: "#DC2626",
-    icon: "#FECACA",
-    shadow: "#DC2626",
+    background: "#E91E63",
+    border: "#FFE4F0",
+    shadow: "#E91E63",
   },
 };
 
@@ -198,6 +197,15 @@ const CenterButton = React.memo(function CenterButton({
     >
       <View
         style={[
+          styles.centerGlow,
+          {
+            backgroundColor: centerTheme.background,
+            shadowColor: centerTheme.shadow,
+          },
+        ]}
+      />
+      <View
+        style={[
           styles.centerDiamondButton,
           {
             backgroundColor: centerTheme.background,
@@ -206,12 +214,13 @@ const CenterButton = React.memo(function CenterButton({
           },
         ]}
       >
-        <MaterialCommunityIcons
-          name="view-dashboard"
-          size={27}
-          color={centerTheme.icon}
-          style={styles.centerDashboardIcon}
-        />
+        <View style={styles.centerLogoPlate}>
+          <Image
+            source={RewardIcon}
+            style={styles.centerLogo}
+            resizeMode="contain"
+          />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -225,18 +234,18 @@ function BottomTabs({
   isDashboard = false,
   activeTabKey,
   cartCount = 0,
+  chatUnreadCount = 0,
   onCenterPress,
   layoutMode = "overlay",
 }: Props) {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { isDark, theme } = useAppTheme();
-  const bottomInset = Math.max(insets.bottom, 8);
+  const bottomInset = Math.max(insets.bottom, 0);
 
   // Ref guards the early-return check so handlePress never needs activeTab as a dep.
   // Without this, every tab press invalidates handlePress → pressHandlers → all TabItem memos.
   const activeTabRef = useRef<TabKey>("Home");
-  const dashboardIndicatorX = useRef(new Animated.Value(DASHBOARD_SLOT_WIDTH)).current;
   const [activeTab, setActiveTab] = useState<TabKey>("Home");
 
   const handlePress = useCallback(
@@ -255,31 +264,24 @@ function BottomTabs({
       : TABS;
   const tabTheme = TAB_ICON_THEME[activeMode] ?? TAB_ICON_THEME.Product;
   const inactiveColor = isDark ? theme.secondaryText : INACTIVE_COLOR;
-  const barBackgroundColor = isDark ? theme.card : "#FFFFFF";
+  const barBackgroundColor = isDark ? theme.card : "rgba(255,255,255,0.78)";
   const barBorderColor = isDark ? theme.border : "rgba(17,24,39,0.08)";
-  const homeIndicatorColor = isDark ? "rgba(255,255,255,0.24)" : "#D1D5DB";
   const activeLabelColor = isDark ? tabTheme.activeIcon : tabTheme.activeLabel;
+  const dashboardPillBackground = isDark ? "rgba(11,0,24,0.82)" : "rgba(255,255,255,0.82)";
+  const dashboardPillBorder = isDark ? "rgba(255,255,255,0.12)" : "rgba(75,0,130,0.1)";
+  const dashboardActiveColor = isDark ? "#FFFFFF" : "#18002E";
+  const dashboardInactiveColor = isDark ? "#D8CBE5" : "#625A6B";
+  const dashboardIndicatorBackground = isDark ? "rgba(106,0,255,0.45)" : "rgba(255,255,255,0.96)";
 
-  const animateDashboardIndicator = useCallback((index: number) => {
-    Animated.spring(dashboardIndicatorX, {
-      toValue: index * DASHBOARD_SLOT_WIDTH,
-      useNativeDriver: true,
-      tension: 120,
-      friction: 13,
-    }).start();
-  }, [dashboardIndicatorX]);
-
-  const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Profile") => {
-    const index = tab === "Notes" ? 0 : tab === "Home" ? 1 : 2;
+  const handleDashboardPress = useCallback((tab: "Notes" | "Home" | "Chat") => {
     activeTabRef.current = tab;
     setActiveTab(tab);
-    animateDashboardIndicator(index);
     if (tab === "Home") {
       onCenterPress?.();
       return;
     }
     onTabPress?.(tab);
-  }, [animateDashboardIndicator, onCenterPress, onTabPress]);
+  }, [onCenterPress, onTabPress]);
 
   // One stable handler per key — rebuilt only when handlePress (i.e. onTabPress) changes,
   // not on every tab press. Passing these as onPress keeps TabItem React.memo effective.
@@ -287,6 +289,7 @@ function BottomTabs({
     () => ({
       Home: () => handlePress("Home"),
       Notes: () => handlePress("Notes"),
+      Chat: () => handlePress("Chat"),
       Search: () => handlePress("Search"),
       Cart: () => handlePress("Cart"),
       History: () => handlePress("History"),
@@ -304,61 +307,47 @@ function BottomTabs({
       setActiveTab(activeTabKey);
     }
 
-    if (isDashboard) {
-      const index = activeTabKey === "Notes" ? 0 : activeTabKey === "Home" ? 1 : 2;
-      animateDashboardIndicator(index);
-    }
-  }, [activeTabKey, animateDashboardIndicator, isDashboard, isFocused]);
+  }, [activeTabKey, isFocused]);
 
   if (isDashboard) {
     return (
-      <View style={[styles.dashboardWrap, { paddingBottom: bottomInset }]}>
-        <View style={styles.dashboardPill}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.dashboardIndicator,
-              { transform: [{ translateX: dashboardIndicatorX }] },
-            ]}
-          />
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => handleDashboardPress("Notes")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="note-text-outline"
-              size={23}
-              color={activeTab === "Notes" ? "#111827" : "#E5E7EB"}
-            />
+      <View pointerEvents="box-none" style={[styles.dashboardWrap, { paddingBottom: bottomInset + 8 }]}>
+        <View style={[styles.referenceBar, { backgroundColor: dashboardPillBackground, borderColor: dashboardPillBorder }]}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Todo List" onPress={() => handleDashboardPress("Notes")} style={styles.referenceSide}>
+            <MaterialCommunityIcons name="note-text-outline" size={26} color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor} />
+            <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>Todo List</Text>
           </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dashboard" onPress={() => handleDashboardPress("Home")} style={[styles.referenceLogoRing, { backgroundColor: dashboardIndicatorBackground }]}>
+            <Image source={RewardIcon} resizeMode="contain" style={styles.referenceLogo} />
+          </TouchableOpacity>
+         
+<TouchableOpacity
+  accessibilityRole="button"
+  accessibilityLabel={chatUnreadCount > 0 ? `Chat, ${chatUnreadCount} unread` : "Chat"}
+  onPress={() => handleDashboardPress("Chat")}
+  style={styles.referenceSide}
+>
+  <View>
+    <MaterialCommunityIcons
+      name="chat-outline"
+      size={26}
+      color={
+        activeTab === "Chat"
+          ? dashboardActiveColor
+          : dashboardInactiveColor
+      }
+    />
+    {chatUnreadCount > 0 && (
+      <View style={[styles.badge, styles.chatBadge, isDark ? { borderColor: theme.card } : styles.chatBadgeLight]}>
+        <Text style={styles.badgeText}>{chatUnreadCount > 9 ? "9+" : chatUnreadCount}</Text>
+      </View>
+    )}
+  </View>
+  <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>
+    Chat
+  </Text>
+</TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => handleDashboardPress("Home")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="home"
-              size={24}
-              color={activeTab === "Home" ? "#111827" : "#E5E7EB"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => handleDashboardPress("Profile")}
-            style={styles.dashboardSideBtn}
-            hitSlop={HIT_SLOP}
-          >
-            <MaterialCommunityIcons
-              name="account-circle-outline"
-              size={24}
-              color={activeTab === "Profile" ? "#111827" : "#E5E7EB"}
-            />
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -370,7 +359,7 @@ function BottomTabs({
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
         {
           height: TAB_BAR_HEIGHT + bottomInset,
-          backgroundColor: layoutMode === "navigator" ? barBackgroundColor : "transparent",
+          backgroundColor: "transparent",
         },
       ]}
     >
@@ -378,10 +367,10 @@ function BottomTabs({
         style={[
           styles.bar,
           {
-            height: TAB_BAR_HEIGHT + bottomInset,
-            paddingBottom: bottomInset,
+            height: FLOATING_BAR_HEIGHT,
+            bottom: bottomInset + FLOATING_BOTTOM_GAP,
             backgroundColor: barBackgroundColor,
-            borderTopColor: barBorderColor,
+            borderColor: barBorderColor,
             shadowColor: isDark ? "#000000" : "#000000",
           },
         ]}
@@ -427,7 +416,6 @@ function BottomTabs({
           onPress={onCenterPress ?? NOOP}
         />
       </View>
-      <View style={[styles.homeIndicator, { backgroundColor: homeIndicatorColor }]} />
     </View>
   );
 }
@@ -435,6 +423,11 @@ function BottomTabs({
 export default React.memo(BottomTabs);
 
 const styles = StyleSheet.create({
+  referenceBar: { width: "88%", height: 64, borderRadius: 34, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-around", shadowColor: "#111827", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 10 },
+  referenceSide: { flex: 1, height: 60, alignItems: "center", justifyContent: "center" },
+  referenceLabel: { fontSize: 11, fontWeight: "600", marginTop: 3 },
+  referenceLogoRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 4, borderColor: "#A1A1AA", marginTop: -24, alignItems: "center", justifyContent: "center", shadowColor: "#52525B", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  referenceLogo: { width: 38, height: 38 },
   dashboardWrap: {
     position: "absolute",
     left: 0,
@@ -442,122 +435,101 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: "center",
   },
-  dashboardPill: {
-    height: 58,
-    minWidth: 204,
-    paddingHorizontal: 9,
-    borderRadius: 31,
-    backgroundColor: "#151515",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-  },
-  dashboardSideBtn: {
-    width: DASHBOARD_SLOT_WIDTH,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  dashboardIndicator: {
-    position: "absolute",
-    left: DASHBOARD_INDICATOR_LEFT,
-    width: DASHBOARD_SLOT_WIDTH,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F4F6",
-    shadowColor: "#FFFFFF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
-  },
   wrap: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
+    alignItems: "center",
   },
   navigatorWrap: {
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
+    alignItems: "center",
   },
   bar: {
+    position: "absolute",
+    left: 24,
+    right: 24,
     backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingHorizontal: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 10,
+    paddingHorizontal: 14,
+    borderRadius: 32,
+    borderWidth: 1,
+    elevation: 16,
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   item: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    height: 56,
   },
   label: {
-    marginTop: 4,
-    fontSize: 11,
+    marginTop: 3,
+    fontSize: 10.5,
     color: INACTIVE_COLOR,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   labelActive: {
     fontWeight: "700",
   },
-  homeIndicator: {
-    position: "absolute",
-    bottom: 8,
-    alignSelf: "center",
-    width: 120,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    opacity: 0.9,
-  },
   centerSpacer: {
-    width: 60,
+    width: 64,
   },
   fabWrap: {
     position: "absolute",
     alignSelf: "center",
-    top: -25,
-    width: 60,
-    height: 60,
+    top: -23,
+    width: CENTER_BUTTON_SIZE + 8,
+    height: CENTER_BUTTON_SIZE + 8,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: "transparent",
+  },
+  centerGlow: {
+    position: "absolute",
+    width: CENTER_BUTTON_SIZE + 10,
+    height: CENTER_BUTTON_SIZE + 10,
+    borderRadius: (CENTER_BUTTON_SIZE + 10) / 2,
+    opacity: 0.18,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+    elevation: 8,
   },
   centerDiamondButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: CENTER_BUTTON_SIZE,
+    height: CENTER_BUTTON_SIZE,
+    borderRadius: CENTER_BUTTON_SIZE / 2,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    transform: [{ rotate: "45deg" }],
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOpacity: 0.32,
+    shadowRadius: 15,
+    elevation: 16,
   },
-  centerDashboardIcon: {
-    transform: [{ rotate: "-45deg" }],
+  centerLogoPlate: {
+    width: CENTER_BUTTON_SIZE - 12,
+    height: CENTER_BUTTON_SIZE - 12,
+    borderRadius: (CENTER_BUTTON_SIZE - 12) / 2,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.84)",
+    overflow: "hidden",
+  },
+  centerLogo: {
+    width: CENTER_BUTTON_SIZE - 22,
+    height: CENTER_BUTTON_SIZE - 22,
   },
   badge: {
     position: "absolute",
@@ -571,6 +543,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "#fff",
+  },
+  chatBadge: {
+    paddingHorizontal: 4,
+  },
+  chatBadgeLight: {
+    borderColor: "#FFFFFF",
   },
   badgeText: {
     color: "#fff",

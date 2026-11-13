@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
+  Text,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -12,15 +13,23 @@ import type { NavigationProp } from '@react-navigation/native';
 
 import { HomeStackParamList, ServiceItem } from '../../navigation/type';
 import { useServiceHome } from '../../hooks/useServiceHome';
-import Card from '../constant/Card';
+import ServiceGridCard from '../constant/ServiceGridCard';
 
 const CONTAINER_PADDING = 16;
+const GRID_COLUMNS = 3;
+const GRID_GAP = 12;
 
+const CardSeparator = () => <View style={styles.cardGap} />;
 
 export default function MostBookedServices() {
   const navigation = useNavigation<NavigationProp<HomeStackParamList>>();
   const { data, isLoading, error } = useServiceHome();
+  const { width } = useWindowDimensions();
   const [activeIdx, setActiveIdx] = useState(0);
+  const cardWidth = Math.floor(
+    (width - CONTAINER_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) /
+    GRID_COLUMNS,
+  );
 
   const viewConfigPairs = useRef([
     {
@@ -86,7 +95,7 @@ export default function MostBookedServices() {
         keyExtractor={item => `${item.service_id}-${item.variant_id}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        // snapToInterval={SNAP_INTERVAL}
+        ItemSeparatorComponent={CardSeparator}
         decelerationRate="fast"
         disableIntervalMomentum={true}
         viewabilityConfigCallbackPairs={viewConfigPairs.current}
@@ -100,27 +109,11 @@ export default function MostBookedServices() {
                   ? { uri: item.image }
                   : null;
 
-          const discount =
-            item.discount_percent && item.discount_percent > 0
-              ? `${item.discount_percent}%`
-              : '';
-
-          const coinsText = item.coins ? String(item.coins) : '';
-
           return (
-            <Card
-              title={item.name}
+            <ServiceGridCard
+              item={item}
               image={imageSource}
-              price={`₹${item.price}`}
-              oldPrice={
-                item.mrp && item.mrp > item.price
-                  ? `₹${item.mrp}`
-                  : undefined
-              }
-              rating={item.rating}
-              users={String(item.review_count ?? 0)}
-              coins={coinsText}
-              discount={discount}
+              cardWidth={cardWidth}
               onPress={() =>
                 navigation.navigate('ServiceDescription', {
                   serviceId: item.service_id,
@@ -150,8 +143,6 @@ export default function MostBookedServices() {
 const styles = StyleSheet.create({
   container: {
     marginTop: 24,
-    marginHorizontal: 16,
-    borderRadius: 28,
     paddingTop: 22,
     paddingBottom: 20,
     overflow: 'hidden',
@@ -161,7 +152,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
-
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -169,46 +159,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTAINER_PADDING,
     marginBottom: 18,
   },
-
   title: {
     fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'left',
-    letterSpacing: -0.2,
   },
-
   subtitle: {
     fontSize: 12.5,
     color: 'rgba(255, 255, 255, 0.78)',
     marginTop: 4,
     fontWeight: '500',
   },
-
   badge: {
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-
   badgeText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
   },
-
   listContent: {
     paddingLeft: CONTAINER_PADDING,
     paddingRight: 6,
   },
-
+  cardGap: {
+    width: GRID_GAP,
+  },
   loaderContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: 30,
   },
-
   dotContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -216,21 +201,16 @@ const styles = StyleSheet.create({
     marginTop: 18,
     gap: 6,
   },
-  card: {
-    width: 170,
-    marginRight: 12,
-  },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Semi-transparent dots over background
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
-
   activeDot: {
     width: 16,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FFFFFF', // Clear active white dot indicator
+    backgroundColor: '#FFFFFF',
   },
 });

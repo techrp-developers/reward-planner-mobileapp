@@ -15,6 +15,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import OrderReceipt from "./OrderReceipt";
+import ReturnHomeButton from './ReturnHomeButton';
 import { fetchOrderReceipt } from "../../ecommerce/api/OrderApi";
 
 const { height } = Dimensions.get("window");
@@ -50,7 +51,7 @@ export default function OrderConfirmScreen() {
 
   /* ---------------- RECEIPT SLIDE ANIMATION ---------------- */
   useEffect(() => {
-    if (!receipt) return;
+    if (!receipt || !['paid', 'confirmed', 'processing', 'shipped', 'delivered', 'completed'].includes(String(receipt.status).toLowerCase())) return;
 
     const timer = setTimeout(() => {
       setShowReceipt(true);
@@ -69,6 +70,7 @@ export default function OrderConfirmScreen() {
     return (
       <SafeAreaView style={styles.loaderWrap}>
         <ActivityIndicator size="large" color="#8665FF" />
+        <ReturnHomeButton />
       </SafeAreaView>
     );
   }
@@ -77,12 +79,16 @@ export default function OrderConfirmScreen() {
   if (!receipt) {
     return (
       <SafeAreaView style={styles.loaderWrap}>
-        <Text style={styles.errorText}>Order not found</Text>
+        <Text style={styles.errorText}>Unable to load your order. Check order history before paying again.</Text>
+        <Pressable onPress={loadReceipt}><Text style={styles.subtitle}>Try loading the order again</Text></Pressable>
+        <ReturnHomeButton />
       </SafeAreaView>
     );
   }
 
   const formattedDate = receipt.orderDate;
+  const status = String(receipt.status ?? 'pending').toLowerCase();
+  const confirmed = ['paid', 'confirmed', 'processing', 'shipped', 'delivered', 'completed'].includes(status);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -102,23 +108,25 @@ export default function OrderConfirmScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.checkCircle}
               >
-                <MaterialIcons name="check" size={50} color="#FFFFFF" />
+                <MaterialIcons name={confirmed ? 'check' : 'info-outline'} size={50} color="#FFFFFF" />
               </LinearGradient>
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>Order Placed Successfully!</Text>
+            <Text style={styles.title}>{confirmed ? 'Order Placed Successfully!' : 'Check Your Payment Status'}</Text>
 
             {/* Subtitle */}
-            <Text style={styles.subtitle}>Your package is on its way</Text>
+            <Text style={styles.subtitle}>{confirmed ? 'Your order is being prepared' : 'Payment has not been confirmed.'}</Text>
             <Text style={styles.subtitle}>
-              Sit back and relax we'll update you as it gets {"\n"}
-              closer to your doorstep!
+              {confirmed ? "We'll keep you updated on your delivery." : 'Check this order in order history before paying again.'}
             </Text>
 
             {/* Reward Section */}
-            <View style={styles.rewardContainer}>
-              <Text style={styles.rewardHeader}>🎉 You earned Reward Coins</Text>
+            {confirmed && <View style={styles.rewardContainer}>
+              <View style={styles.rewardHeaderRow}>
+                <MaterialCommunityIcons name="gift-outline" size={18} color="#8665FF" />
+                <Text style={styles.rewardHeader}>You earned RP Points</Text>
+              </View>
 
               <Pressable
                 onPress={() => navigation.navigate("Home" as never)}
@@ -130,13 +138,13 @@ export default function OrderConfirmScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.rewardBtn}
                 >
-                  <Text style={styles.coinIcon}>🪙</Text>
+                  <MaterialCommunityIcons name="star-four-points" size={18} color="#FFFFFF" />
                   <Text style={styles.rewardBtnText}>
-                    +{Number(receipt?.rewards?.earned ?? 0)} Coins earned on this order
+                    +{Number(receipt?.rewards?.earned ?? 0)} RP Points earned on this order
                   </Text>
                 </LinearGradient>
               </Pressable>
-            </View>
+            </View>}
           </View>
 
           {/* Order Summary Card */}
@@ -160,7 +168,7 @@ export default function OrderConfirmScreen() {
                 ]}
               >
                 <Text style={styles.statusText}>
-                  {receipt.status.toUpperCase()}
+                  {status.toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -170,6 +178,7 @@ export default function OrderConfirmScreen() {
         </View>
 
         {/* Slide-up Receipt */}
+        {!confirmed && <Pressable onPress={loadReceipt}><Text style={styles.subtitle}>Refresh payment status</Text></Pressable>}
         {showReceipt && (
           <Animated.View
             style={[
@@ -181,6 +190,7 @@ export default function OrderConfirmScreen() {
           </Animated.View>
         )}
       </LinearGradient>
+      <ReturnHomeButton />
     </SafeAreaView>
   );
 }
@@ -243,6 +253,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     fontWeight: "600",
+  },
+  rewardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     marginBottom: 12,
   },
   rewardBtnOuter: {
@@ -257,11 +272,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
-  coinIcon: { fontSize: 16, marginRight: 8 },
   rewardBtnText: {
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
+    marginLeft: 8,
   },
   receiptWrap: {
     position: "absolute",

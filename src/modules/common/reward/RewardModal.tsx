@@ -153,7 +153,7 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
             </View>
 
             <Text style={styles.rewardAmount}>{points.toLocaleString()}</Text>
-            <Text style={styles.rewardCoinsLabel}>Reward Coins</Text>
+            <Text style={styles.rewardCoinsLabel}>RP Points</Text>
 
             <View style={styles.rewardSuccessPill}>
               <MaterialCommunityIcons name="check-circle" size={14} color="#FFFFFF" />
@@ -178,7 +178,7 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
             Congratulations!{"\n\n"}
             As a welcome gift, we have credited{" "}
             <Text style={styles.descriptionHighlight}>
-              {points.toLocaleString()} reward coins
+              {points.toLocaleString()} RP Points
             </Text>{" "}
             to your account.{"\n\n"}
             Start earning, shopping, and redeeming exciting rewards with Reward Planners.

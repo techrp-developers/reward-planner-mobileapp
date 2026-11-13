@@ -1,3 +1,6 @@
+import { formatMoney } from '../../utils/formatMoney';
+import OfferDetails from '../../../common/order/OfferDetails';
+import type { OfferLine } from '../../../common/order/appliedOffer';
 import React from 'react'
 import {
   View,
@@ -10,6 +13,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import { useAppTheme } from '../../../../theme/ThemeContext'
 
 type Props = {
+  offerLine?: OfferLine
   title: string
   image: string
   deliveryText: string
@@ -27,6 +31,7 @@ type Props = {
 }
 
 export default function CartItemCard({
+  offerLine,
   title,
   image,
   deliveryText,
@@ -79,10 +84,11 @@ export default function CartItemCard({
             <Text style={styles.returnText}>{returnText}</Text>
 
             <View style={styles.priceRow}>
-              <Text style={[styles.mrp, { color: theme.secondaryText }]}>₹{mrp}</Text>
-              <Text style={[styles.price, { color: theme.text }]}> ₹{price}</Text>
+              <Text style={[styles.mrp, { color: theme.secondaryText }]}>{formatMoney(mrp)}</Text>
+              <Text style={[styles.price, { color: theme.text }]}> {formatMoney(price)}</Text>
               <Text style={styles.discount}> {discountText}</Text>
             </View>
+            {offerLine && <OfferDetails item={offerLine} />}
           </View>
         </TouchableOpacity>
 

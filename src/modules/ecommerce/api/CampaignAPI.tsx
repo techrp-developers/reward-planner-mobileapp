@@ -1,12 +1,24 @@
 import axios from "axios";
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
-import { API_V1_URL as BASE_API_URL } from '../../../config/apiConfig';
+import {
+  API_V1_URL as BASE_API_URL,
+  normalizeLocalCmsImageUrl,
+} from '../../../config/apiConfig';
 
 /* =========================================================
    TYPES
 ========================================================= */
 
 export interface CampaignPoster {
+  module?: 'product' | 'service';
+  redirect_ids?: number[];
+  navigation?: {
+    destination: string;
+    targetId?: number;
+    targetIds?: number[];
+    campaignId?: number;
+    url?: string;
+  } | null;
   campaign_id: number;
   title: string;
   banner_image: string;
@@ -24,6 +36,7 @@ export interface FlashSaleCampaign {
 }
 
 export interface CampaignHomeData {
+  show_flash_sale?: boolean;
   posters: CampaignPoster[];
   dashboard_posters: CampaignPoster[];
   flash_sales: FlashSaleCampaign[];
@@ -38,16 +51,35 @@ export interface CampaignHomeResponse {
    GET CAMPAIGN HOME
 ========================================================= */
 
-export const getCampaignHome = async (): Promise<CampaignHomeResponse> => {
+export const getCampaignHome = async (module: 'product' | 'service' = 'product'): Promise<CampaignHomeResponse> => {
   try {
     const headers = await getAuthHeaders();
 
     const res = await axios.get(
-      `${BASE_API_URL}/campaign/home`,
+      `${BASE_API_URL}/${module === 'service' ? 'service-campaign' : 'campaign'}/home`,
       { headers }
     );
 
-    return res.data;
+    const data = res.data as CampaignHomeResponse;
+
+    return {
+      ...data,
+      data: {
+        ...data.data,
+        posters: (data.data?.posters || []).map((poster) => ({
+          ...poster,
+          banner_image: normalizeLocalCmsImageUrl(poster.banner_image) || '',
+        })),
+        dashboard_posters: (data.data?.dashboard_posters || []).map((poster) => ({
+          ...poster,
+          banner_image: normalizeLocalCmsImageUrl(poster.banner_image) || '',
+        })),
+        flash_sales: (data.data?.flash_sales || []).map((campaign) => ({
+          ...campaign,
+          banner_image: normalizeLocalCmsImageUrl(campaign.banner_image) || '',
+        })),
+      },
+    };
   } catch (error: any) {
     if (Number(error?.response?.status) === 401) {
       await clearAuthToken();
@@ -74,6 +106,8 @@ export interface CampaignProductReward {
 }
 
 export interface CampaignProduct {
+  campaign_id?: number | null;
+  content_id?: number | null;
   id: number;
   product_id: number;
   product_name: string;
@@ -84,7 +118,10 @@ export interface CampaignProduct {
   variant_id: number;
   mrp: string;
   original_price: string;
-  final_price: string;
+  final_price: string | number;
+  sale_price?: string | number;
+  original_sale_price?: string | number;
+  offer_price?: string | number | null;
   image?: string;
   price?: string;
   originalPrice?: string;
@@ -97,6 +134,7 @@ export interface CampaignProduct {
 }
 
 export interface CampaignProductsResponse {
+  show_section?: boolean;
   success: boolean;
   count: number;
   data: CampaignProduct[];

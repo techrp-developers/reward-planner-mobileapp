@@ -100,11 +100,11 @@
         useEffect(() => {
             if (serviceData?.variants?.length) {
                 unstable_batchedUpdates(() => {
-                    setSelectedVariant(serviceData.variants[0]);
+                    setSelectedVariant(serviceData.variants.find(variant => variant.id === route.params.variantId) ?? serviceData.variants[0]);
                     setFormValues({});
                 });
             }
-        }, [serviceData]);
+        }, [serviceData, route.params.variantId]);
 
         const activeVariant = selectedVariant ?? serviceData?.variants?.[0] ?? null;
         const hideAddToCart = shouldHideAddToCartForService(
@@ -339,12 +339,16 @@
             if (!serviceData?.variants?.length) return [];
             return serviceData.variants.map((v, idx) => {
                 const { label, planTitle } = getVariantDisplayName(v);
+                const price = Number(String(v.price || '').replace(/[^0-9.]/g, ''));
+                const mrp = Number(String(v.mrp || '').replace(/[^0-9.]/g, ''));
+                const hasDiscount = Number.isFinite(mrp) && mrp > 0 && mrp > price;
+
                 return {
                     id: String(v.id || idx + 1),
                     title: label || ('Plan ' + (idx + 1)),
                     planTitle,
-                    price: '\u20B9' + Number(v.price || 0).toLocaleString('en-IN'),
-                    oldPrice: v.mrp ? ('\u20B9' + Number(v.mrp).toLocaleString('en-IN')) : '\u20B90',
+                    price: '\u20B9' + (Number.isFinite(price) ? price : 0).toLocaleString('en-IN'),
+                    oldPrice: hasDiscount ? ('\u20B9' + mrp.toLocaleString('en-IN')) : undefined,
                     subtitle: v.short_description,
                     rawVariant: v,
                 };

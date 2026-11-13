@@ -7,10 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
+  Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
 import BBPSHead from '../constatnt/BBPSHead';
 import {
@@ -23,8 +22,9 @@ import { useAlert } from '../../ecommerce/components/alerts';
 import SkeletonBox from '../../services/component/constant/SkeletonBox';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import { getBillFetchErrorMessage } from '../utils/billFetchError';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
-const BRAND_START = '#8665FF';
 const BRAND_END = '#5B47A3';
 const FIVE_MINUTES = 5 * 60 * 1000;
 const FIELD_SKELETON_GROUPS = [0, 1];
@@ -36,7 +36,12 @@ type BillDetailsRouteParams = {
   };
   operatorId?: string | number;
   operatorName?: string;
+  operatorLogoUrl?: string;
+  operatorLogoAlt?: string;
   categoryName?: string;
+  categoryId?: number | string;
+  mobileNumber?: string;
+  selectedLocation?: { operator_location_id: string; operator_location_name: string; abbreviation: string };
 };
 
 type BillDetailsScreenProps = {
@@ -80,15 +85,22 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   };
   const operatorId = Number(operatorData.id || routeParams.operatorId);
   const categoryName = routeParams?.categoryName || 'Electricity Bill';
+  const isCreditCard = Number(routeParams.categoryId) === 7 || /credit\s*card/i.test(categoryName);
   const hasValidOperatorId = Number.isFinite(operatorId) && operatorId > 0;
 
   const [formValues, setFormValues] = useState<FormValues>({});
+  const [logoFailed, setLogoFailed] = useState(false);
   // const [selectedCategory, setSelectedCategory] = useState('Home');
   const [isLoading, setIsLoading] = useState(false);
+  const fetchInProgress = useRef(false);
+  const formOperatorId = useRef<number | null>(null);
 
   const {
     data: operatorDetails = null,
     isLoading: detailsLoading,
+    isError: detailsError,
+    isFetching: detailsFetching,
+    refetch: refetchDetails,
   } = useQuery({
     queryKey: bbpsOperatorDetailsQueryKey(operatorId),
     queryFn: () => fetchOperatorDetails(operatorId),
@@ -103,10 +115,12 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   );
   const providerName =
     operatorDetails?.operator_name || operatorData?.name || routeParams.operatorName || 'Biller';
+  const operatorLogoUrl = routeParams.operatorLogoUrl;
   const loggedInUserName = user?.name || 'Customer';
   const isBillFetchSupported = operatorDetails?.fetchBill === 1;
   const isContinueDisabled =
     detailsLoading ||
+    detailsError ||
     isLoading ||
     fields.length === 0 ||
     fields.some((field) => !formValues[field.param_name]?.trim());
@@ -130,6 +144,10 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   }, [alert]);
 
   useEffect(() => {
+    setLogoFailed(false);
+  }, [operatorLogoUrl]);
+
+  useEffect(() => {
     if (!hasValidOperatorId) {
       alertRef.current.warning('Invalid Biller', 'Biller details are missing. Please select a biller again.');
       return;
@@ -139,14 +157,14 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       return;
     }
 
-    const initialValues = (operatorDetails.data || []).filter(isUserInputField).reduce<FormValues>((values, field) => {
-      if (field?.param_name) {
-        values[field.param_name] = '';
-      }
+    const sameOperator = formOperatorId.current === operatorId;
+    formOperatorId.current = operatorId;
+    setFormValues(current => fields.reduce<FormValues>((values, field) => {
+      values[field.param_name] = sameOperator ? current[field.param_name] || ''
+        : field.param_name === 'utility_acc_no' ? routeParams.mobileNumber || '' : '';
       return values;
-    }, {});
-    setFormValues(initialValues);
-  }, [hasValidOperatorId, operatorDetails]);
+    }, {}));
+  }, [hasValidOperatorId, operatorDetails, operatorId, fields, routeParams.mobileNumber]);
 
   const updateFieldValue = useCallback((field: OperatorField, value: string) => {
     setFormValues((current) => ({
@@ -165,14 +183,26 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       const value = formValues[field.param_name]?.trim() || '';
 
       if (!value) {
-        alert.warning('Invalid Input', field.error_message || `Please enter ${field.param_label}.`);
+        alert.warning('Invalid Input', `Please enter ${field.param_label}.`);
         return false;
       }
 
       try {
         const regex = new RegExp(field.regex);
         if (!regex.test(value)) {
-          alert.warning('Invalid Input', field.error_message || `Please enter valid ${field.param_label}.`);
+          if (__DEV__) {
+            console.warn('[BBPS] Field validation failed', {
+              operatorId,
+              field: field.param_name,
+              regex: field.regex,
+              characterCount: value.length,
+            });
+          }
+          alert.warning(
+            'Invalid Input',
+            `${field.param_label}: ${field.error_message || 'The entered value does not match the required format.'}\nYou entered ${value.length} characters.`,
+            7000,
+          );
           return false;
         }
       } catch {
@@ -181,28 +211,40 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     }
 
     return true;
-  }, [fields, formValues, alert]);
+  }, [fields, formValues, alert, operatorId]);
 
   const handleContinue = useCallback(async () => {
+    if (fetchInProgress.current || detailsLoading || detailsError) return;
     if (!validateInputs()) {
       return;
     }
 
+    fetchInProgress.current = true;
     setIsLoading(true);
     try {
       const payload = {
         sender_name: loggedInUserName,
         operator_id: String(operatorId),
-        ...formValues,
+        ...Object.fromEntries(Object.entries(formValues).map(([key, value]) => [key, value.trim()])),
+        ...(Number(routeParams.categoryId) > 0
+          ? { category: Number(routeParams.categoryId) }
+          : {}),
         ...(!formValues.confirmation_mobile_no && user?.phone
           ? { confirmation_mobile_no: user.phone }
           : {}),
       };
 
       if (!isBillFetchSupported) {
+        if (!/mobile prepaid/i.test(categoryName)) {
+          alert.warning('Service Unavailable', 'This biller does not currently support bill fetching. Please choose another biller.');
+          return;
+        }
         navigation.navigate('RechargePlanScreen', {
+          selectedLocation: routeParams.selectedLocation,
           operatorId,
           operatorName: providerName,
+          operatorLogoUrl,
+          operatorLogoAlt: routeParams.operatorLogoAlt,
           categoryName,
           formValues,
         });
@@ -214,7 +256,8 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
       if (!response?.success) {
         alert.warning(
           'Bill Fetch Failed',
-          response?.message || 'Unable to fetch bill details'
+          getBillFetchErrorMessage(response),
+          10000,
         );
         return;
       }
@@ -228,10 +271,13 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     } catch (error: any) {
       alert.error('Error', error?.message || 'Could not fetch bill details.');
     } finally {
+      fetchInProgress.current = false;
       setIsLoading(false);
     }
   }, [
     validateInputs,
+    detailsLoading,
+    detailsError,
     formValues,
     loggedInUserName,
     operatorId,
@@ -239,6 +285,10 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
     isBillFetchSupported,
     navigation,
     providerName,
+    operatorLogoUrl,
+    routeParams.operatorLogoAlt,
+    routeParams.categoryId,
+    routeParams.selectedLocation,
     categoryName,
     alert,
   ]);
@@ -246,7 +296,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
+    <BBPSSafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <BBPSHead
         title="Enter Details"
         onBackPress={handleBackPress}
@@ -265,21 +315,33 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           <View style={styles.providerSection}>
             {detailsLoading ? (
               <>
-                <SkeletonBox pulse={pulse} width={45} height={45} borderRadius={25} />
+                <SkeletonBox pulse={pulse} width={56} height={56} borderRadius={28} />
                 <View style={styles.providerSkeletonText}>
                   <SkeletonBox pulse={pulse} width="85%" height={15} borderRadius={8} />
                 </View>
               </>
             ) : (
               <>
-                <LinearGradient
-                  colors={bbpsTheme.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.logoCircle}
-                >
-                  <Icon name="flash" size={22} color="#FFFFFF" />
-                </LinearGradient>
+                <View style={[styles.logoCircle, { borderColor: bbpsTheme.colors.border }]}> 
+                  {operatorLogoUrl && !logoFailed ? (
+                    <Image
+                      source={{ uri: operatorLogoUrl }}
+                      style={styles.operatorLogo}
+                      resizeMode="contain"
+                      accessibilityLabel={routeParams.operatorLogoAlt || `${providerName} logo`}
+                      onError={() => setLogoFailed(true)}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={bbpsTheme.gradients.primary}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.logoFallback}
+                    >
+                      <Text style={styles.logoInitial}>{providerName.charAt(0).toUpperCase()}</Text>
+                    </LinearGradient>
+                  )}
+                </View>
                 <Text style={[styles.providerName, { color: bbpsTheme.colors.textStrong }]}>{providerName}</Text>
               </>
             )}
@@ -296,6 +358,37 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
                   </View>
                 ))}
               </>
+            ) : detailsError || fields.length === 0 ? (
+              <View accessibilityLiveRegion="polite">
+                <Text style={[styles.unavailableTitle, { color: bbpsTheme.colors.textStrong }]}>
+                  {isCreditCard ? 'Credit card bill payment unavailable' : 'Biller temporarily unavailable'}
+                </Text>
+                <Text style={[styles.unavailableMessage, { color: bbpsTheme.colors.muted }]}>
+                  {isCreditCard
+                    ? `We couldn't load bill payment details for ${providerName}. Please try again later or choose another bank.`
+                    : `We couldn't load bill payment details for ${providerName}. Please try again or choose another biller.`}
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.unavailableAction}
+                  disabled={detailsFetching}
+                  accessibilityState={{ disabled: detailsFetching }}
+                  onPress={() => { void refetchDetails(); }}
+                >
+                  <Text style={[styles.label, { color: bbpsTheme.colors.text }]}>
+                    {detailsFetching ? 'Loading…' : 'Retry'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.unavailableAction}
+                  onPress={handleBackPress}
+                >
+                  <Text style={[styles.label, { color: bbpsTheme.colors.text }]}>
+                    {isCreditCard ? 'Choose another bank' : 'Choose another biller'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               fields.map((field, index) => (
                 <View key={field.param_id || field.param_name} style={index > 0 && styles.mobileLabel}>
@@ -313,6 +406,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
                     placeholderTextColor={bbpsTheme.colors.subtle}
                     keyboardType={isNumericField(field) ? 'numeric' : 'default'}
                     value={formValues[field.param_name] || ''}
+                    editable={!isLoading}
                     onChangeText={(value) => updateFieldValue(field, value)}
                   />
                   <Text style={[styles.helperText, { color: bbpsTheme.colors.subtle }]}>
@@ -377,18 +471,18 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7FF' },
-  content: { padding: 16 },
+  content: { padding: 16, gap: 8 },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    paddingVertical: 20,
-    marginBottom: 20,
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 0,
     overflow: 'hidden',
     shadowColor: '#5B47A3',
     shadowOffset: { width: 0, height: 6 },
@@ -399,32 +493,44 @@ const styles = StyleSheet.create({
   providerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   logoCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
+  operatorLogo: { width: '100%', height: '100%', borderRadius: 28 },
+  logoFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  logoInitial: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
   providerName: { fontSize: 15, fontWeight: '700', color: '#1F2937', flex: 1 },
-  providerSkeletonText: { flex: 1, marginLeft: 12 },
-  inputWrapper: { paddingHorizontal: 20, marginBottom: 15 },
-  label: { fontSize: 13, color: '#6B7280', marginBottom: 6, fontWeight: '500' },
-  mobileLabel: { marginTop: 14 },
+  providerSkeletonText: { flex: 1, marginLeft: 16 },
+  inputWrapper: { paddingHorizontal: 16, marginBottom: 16 },
+  label: { fontSize: 13, color: '#6B7280', marginBottom: 8, fontWeight: '500' },
+  mobileLabel: { marginTop: 16 },
   input: {
+    height: 56,
     borderWidth: 1,
     borderColor: '#E5E0FA',
     backgroundColor: '#FAF9FF',
     borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 0,
     fontSize: 16,
     color: '#111827',
   },
-  helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 5 },
+  helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 8 },
+  unavailableTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  unavailableMessage: { fontSize: 14, lineHeight: 21, marginBottom: 12 },
+  unavailableAction: { minHeight: 44, justifyContent: 'center' },
   skeletonInputGap: { marginTop: 8 },
   nicknameWrapper: {
     backgroundColor: '#F3EFFF',
@@ -479,7 +585,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   button: {
-    height: 55,
+    height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',

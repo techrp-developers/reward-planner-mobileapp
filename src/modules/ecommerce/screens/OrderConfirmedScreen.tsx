@@ -12,9 +12,12 @@ import { HomeStackParamList } from "../navigation/types";
 import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderStatusJourney";
 import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
 import PriceDetailsCard from "../../common/order/PriceDetailsCard";
+import OfferDetails from '../../common/order/OfferDetails';
+import ReturnHomeButton from '../../common/order/ReturnHomeButton';
+import type { AppliedOffer } from '../../common/order/appliedOffer';
 import InvoiceAndServiceBanner from "../../common/order/InvoiceAndServiceBanner";
 import ProductCarousel from "../components/order/ProductCarousel";
-import { fetchOrderDetails } from "../api/OrderApi";
+import { fetchOrderDetails, OrderItemReturnRequest } from "../api/OrderApi";
 import { fetchAllProducts, getProductImageUrl } from "../api/ProductApi";
 import { useAppTheme } from "../../../theme/ThemeContext";
 
@@ -50,6 +53,7 @@ type OrderDetailsResponse = {
         landmark?: string;
     };
     items?: Array<{
+        offer?: AppliedOffer | null;
         order_item_id: number;
         vendor_order_id?: number | null;
         shipment_id?: number | null;
@@ -77,6 +81,8 @@ type OrderDetailsResponse = {
             submitted: boolean;
             review_id: number | null;
         };
+        open_box_delivery?: boolean;
+        return_request?: OrderItemReturnRequest;
     }>;
     shipments?: Array<{
         vendor_id?: number;
@@ -422,6 +428,25 @@ export default function OrderConfirmedScreen() {
         });
     };
 
+    const openItemReturnScreen = (item: NonNullable<OrderDetailsResponse["items"]>[number], meta: string) => {
+        navigation.navigate("ItemReturnRequest", {
+            orderItemId: Number(item.order_item_id),
+            orderId: Number(orderData?.order?.order_id),
+            orderRef: orderData?.order?.order_ref,
+            productTitle: [item.brand_name, item.product_name].filter(Boolean).join(" "),
+            productMeta: meta,
+            canReturn: Boolean(item.return_request?.can_return),
+            canReplace: Boolean(item.return_request?.can_replace),
+            windowEndsAt: item.return_request?.window_ends_at ?? null,
+        });
+    };
+
+    const openItemReturnStatus = (item: NonNullable<OrderDetailsResponse["items"]>[number]) => {
+        navigation.navigate("ItemReturnDetails", {
+            orderItemId: Number(item.order_item_id),
+        });
+    };
+
     if (loading) {
         return (
             <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -466,6 +491,7 @@ export default function OrderConfirmedScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Product Card */}
+                <ReturnHomeButton />
                 <OrderItemCard
                     image={
                         firstItem?.image ? (
@@ -515,6 +541,15 @@ export default function OrderConfirmedScreen() {
                             const cancellation = item.cancellation;
                             const feedback = item.feedback;
                             const hasCancellationRequest = !!cancellation?.status;
+                            const returnRequest = item.return_request;
+                            const hasReturnRequest = !!returnRequest?.status;
+                            const canRequestReturn = !!(returnRequest?.can_return || returnRequest?.can_replace);
+                            const returnActionLabel = returnRequest?.can_return && returnRequest?.can_replace
+                                ? "Return / Replace"
+                                : returnRequest?.can_replace
+                                    ? "Replace Item"
+                                    : "Return Item";
+                            const returnTypeLabel = returnRequest?.request_type === "replacement" ? "Replacement" : "Return";
 
                             return (
                                 <View key={item.order_item_id} style={[styles.reviewItemRow, { borderTopColor: theme.border }]}>
@@ -525,9 +560,15 @@ export default function OrderConfirmedScreen() {
                                         <Text style={[styles.reviewItemMeta, { color: theme.secondaryText }]} numberOfLines={1}>
                                             {meta}
                                         </Text>
+                                        <OfferDetails item={item} />
                                         {item.shipping_status ? (
                                             <Text style={[styles.reviewItemStatus, { color: theme.secondaryText }]} numberOfLines={1}>
                                                 {toTitleCase(item.shipping_status)}
+                                            </Text>
+                                        ) : null}
+                                        {item.open_box_delivery && item.shipping_status !== "delivered" ? (
+                                            <Text style={[styles.openBoxNote, { color: isDark ? "#93C5FD" : "#1D4ED8" }]}>
+                                                Open box delivery: check the product in front of the delivery agent before accepting it.
                                             </Text>
                                         ) : null}
                                     </View>
@@ -565,6 +606,38 @@ export default function OrderConfirmedScreen() {
                                             </TouchableOpacity>
                                         ) : null}
 
+                                        {hasReturnRequest ? (
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.reviewButton,
+                                                    {
+                                                        backgroundColor: isDark ? "#132235" : "#EFF6FF",
+                                                        borderColor: isDark ? "#1E3A5F" : "#BFDBFE",
+                                                    },
+                                                ]}
+                                                activeOpacity={0.82}
+                                                onPress={() => openItemReturnStatus(item)}
+                                            >
+                                                <Text style={[styles.reviewButtonText, { color: "#2563EB" }]}>
+                                                    {returnTypeLabel} {toTitleCase(returnRequest?.status || "")}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ) : canRequestReturn ? (
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.reviewButton,
+                                                    {
+                                                        backgroundColor: isDark ? "#132235" : "#EFF6FF",
+                                                        borderColor: isDark ? "#1E3A5F" : "#BFDBFE",
+                                                    },
+                                                ]}
+                                                activeOpacity={0.82}
+                                                onPress={() => openItemReturnScreen(item, meta)}
+                                            >
+                                                <Text style={[styles.reviewButtonText, { color: "#2563EB" }]}>{returnActionLabel}</Text>
+                                            </TouchableOpacity>
+                                        ) : null}
+
                                         {feedback?.can_submit ? (
                                             <TouchableOpacity
                                                 style={[
@@ -596,6 +669,7 @@ export default function OrderConfirmedScreen() {
                     phone={orderData.address?.phone || "-"}
                 />
                 <PriceDetailsCard
+                    offerSavings={(orderData.items ?? []).reduce((sum, item) => sum + Number(item.offer?.savings || 0), 0)}
                     itemTotal={itemTotal}
                     deliveryFee={shippingTotal}
                     bagDiscount={bagDiscount}
@@ -690,6 +764,12 @@ const styles = StyleSheet.create({
         marginTop: 2,
         fontSize: 12,
         fontWeight: "600",
+    },
+    openBoxNote: {
+        marginTop: 4,
+        fontSize: 11,
+        fontWeight: "600",
+        lineHeight: 15,
     },
     itemActions: {
         alignItems: "flex-end",

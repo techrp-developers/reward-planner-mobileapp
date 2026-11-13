@@ -1,7 +1,7 @@
   import axios from "axios";
   import AsyncStorage from "@react-native-async-storage/async-storage";
   import api from "./axios";
-  import { API_BASE_URL } from '../../../../config/apiConfig';
+  import { secureDeleteItem, secureGetItem, secureSetItem } from "../services/secureStorage";
   const AUTH_TOKEN_KEY = "@rewardsplanners_auth_token";
   const AUTH_USER_NAME_KEY = "@rewardsplanners_user_name";
 
@@ -69,19 +69,19 @@
     setAuthToken(normalizedToken);
 
     if (normalizedToken) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, normalizedToken);
+      await secureSetItem(AUTH_TOKEN_KEY, normalizedToken);
       return;
     }
 
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    await secureDeleteItem(AUTH_TOKEN_KEY);
   };
 
   export const hydrateAuthToken = async () => {
-    const storedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const storedToken = await secureGetItem(AUTH_TOKEN_KEY);
     const normalizedToken = normalizeToken(storedToken);
 
     if (!normalizedToken && storedToken) {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      await secureDeleteItem(AUTH_TOKEN_KEY);
     }
 
     setAuthToken(normalizedToken);
@@ -114,7 +114,7 @@
 
   export const getAuthHeaders = async () => {
     const token =
-      getAuthToken() || normalizeToken(await AsyncStorage.getItem(AUTH_TOKEN_KEY));
+      getAuthToken() || normalizeToken(await secureGetItem(AUTH_TOKEN_KEY));
 
     if (!token) {
       applyAuthHeader(null);
@@ -137,7 +137,7 @@
   };
 
   export const register = async (payload: RegisterPayload) => {
-    const res = await axios.post(`${API_BASE_URL}/v1/auth/register`, payload);
+    const res = await api.post("/v1/auth/register", payload);
 
     const token = extractToken(res.data);
     if (token) {
@@ -160,7 +160,7 @@
   };
 
   export const login = async (payload: LoginPayload) => {
-    const res = await axios.post(`${API_BASE_URL}/v1/auth/login`, payload);
+    const res = await api.post("/v1/auth/login", payload);
 
     const token = extractToken(res.data);
 
@@ -281,10 +281,7 @@
   };
 
   export const activateAccount = async (payload: ActivateAccountPayload) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/activate-account`,
-      payload
-    );
+    const res = await api.post("/v1/auth/activate-account", payload);
     return res.data;
   };
 
@@ -296,10 +293,7 @@
   export const verifyActivationOtp = async (
     payload: VerifyActivationOtpPayload
   ) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/verify-activation-otp`,
-      payload
-    );
+    const res = await api.post("/v1/auth/verify-activation-otp", payload);
 
     const token = extractToken(res.data);
     if (token) {
@@ -320,10 +314,7 @@
   };
 
   export const setPassword = async (payload: SetPasswordPayload) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/set-password`,
-      payload
-    );
+    const res = await api.post("/v1/auth/set-password", payload);
 
     const token = extractToken(res.data);
     if (token) {
@@ -345,10 +336,7 @@
   };
 
   export const forgotPassword = async (payload: ForgotPasswordPayload) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/forgot-password`,
-      payload
-    );
+    const res = await api.post("/v1/auth/forgot-password", payload);
     return res.data;
   };
 
@@ -359,10 +347,7 @@
   };
 
   export const resendOtp = async (payload: ResendOtpPayload) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/resend-otp`,
-      payload
-    );
+    const res = await api.post("/v1/auth/resend-otp", payload);
     return res.data;
   };
 
@@ -376,10 +361,7 @@
   export const verifyForgotPasswordOtp = async (
     payload: VerifyForgotPasswordOtpPayload
   ) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/verify-forgot-password-otp`,
-      payload
-    );
+    const res = await api.post("/v1/auth/verify-forgot-password-otp", payload);
     return res.data;
   };
 
@@ -391,10 +373,7 @@
   };
 
   export const resetPassword = async (payload: ResetPasswordPayload) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/reset-password`,
-      payload
-    );
+    const res = await api.post("/v1/auth/reset-password", payload);
     return res.data;
   };
 
@@ -407,10 +386,7 @@
   export const resendActivationOtp = async (
     payload: ResendActivationOtpPayload
   ) => {
-    const res = await axios.post(
-      `${API_BASE_URL}/v1/auth/resend-activation-otp`,
-      payload
-    );
+    const res = await api.post("/v1/auth/resend-activation-otp", payload);
     return res.data;
   };
 

@@ -46,6 +46,7 @@ export interface ServiceVariantRaw {
   title?: string;
   short_description?: string;
   price: string;
+  original_price?: string;
   mrp?: string;
   features?: string[];
   details?: string[];
@@ -160,7 +161,7 @@ export interface CartVariantItem {
   /** Descriptive plan title shown under the short variant label (omitted when variant_name is "Default"). */
   planTitle?: string;
   price: string;
-  oldPrice: string;
+  oldPrice?: string;
   subtitle: string;
   rawVariant: NormalizedVariant;
 }

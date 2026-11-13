@@ -7,6 +7,7 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
+const { priceLines, getFlashSaleLimit } = require("../utils/activeOffers");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path) {
@@ -21,6 +22,8 @@ class cartModel {
     SELECT 
       ci.cart_item_id,
       ci.quantity,
+      ci.flash_sale_campaign_id,
+      ci.promotional_content_id,
 
       p.product_id,
       p.product_name,
@@ -57,6 +60,7 @@ class cartModel {
   `;
 
     const [rows] = await db.execute(query, [userId]);
+    await priceLines(rows);
 
     return {
       items: rows.map((row) => {
@@ -93,7 +97,13 @@ class cartModel {
           return_window: row.return_window_days,
           is_replaceable: row.is_replaceable,
 
-          sale_price: Number(row.sale_price),
+          sale_price: row.sale_price,
+          original_sale_price: row.base_sale_price,
+          effective_sale_price: row.sale_price,
+          flash_sale_campaign_id: row.flash_sale_campaign_id,
+          promotional_content_id: row.promotional_content_id,
+          offer_price: row.offer_price,
+          is_offer: row.offer_price !== null,
           mrp: Number(row.mrp),
           quantity: Number(row.quantity),
         };
@@ -118,6 +128,8 @@ class cartModel {
         ci.product_id,
         ci.variant_id,
         ci.quantity,
+        ci.flash_sale_campaign_id,
+        ci.promotional_content_id,
 
         p.category_id,
         p.subcategory_id,
@@ -134,6 +146,7 @@ class cartModel {
     `,
       [user_id],
     );
+    await priceLines(cartItems);
 
     /* ===============================
       CACHE
@@ -144,8 +157,10 @@ class cartModel {
     let totalRewardEarn = 0;
 
     const items = [];
+    const earningRules = new Map();
 
     for (let item of cartItems) {
+      const fixedPrice = item.offer_price != null;
       const price = Number(item.sale_price || 0);
       const qty = Number(item.quantity || 0);
 
@@ -172,6 +187,8 @@ class cartModel {
         rewardCache[key] = rules;
       }
 
+      earningRules.set(item.variant_id, rules);
+
       // earning
       let rewardEarn = 0;
       if (rules.length) {
@@ -181,8 +198,8 @@ class cartModel {
       /* ===============================
         REDEMPTION (rule-based, per line item)
         =============================== */
-      const redemption = resolveRedemption(itemTotal, rules);
-      const maxAllowed = calculateRedeemableCoins(itemTotal, redemption);
+      const redemption = fixedPrice ? null : resolveRedemption(itemTotal, rules);
+      const maxAllowed = fixedPrice ? 0 : calculateRedeemableCoins(itemTotal, redemption);
       const canRedeem = maxAllowed > 0;
 
       totalRewardEarn += rewardEarn;
@@ -222,6 +239,11 @@ class cartModel {
 
     totalRedeemed = Math.min(totalRedeemed, cartTotal);
 
+    totalRewardEarn = 0;
+    for (const item of items) {
+      item.rewardEarn = calculateReward(item.itemTotal - item.redeemable, earningRules.get(item.variant_id));
+      totalRewardEarn += item.rewardEarn;
+    }
     const finalPayable = cartTotal - totalRedeemed;
 
     return {
@@ -258,6 +280,8 @@ class cartModel {
 
       if (!variant) throw new Error("INVALID_VARIANT");
 
+      const flashSaleRemaining = await getFlashSaleLimit(variantId, { conn, forUpdate: true });
+
       const [[existing]] = await conn.execute(
         `SELECT quantity FROM cart_items WHERE user_id = ? AND variant_id = ? FOR UPDATE`,
         [userId, variantId],
@@ -267,6 +291,10 @@ class cartModel {
 
       if (newQty > variant.stock) {
         throw new Error("INSUFFICIENT_STOCK");
+      }
+
+      if (flashSaleRemaining !== null && newQty > flashSaleRemaining) {
+        throw new Error("FLASH_SALE_LIMIT_EXCEEDED");
       }
 
       await conn.execute(
@@ -344,6 +372,11 @@ class cartModel {
     // 3 Stock validation
     if (quantity > row.stock) {
       throw new Error("INSUFFICIENT_STOCK");
+    }
+
+    const flashSaleRemaining = await getFlashSaleLimit(row.variant_id);
+    if (flashSaleRemaining !== null && quantity > flashSaleRemaining) {
+      throw new Error("FLASH_SALE_LIMIT_EXCEEDED");
     }
 
     // 4 Update quantity

@@ -7,12 +7,14 @@ type BenefitsRowProps = {
   is_returnable?: number | boolean;
   is_replaceable?: number | boolean;
   return_window_days?: number;
+  open_box_delivery?: number | boolean;
 };
 
 export default function BenefitsRow(props: BenefitsRowProps) {
   const { theme } = useAppTheme();
   const isReturnable = Boolean(props.is_returnable);
   const isReplaceable = Boolean(props.is_replaceable);
+  const isOpenBox = Number(props.open_box_delivery) === 1 || props.open_box_delivery === true;
 
   const returnText = isReturnable
     ? `${props.return_window_days ?? 7} Day Return`
@@ -21,6 +23,7 @@ export default function BenefitsRow(props: BenefitsRowProps) {
   const replacementText = isReplaceable ? "Replacement Available" : "No Replacement";
 
   return (
+    <View>
     <View style={styles.benefitsRow}>
       <View style={styles.benefitItem}>
         <MaterialCommunityIcons
@@ -49,6 +52,19 @@ export default function BenefitsRow(props: BenefitsRowProps) {
         <Text style={[styles.benefitText, { color: theme.secondaryText }]}>Fast Delivery</Text>
       </View>
     </View>
+
+    {isOpenBox ? (
+      <View style={[styles.openBoxBanner, { borderColor: theme.border, backgroundColor: theme.card }]}>
+        <MaterialCommunityIcons name="package-variant" size={22} color="#2563EB" />
+        <View style={styles.openBoxCopy}>
+          <Text style={[styles.openBoxTitle, { color: theme.text }]}>Open Box Delivery</Text>
+          <Text style={[styles.openBoxText, { color: theme.secondaryText }]}>
+            Check the product in front of the delivery agent before accepting it.
+          </Text>
+        </View>
+      </View>
+    ) : null}
+    </View>
   );
 }
 
@@ -72,6 +88,20 @@ const styles = StyleSheet.create({
     color: "#444",
     textAlign: "center",
   },
+
+  openBoxBanner: {
+    marginTop: 14,
+    marginHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+  },
+  openBoxCopy: { flex: 1 },
+  openBoxTitle: { fontSize: 13, fontWeight: "800" },
+  openBoxText: { fontSize: 11, fontWeight: "500", marginTop: 2, lineHeight: 15 },
 
   textGreen:  { color: "#10B981" },
   textIndigo: { color: "#6366F1" },

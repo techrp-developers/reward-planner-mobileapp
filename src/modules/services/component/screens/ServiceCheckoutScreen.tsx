@@ -56,7 +56,11 @@ const THIRTY_MINUTES = 30 * 60 * 1000;
 //   },
 // ];
 
+import { getAppliedOffer } from '../../../common/order/appliedOffer';
+import OfferDetails from '../../../common/order/OfferDetails';
+
 type ServicePreviewItem = {
+  offer?: import('../../../common/order/appliedOffer').AppliedOffer | null;
   id: number | string;
   service_id: number | null;
   variant_id: number | null;
@@ -263,7 +267,8 @@ function normalizePreview(
         description: String(entry?.description ?? entry?.short_description ?? '').trim(),
 
         price: parseMoney(entry?.price),
-        mrp: parseMoney(entry?.mrp ?? entry?.price),
+        mrp: parseMoney(entry?.regular_price ?? entry?.original_price ?? entry?.mrp ?? entry?.price),
+        offer: getAppliedOffer(entry),
 
         imageUrl: getFirstImage(entry, ['image_url', 'variant_image']),
 
@@ -340,7 +345,7 @@ export default function ServiceCheckoutScreen() {
   // paddingBottom on the content wrapper, so the CTA must not also offset by
   // the tab bar height itself (tabBarAware:false) — otherwise it floats above
   // the bottom bar with a visible gap instead of sitting right on top of it.
-  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
+  const stickyCTA = useStickyBottomCTA();
   const queryClient = useQueryClient();
   const route = useRoute<RouteT>();
   const {
@@ -857,10 +862,12 @@ export default function ServiceCheckoutScreen() {
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
         <EmptyCart
+          variant="services"
+          onBrowse={() => navigation.goBack()}
           message={
             isBuyNow
               ? 'Unable to load the selected item. Please login and try again.'
-              : 'Your cart is empty. Add products to continue.'
+              : 'Your service cart is empty. Add services to continue.'
           }
         />
       </View>
@@ -951,6 +958,7 @@ export default function ServiceCheckoutScreen() {
               </View>
             </View>
 
+            <OfferDetails item={item} />
             {item.documents.length > 0 && (
               <View style={[styles.docsSection, { borderTopColor: servicesTheme.colors.divider }]}>
                 <Text style={[styles.docsTitle, { color: servicesTheme.colors.textStrong }]} >Documents Required</Text>
@@ -1006,8 +1014,8 @@ export default function ServiceCheckoutScreen() {
         loading={placing}
         onPlaceOrder={handlePlaceOrder}
         wrapperPaddingBottom={16}
-        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
-        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
+        // Sits above the bottom tab bar, or above the keyboard when it's open.
+        bottomOffset={stickyCTA.bottomOffset}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

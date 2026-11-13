@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -70,25 +72,26 @@ const toCollectionPage = (response: any, offset: number): CollectionPage => {
 
 const fetchCollectionPage = async (
   source: ProductCollectionSource,
-  offset: number
+  offset: number,
+  search = ""
 ): Promise<CollectionPage> => {
   switch (source) {
     case "bestSellers":
-      return toCollectionPage(await fetchBestSellers(offset), offset);
+      return toCollectionPage(await fetchBestSellers(offset, search), offset);
     case "newArrivals":
-      return toCollectionPage(await fetchNewArrivals(offset), offset);
+      return toCollectionPage(await fetchNewArrivals(offset, search), offset);
     case "mostViewed":
-      return toCollectionPage(await fetchMostViewedProducts(offset), offset);
+      return toCollectionPage(await fetchMostViewedProducts(offset, search), offset);
     case "recommended":
-      return toCollectionPage(await getRecommendedProducts(offset), offset);
+      return toCollectionPage(await getRecommendedProducts(offset, search), offset);
     case "recent":
-      return toCollectionPage(await getRecentProducts(offset), offset);
+      return toCollectionPage(await getRecentProducts(offset, search), offset);
     case "topRated":
-      return toCollectionPage(await fetchTopRatedProducts(offset), offset);
+      return toCollectionPage(await fetchTopRatedProducts(offset, search), offset);
     case "all":
     default: {
       const page = Math.floor(offset / PAGE_SIZE) + 1;
-      const response = await fetchAllProducts({ page, pageSize: PAGE_SIZE });
+      const response = await fetchAllProducts({ page, pageSize: PAGE_SIZE, search });
       const result = toCollectionPage(response, offset);
       const hasMore = Boolean(response?.hasMore ?? result.products.length === PAGE_SIZE);
 
@@ -108,7 +111,20 @@ function ProductScreen() {
   const pulse = useRef(new Animated.Value(0)).current;
   const { theme } = useAppTheme();
   const source = route.params?.source ?? "all";
-  const title = COLLECTION_TITLES[source];
+  const title = route.params?.title ?? COLLECTION_TITLES[source];
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState('');
+  const searchInput = useRef<TextInput>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchText.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+  useEffect(() => {
+    setSearchText('');
+    setSearch('');
+    setShowSearch(false);
+  }, [source, title]);
 
   const gap = 12;
   const horizontalPadding = 16;
@@ -136,9 +152,11 @@ function ProductScreen() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isFetching,
+    refetch,
   } = useInfiniteQuery({
-    queryKey: ["ecommerce", "product-collection", source],
-    queryFn: ({ pageParam }) => fetchCollectionPage(source, pageParam),
+    queryKey: ["ecommerce", "product-collection", source, search],
+    queryFn: ({ pageParam }) => fetchCollectionPage(source, pageParam, search),
     initialPageParam: 0,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore && lastPage.nextOffset > 0 ? lastPage.nextOffset : undefined,
@@ -164,13 +182,26 @@ function ProductScreen() {
   }, [data?.pages]);
 
   const handleLoadMore = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
+    if (!hasNextPage || isFetching || error) return;
     fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [fetchNextPage, hasNextPage, isFetching, error]);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <ProductHeadColor title={title} onBackPress={() => navigation.goBack()} />
+      <ProductHeadColor title={title} onBackPress={() => navigation.goBack()}
+        onSearchPress={() => { setShowSearch(true); searchInput.current?.focus(); }} />
+      {showSearch ? (
+        <View style={[styles.searchRow, { borderColor: theme.border }]}>
+          <TextInput ref={searchInput} autoFocus value={searchText} onChangeText={setSearchText}
+            placeholder={`Search ${title}`} accessibilityLabel={`Search ${title}`}
+            placeholderTextColor={theme.secondaryText} style={[styles.searchInput, { color: theme.text }]}
+            returnKeyType="search" onSubmitEditing={() => setSearch(searchText.trim())} />
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel search"
+            onPress={() => { setSearchText(''); setSearch(''); setShowSearch(false); }}>
+            <Text style={{ color: theme.text }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {isLoading ? (
         <View style={[styles.skeletonWrap, { backgroundColor: theme.background }]}>
@@ -189,9 +220,13 @@ function ProductScreen() {
           <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
             {(error as Error)?.message || `Failed to load ${title.toLowerCase()}.`}
           </Text>
+          <TouchableOpacity accessibilityRole="button" onPress={() => refetch()}>
+            <Text style={{ color: theme.text }}>Tap to retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
+          key={`${source}:${search}`}
           data={products}
           keyExtractor={(item, index) => String(item?.id ?? item?.product_id ?? index)}
           numColumns={2}
@@ -209,11 +244,15 @@ function ProductScreen() {
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color={theme.primary} />
               </View>
+            ) : error ? (
+              <TouchableOpacity style={styles.footerLoader} accessibilityRole="button" onPress={() => fetchNextPage()}>
+                <Text style={[styles.emptyText, { color: theme.text }]}>Unable to load more. Tap to retry.</Text>
+              </TouchableOpacity>
             ) : null
           }
           ListEmptyComponent={
             <View style={[styles.centerWrap, { backgroundColor: theme.background }]}>
-              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No {title.toLowerCase()} found.</Text>
+              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>{search ? `No products matching "${search}" in ${title}.` : `No ${title.toLowerCase()} found.`}</Text>
             </View>
           }
         />
@@ -225,6 +264,8 @@ function ProductScreen() {
 export default ProductScreen;
 
 const styles = StyleSheet.create({
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, paddingHorizontal: 12, borderWidth: 1, borderRadius: 10, marginTop: 12 },
+  searchInput: { flex: 1, minHeight: 48, paddingRight: 12 },
   screen: {
     flex: 1,
     backgroundColor: "#FFFFFF",

@@ -58,7 +58,12 @@ const isVariantAvailable = (variant: any) =>
 export default function
   ProductDescriptionScreen() {
   const route = useRoute<RouteT>();
-  const { productId, variantId: requestedVariantId } = route.params;
+  const {
+    productId,
+    variantId: requestedVariantId,
+    campaignId,
+    contentId,
+  } = route.params;
   const { isAuthenticated } = useAuth();
   const alert = useAlert();
   const { addItem, updateQuantity, totalQuantity, items: cartItems } = useCart();
@@ -131,6 +136,8 @@ export default function
       product_id: Number(product.product_id),
       variant_id: Number(selectedVariant.variant_id),
       qty: Math.max(1, Number(qty) || 1),
+      campaign_id: campaignId == null ? undefined : Number(campaignId),
+      content_id: contentId == null ? undefined : Number(contentId),
     };
 
     __DEV__ && console.log("➡️ Buy Now params:", buyNowParams);
@@ -140,12 +147,14 @@ export default function
       product_id: buyNowParams.product_id,
       variant_id: buyNowParams.variant_id,
       qty: buyNowParams.qty,
+      campaign_id: buyNowParams.campaign_id,
+      content_id: buyNowParams.content_id,
     }).catch(() => {
       // Ignore prefetch errors and continue navigation.
     });
 
     navigation.navigate("OrderStepUI", buyNowParams);
-  }, [isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
+  }, [campaignId, contentId, isAuthenticated, navigation, product?.product_id, qty, selectedVariant]);
 
 
 
@@ -171,7 +180,8 @@ export default function
       });
     };
 
-    const cachedProduct = queryClient.getQueryData<any>(productDetailsQueryKey(productId));
+    const detailsQueryKey = productDetailsQueryKey(productId, campaignId, contentId);
+    const cachedProduct = queryClient.getQueryData<any>(detailsQueryKey);
     if (cachedProduct) {
       applyProductState(cachedProduct);
       setLoading(false);
@@ -181,7 +191,7 @@ export default function
 
     // Start the network request immediately. Rendering the heavier product
     // content still waits for the native screen transition to finish below.
-    const productRequest = fetchProductDetailsByID(productId)
+    const productRequest = fetchProductDetailsByID(productId, campaignId, contentId)
       .then((raw) => ({ raw, error: null }))
       .catch((error) => ({ raw: null, error }));
 
@@ -209,7 +219,7 @@ export default function
           ...raw,
           variants: Array.isArray(raw?.variants) ? raw.variants.map(normalizeVariant) : [],
         };
-        queryClient.setQueryData(productDetailsQueryKey(productId), p);
+        queryClient.setQueryData(detailsQueryKey, p);
 
         if (!isMounted) return;
         applyProductState(p);
@@ -229,7 +239,7 @@ export default function
       isMounted = false;
       interactionTask.cancel();
     };
-  }, [productId, queryClient, requestedVariantId]);
+  }, [campaignId, contentId, productId, queryClient, requestedVariantId]);
 
 
 
@@ -413,7 +423,7 @@ export default function
         return;
       }
 
-      await addItem(product.product_id, selectedVariant.variant_id, qty);
+      await addItem(product.product_id, selectedVariant.variant_id, qty, campaignId, contentId);
 
       // Open sheet first so it isn't blocked by alert overlays.
       setSheetVisible(true);
@@ -438,6 +448,8 @@ export default function
     }
   }, [
     adding,
+    campaignId,
+    contentId,
     isAuthenticated,
     product?.product_id,
     selectedVariant?.variant_id,
@@ -504,12 +516,15 @@ export default function
   if (!product) return <Text style={[styles.notFoundText, { color: theme.text, backgroundColor: theme.background }]}>Product not found</Text>;
   const variant = selectedVariant;
 
-  const salePrice = variant ? `₹${variant.sale_price}` : "₹0";
-  const mrp = variant ? `₹${variant.mrp}` : "";
+  const parseVariantPrice = (value: unknown) => Number(String(value ?? '').replace(/[^0-9.]/g, '')) || 0;
+  const salePriceValue = variant ? parseVariantPrice(variant.price ?? variant.sale_price) : 0;
+  const mrpValue = variant ? parseVariantPrice(variant.mrp) : 0;
+  const salePrice = variant ? `₹${salePriceValue}` : "₹0";
+  const mrp = variant ? `₹${mrpValue}` : "";
 
   const offPercent =
-    variant && +variant.mrp > +variant.sale_price
-      ? `${Math.round(((+variant.mrp - +variant.sale_price) / +variant.mrp) * 100)}%`
+    variant && mrpValue > salePriceValue
+      ? `${Math.round(((mrpValue - salePriceValue) / mrpValue) * 100)}%`
       : "";
 
   const normalizeDescription = (value: unknown) => {
@@ -559,9 +574,17 @@ export default function
         <View style={styles.descriptionWrap}>
           {/* Brand + Product in one row */}
           <View style={styles.titleRow}>
-            <Text style={[styles.productTitle, { color: theme.text }]}>
-              {product.brand_name}
-            </Text>
+            {typeof product.brand_name === 'string' && product.brand_name.trim() ? (
+              <TouchableOpacity
+                accessibilityRole="link"
+                accessibilityLabel={`Shop all ${product.brand_name.trim()} products`}
+                onPress={() => navigation.push('BrandProducts', { brandName: product.brand_name.trim() })}
+              >
+                <Text style={[styles.productTitle, { color: theme.text, textDecorationLine: 'underline' }]}>
+                  {product.brand_name.trim()}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
 
             <Text style={[styles.productName, { color: theme.text }]}>
               {product.product_name}
@@ -608,6 +631,7 @@ export default function
           is_returnable={product?.is_returnable}
           is_replaceable={product?.is_replaceable}
           return_window_days={product?.return_window_days}
+          open_box_delivery={product?.open_box_delivery}
         />
         <ProductInfoAccordions
           productDescription={productDescription}

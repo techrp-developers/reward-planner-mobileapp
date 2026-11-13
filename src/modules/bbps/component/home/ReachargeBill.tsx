@@ -1,3 +1,4 @@
+import { queryClient } from '../../../../query/queryClient';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -6,6 +7,7 @@ import { SvgProps } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
 import { useBbpsTheme } from '../../utils/useBbpsTheme';
+import OffersBanner from '../../../ecommerce/components/home/OffersBanner';
 
 // Asset Imports
 import Recharge from '../../assets/BBPS_Service/Recharge.svg';
@@ -232,11 +234,13 @@ const RechargeBillSkeleton = ({ bbpsTheme }: { bbpsTheme: BbpsTheme }) => {
           toValue: 1,
           duration: 650,
           useNativeDriver: true,
+          isInteraction: false,
         }),
         Animated.timing(shimmerAnim, {
           toValue: 0.3,
           duration: 650,
           useNativeDriver: true,
+          isInteraction: false,
         }),
       ]),
     );
@@ -433,6 +437,8 @@ function RechargeBill() {
         </View>
       )}
 
+      <OffersBanner module="payment" wrapperStyle={styles.afterQuickPayOffer} />
+
       <View
         style={[
           styles.directoryCard,
@@ -494,8 +500,8 @@ function RechargeBill() {
               </LinearGradient>
             </View>
             <View style={styles.benefitContent}>
-              <Text style={[styles.benefitTitle, { color: bbpsTheme.isDark ? '#FFFFFF' : '#33213F' }]}>Earn reward points</Text>
-              <Text style={[styles.benefitDescription, { color: bbpsTheme.isDark ? '#CDBED5' : '#725E7D' }]}>Points are credited after every successful transaction.</Text>
+              <Text style={[styles.benefitTitle, { color: bbpsTheme.isDark ? '#FFFFFF' : '#33213F' }]}>Earn RP points</Text>
+              <Text style={[styles.benefitDescription, { color: bbpsTheme.isDark ? '#CDBED5' : '#725E7D' }]}>RP points are credited after every successful transaction.</Text>
             </View>
           </View>
           <View style={[styles.benefitDivider, { backgroundColor: bbpsTheme.isDark ? 'rgba(255,255,255,0.10)' : 'rgba(112,64,150,0.12)' }]} />
@@ -519,7 +525,7 @@ function RechargeBill() {
           <Text style={[styles.sectionDisplayTitle, { color: ui.text, marginBottom: 0 }]}>Others</Text>
         </View>
         <TouchableOpacity style={[styles.otherRow, { borderBottomColor: ui.divider }]} onPress={() => navigation.navigate('OrderHistory')}>
-          <View style={[styles.otherIcon, { backgroundColor: ui.rowIcon, borderColor: ui.rowIconBorder }]}><MaterialCommunityIcons name="receipt-text-outline" size={20} color={ui.text} /></View>
+          <View style={[styles.otherIcon, { backgroundColor: ui.rowIcon, borderColor: ui.rowIconBorder }]}><MaterialCommunityIcons name="history" size={20} color={ui.text} /></View>
           <Text style={[styles.otherLabel, { color: ui.text }]}>Recharges & bill payment history</Text>
           <MaterialCommunityIcons name="chevron-right" size={22} color={ui.arrow} />
         </TouchableOpacity>
@@ -582,6 +588,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
   quickCardTitle: { fontSize: 12, fontWeight: '700', lineHeight: 16, minHeight: 32 },
   quickCardAccent: { position: 'absolute', left: 12, right: 12, bottom: 0, height: 3, borderTopLeftRadius: 2, borderTopRightRadius: 2, opacity: 0.75 },
+  afterQuickPayOffer: { marginHorizontal: -16, paddingTop: 14, paddingBottom: 0 },
   featuredLarge: { flex: 1.05, borderRadius: 21, overflow: 'hidden', borderWidth: 1, borderColor: '#2A2630' },
   featuredSide: { flex: 0.95, gap: 10 },
   featuredSmall: { flex: 1, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#2A2630' },
@@ -707,3 +714,7 @@ const styles = StyleSheet.create({
 });
 
 export default RechargeBill;
+
+export const prefetchBillCategories = () => queryClient.prefetchQuery({
+  queryKey: BILL_CATEGORIES_QUERY_KEY, queryFn: fetchBillsCategories, staleTime: BILL_CATEGORIES_STALE_TIME,
+});

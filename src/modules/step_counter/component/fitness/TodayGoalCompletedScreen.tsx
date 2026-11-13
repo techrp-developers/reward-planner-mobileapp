@@ -323,7 +323,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
         {reward > 0 && (
           <SectionCard fadeAnim={anims[3].fade} slideAnim={anims[3].slide}>
             <View style={styles.rewardRow}>
-              <Text style={styles.rewardLabel}>🪙 Coins Earned Today</Text>
+              <Text style={styles.rewardLabel}>RP Points Earned Today</Text>
               <Text style={styles.rewardValue}>+{reward}</Text>
             </View>
           </SectionCard>

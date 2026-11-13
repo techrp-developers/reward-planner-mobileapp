@@ -136,7 +136,7 @@ const CoinHistoryAndPlan: React.FC = () => {
               size={22}
               color={VD.accent}
             />
-            <Text style={styles.stateText}>Your earned coins will appear here.</Text>
+            <Text style={styles.stateText}>Your earned RP Points will appear here.</Text>
           </View>
         ) : (
           <ScrollView

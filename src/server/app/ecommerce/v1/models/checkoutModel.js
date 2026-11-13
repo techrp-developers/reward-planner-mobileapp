@@ -2,7 +2,11 @@ const db = require("../../../../config/database");
 const fs = require("fs");
 const path = require("path");
 const AddressModel = require("../../../common/models/addressModel");
-const xpressService = require("../../../../services/ExpressBees/xpressbees_service");
+const courierService = require("../../../../services/courier/courierService");
+const {
+  buildDeliveryChoices,
+  selectCourierForPreference,
+} = require("../../../../services/courier/courierPolicy");
 const {
   reserveWalletCoins,
 } = require("../../../../services/rewards/ecommerceWalletService");
@@ -13,7 +17,9 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
+const { priceLines } = require("../utils/activeOffers");
 const { deliveryChargeForUser } = require("../utils/deliveryFeePolicy");
+const { orderOfferColumns, orderOffer } = require("../../../../utils/orderOffer");
 
 const CDN_BASE_URL = "https://cdn.rewardplanners.com";
 function getPublicUrl(path) {
@@ -39,6 +45,7 @@ class CheckoutModel {
     useRewards = true,
     expectedTotal,
     expectedRedeemable,
+    deliveryPreference,
   ) {
     const conn = await db.getConnection();
 
@@ -93,6 +100,7 @@ class CheckoutModel {
         `,
         [userId],
       );
+      await priceLines(cartItems, { conn });
 
       if (!cartItems.length) throw new Error("CART_EMPTY");
 
@@ -153,8 +161,12 @@ class CheckoutModel {
         let redeemable = 0;
 
         if (useRewards && remainingWallet > 0) {
-          const redemption = resolveRedemption(itemTotal, rules);
-          const maxAllowed = calculateRedeemableCoins(itemTotal, redemption);
+          const redemption = item.flash_sale_campaign_id === null && item.promotional_content_id === null
+            ? resolveRedemption(itemTotal, rules)
+            : null;
+          const maxAllowed = item.flash_sale_campaign_id === null && item.promotional_content_id === null
+            ? calculateRedeemableCoins(itemTotal, redemption)
+            : 0;
 
           redeemable = Math.min(remainingWallet, maxAllowed, itemTotal);
 
@@ -232,7 +244,7 @@ class CheckoutModel {
         const breadth = Math.round(vendor.breadth);
         const height = Math.round(vendor.height);
 
-        const serviceResponse = await xpressService.checkServiceability({
+        const serviceResponse = await courierService.checkServiceability({
           origin: vendorAddress.pincode,
           destination: customerAddress.zipcode,
           payment_type: "prepaid",
@@ -259,9 +271,10 @@ class CheckoutModel {
           throw new Error("NOT_SERVICEABLE");
         }
 
-        const selectedCourier = [...validOptions].sort(
-          (a, b) => a.total_charges - b.total_charges,
-        )[0];
+        const selectedCourier = selectCourierForPreference(
+          validOptions,
+          deliveryPreference,
+        );
 
         // =====================
         // DELIVERY DATE
@@ -326,12 +339,15 @@ class CheckoutModel {
       }
 
       const [lockedCart] = await conn.execute(
-        `SELECT ci.variant_id, ci.quantity, v.sale_price, v.stock
+        `SELECT ci.variant_id, ci.quantity,
+                v.sale_price,
+                v.stock
          FROM cart_items ci
          JOIN product_variants v ON v.variant_id = ci.variant_id
          WHERE ci.user_id = ? FOR UPDATE`,
         [userId],
       );
+      await priceLines(lockedCart, { conn, forUpdate: true });
       const cartUnchanged =
         lockedCart.length === cartItems.length &&
         cartItems.every((item) => {
@@ -342,6 +358,8 @@ class CheckoutModel {
             current &&
             Number(current.quantity) === Number(item.quantity) &&
             Number(current.sale_price) === Number(item.sale_price) &&
+            current.flash_sale_campaign_id === item.flash_sale_campaign_id &&
+            current.promotional_content_id === item.promotional_content_id &&
             Number(current.stock) >= Number(item.quantity)
           );
         });
@@ -437,8 +455,8 @@ class CheckoutModel {
         await conn.execute(
           `
         INSERT INTO eorder_items
-        (order_id, vendor_order_id, product_id, variant_id, quantity, price, reward_discount, reward_coins_used, reward_earned, reward_coins_earned, final_price)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (order_id, vendor_order_id, product_id, variant_id, quantity, price, reward_discount, reward_coins_used, reward_earned, reward_coins_earned, final_price, flash_sale_campaign_id, promotional_content_id, original_price)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
           [
             orderId,
@@ -452,8 +470,24 @@ class CheckoutModel {
             pricing.rewardEarn,
             pricing.rewardEarn,
             pricing.finalItemTotal,
+            item.flash_sale_campaign_id,
+            item.promotional_content_id,
+            item.base_sale_price,
           ],
         );
+
+        if (item.flash_sale_campaign_id) {
+          const [flashSaleRes] = await conn.execute(
+            `UPDATE campaign_items
+             SET sold_qty = COALESCE(sold_qty, 0) + ?
+             WHERE campaign_id = ? AND variant_id = ?
+               AND max_qty - COALESCE(sold_qty, 0) >= ?`,
+            [item.quantity, item.flash_sale_campaign_id, item.variant_id, item.quantity],
+          );
+          if (flashSaleRes.affectedRows === 0) {
+            throw new Error("FLASH_SALE_LIMIT_EXCEEDED");
+          }
+        }
 
         const [updateRes] = await conn.execute(
           `
@@ -521,11 +555,14 @@ class CheckoutModel {
     productId,
     variantId,
     quantity,
+    campaignId = null,
+    contentId = null,
     companyId,
     addressId,
     useRewards = true,
     expectedTotal,
     expectedRedeemable,
+    deliveryPreference,
   }) {
     const conn = await db.getConnection();
 
@@ -550,8 +587,7 @@ class CheckoutModel {
       // ===============================
       // 2. FETCH PRODUCT + REWARD
       // ===============================
-      const [[item]] = await conn.execute(
-        `
+      const pricingSql = `
       SELECT 
         v.sale_price,
         v.mrp,
@@ -571,11 +607,14 @@ class CheckoutModel {
 
       WHERE v.variant_id = ? AND v.product_id = ?
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
-      `,
-        [variantId, productId],
-      );
+      `;
+      const pricingParams = [variantId, productId];
+      const [[item]] = await conn.execute(pricingSql, pricingParams);
 
       if (!item) throw new Error("INVALID_VARIANT");
+      await priceLines([Object.assign(item, { variant_id: variantId, quantity })], { conn });
+
+
 
       if (quantity > item.stock) throw new Error("OUT_OF_STOCK");
 
@@ -585,17 +624,17 @@ class CheckoutModel {
       const itemTotal = Number(item.sale_price) * quantity;
 
       const rules = await RewardModel.getProductRewards(
-        productId,
-        variantId,
-        item.category_id,
-        item.subcategory_id,
-        itemTotal,
-        item.is_discount_eligible,
-      );
+          productId,
+          variantId,
+          item.category_id,
+          item.subcategory_id,
+          itemTotal,
+          item.is_discount_eligible,
+        );
 
       let redeemable = 0;
 
-      if (useRewards && walletBalance > 0) {
+      if (item.flash_sale_campaign_id === null && item.promotional_content_id === null && useRewards && walletBalance > 0) {
         const redemption = resolveRedemption(itemTotal, rules);
         const maxAllowed = calculateRedeemableCoins(itemTotal, redemption);
 
@@ -634,7 +673,7 @@ class CheckoutModel {
       const breadth = Math.round(item.breadth);
       const height = Math.round(quantity * Number(item.height));
 
-      const serviceResponse = await xpressService.checkServiceability({
+      const serviceResponse = await courierService.checkServiceability({
         origin: vendorAddress.pincode,
         destination: customerAddress.zipcode,
         payment_type: "prepaid",
@@ -649,9 +688,10 @@ class CheckoutModel {
         throw new Error("NOT_SERVICEABLE");
       }
 
-      const courier = serviceResponse.data
-        .filter((o) => o.total_charges > 0)
-        .sort((a, b) => a.total_charges - b.total_charges)[0];
+      const courier = selectCourierForPreference(
+        serviceResponse.data,
+        deliveryPreference,
+      );
 
       if (!courier) throw new Error("NOT_SERVICEABLE");
 
@@ -693,14 +733,20 @@ class CheckoutModel {
       }
 
       const [[lockedItem]] = await conn.execute(
-        `SELECT sale_price, stock
-         FROM product_variants
-         WHERE variant_id = ? AND product_id = ? FOR UPDATE`,
-        [variantId, productId],
+        `${pricingSql} FOR UPDATE`,
+        pricingParams,
       );
+      if (lockedItem) {
+        await priceLines(
+          [Object.assign(lockedItem, { variant_id: variantId, quantity })],
+          { conn, forUpdate: true },
+        );
+      }
       if (
         !lockedItem ||
         Number(lockedItem.sale_price) !== Number(item.sale_price) ||
+        lockedItem.flash_sale_campaign_id !== item.flash_sale_campaign_id ||
+        lockedItem.promotional_content_id !== item.promotional_content_id ||
         Number(lockedItem.stock) < Number(quantity)
       ) {
         throw new Error("CHECKOUT_CHANGED");
@@ -794,8 +840,8 @@ class CheckoutModel {
       (order_id, vendor_order_id, product_id, variant_id, quantity, price,
        reward_discount, reward_coins_used,
        reward_earned, reward_coins_earned,
-       final_price)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       final_price, flash_sale_campaign_id, promotional_content_id, original_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
         [
           orderId,
@@ -809,8 +855,24 @@ class CheckoutModel {
           rewardEarn,
           rewardEarn,
           finalItemTotal,
+          item.flash_sale_campaign_id,
+          item.promotional_content_id,
+          item.base_sale_price,
         ],
       );
+
+      if (item.flash_sale_campaign_id) {
+        const [flashSaleRes] = await conn.execute(
+          `UPDATE campaign_items
+           SET sold_qty = COALESCE(sold_qty, 0) + ?
+           WHERE campaign_id = ? AND variant_id = ?
+             AND max_qty - COALESCE(sold_qty, 0) >= ?`,
+          [quantity, item.flash_sale_campaign_id, variantId, quantity],
+        );
+        if (flashSaleRes.affectedRows === 0) {
+          throw new Error("FLASH_SALE_LIMIT_EXCEEDED");
+        }
+      }
 
       // ===============================
       // 9. ORDER SHIPMENT
@@ -868,7 +930,12 @@ class CheckoutModel {
   }
 
   // Get checkout details
-  async getCheckoutCart(userId, useRewards = true, addressId = null) {
+  async getCheckoutCart(
+    userId,
+    useRewards = true,
+    addressId = null,
+    deliveryPreference,
+  ) {
     // ===============================
     // 1. WALLET
     // ===============================
@@ -927,6 +994,7 @@ class CheckoutModel {
     `,
       [userId],
     );
+    await priceLines(rows);
 
     if (!rows.length) throw new Error("CART_EMPTY");
 
@@ -960,6 +1028,8 @@ class CheckoutModel {
         category_id: row.category_id,
         subcategory_id: row.subcategory_id,
         variant_id: row.variant_id,
+        flash_sale_campaign_id: row.flash_sale_campaign_id,
+        promotional_content_id: row.promotional_content_id,
         variant_attributes: attributes,
         attributes,
         vendor_id: row.vendor_id,
@@ -974,6 +1044,9 @@ class CheckoutModel {
 
         mrp: Number(row.mrp),
         price: Number(row.sale_price),
+        original_price: row.base_sale_price,
+        offer_price: row.offer_price,
+        is_offer: row.offer_price !== null,
         quantity: Number(row.quantity),
 
         itemTotal,
@@ -1020,7 +1093,7 @@ class CheckoutModel {
       }
 
       // Redemption (rule-based)
-      if (useRewards && remainingWallet > 0) {
+      if (item.flash_sale_campaign_id === null && item.promotional_content_id === null && useRewards && remainingWallet > 0) {
         const redemption = resolveRedemption(itemTotal, rules);
         const maxAllowed = calculateRedeemableCoins(itemTotal, redemption);
 
@@ -1100,6 +1173,7 @@ class CheckoutModel {
     const shippingBreakdown = [];
     const eddList = [];
     const vendorEDDMap = {};
+    const vendorCourierOptions = [];
     // Shipping cannot be calculated until the user selects an address.
     if (!addressRequired) {
       for (const vendorId in vendorGroups) {
@@ -1115,7 +1189,7 @@ class CheckoutModel {
 
         if (!vendorAddress?.pincode) continue;
 
-        const serviceResponse = await xpressService.checkServiceability({
+        const serviceResponse = await courierService.checkServiceability({
           origin: vendorAddress.pincode,
           destination: destinationPincode,
           payment_type: "prepaid",
@@ -1134,11 +1208,14 @@ class CheckoutModel {
           continue;
         }
 
-        const courier = courierOptions
-          .filter((option) => Number(option.total_charges) > 0)
-          .sort((a, b) => Number(a.total_charges) - Number(b.total_charges))[0];
+        const courier = selectCourierForPreference(
+          courierOptions,
+          deliveryPreference,
+        );
 
         if (!courier) continue;
+
+        vendorCourierOptions.push(courierOptions);
 
         const shippingCharge = deliveryChargeForUser({
           userId,
@@ -1209,6 +1286,14 @@ class CheckoutModel {
       addressRequired,
       shippingCalculated: !addressRequired,
       shippingBreakdown,
+      deliveryChoices: buildDeliveryChoices(vendorCourierOptions, {
+        chargeFor: (courier) =>
+          deliveryChargeForUser({
+            userId,
+            calculatedCharge: courier.total_charges,
+          }),
+        baseAmount: finalProductTotal,
+      }),
     };
   }
 
@@ -1217,9 +1302,12 @@ class CheckoutModel {
     productId,
     variantId,
     quantity,
+    campaignId = null,
+    contentId = null,
     useRewards = true,
     userId,
     addressId = null,
+    deliveryPreference,
   }) {
     // ===============================
     // 1. WALLET
@@ -1276,6 +1364,9 @@ class CheckoutModel {
     );
 
     if (!row) throw new Error("INVALID_VARIANT");
+    await priceLines([Object.assign(row, { quantity })]);
+
+
 
     if (quantity > row.stock || row.stock <= 0) {
       throw new Error("OUT_OF_STOCK");
@@ -1288,13 +1379,13 @@ class CheckoutModel {
      3. REWARD ENGINE
   =============================== */
     const rules = await RewardModel.getProductRewards(
-      row.product_id,
-      row.variant_id,
-      row.category_id,
-      row.subcategory_id,
-      itemTotal,
-      row.is_discount_eligible,
-    );
+        row.product_id,
+        row.variant_id,
+        row.category_id,
+        row.subcategory_id,
+        itemTotal,
+        row.is_discount_eligible,
+      );
 
     let remainingWallet = useRewards ? walletBalance : 0;
     let totalRedeemed = 0;
@@ -1303,7 +1394,7 @@ class CheckoutModel {
     /* ===============================
      4. REDEMPTION (rule-based)
   =============================== */
-    if (useRewards && remainingWallet > 0) {
+    if (row.flash_sale_campaign_id === null && row.promotional_content_id === null && useRewards && remainingWallet > 0) {
       const redemption = resolveRedemption(itemTotal, rules);
       const maxAllowed = calculateRedeemableCoins(itemTotal, redemption);
 
@@ -1346,6 +1437,7 @@ class CheckoutModel {
     let shippingCharge = 0;
     let expectedDeliveryDate = null;
     let shippingBreakdown = [];
+    let deliveryChoices = [];
 
     if (!addressRequired) {
       const [[vendorAddress]] = await db.execute(
@@ -1356,7 +1448,7 @@ class CheckoutModel {
 
       if (!vendorAddress) throw new Error("VENDOR_ADDRESS_MISSING");
 
-      const serviceResponse = await xpressService.checkServiceability({
+      const serviceResponse = await courierService.checkServiceability({
         origin: vendorAddress.pincode,
         destination: destinationPincode,
         payment_type: "prepaid",
@@ -1373,15 +1465,25 @@ class CheckoutModel {
         throw new Error("NOT_SERVICEABLE");
       }
 
-      const courier = serviceResponse.data
-        .filter((o) => Number(o.total_charges) > 0)
-        .sort((a, b) => Number(a.total_charges) - Number(b.total_charges))[0];
+      const courier = selectCourierForPreference(
+        serviceResponse.data,
+        deliveryPreference,
+      );
 
       if (!courier) throw new Error("NOT_SERVICEABLE");
 
       shippingCharge = deliveryChargeForUser({
         userId,
         calculatedCharge: courier.total_charges,
+      });
+
+      deliveryChoices = buildDeliveryChoices([serviceResponse.data], {
+        chargeFor: (option) =>
+          deliveryChargeForUser({
+            userId,
+            calculatedCharge: option.total_charges,
+          }),
+        baseAmount: finalItemTotal,
       });
 
       if (courier.estimated_delivery_date) {
@@ -1431,6 +1533,11 @@ class CheckoutModel {
         is_replaceable: row.is_replaceable,
 
         price: salePrice,
+        original_price: row.base_sale_price,
+        offer_price: row.offer_price,
+        is_offer: row.offer_price !== null,
+        flash_sale_campaign_id: row.flash_sale_campaign_id,
+        promotional_content_id: row.promotional_content_id,
         quantity,
 
         item_total: itemTotal,
@@ -1460,6 +1567,7 @@ class CheckoutModel {
       addressRequired,
       shippingCalculated: !addressRequired,
       shippingBreakdown,
+      deliveryChoices,
       estimated_delivery_date: expectedDeliveryDate,
     };
   }
@@ -1525,6 +1633,7 @@ class CheckoutModel {
       oi.price,
       oi.final_price,
       oi.reward_discount,
+      ${orderOfferColumns("oi")},
       p.product_name,
 
       (
@@ -1618,6 +1727,7 @@ class CheckoutModel {
         item_total: Number(i.price) * i.quantity,
         final_price: Number(i.final_price),
         reward_discount: Number(i.reward_discount),
+        offer: orderOffer(i, i.price, i.quantity),
       })),
 
       bill: {
@@ -1631,6 +1741,10 @@ class CheckoutModel {
             Number(order.total_amount),
         ),
         reward_discount: Number(order.reward_discount),
+        offer_savings: items.reduce(
+          (sum, i) => sum + (orderOffer(i, i.price, i.quantity)?.savings || 0),
+          0,
+        ),
         order_total: Number(order.total_amount),
       },
 

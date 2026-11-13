@@ -23,7 +23,7 @@ const EVENT_LABELS: Record<string, string> = {
 
 const REFUND_METHOD_LABELS: Record<string, string> = {
   original: "Refund to Original Payment",
-  wallet: "Reward Coins Reversed",
+  wallet: "RP Points Reversed",
 };
 
 const STATUS_TITLES: Record<string, string> = {

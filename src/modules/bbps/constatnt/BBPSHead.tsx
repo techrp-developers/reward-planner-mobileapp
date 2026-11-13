@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
   
   // Profile specific styles
   profileSection: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
-  logoContainer: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
-  operatorLogo: { width: 28, height: 28 },
+  logoContainer: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB', overflow: 'hidden' },
+  operatorLogo: { width: '100%', height: '100%', borderRadius: 24 },
   operatorInitialCircle: {
     width: 36,
     height: 36,

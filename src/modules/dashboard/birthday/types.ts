@@ -5,6 +5,14 @@ export interface BirthdayEmployee {
   department: string;
   photo?: string | null;
   message?: string | null;
+  isSelf?: boolean;
+  wished?: boolean;
+}
+
+export interface BirthdayWishesReceived {
+  count: number;
+  // Most recent senders first, at most 3
+  senders: string[];
 }
 
 export interface BirthdayAPIResponse {

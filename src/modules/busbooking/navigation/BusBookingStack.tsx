@@ -10,6 +10,9 @@ import PassengerDetailsScreen from "../components/screens/PassengerDetailsScreen
 import BoardingDroppingSelectionScreen from "../components/screens/BoardingDroppingSelectionScreen";
 import BusSummaryScreen from "../components/screens/BusSummaryScreen";
 import PaymentScreen from "../components/screens/PaymentScreen";
+import BusOrdersScreen from "../components/screens/BusOrdersScreen";
+import BusOrderDetailScreen from "../components/screens/BusOrderDetailScreen";
+import type { BusListingFacets } from "../utils/busListingFilters";
 
 export type BusBookingStackParamList = {
   DineOutModule: { moduleName?: string } | undefined;
@@ -30,15 +33,20 @@ export type BusBookingStackParamList = {
 
   journeyDate: string;
 
-  journeyTime: string;
-
   isWomenBooking?: boolean;
 
   selectedFilters?: string[];
 };
   AllFilterScreen: {
     selectedOptions?: string[];
-  } | undefined;
+    // Built from the buses of the current search, so every option and count
+    // on the filter screen reflects real inventory.
+    facets: BusListingFacets;
+  };
+  BusOrdersScreen: undefined;
+  BusOrderDetailScreen: {
+    orderRef: string;
+  };
   AboutBusScreen: { bus: any };
   SeatSelectionScreen: {
   bus: any;
@@ -47,6 +55,7 @@ export type BusBookingStackParamList = {
 };
 PassengerDetailsScreen: {
   bus: any;
+  totalFare: number;
 
   selectedSeats: any[];
 
@@ -56,22 +65,19 @@ PassengerDetailsScreen: {
 
   traceId?: string;
 
-  srdvIndex?: string;
-
   resultIndex?: string;
 
   isWomenBooking?: boolean;
 };
 BoardingDroppingSelectionScreen: {
   bus: any;
+  totalFare: number;
 
   selectedSeats: any[];
 
   passengers?: any[];
 
   traceId?: string;
-
-  srdvIndex?: string;
 
   resultIndex?: string;
 
@@ -126,6 +132,11 @@ export default function BusBookingStack() {
       />
       <Stack.Screen name="BusSummaryScreen" component={BusSummaryScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
+      <Stack.Screen name="BusOrdersScreen" component={BusOrdersScreen} />
+      <Stack.Screen
+        name="BusOrderDetailScreen"
+        component={BusOrderDetailScreen}
+      />
     </Stack.Navigator>
   );
 }

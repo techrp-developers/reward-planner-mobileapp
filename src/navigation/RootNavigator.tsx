@@ -41,6 +41,7 @@ export type AppStackParamList = {
   GlobalSearchScreen: undefined;
   TrackOrders: undefined;
   Notification: undefined;
+  NotificationSettings: undefined;
   ServiceSearch: undefined;
   WalletHistory: undefined;
   HelpForm: { context?: 'dashboard' | 'ecommerce' | 'services' | 'bbps' | 'step_counter' } | undefined;
@@ -51,6 +52,8 @@ export type AppStackParamList = {
   ExploreModule: undefined;
   AIAssistant: undefined;
   TodoList: undefined;
+  Chat: undefined;
+  Quiz: undefined;
 };
 
 export type RootStackParamList = {
@@ -99,6 +102,10 @@ function AppNavigator() {
     >
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
+      <AppStack.Screen
+        name="Quiz"
+        getComponent={() => require("../modules/games/screens/QuizScreen").default}
+      />
       <AppStack.Screen
         name="Home"
         component={MainLayout}
@@ -221,6 +228,12 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/ecommerce/profile/TodoList").default
         }
+        options={{ animation: "slide_from_left" }}
+      />
+      <AppStack.Screen
+        name="Chat"
+        getComponent={() => require("../modules/chat/navigation/ChatStack").default}
+        options={{ animation: "slide_from_right" }}
       />
       <AppStack.Screen
         name="MyOrder"
@@ -271,6 +284,10 @@ function AppNavigator() {
         }
       />
       <AppStack.Screen
+        name="NotificationSettings"
+        getComponent={() => require("../modules/dashboard/notification/NotificationSettings").default}
+      />
+      <AppStack.Screen
         name="Notification"
         getComponent={() =>
           require("../modules/dashboard/notification/Notification").default
@@ -316,6 +333,10 @@ const MODAL_HIDDEN: VersionModalState = {
   updateUrl: "",
 };
 
+// // Temporary local-development switch. This skips the startup login screen and
+// // opens the app in guest mode without pretending that an auth token exists.
+// const BYPASS_LOGIN_SCREEN = true;
+
 export default function RootNavigator() {
   const { isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
   const [versionModal, setVersionModal] = useState<VersionModalState>(MODAL_HIDDEN);
@@ -349,7 +370,10 @@ export default function RootNavigator() {
   // Show Splash while: (a) session is hydrating, OR (b) authenticated but
   // terms status API call hasn't resolved yet (termsAccepted is still null).
   const isCheckingTerms = isAuthenticated && termsAccepted === null;
+  // const isCheckingTerms =
+  //   !BYPASS_LOGIN_SCREEN && isAuthenticated && termsAccepted === null;
   const showSplash = isInitializing || isCheckingTerms;
+  // const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
 
   // Only surface the first-login reward popup once the user has actually
   // reached the authenticated app (past Splash/TermsGate/biometric lock),
@@ -363,7 +387,9 @@ export default function RootNavigator() {
     </RootStack.Navigator>
   ) : (
     <RootStack.Navigator screenOptions={defaultScreenOptions}>
-      {isAuthenticated ? (
+      {/* {showMainApp ? (
+        BYPASS_LOGIN_SCREEN || termsAccepted ? ( */}
+         {isAuthenticated ? (
         termsAccepted ? (
           // ── Normal app — terms already accepted ─────────────────
           <RootStack.Screen

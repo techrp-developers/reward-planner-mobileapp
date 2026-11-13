@@ -3,6 +3,8 @@ const rewardEligibilityService = require("../services/rewardEligibilityService")
 const productQuickCreateService = require("../services/productQuickCreateService");
 const poolStockModel = require("../models/poolStockModel");
 const allProductsService = require("../services/allProductsService");
+const productImportService = require("../services/productImportService");
+const productExportService = require("../services/productExportService");
 
 function sendServiceError(res, error, fallbackMessage) {
   const statusCode = error.statusCode || 500;
@@ -92,7 +94,7 @@ class ProductController {
   async search(req, res) {
     try {
       const query = String(req.query.q || "").trim();
-      const rows = await poolStockModel.findActivePools(query, SEARCH_LIMIT);
+      const rows = (await require("../services/eventAssignmentService").products(req.fleaMarketScheduleId,query)).filter(row=>row.available_qty>0).slice(0,SEARCH_LIMIT);
 
       return res.json({
         success: true,
@@ -104,7 +106,7 @@ class ProductController {
           brand: row.brand_name,
           sku: row.sku,
           mrp: Number(row.mrp),
-          salePrice: row.allocation_price != null ? Number(row.allocation_price) : Number(row.sale_price),
+          salePrice: Number(row.sale_price),
           stock: row.available_qty,
           heroImage: row.hero_image,
         })),
@@ -123,7 +125,10 @@ class ProductController {
         return res.status(400).json({ success: false, message: "variantId must be a positive integer" });
       }
 
-      const eligibility = await rewardEligibilityService.getEligibilityForVariant(variantId);
+      const assignment=(await require("../services/eventAssignmentService").products(req.fleaMarketScheduleId)).find(row=>row.variant_id===variantId);
+      if (!assignment) return res.status(404).json({success:false,message:"Product is not assigned to this event"});
+      const variant=await productModel.findVariantDetail(variantId);
+      const eligibility = await rewardEligibilityService.computeEligibility({...variant,sale_price:assignment.sale_price});
       return res.json(eligibility);
     } catch (error) {
       const statusCode = error.statusCode || 500;
@@ -158,6 +163,48 @@ class ProductController {
     } catch (error) {
       console.error("[flea-market][products-all] filter-options error:", error);
       return res.status(500).json({ success: false, message: "Failed to load filter options" });
+    }
+  }
+
+  // Bulk product creation from an uploaded CSV — header validation and
+  // malformed-file errors are hard failures (4xx, nothing processed); once
+  // the file itself is valid, individual bad products are reported inline
+  // in the results array rather than failing the whole request, so good
+  // rows in the same file still get created.
+  async importCsv(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded — expected a 'file' field." });
+      }
+
+      const result = await productImportService.importCsv(req.file.buffer);
+      return res.json({ success: true, ...result });
+    } catch (error) {
+      const statusCode = error.statusCode || 500;
+      if (statusCode >= 500) console.error("[flea-market][products-import] error:", error);
+      return res.status(statusCode).json({ success: false, message: error.message || "Failed to import products" });
+    }
+  }
+
+  // CSV export — same (q, vendor_id) filter the "All Products" list uses,
+  // same column order the import endpoint expects (round-trip capable).
+  async exportCsv(req, res) {
+    try {
+      const { q, vendor_id } = req.query;
+      const csv = await productExportService.exportCsv({
+        q: q ? String(q).trim() : "",
+        vendorId: vendor_id ? Number(vendor_id) : null,
+      });
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="products-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+      );
+      return res.status(200).send(csv);
+    } catch (error) {
+      console.error("[flea-market][products-export] error:", error);
+      return res.status(500).json({ success: false, message: "Failed to export products" });
     }
   }
 }

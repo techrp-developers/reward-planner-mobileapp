@@ -1,7 +1,11 @@
 // src/api/ProductApi.ts
 import axios from 'axios';
 import api from '../../common/auth/api/axios';
-import { API_BASE_URL, SERVER_URL as IMAGE_BASE_URL } from '../../../config/apiConfig';
+import {
+  API_BASE_URL,
+  SERVER_URL as IMAGE_BASE_URL,
+  normalizeLocalCmsImageUrl,
+} from '../../../config/apiConfig';
 
 export type ImageSizePreset =
   | 'thumbnail'
@@ -33,12 +37,20 @@ const appendImageOptimizationParams = (
 export type FetchAllProductsParams = {
   page?: number;
   pageSize?: number;
+  search?: string;
+};
+
+export const fetchProductsByBrand = async (brand: string, page = 1, search = '') => {
+  const res = await api.get('/v1/product/by-brand', {
+    params: { brand, page, limit: 20, search },
+  });
+  return res.data;
 };
 
 export const fetchAllProducts = async (params?: FetchAllProductsParams) => {
   const res = await api.get(`/v1/product/all-products`, {
     params: params?.page
-      ? { page: params.page, pageSize: params.pageSize }
+      ? { page: params.page, limit: params.pageSize, search: params.search }
       : undefined,
   });
   return res.data;
@@ -90,12 +102,21 @@ export const getProductImageUrl = (
   const fullUrl = `${IMAGE_BASE_URL}/${encoded}`;
   return appendImageOptimizationParams(fullUrl, width, quality);
 };
-export const fetchProductDetailsByID = async (productId: string | number) => {
+export const fetchProductDetailsByID = async (
+  productId: string | number,
+  campaignId?: string | number,
+  contentId?: string | number,
+) => {
   if (!productId) {
     throw new Error('Missing product id');
   }
 
-  const res = await api.get(`/v1/product/product-details/${productId}`);
+  const res = await api.get(`/v1/product/product-details/${productId}`, {
+    params: {
+      ...(campaignId == null ? {} : { campaign_id: campaignId }),
+      ...(contentId == null ? {} : { content_id: contentId }),
+    },
+  });
   const payload = res?.data;
   return payload?.product ?? payload?.data?.product ?? payload?.data ?? null;
 };
@@ -185,8 +206,11 @@ export const fetchAllOfferPosters = async () => {
 };
 export const getOfferPosterUrl = (path?: string) => {
   if (!path) return '';
-  const base = encodeURI(`${API_BASE_URL}/uploads${path}`);
-  return appendImageOptimizationParams(base, 480, 60);
+  const normalizedPath = /^https?:\/\//i.test(path) || /^\/?uploads\//i.test(path)
+    ? path
+    : `/uploads/${path.replace(/^\/+/, '')}`;
+  const base = normalizeLocalCmsImageUrl(normalizedPath);
+  return base ? appendImageOptimizationParams(base, 480, 60) : '';
 };
 
 export const fetchSearchSuggestions = async (query: string) => {

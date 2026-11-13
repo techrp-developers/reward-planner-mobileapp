@@ -12,6 +12,8 @@ export type TodoPayload = {
   title: string;
   subtitle?: string;
   reminder_time?: string | null;
+  // Tells the backend this device rings its own alarm, so it skips the push.
+  device_alarm?: boolean;
 };
 
 export type TodoFilterType = "ALL" | "TODAY" | "PENDING" | "COMPLETED";
@@ -78,6 +80,21 @@ export const fetchTodosByDate = async (
 
     console.debug("Todo fetch failed:", error?.message || error);
     return { data: [] };
+  }
+};
+
+// All pending todos across dates; used to schedule on-device alarms.
+// Returns null on failure so callers don't mistake an error for "no todos".
+export const fetchPendingTodos = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return null;
+
+    const res = await axios.get(`${API_BASE_URL}/todo?filter=PENDING`, { headers });
+    return res.data;
+  } catch (error: any) {
+    __DEV__ && console.log("Fetch Pending Todos Error:", error?.response?.data || error?.message);
+    return null;
   }
 };
 
@@ -159,7 +176,8 @@ export const completeMultipleTodosApi = async (
 export const updateTodoReminder = async (
   todoId: string | number,
   createdBy: number,
-  reminderTime: string
+  reminderTime: string,
+  deviceAlarm = false
 ) => {
   try {
     const headers = await getAuthHeaders();
@@ -169,6 +187,7 @@ export const updateTodoReminder = async (
       {
         created_by: createdBy,
         reminder_time: reminderTime,
+        device_alarm: deviceAlarm,
       },
       {
         headers,

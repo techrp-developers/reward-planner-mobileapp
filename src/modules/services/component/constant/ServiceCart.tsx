@@ -11,7 +11,7 @@ type VariantItem = {
     title: string;
     planTitle?: string;
     price: string;
-    oldPrice: string;
+    oldPrice?: string;
     subtitle?: string;
     rawVariant?: any;
 };

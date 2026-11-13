@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   Share,
@@ -19,6 +20,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import BottomTabs, { TAB_BAR_HEIGHT, type TabKey } from "../../../bottombar/BottomTabs";
 
 import {
   addTodo,
@@ -30,6 +32,15 @@ import {
   deleteTodoApi,
   deleteMultipleTodosApi,
 } from "../api/ProfileApi";
+import {
+  canUseDeviceAlarms,
+  openTodoAlarmSettings,
+  syncTodoAlarmsSafely,
+} from "../../common/notifications/todoAlarms";
+import ReminderTimePicker, {
+  formatReminderParts,
+  parseReminderParts,
+} from "./ReminderTimePicker";
 
 type Todo = {
   id: string;
@@ -92,30 +103,11 @@ const getDayName = (date: Date) => {
   return date.toLocaleDateString("en-US", { weekday: "short" });
 };
 
-const buildTimeOptions = () => {
-  const options: string[] = [];
-
-  for (let hour = 6; hour <= 23; hour++) {
-    ["00", "30"].forEach(min => {
-      const date = new Date();
-      date.setHours(hour);
-      date.setMinutes(Number(min));
-
-      options.push(
-        date.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
-      );
-    });
-  }
-
-  return options;
-};
-
 const TodoListScreen = () => {
   const navigation = useNavigation<any>();
+  const handleFooterPress = useCallback((tab: TabKey) => {
+    if (tab === "Chat") navigation.navigate("Chat");
+  }, [navigation]);
   const { isDark, theme } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const dateListRef = useRef<FlatList<DateItem>>(null);
@@ -145,6 +137,7 @@ const TodoListScreen = () => {
   const [alarmModalVisible, setAlarmModalVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [timeTarget, setTimeTarget] = useState<TimeTarget>("start");
+  const [draftTime, setDraftTime] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState("");
@@ -157,7 +150,6 @@ const TodoListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const timeOptions = useMemo(() => buildTimeOptions(), []);
   const themed = useMemo(
     () =>
       StyleSheet.create({
@@ -367,6 +359,21 @@ const TodoListScreen = () => {
     setModalVisible(true);
   };
 
+  // Device alarms can't ring without notification + exact-alarm access, so
+  // offer the settings screen instead of silently falling back to push only.
+  const warnIfAlarmsBlocked = (deviceAlarm: boolean, hasReminder: boolean) => {
+    if (Platform.OS !== "android" || deviceAlarm || !hasReminder) return;
+
+    Alert.alert(
+      "Allow alarms",
+      "Allow notifications and \"Alarms & reminders\" so this reminder rings on your phone. You'll still get a push notification until then.",
+      [
+        { text: "Not now", style: "cancel" },
+        { text: "Open settings", onPress: () => { openTodoAlarmSettings().catch(() => {}); } },
+      ]
+    );
+  };
+
   const saveTodo = async () => {
     try {
       if (!title.trim()) {
@@ -381,6 +388,7 @@ const TodoListScreen = () => {
 
       setSaving(true);
 
+      const deviceAlarm = reminderTime ? await canUseDeviceAlarms() : false;
       const payload = {
         created_by: createdBy,
         task_date: selectedDate,
@@ -389,6 +397,7 @@ const TodoListScreen = () => {
         title: title.trim(),
         subtitle: subtitle.trim(),
         reminder_time: reminderTime || null,
+        device_alarm: deviceAlarm,
       };
 
       if (editingId) {
@@ -400,6 +409,8 @@ const TodoListScreen = () => {
       setModalVisible(false);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
+      warnIfAlarmsBlocked(deviceAlarm, Boolean(reminderTime));
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -425,6 +436,7 @@ const TodoListScreen = () => {
             await deleteTodoApi(selectedTodo.id, createdBy);
             resetSelection();
             await fetchTodos();
+            syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
               "Todo",
@@ -451,6 +463,7 @@ const TodoListScreen = () => {
             await deleteMultipleTodosApi(selectedTodoIds, createdBy);
             resetSelection();
             await fetchTodos();
+            syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
               "Todo",
@@ -489,6 +502,7 @@ const TodoListScreen = () => {
       await completeTodoApi(selectedTodo.id, createdBy);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -506,6 +520,7 @@ const TodoListScreen = () => {
       await completeMultipleTodosApi(selectedTodoIds, createdBy);
       resetSelection();
       await fetchTodos();
+      syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
         "Todo",
@@ -541,7 +556,9 @@ const TodoListScreen = () => {
       return;
     }
 
-    setReminderTime(selectedTodo.reminder || "");
+    // Start from the saved reminder, or a few minutes from now, so the
+    // dropdowns always hold a complete time.
+    setReminderTime(formatReminderParts(parseReminderParts(selectedTodo.reminder)));
     setAlarmModalVisible(true);
   };
 
@@ -549,14 +566,19 @@ const TodoListScreen = () => {
     if (!selectedTodo) return;
 
     try {
+      const deviceAlarm = reminderTime ? await canUseDeviceAlarms() : false;
+
       await updateTodoReminder(
         selectedTodo.id,
         createdBy,
-        reminderTime || "No reminder time"
+        reminderTime || "No reminder time",
+        deviceAlarm
       );
 
       setAlarmModalVisible(false);
       await fetchTodos();
+      syncTodoAlarmsSafely();
+      warnIfAlarmsBlocked(deviceAlarm, Boolean(reminderTime));
     } catch (error: any) {
       Alert.alert(
         "Reminder",
@@ -569,6 +591,7 @@ const TodoListScreen = () => {
 
   const openTimePicker = (target: TimeTarget) => {
     setTimeTarget(target);
+    setDraftTime(formatReminderParts(parseReminderParts(target === "start" ? startTime : endTime), true));
     setTimePickerVisible(true);
   };
 
@@ -661,18 +684,20 @@ const TodoListScreen = () => {
         style={styles.header}
       >
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => setMenuVisible(true)}>
-            <MaterialCommunityIcons name="view-grid" size={20} color="#fff" />
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={styles.headerActionBtn}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("Dashboard"))}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={21} color="#fff" />
           </TouchableOpacity>
 
           <Text style={styles.headerDate}>{formatHeaderDate(selectedDate)}</Text>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerActionBtn}
-              onPress={() => navigation.navigate("Dashboard")}
-            >
-              <MaterialCommunityIcons name="home" size={21} color="#fff" />
+            <TouchableOpacity style={styles.headerActionBtn} onPress={() => setMenuVisible(true)}>
+              <MaterialCommunityIcons name="view-grid" size={20} color="#fff" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.headerActionBtn} onPress={openAlarmModal}>
@@ -800,7 +825,7 @@ const TodoListScreen = () => {
           </View>
         )}
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
           {filteredTodos.map(todo => {
             const active = selectedTodoId === todo.id;
             const isChecked = selectedTodoIds.includes(todo.id);
@@ -1102,31 +1127,33 @@ const TodoListScreen = () => {
         </View>
       </Modal>
 
-      <Modal visible={timePickerVisible} transparent animationType="fade">
+      <Modal visible={timePickerVisible} transparent animationType="fade" onRequestClose={() => setTimePickerVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.timePickerModal, themed.surface]}>
             <Text style={[styles.modalTitle, themed.text]}>
               Select {timeTarget === "start" ? "Start" : "End"} Time
             </Text>
 
-            <ScrollView style={styles.timeList}>
-              {timeOptions.map(item => (
-                <TouchableOpacity
-                  key={item}
-                  style={[styles.timeOption, themed.divider]}
-                  onPress={() => selectTime(item)}
-                >
-                  <Text style={[styles.timeOptionText, themed.text]}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <ReminderTimePicker
+              value={draftTime}
+              onChange={setDraftTime}
+              isDark={isDark}
+              textColor={theme.text}
+              showSeconds
+              previewLabel={timeTarget === "start" ? "Starts at" : "Ends at"}
+            />
 
-            <TouchableOpacity
-              style={[styles.cancelFullButton, themed.softButton]}
-              onPress={() => setTimePickerVisible(false)}
-            >
-              <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setTimePickerVisible(false)}
+              >
+                <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={() => selectTime(draftTime)}>
+                <Text style={styles.saveText}>Set Time</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1136,12 +1163,11 @@ const TodoListScreen = () => {
           <View style={[styles.modalCard, themed.surface]}>
             <Text style={[styles.modalTitle, themed.text]}>Set Alarm Reminder</Text>
 
-            <TextInput
-              placeholder="Reminder time e.g. 10:30 AM"
-              placeholderTextColor={placeholderColor}
+            <ReminderTimePicker
               value={reminderTime}
-              onChangeText={setReminderTime}
-              style={[styles.input, themed.surface, themed.text]}
+              onChange={setReminderTime}
+              isDark={isDark}
+              textColor={theme.text}
             />
 
             <View style={styles.modalActions}>
@@ -1159,6 +1185,13 @@ const TodoListScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <BottomTabs
+        isDashboard
+        activeTabKey="Notes"
+        onTabPress={handleFooterPress}
+        onCenterPress={() => navigation.navigate("Dashboard")}
+      />
     </SafeAreaView>
   );
 };

@@ -41,7 +41,7 @@ function buildButtonValuesFromConfig(buttonConfig, ctx) {
   return Object.keys(out).length ? out : null;
 }
 
-async function enqueueWhatsApp({ eventName, ctx }) {
+async function enqueueWhatsApp({ eventName, ctx, sendImmediately = false }) {
   if (!eventName || !ctx || typeof ctx !== "object") {
     return { ok: false, reason: "INVALID_PAYLOAD" };
   }
@@ -110,8 +110,22 @@ async function enqueueWhatsApp({ eventName, ctx }) {
     //  Build Button Values from template button_config (for authentication/button templates)
     const buttonValues = buildButtonValuesFromConfig(tpl.button_config, ctx);
 
+    // Login codes must be accepted by the provider before reporting success.
+    // Do not queue these as well: a worker retry could send an obsolete code.
+    if (sendImmediately) {
+      const { sendTemplateMessage } = require("./interaktService");
+      await sendTemplateMessage({
+        phone: phone_full,
+        templateName: tpl.interakt_name,
+        languageCode: String(tpl.language_code || "en").trim().replace(/-/g, "_"),
+        bodyValues,
+        buttonValues,
+      });
+      return { ok: true, queued: false, accepted: true };
+    }
+
     // 4) Create Unique Key for Idempotency (prevents double send)
-    const idem_key = `${ctx.company_id || "GLOBAL"}|${eventName}|${
+    const idem_key = ctx.idempotency_key || `${ctx.company_id || "GLOBAL"}|${eventName}|${
       picked.template_key
     }|${phone_full}|${ctx.order_id || Date.now()}`;
 
@@ -142,6 +156,10 @@ async function enqueueWhatsApp({ eventName, ctx }) {
       has_buttons: !!buttonValues,
     };
   } catch (e) {
+    if (sendImmediately) {
+      console.error("[WA_OTP] Send failed", { status: e.response?.status, code: e.code });
+      return { ok: false, reason: "DELIVERY_FAILED" };
+    }
     if (
       String(e.message || "").includes("uq_idem") ||
       String(e.code || "") === "ER_DUP_ENTRY"
@@ -205,6 +223,9 @@ function buildBodyValues(templateKey, ctx) {
     case "order_place_arriving":
       return [name, orderId];
 
+    case "order_in_transit":
+      return [name, orderId];
+
     case "order_place_delivered":
       return [name, orderId];
 
@@ -237,6 +258,8 @@ function buildBodyValues(templateKey, ctx) {
 
     case "reward_planners_ios_launch":
     case "flea_market_inamdar":
+    case "rp_community_invitation":
+    case "rp_community_invitation_marathi":
       return [name];
 
     case "create_account_notification":

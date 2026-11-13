@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import OfferDetails from '../../../common/order/OfferDetails';
 import {
   View,
   Text,
@@ -86,6 +87,7 @@ export default function ServiceOrderItemCard({
           </View>
 
           <Text style={styles.ref}>{item.order_ref}</Text>
+          <OfferDetails item={item} />
         </View>
 
         <MaterialCommunityIcons

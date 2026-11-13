@@ -1621,13 +1621,12 @@ class ProductModel {
         ON c.category_id = p.category_id
        AND c.status = 1
 
-      INNER JOIN sub_categories sc
+      /* Subcategory / sub-subcategory are optional on a product */
+      LEFT JOIN sub_categories sc
         ON sc.subcategory_id = p.subcategory_id
-       AND sc.status = 1
 
-      INNER JOIN sub_sub_categories ssc
+      LEFT JOIN sub_sub_categories ssc
         ON ssc.sub_subcategory_id = p.sub_subcategory_id
-       AND ssc.status = 1
 
       INNER JOIN product_variants v
         ON v.variant_id = (
@@ -1658,6 +1657,8 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (sc.subcategory_id IS NULL OR sc.status = 1)
+        AND (ssc.sub_subcategory_id IS NULL OR ssc.status = 1)
         AND p.product_id != ?
         AND (
           p.category_id = ?
@@ -2022,13 +2023,12 @@ class ProductModel {
         ON c.category_id = p.category_id
        AND c.status = 1
 
-      INNER JOIN sub_categories sc
+      /* Subcategory / sub-subcategory are optional on a product */
+      LEFT JOIN sub_categories sc
         ON sc.subcategory_id = p.subcategory_id
-       AND sc.status = 1
 
-      INNER JOIN sub_sub_categories ssc
+      LEFT JOIN sub_sub_categories ssc
         ON ssc.sub_subcategory_id = p.sub_subcategory_id
-       AND ssc.status = 1
 
       /* Lowest visible variant */
       INNER JOIN product_variants v
@@ -2060,6 +2060,8 @@ class ProductModel {
         AND p.is_deleted = 0
         AND p.is_visible = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
+        AND (sc.subcategory_id IS NULL OR sc.status = 1)
+        AND (ssc.sub_subcategory_id IS NULL OR ssc.status = 1)
 
       GROUP BY p.product_id
       ORDER BY p.created_at DESC

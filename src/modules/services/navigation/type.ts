@@ -4,6 +4,7 @@ import type { BundleEnquiryField } from '../api/BundleAPI';
 
 export type HomeStackParamList = {
   Home: undefined;
+  ServiceCampaign: { campaignId: number; title?: string };
   ServiceSearch: undefined;
   MutualFundCalculators: undefined;
   CommonQuestions: undefined;
@@ -18,6 +19,7 @@ export type HomeStackParamList = {
   StepUpSIPCalculator: undefined;
   SWPCalculator: undefined;
   ServiceDescription: {
+    variantId?: number;
     serviceId: number;
     categoryId?: number;
     title?: string;

@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { AppliedOffer } from '../../common/order/appliedOffer';
 import { getAuthHeaders, clearAuthToken } from "../../common/auth/api/AuthAPI";
 import { BASE_API_URL } from "./api";
 
@@ -7,6 +8,7 @@ import { BASE_API_URL } from "./api";
 ========================================================= */
 
 export interface ServiceOrderItem {
+  offer?: AppliedOffer | null;
   id: number;
   order_ref: string;
   service_name: string;
@@ -33,6 +35,7 @@ export interface OrderSummary {
 }
 
 export interface ServiceOrder {
+  offer_item_count?: number;
   parent_order_id: string;
   created_at: string;
   status: string;
@@ -212,6 +215,7 @@ export interface SubmitServiceFeedbackPayload {
 }
 
 export interface ServiceItem {
+  offer?: AppliedOffer | null;
   id: number;
   service_id?: number | null;
   order_ref: string;

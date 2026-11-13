@@ -281,7 +281,7 @@ const GoalReachedScreen: React.FC<Props> = ({
 
         {reward > 0 && (
           <View style={styles.rewardBadge}>
-            <Text style={styles.rewardText}>🪙 +{reward} coins earned!</Text>
+            <Text style={styles.rewardText}>🪙 +{reward} RP Points earned!</Text>
           </View>
         )}
 

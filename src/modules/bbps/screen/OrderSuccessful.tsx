@@ -1,16 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import RecommendedServices from '../component/order/RecommendedServices';
+import ReturnHomeButton from '../../common/order/ReturnHomeButton';
 import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
+import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
 
 function OrderSuccessfulComponent() {
   const navigation = useNavigation<any>();
   const bbpsTheme = useBbpsTheme();
 
   return (
+    <BBPSSafeAreaView style={{ backgroundColor: bbpsTheme.colors.background }}>
     <ScrollView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
       <View style={styles.sectionMargin}>
@@ -18,6 +21,7 @@ function OrderSuccessfulComponent() {
       </View>
 
       {/* 24/7 Help & Support Section */}
+      <ReturnHomeButton />
       <TouchableOpacity
         style={[
           styles.helpContainer,
@@ -41,6 +45,7 @@ function OrderSuccessfulComponent() {
         <RecommendedServices />
       </View>
     </ScrollView>
+    </BBPSSafeAreaView>
   );
 }
 

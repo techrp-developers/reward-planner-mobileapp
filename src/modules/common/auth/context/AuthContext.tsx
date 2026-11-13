@@ -1,3 +1,4 @@
+import { normalizeAuthUser } from '../utils/normalizeAuthUser';
 import React, {
   createContext,
   useCallback,
@@ -8,13 +9,14 @@ import React, {
   useState,
 } from "react";
 import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import DeviceInfo from "react-native-device-info";
 import api, { API_BASE_URL, setSessionHandlers } from "../api/axios";
 import { clearAuthToken, persistAuthToken } from "../api/AuthAPI";
 import { fetchTermsStatus } from "../../../ecommerce/api/TermsConditionAPI";
 import { isTokenExpiringSoon } from "../utils/jwtUtils";
+import { secureDeleteItem, secureGetItem, secureSetItem } from "../services/secureStorage";
+import { chatSocket } from "../../../chat/services/chatSocket";
 
 const REFRESH_TOKEN_KEY = "@rewardsplanners_refresh_token";
 const DEVICE_ID_KEY = "@rewardsplanners_device_id";
@@ -60,60 +62,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const loadSecureStore = () => {
-  try {
-    const SecureStore = require("expo-secure-store");
-
-    if (
-      SecureStore &&
-      typeof SecureStore.getItemAsync === "function" &&
-      typeof SecureStore.setItemAsync === "function" &&
-      typeof SecureStore.deleteItemAsync === "function"
-    ) {
-      return SecureStore;
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-const secureStore = loadSecureStore();
-
-const secureSetItem = async (key: string, value: string) => {
-  if (secureStore) {
-    await secureStore.setItemAsync(key, value);
-    return;
-  }
-
-  await AsyncStorage.setItem(key, value);
-};
-
-const secureGetItem = async (key: string) => {
-  if (secureStore) {
-    return secureStore.getItemAsync(key);
-  }
-
-  return AsyncStorage.getItem(key);
-};
-
-const secureDeleteItem = async (key: string) => {
-  if (secureStore) {
-    await secureStore.deleteItemAsync(key);
-    return;
-  }
-
-  await AsyncStorage.removeItem(key);
-};
-
-const extractUser = (payload: any): AuthUser | null => {
-  const user = payload?.user || payload?.data?.user || payload?.data || null;
-
-  if (!user) return null;
-
-  return user;
-};
+const extractUser = (payload: any): AuthUser | null => normalizeAuthUser(payload);
 
 const generateDeviceId = () => {
   const randomPart = Math.random().toString(36).substring(2, 12);
@@ -172,12 +121,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isLoggingOutRef   = useRef(false);
   const restoreRetryRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Presence follows the signed-in app session, including screens outside chat.
+  useEffect(() => {
+    if (user && accessToken) chatSocket.connect(accessToken);
+    else chatSocket.disconnect();
+  }, [user, accessToken]);
+
+  useEffect(() => () => chatSocket.disconnect(), []);
+
   const updateAccessToken = useCallback((nextAccessToken: string | null) => {
     accessTokenRef.current = nextAccessToken;
     setAccessToken(nextAccessToken);
   }, []);
 
   const clearLocalSession = useCallback(async () => {
+    // Stop the chat socket from reconnecting with the signed-out user's token.
+    chatSocket.disconnect();
     updateAccessToken(null);
     setUser(null);
     setTermsAccepted(null); // reset so next login re-checks
@@ -235,7 +194,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const requestLoginOtp = useCallback(async (identifier: string) => {
     setLoading(true);
     try {
+      if (__DEV__) {
+        console.log("[Auth] Request login OTP:", {
+          url: `${API_BASE_URL}/v1/auth/request-otp`,
+          login: identifier,
+        });
+      }
       const response = await api.post("/v1/auth/request-otp", { login: identifier });
+      if (__DEV__) {
+        console.log("[Auth] Request login OTP success:", response.data);
+      }
       return response.data;
     } finally {
       setLoading(false);

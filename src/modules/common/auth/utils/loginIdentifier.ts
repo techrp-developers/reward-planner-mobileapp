@@ -42,3 +42,8 @@ export const getLoginIdentifierKeyboardType = (value: string) => {
   if (/^[+\d\s()-]+$/.test(trimmed)) return "phone-pad" as const;
   return "email-address" as const;
 };
+
+export const normalizeIndianMobile = (value: string): string | null => {
+  const parsed = parseLoginIdentifier(value);
+  return parsed.kind === 'phone' ? parsed.normalized : null;
+};

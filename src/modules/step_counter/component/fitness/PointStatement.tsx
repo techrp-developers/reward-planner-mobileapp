@@ -161,7 +161,7 @@ const PointsStatementScreen: React.FC = () => {
               >
                 <Icon name="chevron-left" size={24} color={VD.accentDark} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Points Statement</Text>
+              <Text style={styles.headerTitle}>RP Points Statement</Text>
               <View style={styles.headerPlaceholder} />
             </View>
 
@@ -178,7 +178,7 @@ const PointsStatementScreen: React.FC = () => {
                 <View style={styles.balanceTextContainer}>
                   <Text style={styles.balanceTitle}>My Balance</Text>
                   <Text style={styles.balanceValue}>
-                    {formatNumber(summary?.balance || 0)} Coins
+                    {formatNumber(summary?.balance || 0)} RP Points
                   </Text>
                 </View>
               </View>
@@ -250,7 +250,7 @@ const TransactionRow = React.memo(({ item }: { item: StepHistoryItem }) => {
 
       <View style={styles.activityContainer}>
         <Text numberOfLines={1} style={styles.activityTitle}>
-          {item.title || (isDebit ? 'Coins Used' : 'Coins Credited')}
+          {item.title || (isDebit ? 'RP Points Used' : 'RP Points Credited')}
         </Text>
         <Text numberOfLines={2} style={styles.activityDesc}>
           {item.description || item.category || 'Step wallet activity'}

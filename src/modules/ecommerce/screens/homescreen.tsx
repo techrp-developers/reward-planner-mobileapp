@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   InteractionManager,
-  Platform,
   StyleSheet,
   View,
   ViewToken,
@@ -14,6 +13,7 @@ import { useAuth } from '../../common/auth/context/AuthContext';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { EcommerceDashboardSectionKey } from '../../common/cms/dashboardLayout';
+import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
 
 // Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -25,6 +25,9 @@ const LazyTopRated = React.lazy(() =>
 );
 const LazyOfferHome = React.lazy(() =>
   Promise.resolve({ default: require('../components/home/OfferHome').default }),
+);
+const LazyHomeBanner = React.lazy(() =>
+  Promise.resolve({ default: require('../components/home/HomeBanner').default }),
 );
 const LazyNewArrivals = React.lazy(() =>
   Promise.resolve({ default: require('../components/Promotion/NewArrivals').default }),
@@ -52,16 +55,17 @@ type HomeSection = {
 };
 
 const ECOMMERCE_SECTION_KEYS: readonly SectionKey[] = [
-  'categories', 'bestSeller', 'topRated', 'offerHome', 'newArrivals',
+  'homeBanner', 'categories', 'bestSeller', 'topRated', 'offerHome', 'newArrivals',
   'mostView', 'recommended', 'features', 'recent', 'productCategory',
 ];
 
-const INITIAL_VISIBLE_SECTIONS = ['categories'] as const;
+const INITIAL_VISIBLE_SECTIONS = ['homeBanner', 'categories'] as const;
 const INITIAL_VISIBLE_SECTION_SET = new Set<SectionKey>(INITIAL_VISIBLE_SECTIONS);
 const SECTION_RENDER_AHEAD = 1;
 
 const SECTION_HEIGHTS: Record<SectionKey, number> = {
   categories: 260,
+  homeBanner: 180,
   bestSeller: 360,
   topRated: 360,
   offerHome: 430,
@@ -77,6 +81,10 @@ const SECTION_PREFETCHERS: Partial<Record<SectionKey, () => Promise<unknown>>> =
   categories: () => {
     const { prefetchCategoriesSection } = require('../components/home/categories_section');
     return prefetchCategoriesSection();
+  },
+  homeBanner: () => {
+    const { prefetchHomeBannerSection } = require('../components/home/HomeBanner');
+    return prefetchHomeBannerSection();
   },
   bestSeller: () => {
     const { prefetchBestSellerSection } = require('../components/Promotion/BestSeller');
@@ -126,6 +134,20 @@ const buildRecentPrefetcher = (userId?: number | string) => {
 
 const MemoCategoriesSection = React.memo(CategoriesSection);
 
+const placeHomeBannerAboveCategories = (sections: HomeSection[]): HomeSection[] => {
+  const withoutBanner = sections.filter((section) => section.key !== 'homeBanner');
+  const banner = sections.find((section) => section.key === 'homeBanner') ?? { key: 'homeBanner' as const };
+  const categoriesIndex = withoutBanner.findIndex((section) => section.key === 'categories');
+
+  if (categoriesIndex < 0) {
+    return [banner, ...withoutBanner];
+  }
+
+  const nextSections = [...withoutBanner];
+  nextSections.splice(categoriesIndex, 0, banner);
+  return nextSections;
+};
+
 const SectionSkeleton = React.memo(function SectionSkeleton({
   sectionKey,
 }: {
@@ -154,6 +176,8 @@ const HomeSectionLoader = React.memo(function HomeSectionLoader({
   sectionKey: SectionKey;
 }) {
   switch (sectionKey) {
+    case 'homeBanner':
+      return <LazySection sectionKey={sectionKey}><LazyHomeBanner /></LazySection>;
     case 'categories':
       return <MemoCategoriesSection />;
     case 'bestSeller':
@@ -220,20 +244,16 @@ const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
 
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
+  const { onScroll } = useNavbarScroll();
   const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
   const homeSections = useMemo<HomeSection[]>(
-    () => layout.sections.map(({ key }) => ({ key: key as SectionKey })),
+    () =>
+      placeHomeBannerAboveCategories(
+        layout.sections.map(({ key }) => ({ key: key as SectionKey })),
+      ),
     [layout.sections],
   );
   const homeSectionKeys = useMemo(() => homeSections.map(({ key }) => key), [homeSections]);
-  const sectionOffsets = useMemo(() => {
-    let offset = 0;
-    return homeSections.reduce((result, section) => {
-      result[section.key] = offset;
-      offset += SECTION_HEIGHTS[section.key];
-      return result;
-    }, {} as Partial<Record<SectionKey, number>>);
-  }, [homeSections]);
   const [readySections, setReadySections] = useState<Set<SectionKey>>(
     () => new Set(INITIAL_VISIBLE_SECTION_SET),
   );
@@ -351,17 +371,6 @@ function HomeScreen() {
     [readySections]
   );
   const keyExtractor = useCallback((item: HomeSection) => item.key, []);
-  const getItemLayout = useCallback(
-    (_: ArrayLike<HomeSection> | null | undefined, index: number) => {
-      const key = homeSections[index].key;
-      return {
-        length: SECTION_HEIGHTS[key],
-        offset: sectionOffsets[key] ?? 0,
-        index,
-      };
-    },
-    [homeSections, sectionOffsets],
-  );
 
   return (
     <ThemedHomeSurface>
@@ -375,10 +384,11 @@ function HomeScreen() {
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={48}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        getItemLayout={getItemLayout}
         ListFooterComponent={ListFooterSpacer}
       />
     </ThemedHomeSurface>

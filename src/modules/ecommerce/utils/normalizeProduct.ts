@@ -91,7 +91,17 @@ export const normalizeProduct = (item: any) => {
         item?.discountPercentage,
       ""
     ),
-    rp_price: toStringValue(item?.rp_price ?? item?.rpPrice, ""),
+    rp_price: toStringValue(
+      item?.rp_price ??
+        item?.rpPrice ??
+        item?.rp_amount ??
+        item?.rpAmount ??
+        item?.reward_price ??
+        item?.rewardPrice ??
+        item?.member_price ??
+        item?.memberPrice,
+      ""
+    ),
     rewardLabel:
       item?.reward?.label ??
       item?.rewardLabel ??

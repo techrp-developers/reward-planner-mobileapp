@@ -1,17 +1,39 @@
 const orderModel = require("../models/orderModel");
 const db = require("../config/database");
-const xpressService = require("../services/ExpressBees/xpressbees_service");
+const courierService = require("../services/courier/courierService");
 const ServiceOrderModel = require("../app/service/v1/models/serviceOrderModel");
 const { sendOpsAlert } = require("../services/alertService");
 const EcommerceRefundService = require("../services/Razorpay/ecommerceRefundService");
 const ItemCancellationModel = require("../models/itemCancellationModel");
 const { notifyUser } = require("../app/common/utils/notification");
+const {
+  sendEcommerceOrderStatusMail,
+} = require("../services/mailBuilder/ecommerceOrderStatus");
+const {
+  enqueueEcommerceOrderStatusWhatsApp,
+} = require("../services/whatsapp/ecommerceOrderStatusWhatsApp");
+const { sendServiceCancellationDecisionEmail } = require("../services/mailBuilder/serviceOrderNotification");
 const Razorpay = require("razorpay");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZOR_API_KEY,
   key_secret: process.env.RAZOR_SECRET_KEY,
 });
+
+// Courier errors arrive as strings, { message }, { error: {...} } or arrays;
+// always reduce them to readable text so the client never gets an object.
+function getCourierErrorMessage(result) {
+  const pick = (value) => {
+    if (!value) return null;
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return pick(value[0]);
+    if (typeof value === "object") {
+      return pick(value.message) || pick(value.error) || pick(value.data) || JSON.stringify(value);
+    }
+    return String(value);
+  };
+  return pick(result?.error) || pick(result?.message) || pick(result?.data) || "Courier rejected the cancellation";
+}
 
 function getServiceCancellationError(error) {
   const errors = {
@@ -276,7 +298,7 @@ class OrderController {
         for (const shipment of refundData.cancellableShipments) {
           try {
             const cancelResult =
-              await xpressService.cancelShipmentExpressBees(
+              await courierService.cancelAtCourier(
                 shipment.awb_number,
               );
             if (!cancelResult?.status) {
@@ -339,6 +361,19 @@ class OrderController {
           }).catch(() => {});
         }
       }
+
+      sendEcommerceOrderStatusMail({
+        orderId,
+        status: "cancelled",
+      }).catch((mailError) =>
+        console.error("Order cancellation mail failed:", mailError),
+      );
+      enqueueEcommerceOrderStatusWhatsApp({
+        orderId,
+        status: "cancelled",
+      }).catch((whatsAppError) =>
+        console.error("Order cancellation WhatsApp failed:", whatsAppError),
+      );
 
       return res.json({
         success: true,
@@ -474,20 +509,31 @@ class OrderController {
           orderItemId,
         );
       let courierCancellationConfirmed = false;
+      // Ops sometimes cancel the AWB directly in the courier panel; the
+      // courier API then answers "Unable to cancel". The manager confirms the
+      // manual cancellation so the refund can proceed, and it is audited.
+      const courierCancelledManually =
+        req.body?.courierCancelledManually === true;
+      let approvalMeta = null;
 
-      if (candidate.requiresCourierCancellation) {
+      if (candidate.requiresCourierCancellation && courierCancelledManually) {
+        courierCancellationConfirmed = true;
+        approvalMeta = {
+          courier_cancelled_manually: true,
+          awb_number: candidate.awb_number,
+          confirmed_by: req.user?.user_id || null,
+        };
+      } else if (candidate.requiresCourierCancellation) {
         const courierResult =
-          await xpressService.cancelShipmentExpressBees(
+          await courierService.cancelAtCourier(
             candidate.awb_number,
           );
-        if (!courierResult?.status) {
-          const reason =
-            courierResult?.error?.message ||
-            courierResult?.error ||
-            courierResult?.message ||
-            "XpressBees rejected the cancellation";
+        const reason = getCourierErrorMessage(courierResult);
+        // A shipment already cancelled at the courier is the outcome we need,
+        // so it must not block the refund forever.
+        if (!courierResult?.status && !/already\s+cancel/i.test(reason)) {
           const error = new Error("COURIER_CANCELLATION_FAILED");
-          error.cause = reason;
+          error.cause = `Courier: ${reason}`;
           throw error;
         }
         courierCancellationConfirmed = true;
@@ -497,7 +543,7 @@ class OrderController {
       const refund = await ItemCancellationModel.approve(
         orderItemId,
         conn,
-        { courierCancellationConfirmed },
+        { courierCancellationConfirmed, approvalMeta },
       );
       await conn.commit();
 
@@ -563,7 +609,7 @@ class OrderController {
         },
       });
     } catch (error) {
-      await conn.rollback();
+      await conn.rollback().catch(() => {});
       const errors = {
         CANCELLATION_REQUEST_NOT_FOUND: [404, "Item cancellation request not found"],
         INVALID_CANCELLATION_STATE: [409, "Cancellation request was already decided"],
@@ -575,22 +621,27 @@ class OrderController {
           409,
           "A booked shipment containing multiple active items cannot cancel only one item",
         ],
+        ORDER_ALREADY_CANCELLED: [
+          409,
+          "The whole order was already cancelled and refunded",
+        ],
         COURIER_CANCELLATION_REQUIRED: [
           409,
-          "XpressBees cancellation must complete before approving the refund",
+          "Courier cancellation must complete before approving the refund",
         ],
+        // Not 502: Cloudflare replaces origin 502s with its own error page,
+        // which hides this message from the manager.
         COURIER_CANCELLATION_FAILED: [
           409,
-          error.cause ||
-            "XpressBees could not cancel this shipment; no refund was started",
+          `${error.cause || "Courier could not cancel this shipment"}. No refund was started.`,
         ],
       };
       const [status, message] = errors[error.message] || [
         500,
         "Unable to approve item cancellation",
       ];
-      if (status === 500) console.error("Approve item cancellation error:", error);
-      return res.status(status).json({ success: false, message });
+      if (status >= 500) console.error("Approve item cancellation error:", error);
+      return res.status(status).json({ success: false, code: error.message, message });
     } finally {
       conn.release();
     }
@@ -620,16 +671,17 @@ class OrderController {
       );
       return res.json({ success: true, message: "Item cancellation rejected" });
     } catch (error) {
-      await conn.rollback();
-      const status =
-        error.message === "CANCELLATION_REQUEST_NOT_FOUND" ? 404 : 409;
-      return res.status(status).json({
-        success: false,
-        message:
-          status === 404
-            ? "Item cancellation request not found"
-            : "Cancellation request was already decided",
-      });
+      await conn.rollback().catch(() => {});
+      const errors = {
+        CANCELLATION_REQUEST_NOT_FOUND: [404, "Item cancellation request not found"],
+        INVALID_CANCELLATION_STATE: [409, "Cancellation request was already decided"],
+      };
+      const [status, message] = errors[error.message] || [
+        500,
+        "Unable to reject item cancellation",
+      ];
+      if (status === 500) console.error("Reject item cancellation error:", error);
+      return res.status(status).json({ success: false, message });
     } finally {
       conn.release();
     }
@@ -724,6 +776,11 @@ class OrderController {
         },
         "service cancellation approved notification",
       );
+
+      sendServiceCancellationDecisionEmail(
+        refundData.service_order_id,
+        "approved",
+      ).catch((error) => console.error("Service cancellation approval email failed:", error));
 
       if (refundData?.payment_id && refundData.amount > 0) {
         ServiceOrderModel.processRefund(refundData).catch((err) => {
@@ -867,6 +924,12 @@ class OrderController {
         },
         "service cancellation rejected notification",
       );
+
+      sendServiceCancellationDecisionEmail(
+        serviceOrderId,
+        "rejected",
+        req.body?.reason || req.body?.rejectionReason || null,
+      ).catch((error) => console.error("Service cancellation rejection email failed:", error));
 
       return res.json({
         success: true,

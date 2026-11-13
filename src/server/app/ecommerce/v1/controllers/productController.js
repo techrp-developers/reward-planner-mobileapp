@@ -16,6 +16,7 @@ const {
   resolveRedemption,
   calculateRedeemableCoins,
 } = require("../utils/rewardCalculate");
+const { applyActiveOffers } = require("../utils/activeOffers");
 
 function positiveInt(value, fallback, max = 100) {
   const parsed = Number.parseInt(value, 10);
@@ -31,6 +32,20 @@ function nonNegativeInt(value, fallback = 0, max = 10000) {
 
 function getProductId(product) {
   return Number(product.product_id || product.id);
+}
+
+function shuffleProducts(products) {
+  const shuffled = [...products];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [
+      shuffled[randomIndex],
+      shuffled[index],
+    ];
+  }
+
+  return shuffled;
 }
 
 async function addWishlistStatus(products, userId) {
@@ -122,8 +137,20 @@ async function addWishlistStatus(products, userId) {
 }
 
 class ProductController {
+  async getProductsByBrand(req, res) {
+    const brandName = req.query.brand;
+    if (typeof brandName !== "string" || !brandName.trim() || brandName.trim().length > 255) {
+      return res.status(400).json({ success: false, message: "A brand name of 1–255 characters is required" });
+    }
+    return ProductController.prototype.listProducts(req, res, brandName.trim());
+  }
+
   // all the products
   async getAllProducts(req, res) {
+    return ProductController.prototype.listProducts(req, res);
+  }
+
+  async listProducts(req, res, brandName) {
     try {
       const page = positiveInt(req.query.page, 1, 10000);
       const limit = positiveInt(req.query.limit, 10, 50);
@@ -135,6 +162,7 @@ class ProductController {
         req.query.sortOrder?.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
       const { products, totalItems } = await ProductModel.getAllProducts({
+        brandName,
         search,
         sortBy,
         sortOrder,
@@ -143,6 +171,8 @@ class ProductController {
       });
 
       const rewardCache = {};
+
+      await applyActiveOffers(products);
 
       const processedProducts = await Promise.all(
         products.map(async (product) => {
@@ -191,11 +221,11 @@ class ProductController {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, product.is_offer_price ? [] : rules);
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
           const canRedeem = rules.some((r) => r.can_redeem_reward);
           const redemptionEnabled = canRedeem && redeem_coins > 0;
-          const rp_price = salePrice - redeem_coins;
+          const rp_price = (salePrice - redeem_coins).toFixed(2);
 
           const mrpDiscountPercent =
             mrp > 0 ? Math.round(((mrp - salePrice) / mrp) * 100) : 0;
@@ -210,8 +240,10 @@ class ProductController {
             sub_subcategory: product.sub_subcategory_name,
             short_description: product.short_description,
             image: mainImage,
-            price: salePrice ? `₹${salePrice}` : null,
-            originalPrice: product.mrp ? `₹${Number(product.mrp)}` : null,
+            price: salePrice ? `₹${salePrice.toFixed(2)}` : null,
+            originalPrice: product.mrp
+              ? `₹${Number(product.mrp).toFixed(2)}`
+              : null,
 
             rp_price: redemptionEnabled ? `₹${rp_price}` : null,
             redeem_coins: redemptionEnabled ? redeem_coins : 0,
@@ -297,6 +329,8 @@ class ProductController {
 
       const rewardCache = {};
 
+      await applyActiveOffers(products);
+
       const processedProducts = await Promise.all(
         products.map(async (product) => {
           const imagePath = product.images?.length
@@ -341,14 +375,14 @@ class ProductController {
           /* ===============================
                 REDEMPTION (rule-based)
               =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, product.is_offer_price ? [] : rules);
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
           const canRedeem = rules.some((r) => r.can_redeem_reward);
 
           const redemptionEnabled = canRedeem && redeem_coins > 0;
 
-          const rp_price = salePrice - redeem_coins;
+          const rp_price = (salePrice - redeem_coins).toFixed(2);
 
           const mrpDiscountPercent =
             mrp > 0 ? Math.round(((mrp - salePrice) / mrp) * 100) : 0;
@@ -363,8 +397,8 @@ class ProductController {
             sub_subcategory: product.sub_subcategory_name,
             image: mainImage,
 
-            price: salePrice ? `₹${salePrice}` : null,
-            originalPrice: mrp ? `₹${mrp}` : null,
+            price: salePrice ? `₹${salePrice.toFixed(2)}` : null,
+            originalPrice: mrp ? `₹${mrp.toFixed(2)}` : null,
             discount: `${mrpDiscountPercent}%`,
             rp_price: redemptionEnabled ? `₹${rp_price}` : 0,
             redeem_coins: redemptionEnabled ? redeem_coins : 0,
@@ -447,6 +481,8 @@ class ProductController {
 
       const rewardCache = {};
 
+      await applyActiveOffers(products);
+
       const processedProducts = await Promise.all(
         products.map(async (product) => {
           const imagePath = product.images?.length
@@ -491,7 +527,7 @@ class ProductController {
           /* ===============================
               REDEMPTION (rule-based)
             =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, product.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -499,7 +535,7 @@ class ProductController {
 
           const redemptionEnabled = canRedeem && redeem_coins > 0;
 
-          const rp_price = salePrice - redeem_coins;
+          const rp_price = (salePrice - redeem_coins).toFixed(2);
 
           const mrpDiscountPercent =
             mrp > 0 ? Math.round(((mrp - salePrice) / mrp) * 100) : 0;
@@ -514,8 +550,8 @@ class ProductController {
             sub_subcategory: product.sub_subcategory_name,
             image: mainImage,
 
-            price: salePrice ? `₹${salePrice}` : null,
-            originalPrice: mrp ? `₹${mrp}` : null,
+            price: salePrice ? `₹${salePrice.toFixed(2)}` : null,
+            originalPrice: mrp ? `₹${mrp.toFixed(2)}` : null,
             discount: `${mrpDiscountPercent}%`,
             rp_price: redemptionEnabled ? `₹${rp_price}` : 0,
             redeem_coins: redemptionEnabled ? redeem_coins : 0,
@@ -577,6 +613,8 @@ class ProductController {
         });
       }
 
+      await applyActiveOffers(product.variants);
+
       if (req.user?.user_id) {
         await db.execute(
           `
@@ -592,17 +630,18 @@ class ProductController {
         ...product,
         variants: await Promise.all(
           product.variants.map(async (variant) => {
+            const isOfferPrice = variant.is_offer_price;
             const salePrice = Number(variant.sale_price) || 0;
             const mrp = Number(variant.mrp) || 0;
 
             const rules = await RewardModel.getProductRewards(
-              product.product_id,
-              variant.variant_id,
-              product.category_id,
-              product.subcategory_id,
-              salePrice,
-              product.is_discount_eligible,
-            );
+                  product.product_id,
+                  variant.variant_id,
+                  product.category_id,
+                  product.subcategory_id,
+                  salePrice,
+                  product.is_discount_eligible,
+                );
 
             let rewardCoins = 0;
             let canEarn = false;
@@ -615,7 +654,7 @@ class ProductController {
             /* ===============================
                 REDEMPTION (rule-based)
               =============================== */
-            const redemption = resolveRedemption(salePrice, rules);
+            const redemption = resolveRedemption(salePrice, isOfferPrice ? [] : rules);
 
             const redeem_coins = calculateRedeemableCoins(
               salePrice,
@@ -642,8 +681,16 @@ class ProductController {
 
             return {
               ...variant,
-              price: `₹${salePrice}`,
-              finalPrice: redemptionEnabled ? `₹${finalPrice}` : null,
+              sale_price: salePrice,
+              original_sale_price: variant.original_sale_price,
+              offer_price: isOfferPrice ? salePrice : null,
+              price: `₹${salePrice.toFixed(2)}`,
+              campaign_id: variant.campaign_id,
+              content_id: variant.content_id,
+              promotional_offer_price: variant.content_id ? salePrice : null,
+              finalPrice: redemptionEnabled
+                ? `₹${finalPrice.toFixed(2)}`
+                : null,
               discount: `${mrpDiscountPercent}%`,
               redemption: {
                 enabled: redemptionEnabled,
@@ -691,9 +738,10 @@ class ProductController {
       const processedCategories = rows.map((category) => ({
         id: category.category_id,
         name: category.category_name,
-        image: category.cover_image
-          ? `${CDN_BASE_URL}/${category.cover_image}`
-          : null,
+        image: buildImageUrl(
+          category.cover_image,
+          category.updated_at,
+        ),
       }));
 
       res.json({
@@ -857,6 +905,9 @@ class ProductController {
       const userId = req.user?.user_id;
       // const userId = 1;
       let recentlyViewed = [];
+      const limit = positiveInt(req.query.limit, 10, 50);
+      const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
       if (!userId) {
         return res.json({ success: true, data: [] });
@@ -927,12 +978,14 @@ class ProductController {
         AND p.is_searchable = 1
         AND COALESCE(p.created_via, '') != 'flea_market_quick_create'
 
+        AND (? = '' OR p.product_name LIKE CONCAT('%', ?, '%'))
       GROUP BY rv.product_id
-      ORDER BY rv.viewed_at DESC
-      LIMIT 10
+      ORDER BY MAX(rv.viewed_at) DESC, p.product_id DESC
+      LIMIT ? OFFSET ?
     `;
 
-      const [rows] = await db.execute(query, [userId]);
+      const [rows] = await db.execute(query, [userId, search, search, limit, offset]);
+      await applyActiveOffers(rows);
 
       const rewardCache = {};
 
@@ -984,7 +1037,7 @@ class ProductController {
           /* ===============================
             REDEMPTION (rule-based)
           =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, row.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -994,7 +1047,7 @@ class ProductController {
 
           const finalRedeemCoins = redemptionEnabled ? redeem_coins : 0;
 
-          const rp_price = salePrice - finalRedeemCoins;
+          const rp_price = (salePrice - finalRedeemCoins).toFixed(2);
 
           return {
             product_id: row.product_id,
@@ -1004,8 +1057,8 @@ class ProductController {
 
             image,
 
-            price: `₹${salePrice}`,
-            originalPrice: `₹${mrp}`,
+            price: `₹${salePrice.toFixed(2)}`,
+            originalPrice: `₹${mrp.toFixed(2)}`,
             discount: `${mrpDiscountPercent}%`,
             rp_price: redemptionEnabled ? `₹${rp_price}` : 0,
 
@@ -1028,6 +1081,9 @@ class ProductController {
       return res.json({
         success: true,
         data: recentlyViewed,
+        hasMore: recentlyViewed.length === limit,
+        offset,
+        nextOffset: offset + recentlyViewed.length,
       });
     } catch (error) {
       console.error("Error fetching recent products:", error);
@@ -1042,6 +1098,7 @@ class ProductController {
       // const userId = 1;
       const limit = positiveInt(req.query.limit, 10, 50);
       const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
       if (!userId) {
         return res.status(401).json({
@@ -1054,6 +1111,7 @@ class ProductController {
         userId,
         limit,
         offset,
+        search,
       );
 
       await addWishlistStatus(products, userId);
@@ -1062,7 +1120,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Recommendation error:", error);
@@ -1078,8 +1136,9 @@ class ProductController {
     try {
       const limit = positiveInt(req.query.limit, 10, 50);
       const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
-      const products = await ProductModel.getNewArrivals(limit, offset);
+      const products = await ProductModel.getNewArrivals(limit, offset, search);
 
       await addWishlistStatus(products, req.user?.user_id);
 
@@ -1087,7 +1146,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("New arrivals error:", error);
@@ -1124,7 +1183,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Customers also bought error:", error);
@@ -1155,7 +1214,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Trending products error:", error);
@@ -1173,8 +1232,9 @@ class ProductController {
       const limit = positiveInt(req.query.limit, 10, 50);
       const days = positiveInt(req.query.days, 30, 365);
       const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
-      const products = await ProductModel.getBestSellers(limit, offset, days);
+      const products = await ProductModel.getBestSellers(limit, offset, days, search);
 
       await addWishlistStatus(products, req.user?.user_id);
 
@@ -1182,7 +1242,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Best sellers error:", error);
@@ -1200,11 +1260,13 @@ class ProductController {
       const limit = positiveInt(req.query.limit, 10, 50);
       const days = positiveInt(req.query.days, 30, 365);
       const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
       const products = await ProductModel.getMostViewedProducts(
         limit,
         offset,
         days,
+        search,
       );
 
       await addWishlistStatus(products, req.user?.user_id);
@@ -1213,7 +1275,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Most viewed products error:", error);
@@ -1230,8 +1292,9 @@ class ProductController {
     try {
       const limit = positiveInt(req.query.limit, 10, 50);
       const offset = nonNegativeInt(req.query.offset);
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
-      const products = await ProductModel.getTopRatedProducts(limit, offset);
+      const products = await ProductModel.getTopRatedProducts(limit, offset, search);
 
       await addWishlistStatus(products, req.user?.user_id);
 
@@ -1239,7 +1302,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Top rated products error:", error);
@@ -1271,9 +1334,10 @@ class ProductController {
       const processedSubCategories = data.map((subcategory) => ({
         id: subcategory.subcategory_id,
         name: subcategory.subcategory_name,
-        image: subcategory.cover_image
-          ? `${CDN_BASE_URL}/${subcategory.cover_image}`
-          : null,
+        image: buildImageUrl(
+          subcategory.cover_image,
+          subcategory.updated_at,
+        ),
       }));
 
       res.json({
@@ -1293,9 +1357,11 @@ class ProductController {
         c.category_id,
         c.category_name,
         c.cover_image AS category_image,
+        c.updated_at AS category_updated_at,
         sc.subcategory_id,
         sc.subcategory_name,
-        sc.cover_image AS subcategory_image
+        sc.cover_image AS subcategory_image,
+        sc.updated_at AS subcategory_updated_at
       FROM categories c
       LEFT JOIN sub_categories sc 
         ON sc.category_id = c.category_id 
@@ -1313,9 +1379,10 @@ class ProductController {
           categoryMap[row.category_id] = {
             id: row.category_id,
             name: row.category_name,
-            image: row.category_image
-              ? `${CDN_BASE_URL}/${row.category_image}`
-              : null,
+            image: buildImageUrl(
+              row.category_image,
+              row.category_updated_at,
+            ),
             subcategories: [],
           };
         }
@@ -1325,9 +1392,10 @@ class ProductController {
           categoryMap[row.category_id].subcategories.push({
             id: row.subcategory_id,
             name: row.subcategory_name,
-            image: row.subcategory_image
-              ? `${CDN_BASE_URL}/${row.subcategory_image}`
-              : null,
+            image: buildImageUrl(
+              row.subcategory_image,
+              row.subcategory_updated_at,
+            ),
           });
         }
       });
@@ -1369,7 +1437,7 @@ class ProductController {
         success: true,
         total: products.length,
         hasMore: products.length === limit,
-        products,
+        products: shuffleProducts(products),
       });
     } catch (error) {
       console.error("Get similar products error:", error);
@@ -1418,6 +1486,8 @@ class ProductController {
         offset,
       });
 
+      await applyActiveOffers(products);
+
       const processedProducts = await Promise.all(
         products.map(async (product) => {
           const imagePath =
@@ -1450,7 +1520,7 @@ class ProductController {
           /* ===============================
        REDEMPTION
     =============================== */
-          const redemption = resolveRedemption(salePrice, rules);
+          const redemption = resolveRedemption(salePrice, product.is_offer_price ? [] : rules);
 
           const redeem_coins = calculateRedeemableCoins(salePrice, redemption);
 
@@ -1472,12 +1542,14 @@ class ProductController {
 
             image: mainImage,
 
-            price: `₹${salePrice}`,
-            originalPrice: `₹${mrp}`,
+            price: `₹${salePrice.toFixed(2)}`,
+            originalPrice: `₹${mrp.toFixed(2)}`,
 
             discount: `${mrpDiscountPercent}%`,
 
-            pointsPrice: redemptionEnabled ? `₹${finalPrice}` : null,
+            pointsPrice: redemptionEnabled
+              ? `₹${finalPrice.toFixed(2)}`
+              : null,
 
             points: finalRedeemCoins,
           };

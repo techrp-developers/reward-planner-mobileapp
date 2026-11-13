@@ -233,7 +233,7 @@ function Profile() {
                             <OutlineButton title="My Orders" onPress={handleOpenOrders} />
                             <OutlineButton title="Buy Again" onPress={() => navigation.navigate('BuyNow')} />
                             <OutlineButton title="Wishlist" onPress={() => navigation.navigate("WishList")} />
-                            <OutlineButton title="Rewards" onPress={() => navigation.navigate("WalletHistory")}
+                            <OutlineButton title="RP Points" onPress={() => navigation.navigate("WalletHistory")}
                             />
                         </ScrollView>
                     </View>

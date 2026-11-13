@@ -11,7 +11,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import Banner from '../constant/Banner';
 import CategoryCard from '../constant/CategoryCard';
 import NeedHelpBanner from '../government/NeedHelpBanner';
 import SkeletonBox from '../constant/SkeletonBox';
@@ -187,7 +186,6 @@ export default function Government_Document_Screen() {
 
       {loading ? (
         <View style={styles.scrollContent}>
-          <Banner />
           <View style={styles.categoryContainer}>
             <GovernmentDocumentSkeleton />
           </View>
@@ -210,11 +208,6 @@ export default function Government_Document_Screen() {
           updateCellsBatchingPeriod={50}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
-          ListHeaderComponent={
-            <>
-              <Banner />
-            </>
-          }
           ListFooterComponent={<NeedHelpBanner />}
           ListEmptyComponent={
             <View style={styles.centeredState}>

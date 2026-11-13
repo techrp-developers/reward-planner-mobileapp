@@ -1,9 +1,11 @@
 // app.js
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 
@@ -14,22 +16,11 @@ const swaggerSpec = require("./config/swagger");
 // setupTodoReminderDB();
 
 require("dotenv").config();
-require("./services/ExpressBees/cron/shipmentCron");
-require("./services/Bbps/retryCron");
-require("./services/Bbps/refundCron");
-require("./services/Razorpay/retryCron");
-require("./services/Maintenance/maintenanceCron");
-require("./services/Razorpay/orderExpiryCron");
-require("./services/Todo/todoReminderCron");
-require("./services/Todo/birthdayReminderCron");
-require("./services/Ecommerce/cartRecoveryCron");
-require("./services/Todo/fitnessGoalHookCron");
-require("./services/Todo/accountPurgeCron");
-// require("./services/Todo/checkoutAbandonmentCron");
-// require("./services/Todo/serviceCartRecoveryCron");
-// require("./services/Bbps/billDueReminderCron");
-
-
+const busProductionSafety = require("./app/busboooking/config/productionSafety");
+busProductionSafety.assertProductionConfiguration();
+busProductionSafety.warnIfBusConfigurationIncomplete();
+require("./config/scheduledJobs").startScheduledJobs();
+const stopSchedulerDiagnostics = require("./services/schedulerDiagnostics").startSchedulerDiagnostics();
 
 // dashboard Route
 const dashboardRoute = require("./routes/indexRoute");
@@ -44,6 +35,8 @@ const serviceRoute = require("./app/service/v1/routes/indexRoute");
 const stepCounterRoute = require("./app/step-counter/v1/routes/indexRoute");
 const bbpsRoute = require("./app/bbps/v1/routes/indexRoute");
 const gamesRoute = require("./app/games/v1/routes/indexRoute");
+const busBookingRoute = require("./app/busboooking/routes/indexRoute");
+const chatRoute = require("./app/chat/routes/indexRoute");
 
 //External Routes
 const mpsRoute = require("./mps-connect/common/routes/indexRoute");
@@ -74,16 +67,35 @@ const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .filter(Boolean);
 
 function isAllowedOrigin(origin) {
-  if (allowedOrigins.includes(origin)) return true;
+  if (!origin) return true;
 
-  if (process.env.NODE_ENV !== "production") {
-    try {
-      const { hostname } = new URL(origin);
-      return hostname === "localhost" || hostname === "127.0.0.1";
-    } catch {
-      return false;
+  try {
+    const parsed = new URL(origin);
+    // Always allow all localhost and loopback origins on any port for development
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return true;
     }
-  }
+
+    // Always allow primary and subdomains of rewardplanners.com
+    if (
+      parsed.hostname === "rewardplanners.com" ||
+      parsed.hostname.endsWith(".rewardplanners.com")
+    ) {
+      return true;
+    }
+
+    const originUrl = parsed.origin;
+    const isMatched = allowedOrigins.some((allowed) => {
+      try {
+        return new URL(allowed).origin === originUrl;
+      } catch {
+        return allowed === origin;
+      }
+    });
+    if (isMatched) return true;
+  } catch {}
+
+  if (allowedOrigins.includes(origin)) return true;
 
   return false;
 }
@@ -104,6 +116,7 @@ app.use(
       "Content-Type",
       "Authorization",
       "X-Location-Id",
+      "X-Schedule-Id",
       "X-Session-Token",
       "Idempotency-Key",
       "X-CSRF-Token",
@@ -137,6 +150,16 @@ app.post(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Temporary diagnostic logger — confirms requests are actually reaching the server
+// without logging request bodies or credentials. Gated to non-production;
+// remove once whatever's being debugged is found.
+if (process.env.NODE_ENV !== "production") {
+  app.use((req, res, next) => {
+    console.log(`\n[REQUEST] ${new Date().toISOString()} ${req.method} ${req.originalUrl}`);
+    next();
+  });
+}
+
 // Maintenance middleware
 app.use(require("./middleware/maintenance"));
 
@@ -156,6 +179,13 @@ if (process.env.NODE_ENV !== "production") {
 // Serve uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// /public/* assets live only in R2 behind the CDN. The mobile app's local mode
+// points image URLs at this server, so in development send them on to the CDN.
+if (process.env.NODE_ENV !== "production") {
+  const { getPublicUrl } = require("./utils/publicUrl");
+  app.get("/public/*", (req, res) => res.redirect(302, getPublicUrl(req.originalUrl)));
+}
+
 // Base route
 app.get("/", (req, res) => {
   res.json({
@@ -165,36 +195,28 @@ app.get("/", (req, res) => {
   });
 });
 
-// Dashboard Routes
-app.use("/", dashboardRoute);
+// Both CRM modules share /api/crm; retain their legacy root aliases.
+require("./routes/mountCrmRoutes")(app, dashboardRoute, fleaMarketRoute);
+// The RM/admin Push Notification Manager is a dashboard feature: the CRM client
+// calls it through the /api/crm proxy. (It is also reachable at /v1/rm/... via
+// commonRoute; both paths use the dashboard session auth.)
+app.use("/api/crm/v1/rm/notifications", require("./app/common/routes/rmNotificationRoute"));
+// Admin-only RM -> company assignments that scope RM notification audiences.
+app.use("/api/crm/v1/rm/assignments", require("./app/common/routes/rmAssignmentRoute"));
 
-// App Routes
+// App Routes 
 app.use("/v1", ecommerceRoute);
 app.use("/v1", serviceRoute);
 app.use("/v1", stepCounterRoute);
 app.use("/v1", commonRoute);
 app.use("/v1", bbpsRoute);
 app.use("/v1", gamesRoute);
+app.use("/v1/chat", chatRoute);
+app.use("/v1", require("./app/Insurrence/routes/indexRoute"));
+app.use("/api/busbooking", busBookingRoute);
 
 // External App Routes
 app.use("/mps", mpsRoute);
-
-// Flea Market Routes
-app.use(
-  "/",
-  (req, res, next) => {
-    // API responses (especially deployment-time 404s) must never be cached by
-    // Cloudflare, otherwise a newly deployed route can keep appearing missing.
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("CDN-Cache-Control", "no-store");
-    res.setHeader("Cloudflare-CDN-Cache-Control", "no-store");
-    res.setHeader("Surrogate-Control", "no-store");
-    next();
-  },
-  fleaMarketRoute,
-);
 
 // 404 Handler
 app.use((req, res) => {
@@ -204,26 +226,20 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler
-app.use((error, req, res, next) => {
-  console.error("Unhandled Error:", error);
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-    error: process.env.NODE_ENV === "development" ? error.message : undefined,
-  });
-});
+// Global Error Handler (database outages answer 503 DATABASE_UNAVAILABLE)
+app.use(require("./middleware/errorHandler"));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+require("./app/chat/socket/chatSocket")(server, app, isAllowedOrigin);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log("\n=================================");
   console.log("Reward Planners Backend Started!");
   console.log(`🔗 Server URL: http://localhost:${PORT}`);
   console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
-  console.log(`Flea Market API ready at http://localhost:${PORT}`);
+  console.log(`Flea Market API ready at http://localhost:${PORT}/api/crm`);
   console.log("CORS allowed origins (parsed):", allowedOrigins);
   console.log("=================================\n");
 
@@ -233,3 +249,43 @@ app.listen(PORT, () => {
     console.log("✅ WhatsApp worker started (START_WA_WORKER=true)");
   }
 });
+
+// Nodemon restarts with SIGUSR2 (nodemon.json). On Linux/macOS that runs the
+// graceful shutdown below. On Windows nodemon force-stops the child instead:
+// its SIGTERM/SIGINT path relies on windows-kill.exe, which can hang and leave
+// the previous process serving stale code indefinitely.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  stopSchedulerDiagnostics();
+  console.log(`Shutting down backend (${signal})...`);
+  const deadline = setTimeout(() => {
+    console.error("Backend shutdown timed out");
+    server.closeAllConnections();
+    process.exit(1);
+  }, 10000);
+  deadline.unref();
+
+  try {
+    const httpClosed = new Promise((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+    server.closeIdleConnections();
+    await Promise.all([...require("node-cron").getTasks().values()].map((task) => task.destroy()));
+    const workerPath = require.resolve("./services/whatsapp/waWorker");
+    const worker = require.cache[workerPath]?.exports;
+    if (worker?.stop) await worker.stop();
+    await httpClosed;
+    await require("./config/database").end();
+    clearTimeout(deadline);
+    console.log("Backend shutdown complete");
+    process.exit(0);
+  } catch (error) {
+    console.error("Backend shutdown failed:", error.code || error.name);
+    process.exit(1);
+  }
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+if (process.platform !== "win32") process.once("SIGUSR2", () => shutdown("SIGUSR2"));

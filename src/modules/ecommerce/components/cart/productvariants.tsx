@@ -170,9 +170,9 @@ export default function ProductVariants({
                     {isColorAttr && displayVariant ? (
                       <View style={styles.variantPriceRow}>
                         <Text style={[styles.variantPrice, { color: theme.text }]}>
-                          ₹{Number(displayVariant.sale_price || 0).toLocaleString("en-IN")}
+                          ₹{Number(String(displayVariant.price ?? displayVariant.sale_price ?? 0).replace(/[^0-9.]/g, '') || 0).toLocaleString("en-IN")}
                         </Text>
-                        {Number(displayVariant.mrp) > Number(displayVariant.sale_price) ? (
+                        {Number(displayVariant.mrp) > Number(String(displayVariant.price ?? displayVariant.sale_price ?? 0).replace(/[^0-9.]/g, '') || 0) ? (
                           <Text style={[styles.variantMrp, { color: theme.secondaryText }]}>
                             ₹{Number(displayVariant.mrp).toLocaleString("en-IN")}
                           </Text>

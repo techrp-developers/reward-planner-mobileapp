@@ -1,6 +1,13 @@
 const CheckoutModel = require("../models/checkoutModel");
 const NotificationModel = require("../../../common/models/notificationModel");
 const db = require("../../../../config/database");
+const {
+  DELIVERY_PREFERENCES,
+} = require("../../../../services/courier/courierPolicy");
+
+const isValidDeliveryPreference = (value) =>
+  value === undefined ||
+  Object.values(DELIVERY_PREFERENCES).includes(value);
 
 class CheckoutController {
   // checkout cart Items
@@ -54,6 +61,7 @@ class CheckoutController {
         useRewards,
         expectedTotal,
         expectedRedeemable,
+        req.body?.delivery_preference,
       );
 
       return res.json({
@@ -92,7 +100,7 @@ class CheckoutController {
       }
 
       if (
-        ["WALLET_BALANCE_CHANGED", "CHECKOUT_CHANGED"].includes(error.message)
+        ["WALLET_BALANCE_CHANGED", "CHECKOUT_CHANGED", "FLASH_SALE_LIMIT_EXCEEDED"].includes(error.message)
       ) {
         return res.status(409).json({
           success: false,
@@ -157,10 +165,13 @@ class CheckoutController {
         product_id,
         variant_id,
         quantity = 1,
+        campaign_id = null,
+        content_id = null,
         address_id,
         use_rewards = true,
         expected_total,
         expected_redeemable = 0,
+        delivery_preference,
       } = req.body;
 
       if (!address_id) {
@@ -182,11 +193,14 @@ class CheckoutController {
         productId: product_id,
         variantId: variant_id,
         quantity,
+        campaignId: campaign_id,
+        contentId: content_id,
         companyId,
         addressId: address_id,
         useRewards: use_rewards,
         expectedTotal: expected_total,
         expectedRedeemable: expected_redeemable,
+        deliveryPreference: delivery_preference,
       });
 
       // await NotificationModel.create({
@@ -220,6 +234,17 @@ class CheckoutController {
         });
       }
 
+      if (error.message === "INVALID_FLASH_SALE") {
+        return res.status(400).json({
+          success: false,
+          message: "Flash sale is no longer active or does not include this product",
+        });
+      }
+
+      if (error.message === "INVALID_PROMOTIONAL_OFFER") {
+        return res.status(400).json({ success: false, message: "Promotional offer is no longer active or does not include this product variant" });
+      }
+
       if (error.message === "PRICE_MISMATCH") {
         return res.status(400).json({
           success: false,
@@ -235,7 +260,7 @@ class CheckoutController {
       }
 
       if (
-        ["WALLET_BALANCE_CHANGED", "CHECKOUT_CHANGED"].includes(error.message)
+        ["WALLET_BALANCE_CHANGED", "CHECKOUT_CHANGED", "FLASH_SALE_LIMIT_EXCEEDED"].includes(error.message)
       ) {
         return res.status(409).json({
           success: false,
@@ -277,7 +302,15 @@ class CheckoutController {
         });
       }
 
-      const { use_rewards = "true", address_id } = req.query;
+      const { use_rewards = "true", address_id, delivery_preference } =
+        req.query;
+
+      if (!isValidDeliveryPreference(delivery_preference)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid delivery_preference",
+        });
+      }
 
       const addressId = address_id ? Number(address_id) : null;
       if (address_id && (!Number.isInteger(addressId) || addressId < 1)) {
@@ -291,6 +324,7 @@ class CheckoutController {
         userId,
         use_rewards === "true",
         addressId,
+        delivery_preference,
       );
 
       return res.json({
@@ -341,7 +375,17 @@ class CheckoutController {
         qty = 1,
         use_rewards = "true",
         address_id,
+        campaign_id,
+        content_id,
+        delivery_preference,
       } = req.query;
+
+      if (!isValidDeliveryPreference(delivery_preference)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid delivery_preference",
+        });
+      }
 
       if (!product_id || !variant_id || Number(qty) < 1) {
         return res.status(400).json({
@@ -362,9 +406,12 @@ class CheckoutController {
         productId: Number(product_id),
         variantId: Number(variant_id),
         quantity: Number(qty),
+        campaignId: campaign_id ? Number(campaign_id) : null,
+        contentId: content_id ? Number(content_id) : null,
         useRewards: use_rewards === "true",
         userId,
         addressId,
+        deliveryPreference: delivery_preference,
       });
 
       return res.json({

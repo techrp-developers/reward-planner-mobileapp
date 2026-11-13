@@ -1,19 +1,38 @@
 const crypto = require("crypto");
 const express = require("express");
-const { authLimiter } = require("../app/common/middlewares/rateLimiter");
+const jwt = require("jsonwebtoken");
+const { onboardingOtpLimiter, onboardingStatusLimiter, onboardingSubmitLimiter } = require("../app/common/middlewares/rateLimiter");
 const { sendOtpEmail, sendAdminOnboardedEmail } = require("../config/mail");
 const { enqueueWhatsApp } = require("../services/whatsapp/waEnqueueService");
 const { normalizeIndianMobile } = require("../services/whatsapp/phone");
-const { createSigningSession, verifySigningSession } = require("../services/zohoSignService");
+const { createSigningSession, verifySigningSession, downloadSigningArtifacts } = require("../services/zohoSignService");
+const { createClientOnboarding } = require("../services/clientOnboardingService");
 
 const router = express.Router();
 const sessions = new Map();
 const OTP_TTL_MS = 10 * 60 * 1000;
+const VERIFICATION_PROOF_TTL_SECONDS = 24 * 60 * 60;
 const RESEND_COOLDOWN_MS = 30 * 1000;
 const MAX_ATTEMPTS = 5;
+const REQUIRE_ZOHO_SIGNING = String(process.env.REQUIRE_ZOHO_SIGNING ?? "true").toLowerCase() !== "false";
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const otpHash = (sessionId, otp) => crypto.createHash("sha256").update(`${sessionId}:${otp}`).digest();
+const verificationSecret = () => process.env.CLIENT_ONBOARDING_PROOF_SECRET || process.env.JWT_SECRET;
+
+function createVerificationProof(session) {
+  const secret = verificationSecret();
+  if (!secret) throw new Error("Client onboarding verification secret is not configured");
+  return jwt.sign({ type: "client_onboarding_verification", channel: session.channel, destination: session.destination }, secret, { algorithm: "HS256", expiresIn: VERIFICATION_PROOF_TTL_SECONDS });
+}
+
+function readVerificationProof(token) {
+  const secret = verificationSecret();
+  if (!secret) throw new Error("Client onboarding verification secret is not configured");
+  const proof = jwt.verify(token, secret, { algorithms: ["HS256"] });
+  if (proof?.type !== "client_onboarding_verification") throw new Error("Invalid verification proof");
+  return proof;
+}
 
 function destinationFor(channel, destination) {
   if (channel === "email") {
@@ -24,7 +43,7 @@ function destinationFor(channel, destination) {
   return null;
 }
 
-router.post("/send", authLimiter, async (req, res) => {
+router.post("/send", onboardingOtpLimiter, async (req, res) => {
   const channel = String(req.body?.channel || "").toLowerCase();
   const destination = destinationFor(channel, req.body?.destination);
   if (!destination) return res.status(400).json({ success: false, message: `Enter a valid ${channel === "email" ? "email address" : "WhatsApp number"}.` });
@@ -52,7 +71,7 @@ router.post("/send", authLimiter, async (req, res) => {
   }
 });
 
-router.post("/verify", authLimiter, (req, res) => {
+router.post("/verify", onboardingOtpLimiter, (req, res) => {
   const sessionId = String(req.body?.sessionId || "");
   const otp = String(req.body?.otp || "").trim();
   const session = sessions.get(sessionId);
@@ -67,10 +86,11 @@ router.post("/verify", authLimiter, (req, res) => {
     return res.status(400).json({ success: false, message: "Incorrect OTP.", attemptsRemaining: MAX_ATTEMPTS - session.attempts });
   }
   sessions.delete(sessionId);
-  return res.json({ success: true, message: `${session.channel === "email" ? "Email" : "WhatsApp"} verified successfully.` });
+  const verificationToken = createVerificationProof(session);
+  return res.json({ success: true, message: `${session.channel === "email" ? "Email" : "WhatsApp"} verified successfully.`, data: { verificationToken, expiresInSeconds: VERIFICATION_PROOF_TTL_SECONDS } });
 });
 
-router.post("/notify-admin", authLimiter, async (req, res) => {
+router.post("/notify-admin", onboardingSubmitLimiter, async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const adminName = String(req.body?.adminName || "").trim();
   const companyName = String(req.body?.companyName || "").trim();
@@ -86,7 +106,7 @@ router.post("/notify-admin", authLimiter, async (req, res) => {
   }
 });
 
-router.post("/sign/start", authLimiter, async (req, res) => {
+router.post("/sign/start", onboardingSubmitLimiter, async (req, res) => {
   const recipientName = String(req.body?.recipientName || "").trim();
   const recipientEmail = normalizeEmail(req.body?.recipientEmail);
   const companyName = String(req.body?.companyName || "").trim();
@@ -101,12 +121,60 @@ router.post("/sign/start", authLimiter, async (req, res) => {
   }
 });
 
-router.post("/sign/status", authLimiter, async (req, res) => {
+router.post("/sign/status", onboardingStatusLimiter, async (req, res) => {
   try {
     const data = await verifySigningSession(req.body?.state);
     return res.json({ success: true, data });
   } catch (error) {
     return res.status(error.status || 502).json({ success: false, message: error.message || "Unable to confirm the Zoho Sign status." });
+  }
+});
+
+router.post("/submit", onboardingSubmitLimiter, async (req, res) => {
+  const emailProofToken = String(req.body?.emailVerificationToken || "");
+  const representativeEmail = normalizeEmail(req.body?.onboarding?.repEmail);
+  try {
+    const proof = readVerificationProof(emailProofToken);
+    if (proof.channel !== "email" || proof.destination !== representativeEmail) throw new Error("Verification proof does not match representative");
+  } catch {
+    return res.status(400).json({ success: false, code: "EMAIL_VERIFICATION_REQUIRED", message: "Representative email verification expired. Verify the email again." });
+  }
+
+  try {
+    let signing = null;
+    let signingArtifacts = [];
+    const signingState = String(req.body?.signingState || "").trim();
+    if (signingState) {
+      const verifiedSigning = await verifySigningSession(signingState);
+      if (verifiedSigning.signed) {
+        if (verifiedSigning.consumed) return res.status(409).json({ success: false, message: "This signed agreement has already been used." });
+        signing = verifiedSigning;
+        signingArtifacts = await downloadSigningArtifacts(signing.requestId);
+      } else if (REQUIRE_ZOHO_SIGNING) {
+        return res.status(400).json({ success: false, message: "Complete the Zoho Sign agreement before submitting onboarding." });
+      }
+    } else if (REQUIRE_ZOHO_SIGNING) {
+      return res.status(400).json({ success: false, message: "Complete the Zoho Sign agreement before submitting onboarding." });
+    }
+    const result = await createClientOnboarding(req.body?.onboarding, { signing, signingState, signingArtifacts });
+    try {
+      await sendAdminOnboardedEmail({
+        email: normalizeEmail(req.body?.onboarding?.adminEmail),
+        adminName: String(req.body?.onboarding?.adminName || "").trim(),
+        companyName: String(req.body?.onboarding?.companyName || "").trim(),
+      });
+    } catch (mailError) {
+      console.error("[CLIENT_ONBOARDING] Welcome email failed after successful onboarding:", mailError);
+    }
+    return res.status(201).json({ success: true, message: "Organization onboarded successfully.", data: result });
+  } catch (error) {
+    console.error("[CLIENT_ONBOARDING] Submission failed:", error);
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.status ? error.message : "Unable to complete onboarding right now.",
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.data ? { data: error.data } : {}),
+    });
   }
 });
 

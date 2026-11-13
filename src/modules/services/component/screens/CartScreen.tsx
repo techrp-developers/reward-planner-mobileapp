@@ -36,7 +36,10 @@ const serviceCartItemsQueryKey = SERVICE_CART_QUERY_KEY;
 
 type NavProps = NativeStackNavigationProp<HomeStackParamList>;
 
+import { getAppliedOffer } from '../../../common/order/appliedOffer';
+
 type ServiceCartItem = {
+  offer?: import('../../../common/order/appliedOffer').AppliedOffer | null;
   id: number | string;
   service_id: number | null;
   variant_id: number | null;
@@ -146,7 +149,8 @@ const normalizeCartItems = (response: any): ServiceCartItem[] => {
       variant_name: item.variant_name,
       description: item.title,
       price: Number(item.price),
-      mrp: Number(item.price),
+      mrp: Number(item.regular_price ?? item.original_price ?? item.price),
+      offer: getAppliedOffer(item),
       imageUrl: item.image_url || item.variant_image
         ? String(item.image_url || item.variant_image)
         : undefined,
@@ -174,7 +178,7 @@ function CartScreen() {
   // paddingBottom on the content wrapper, so the CTA must not also offset by
   // the tab bar height itself (tabBarAware:false) — otherwise it floats above
   // the bottom bar with a visible gap instead of sitting right on top of it.
-  const stickyCTA = useStickyBottomCTA({ tabBarAware: false });
+  const stickyCTA = useStickyBottomCTA();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const pulse = useRef(new Animated.Value(0)).current;
@@ -389,6 +393,7 @@ function CartScreen() {
 
   const renderItem = useCallback(({ item }: { item: ServiceCartItem }) => (
     <CartCard
+      offer={item.offer}
       id={item.id}
       serviceName={item.service_name}
       variantName={item.variant_name}
@@ -443,6 +448,7 @@ function CartScreen() {
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
         <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
         <EmptyCart
+          variant="services"
           onBrowse={() => navigation.goBack()}
           message="Your service cart is empty. Browse services to get started."
         />
@@ -505,8 +511,8 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
-        // Rest flush against the bottom bar; still rise above the keyboard when it's open.
-        bottomOffset={stickyCTA.keyboardHeight > 0 ? stickyCTA.bottomOffset : 0}
+        // Sits above the bottom tab bar, or above the keyboard when it's open.
+        bottomOffset={stickyCTA.bottomOffset}
         onLayout={stickyCTA.onCtaLayout}
       />
     </View>

@@ -160,7 +160,7 @@ const RewardsOverview: React.FC = () => {
             <Text style={styles.eyebrow}>REWARDS</Text>
             <Text style={[styles.title, t.title]}>Overview</Text>
             <Text style={[styles.subtitle, t.subtitle]} numberOfLines={1}>
-              Track your reward points
+              Track your RP points
             </Text>
           </View>
 

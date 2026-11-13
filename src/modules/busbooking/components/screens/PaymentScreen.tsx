@@ -2,7 +2,6 @@ import React from "react";
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,7 +29,6 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import LinearGradient from "react-native-linear-gradient";
-import RazorpayCheckout from "react-native-razorpay";
 import BusBookingStatusPopup, {
   useBusBookingPopup,
 } from "../BusBookingStatusPopup";
@@ -41,13 +39,16 @@ import type {
 
 import {
   createBusPaymentOrderApi,
-  bookBusTicketApi,
-  verifyBusPaymentApi,
 } from "../../services/busBookingApi";
 
 import type {
   CreateBusPaymentOrderResponse,
 } from "../../services/busBookingApi";
+
+import {
+  getBusCheckoutErrorResult,
+  runBusCheckout,
+} from "../../utils/busCheckout";
 
 
 /*
@@ -174,27 +175,6 @@ export default function PaymentScreen() {
       ""
     );
 
-  const traceId =
-    String(
-      blockResponse
-        ?.traceId ||
-      ""
-    ).trim();
-
-  const srdvIndex =
-    String(
-      blockResponse
-        ?.srdvIndex ||
-      ""
-    ).trim();
-
-  const resultIndex =
-    String(
-      blockResponse
-        ?.resultIndex ||
-      ""
-    ).trim();
-
 
   /*
   |--------------------------------------------------------------------------
@@ -273,21 +253,6 @@ export default function PaymentScreen() {
           CreateBusPaymentOrderResponse
       ) => {
 
-        if (
-          !order?.data?.key ||
-          !order?.data?.orderId ||
-          !Number.isFinite(
-            Number(
-              order?.data?.amount
-            )
-          )
-        ) {
-
-          throw new Error(
-            "Razorpay order details are missing."
-          );
-        }
-
         const firstPassenger =
           Array.isArray(
             passengers
@@ -296,127 +261,38 @@ export default function PaymentScreen() {
             ? passengers[0]
             : null;
 
-        const options = {
-          key:
-            order.data.key,
-          amount:
-            Number(
-              order.data.amount
-            ),
-          currency:
-            order.data.currency ||
-            "INR",
-          order_id:
-            order.data.orderId,
-          name:
-            "Rewards Planners",
-          description:
-            `Bus Ticket ${sourceCity} to ${destinationCity}`,
-          prefill: {
-            name:
-              firstPassenger?.fullName ||
-              "Rewards Planners User",
-            contact:
-              firstPassenger?.phone ||
-              "",
-            email:
-              firstPassenger?.email ||
-              "",
-          },
-          theme: {
-            color:
-              "#D31637",
-          },
-        };
-
-        console.log(
-          "[BusBooking][Payment] RAZORPAY OPTIONS",
-          {
-            order_id:
-              options.order_id,
-            amount:
-              options.amount,
-            key:
-              options.key,
-          }
-        );
-
         setProcessingPayment(
           true
         );
 
         try {
-          const paymentResult =
-            await RazorpayCheckout.open(
-              options
-            );
-
-          console.log(
-            "[BusBooking][Payment] RAZORPAY SUCCESS",
-            paymentResult
-          );
-
-          if (
-            !traceId ||
-            !srdvIndex ||
-            !resultIndex
-          ) {
-            throw new Error(
-              "Booking identifiers are missing after payment."
-            );
-          }
-
-          try {
-            await verifyBusPaymentApi({
-              razorpay_order_id: paymentResult.razorpay_order_id,
-              razorpay_payment_id: paymentResult.razorpay_payment_id,
-              razorpay_signature: paymentResult.razorpay_signature,
-            });
-            console.log("[BusBooking][Payment] PAYMENT VERIFIED");
-          } catch (verifyErr: any) {
-            console.log("[BusBooking][Payment] PAYMENT VERIFY WARNING:", verifyErr?.message);
-          }
-
-          const bookingResponse =
-            await bookBusTicketApi({
+          // Razorpay -> verify-payment -> book. Every outcome, including a
+          // cancelled checkout, comes back as a popup to show.
+          const result =
+            await runBusCheckout({
+              order,
               orderRef,
-              order_ref: orderRef,
-              traceId,
-              srdvIndex,
-              resultIndex,
+              description:
+                `Bus Ticket ${sourceCity} to ${destinationCity}`,
+              prefill: {
+                name:
+                  firstPassenger?.fullName ||
+                  "Rewards Planners User",
+                contact:
+                  firstPassenger?.phone ||
+                  "",
+                email:
+                  firstPassenger?.email ||
+                  "",
+              },
             });
 
-          console.log(
-            "[BusBooking][Payment] BOOK SUCCESS",
-            bookingResponse
-          );
-
           showPopup({
-            title: "Booking Confirmed",
-            message: bookingResponse?.ticketNo
-              ? `Ticket No: ${bookingResponse.ticketNo}`
-              : "Bus ticket booked successfully.",
-            variant: "success",
-            onClose: () => navigation.navigate("BookingHomeScreen"),
-          });
-        } catch (error: any) {
-          console.log(
-            "[BusBooking][Payment] RAZORPAY ERROR",
-            error
-          );
-
-          const message =
-            error?.description ||
-            error?.message ||
-            error?.error?.description ||
-            "Payment was cancelled or failed.";
-
-          showPopup({
-            title: String(message).toLowerCase().includes("cancel")
-              ? "Payment Cancelled"
-              : "Payment Failed",
-            message: String(message),
-            variant: String(message).toLowerCase().includes("cancel") ? "warning" : "error",
+            ...result.popup,
+            buttonText: result.leaveCheckout ? 'Go to Home' : result.popup.buttonText,
+            onClose: result.leaveCheckout
+              ? () => navigation.popToTop()
+              : undefined,
           });
         } finally {
           setProcessingPayment(
@@ -427,11 +303,10 @@ export default function PaymentScreen() {
       [
         destinationCity,
         navigation,
+        orderRef,
         passengers,
-        resultIndex,
+        showPopup,
         sourceCity,
-        srdvIndex,
-        traceId,
       ]
     );
 
@@ -541,27 +416,9 @@ export default function PaymentScreen() {
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Existing Razorpay Order
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-          paymentOrder
-            ?.success &&
-          paymentOrder
-            ?.data
-            ?.orderId
-        ) {
-
-          await openRazorpayCheckout(
-            paymentOrder
-          );
-          return;
-        }
-
-
+        // Always ask the backend for the order, even on a retry: it returns
+        // the existing Razorpay order while the seat hold is valid and
+        // rejects the payment (HTTP 410) once the hold has expired.
         try {
 
           setCreatingPaymentOrder(
@@ -664,63 +521,9 @@ export default function PaymentScreen() {
           );
 
 
-          /*
-          |--------------------------------------------------------------------------
-          | CURRENT CHECKPOINT
-          |--------------------------------------------------------------------------
-          |
-          | Razorpay order is now created.
-          |
-          | razorpay_orders should contain:
-          |
-          | module = busbooking
-          | ref_id = BB-ORD-xxxx
-          |
-          |--------------------------------------------------------------------------
-          */
-
           await openRazorpayCheckout(
             response
           );
-
-          return;
-
-
-          Alert.alert(
-            "Payment Order Created",
-            `Order: ${response.data.orderId}\nAmount: ₹${(
-              Number(
-                response
-                  .data
-                  .amount ||
-                0
-              ) /
-              100
-            ).toLocaleString(
-              "en-IN"
-            )}\n\nBus Ref: ${response.data.order_ref}`
-          );
-
-
-          /*
-          |--------------------------------------------------------------------------
-          | NEXT STEP
-          |--------------------------------------------------------------------------
-          |
-          | After this checkpoint works, use the SAME Razorpay Checkout code
-          | already used by your Service module.
-          |
-          | Values to pass into Service Razorpay checkout:
-          |
-          | response.data.key
-          | response.data.orderId
-          | response.data.amount
-          | response.data.currency
-          |
-          | DO NOT call /book here yet.
-          |
-          |--------------------------------------------------------------------------
-          */
 
 
         } catch (
@@ -734,19 +537,20 @@ export default function PaymentScreen() {
           );
 
 
-          const message =
-            String(
-              error?.message ||
-              ""
+          // An expired seat hold (HTTP 410) cannot be paid for any more, so
+          // that case sends the user back to pick seats again.
+          const result =
+            getBusCheckoutErrorResult(
+              error
             );
 
 
           showPopup({
-            title: message.toLowerCase().includes("token")
-              ? "Session Expired"
-              : "Payment Error",
-            message: message || "Unable to create Razorpay payment order.",
-            variant: "error",
+            ...result.popup,
+            buttonText: result.leaveCheckout ? 'Go to Home' : result.popup.buttonText,
+            onClose: result.leaveCheckout
+              ? () => navigation.popToTop()
+              : undefined,
           });
 
 
@@ -767,15 +571,17 @@ export default function PaymentScreen() {
 
         localOrderId,
 
+        navigation,
+
         openRazorpayCheckout,
 
         orderRef,
 
         payableAmount,
 
-        paymentOrder,
-
         selectedSeats,
+
+        showPopup,
 
         sourceCity,
       ]
@@ -1568,7 +1374,7 @@ export default function PaymentScreen() {
                   }
                 >
                   {processingPayment
-                    ? "Opening Payment..."
+                    ? "Processing Payment..."
                     : "Creating Payment..."}
                 </Text>
               </>

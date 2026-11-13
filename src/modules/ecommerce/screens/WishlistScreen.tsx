@@ -335,8 +335,8 @@ const WishlistScreen = () => {
         </View>
 
         <View style={styles.details}>
-          <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>{String(brand).toUpperCase()}</Text>
-          <Text style={[styles.name, { color: theme.secondaryText }]} numberOfLines={2}>{name}</Text>
+          <Text style={[styles.brand, { color: theme.text }]} numberOfLines={2}>{name}</Text>
+          <Text style={[styles.name, { color: theme.secondaryText }]} numberOfLines={1}>{brand}</Text>
 
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -485,17 +485,16 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#333",
-    textTransform: "uppercase",
   },
 
   name: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#666",
     marginTop: 4,
-    fontWeight: "600",
+    fontWeight: "400",
   },
 
   ratingRow: {

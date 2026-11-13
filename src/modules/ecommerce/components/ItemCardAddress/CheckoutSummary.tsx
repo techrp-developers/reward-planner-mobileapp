@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
@@ -61,7 +62,7 @@ export default function CheckoutSummary({
 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={[styles.price, { color: theme.text }]}>₹{total}</Text>
+          <Text style={[styles.price, { color: theme.text }]}>{formatMoney(total)}</Text>
           <Text style={[styles.items, { color: theme.secondaryText }]}>{count} items selected</Text>
         </View>
 

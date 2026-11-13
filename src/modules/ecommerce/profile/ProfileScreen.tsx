@@ -3,11 +3,11 @@
 // API:    GET /v1/auth/user-info  (via getAuthHeaders)
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Svg, Path } from 'react-native-svg';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Alert, Platform, Linking, Switch,
+  Image, ActivityIndicator, Alert, Animated, Easing, Modal, Platform, Linking, PermissionsAndroid, Switch,
   Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,8 +25,12 @@ import { LogoutConfirmationModal } from '../../common/auth/screens/LogoutConfirm
 import { rs, fs } from '../../../utils/responsive';
 import axios from 'axios';
 import Reward from '../../../assets/product/rewards.svg';
-
-const API_BASE_URL = 'https://rewardplanners.com/api/crm';
+import { API_BASE_URL } from '../../../config/apiConfig';
+import { fetchGmcDetails } from '../../inssurance/services/inssuranceApi';
+import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+import Share from 'react-native-share';
+import { useBottomTabsInset } from '../../../bottombar/BottomTabsInsetContext';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -158,6 +162,7 @@ const ProfileScreen: React.FC = () => {
   const theme = appTheme;
   const { isAuthenticated, user: authUser, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const tabBarInset = useBottomTabsInset();
 
   const [userInfo, setUserInfo]         = useState<UserInfo | null>(null);
   const [gmcDetails, setGmcDetails]     = useState<any | null>(null);
@@ -169,6 +174,24 @@ const ProfileScreen: React.FC = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [logoutLoading, setLogoutLoading]           = useState(false);
   const [deleteLoading, setDeleteLoading]           = useState(false);
+  const [deletionScheduled, setDeletionScheduled] = useState<{
+    deadline: string;
+    gracePeriodDays: number;
+  } | null>(null);
+  const [deletionExitLoading, setDeletionExitLoading] = useState(false);
+  const [profileCardPage, setProfileCardPage] = useState(0);
+  const [visitCardQr, setVisitCardQr] = useState<string | null>(null);
+  const [visitCardHeaders, setVisitCardHeaders] = useState<Record<string, string>>({});
+  const [, setVisitCardLoading] = useState(false);
+  const [visitCardRequested, setVisitCardRequested] = useState(false);
+  const [visitCardModalVisible, setVisitCardModalVisible] = useState(false);
+  const [mediclaimCardModalVisible, setMediclaimCardModalVisible] = useState(false);
+  const [visitCardExporting, setVisitCardExporting] = useState(false);
+  const [visitCardActionsHidden, setVisitCardActionsHidden] = useState(false);
+  const visitCardCaptureRef = useRef<ViewShotRef>(null);
+  const cardFlipAnimation = useRef(new Animated.Value(0)).current;
+
+  const cardWidth = Dimensions.get('window').width - rs(40);
 
   const topPadding =
     (insets.top > 0 ? insets.top : Platform.OS === 'android' ? 24 : 50) + 8;
@@ -316,6 +339,79 @@ const ProfileScreen: React.FC = () => {
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
+  const loadVisitCardQr = useCallback(async (): Promise<string | null> => {
+    if (visitCardQr) return visitCardQr;
+    try {
+      setVisitCardLoading(true);
+      const headers = await getAuthHeaders();
+      if (!headers.Authorization) throw new Error('Please sign in again to view your visiting card.');
+      const qrUri = `${API_BASE_URL}/v1/auth/visit-card/qr`;
+      setVisitCardHeaders(headers as Record<string, string>);
+      setVisitCardQr(qrUri);
+      return qrUri;
+    } catch (error: any) {
+      Alert.alert('Visiting card unavailable', error?.message || 'Could not load your QR code. Please try again.');
+      return null;
+    } finally {
+      setVisitCardLoading(false);
+    }
+  }, [visitCardQr]);
+
+  const captureVisitCard = useCallback(async () => {
+    if (!visitCardCaptureRef.current) throw new Error('The visiting card is not ready yet.');
+    setVisitCardActionsHidden(true);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    try { return await visitCardCaptureRef.current.capture(); }
+    finally { setVisitCardActionsHidden(false); }
+  }, []);
+
+  const handleDownloadVisitCard = useCallback(async () => {
+    try {
+      setVisitCardExporting(true);
+      if (Platform.OS === 'android' && Number(Platform.Version) <= 28) {
+        const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) return;
+      }
+      const uri = await captureVisitCard();
+      await CameraRoll.save(uri, { type: 'photo', album: Platform.OS === 'android' ? 'Reward Planners' : undefined });
+      Alert.alert('Card saved', 'Your visiting card JPG has been saved to Photos.');
+    } catch (error: any) {
+      Alert.alert('Could not save card', error?.message || 'Please try again.');
+    } finally { setVisitCardExporting(false); }
+  }, [captureVisitCard]);
+
+  const handleShareVisitCard = useCallback(async () => {
+    try {
+      setVisitCardExporting(true);
+      const uri = await captureVisitCard();
+      await Share.open({
+        title: `${displayName}'s visiting card`,
+        message: [displayName, userInfo?.employeeInfo?.role, userInfo?.company?.name, userInfo?.phone, userInfo?.email].filter(Boolean).join('\n'),
+        url: uri,
+        type: 'image/jpeg',
+        failOnCancel: false,
+      });
+    } catch (error: any) {
+      Alert.alert('Could not share card', error?.message || 'Please try again.');
+    } finally { setVisitCardExporting(false); }
+  }, [captureVisitCard, displayName, userInfo]);
+
+  const handleOpenVisitCard = useCallback(() => {
+    cardFlipAnimation.setValue(0);
+    setVisitCardModalVisible(true);
+  }, [cardFlipAnimation]);
+
+  const handleVisitCardModalShown = useCallback(() => {
+    Animated.timing(cardFlipAnimation, { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [cardFlipAnimation]);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && !visitCardRequested) {
+      setVisitCardRequested(true);
+      loadVisitCardQr();
+    }
+  }, [isAuthenticated, loadVisitCardQr, loading, visitCardRequested]);
+
   if (loading) {
     return (
       <View style={[styles.loader, { backgroundColor: theme.background }]}>
@@ -341,7 +437,7 @@ const ProfileScreen: React.FC = () => {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: rs(56) }}
+        contentContainerStyle={{ paddingBottom: rs(56) + tabBarInset }}
         bounces
       >
         {/* ════════════════════════════════════
@@ -364,6 +460,7 @@ const ProfileScreen: React.FC = () => {
           <View style={{ width: '100%' }}>
             <ScrollView
               horizontal
+              scrollEnabled={false}
               showsHorizontalScrollIndicator={false}
               snapToInterval={cardWidth + rs(12)}
               decelerationRate="fast"
@@ -452,8 +549,8 @@ const ProfileScreen: React.FC = () => {
                   </View>
                 </View>
               </LinearGradient>
-              {/* Card 2: GMC Digital Insurance Card (Policybazaar Theme) */}
-              {gmcDetails && (
+              {/* The mediclaim card now opens from the My Cards directory below. */}
+              {false && gmcDetails && (
                 <View style={[styles.pbCardShadowWrapper, { width: cardWidth }]}>
                   <LinearGradient
                     colors={['#009ac7', '#007ca5', '#005b7f']}
@@ -537,7 +634,7 @@ const ProfileScreen: React.FC = () => {
             </ScrollView>
 
             {/* Pagination indicator dots */}
-            {gmcDetails && (
+            {false && gmcDetails && (
               <View style={styles.paginationRow}>
                 <View style={[styles.pagDot, profileCardPage === 0 ? styles.pagDotActive : styles.pagDotInactive]} />
                 <View style={[styles.pagDot, profileCardPage === 1 ? styles.pagDotActive : styles.pagDotInactive]} />
@@ -550,6 +647,47 @@ const ProfileScreen: React.FC = () => {
             STATS ROW — Reward pts (big) + company logo
         ════════════════════════════════════ */}
         <View style={styles.body}>
+          {isDashboardProfile && (
+            <>
+              <SectionHead title="My Cards" isDark={isDark} />
+              <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={handleOpenVisitCard} activeOpacity={0.78}>
+                <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
+                  <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={styles.cardDirectoryCopy}>
+                  <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Visiting Card</Text>
+                  <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view, download or share your digital card</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
+              </TouchableOpacity>
+              {gmcDetails && (
+                <TouchableOpacity
+                  style={[styles.cardDirectoryItem, styles.cardDirectorySpacing, cardColor(isDark, theme)]}
+                  onPress={() => setMediclaimCardModalVisible(true)}
+                  activeOpacity={0.78}
+                >
+                  <LinearGradient colors={['#009AC7', '#005B7F']} style={[styles.cardDirectoryIcon, styles.mediclaimThumbnail]}>
+                    <View style={styles.mediclaimLogoRow}>
+                      <View style={styles.mediclaimCareBox}>
+                        <Text style={styles.mediclaimCareText}>care</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.mediclaimHealthText}>HEALTH</Text>
+                        <Text style={styles.mediclaimInsuranceText}>INSURANCE</Text>
+                      </View>
+                    </View>
+                    <View style={styles.mediclaimCardLine} />
+                    <View style={styles.mediclaimCardLineShort} />
+                  </LinearGradient>
+                  <View style={styles.cardDirectoryCopy}>
+                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Mediclaim Card</Text>
+                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view your health insurance card</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={21} color="#007CA5" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
 
           {/* ════════════════════════════════════
               CONTACT INFO
@@ -743,6 +881,104 @@ const ProfileScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      <Modal visible={mediclaimCardModalVisible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setMediclaimCardModalVisible(false)}>
+        <View style={styles.mediclaimModalBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setMediclaimCardModalVisible(false)} accessibilityLabel="Close mediclaim card" />
+          <View style={styles.mediclaimModalContent}>
+            <View style={styles.mediclaimModalHeader}>
+              <Text style={styles.mediclaimModalTitle}>Mediclaim Card</Text>
+              <TouchableOpacity style={styles.mediclaimModalClose} onPress={() => setMediclaimCardModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <LinearGradient colors={['#009AC7', '#007CA5', '#005B7F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.mediclaimPreviewCard}>
+              <CardPattern />
+              <View style={styles.pbCardUpperContent}>
+                <View style={styles.pbCardHeader}>
+                  <View style={styles.pbLogoRow}>
+                    <Text style={styles.pbLogoText}>policybazaar</Text>
+                    <View style={styles.pbDotComBox}><Text style={styles.pbDotComText}>.com</Text></View>
+                  </View>
+                  <View style={styles.pbActiveBadge}>
+                    <View style={styles.pbActiveIconCircle}><MaterialCommunityIcons name="check" size={8} color="#10B981" /></View>
+                    <Text style={styles.pbActiveText}>Active Policy</Text>
+                  </View>
+                </View>
+                <View style={styles.pbCardMiddle}>
+                  <View style={styles.pbMiddleLeft}>
+                    <Text style={styles.pbNameText}>{gmcDetails?.name || displayName}</Text>
+                    <Text style={styles.pbInsurerText}>{gmcDetails?.policy_company_name || 'Care Health Insurance'}</Text>
+                    <Text style={styles.pbPolicyLabel}>Policy No.</Text>
+                    <Text style={styles.pbPolicyNoText}>{gmcDetails?.policy_number || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.pbMiddleRight}>
+                    <View style={styles.pbOrbOuterRing}><View style={styles.pbOrbInnerRing}><View style={styles.pbShieldIconBox}><MaterialCommunityIcons name="shield" size={26} color="#FFFFFF" /></View></View></View>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.pbBottomPanel}>
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Member ID</Text><Text style={styles.pbBottomVal}>{gmcDetails?.member_id || '—'}</Text></View></View>
+                <View style={styles.pbVerticalLine} />
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="calendar-clock" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Valid Till</Text><Text style={styles.pbBottomVal}>{gmcDetails?.valid_till || '—'}</Text></View></View>
+                <View style={styles.pbVerticalLine} />
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Policy Type</Text><Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails?.policy_type || 'Group Card'}</Text></View></View>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={visitCardModalVisible} transparent animationType="fade" statusBarTranslucent onShow={handleVisitCardModalShown} onRequestClose={() => setVisitCardModalVisible(false)}>
+        <View style={styles.cardModalBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel="Close visiting card" />
+          <View style={styles.cardModalSheet}>
+            <View style={styles.cardModalHandle} />
+            <View style={styles.cardModalHeader}>
+              <TouchableOpacity style={styles.cardModalClose} onPress={() => setVisitCardModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <Animated.View style={[styles.businessCardFlipWrap, { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnimation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>
+              <ViewShot ref={visitCardCaptureRef} options={{ format: 'jpg', quality: 0.95, result: 'tmpfile', fileName: 'reward-planners-visiting-card' }} style={styles.businessCardCapture}>
+                <LinearGradient colors={['#09090B', '#18181B', '#312E81']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.businessCard} collapsable={false}>
+                  <View style={styles.businessCardHeader}>
+                    {userInfo?.company?.logo ? <Image source={{ uri: userInfo.company.logo }} style={styles.businessCompanyLogo} resizeMode="contain" /> : <MaterialCommunityIcons name="office-building-outline" size={28} color="#FFFFFF" />}
+                  </View>
+                  <View style={styles.businessCardBody}>
+                    <View style={styles.businessAvatar}>
+                      {(avatarUri || userInfo?.userImage) ? <Image source={{ uri: (avatarUri || userInfo?.userImage)! }} style={styles.businessAvatarImage} /> : <Text style={styles.businessInitial}>{displayName.trim().charAt(0).toUpperCase() || 'U'}</Text>}
+                    </View>
+                    <Text style={styles.businessName} numberOfLines={1}>{displayName}</Text>
+                    {emp?.role ? <Text style={styles.businessRole}>{emp.role}</Text> : null}
+                    {userInfo?.company?.name ? <Text style={styles.businessCompany}>{userInfo.company.name}</Text> : null}
+                    <View style={styles.businessContacts}>
+                      {userInfo?.phone ? <BusinessContact icon="phone-outline" value={formatPhone(userInfo.phone)} /> : null}
+                      {userInfo?.email ? <BusinessContact icon="email-outline" value={userInfo.email} /> : null}
+                    </View>
+                    <View style={styles.businessQrColumn}>
+                      <View style={styles.businessQrBox}>
+                        {visitCardQr ? <Image source={{ uri: visitCardQr, headers: visitCardHeaders }} style={styles.businessQr} resizeMode="contain" /> : <ActivityIndicator color="#4F46E5" />}
+                      </View>
+                      <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
+                    </View>
+                    <View style={[styles.businessCardActions, visitCardActionsHidden && styles.businessCardActionsHidden]}>
+                      <TouchableOpacity style={styles.businessDownloadButton} onPress={handleDownloadVisitCard} disabled={visitCardExporting}>
+                        {visitCardExporting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="download-outline" size={17} color="#FFFFFF" />}
+                        <Text style={styles.businessShareText}>Download</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} disabled={visitCardExporting}>
+                        <MaterialCommunityIcons name="share-variant-outline" size={17} color="#FFFFFF" />
+                        <Text style={styles.businessShareText}>Share</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </ViewShot>
+            </Animated.View>
+          </View>
+        </View>
+      </Modal>
+
       <LogoutConfirmationModal
         visible={logoutModalVisible}
         isLoading={logoutLoading}
@@ -783,6 +1019,15 @@ const ProfileScreen: React.FC = () => {
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const BusinessContact = ({ icon, value }: { icon: string; value: string }) => (
+  <View style={styles.businessContactRow}>
+    <View style={styles.businessContactIcon}>
+      <MaterialCommunityIcons name={icon} size={11} color="#FFFFFF" />
+    </View>
+    <Text style={styles.businessContactText} numberOfLines={1}>{value}</Text>
+  </View>
+);
 
 const SectionHead = ({ title, isDark, action, onAction }: {
   title: string; isDark: boolean; action?: string; onAction?: () => void;
@@ -1038,6 +1283,58 @@ const styles = StyleSheet.create({
   secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: rs(22), marginBottom: rs(9), marginLeft: rs(10), marginRight: rs(8) },
   secTitle: { fontSize: fs(10), fontWeight: '800', letterSpacing: 0.6 },
   secAction: { fontSize: fs(12), color: '#4F46E5', fontWeight: '800' },
+
+  cardDirectoryItem: { minHeight: rs(78), borderRadius: rs(18), borderWidth: 1, padding: rs(12), flexDirection: 'row', alignItems: 'center', gap: rs(11), elevation: 2, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  cardDirectorySpacing: { marginTop: rs(10) },
+  cardDirectoryIcon: { width: rs(50), height: rs(50), borderRadius: rs(15), alignItems: 'center', justifyContent: 'center' },
+  mediclaimThumbnail: { alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: rs(5), paddingVertical: rs(7), overflow: 'hidden' },
+  mediclaimLogoRow: { flexDirection: 'row', alignItems: 'center', gap: rs(2) },
+  mediclaimCareBox: { backgroundColor: '#FBBF24', borderRadius: rs(2), paddingHorizontal: rs(3), paddingVertical: rs(1) },
+  mediclaimCareText: { color: '#0F172A', fontSize: fs(6), lineHeight: fs(7), fontWeight: '900' },
+  mediclaimHealthText: { color: '#FBBF24', fontSize: fs(4), lineHeight: fs(5), fontWeight: '900' },
+  mediclaimInsuranceText: { color: '#FFFFFF', fontSize: fs(3), lineHeight: fs(4), fontWeight: '800' },
+  mediclaimCardLine: { width: '88%', height: rs(2), borderRadius: rs(1), backgroundColor: 'rgba(255,255,255,0.78)' },
+  mediclaimCardLineShort: { width: '58%', height: rs(2), borderRadius: rs(1), backgroundColor: 'rgba(255,255,255,0.48)' },
+  mediclaimModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', paddingHorizontal: rs(16) },
+  mediclaimModalContent: { width: '100%' },
+  mediclaimModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: rs(12), paddingHorizontal: rs(4) },
+  mediclaimModalTitle: { color: '#FFFFFF', fontSize: fs(18), fontWeight: '900' },
+  mediclaimModalClose: { width: rs(38), height: rs(38), borderRadius: rs(19), alignItems: 'center', justifyContent: 'center', backgroundColor: '#27272A' },
+  mediclaimPreviewCard: { width: '100%', aspectRatio: 1.58, borderRadius: rs(22), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  mediclaimFieldCopy: { marginLeft: rs(4), flex: 1 },
+  cardDirectoryCopy: { flex: 1, minWidth: 0 },
+  cardDirectoryTitle: { fontSize: fs(14), fontWeight: '900' },
+  cardDirectorySubtitle: { fontSize: fs(9), lineHeight: fs(13), fontWeight: '600', marginTop: rs(3) },
+  cardModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'flex-end' },
+  cardModalSheet: { height: '90%', borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24), paddingHorizontal: rs(16), paddingTop: rs(8), paddingBottom: rs(16), elevation: 20, backgroundColor: '#000000' },
+  cardModalHandle: { width: rs(40), height: rs(4), borderRadius: rs(2), backgroundColor: '#71717A', opacity: 0.7, alignSelf: 'center', marginBottom: rs(8) },
+  cardModalHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: rs(8) },
+  cardModalClose: { width: rs(36), height: rs(36), borderRadius: rs(18), alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' },
+  businessCardFlipWrap: { width: '100%', flex: 1, backfaceVisibility: 'hidden' },
+  businessCardCapture: { width: '100%', flex: 1, borderRadius: rs(24), overflow: 'hidden', backgroundColor: '#09090B' },
+  businessCard: { width: '100%', flex: 1, minHeight: rs(500), borderRadius: rs(24), padding: rs(16), overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(129,140,248,0.28)' },
+  businessCardHeader: { alignItems: 'center', marginBottom: rs(12) },
+  businessCompanyLogo: { width: rs(112), height: rs(42) },
+  businessCardBody: { flex: 1, alignItems: 'center' },
+  businessAvatar: { width: rs(92), height: rs(92), borderRadius: rs(46), borderWidth: 4, borderColor: '#818CF8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5' },
+  businessAvatarImage: { width: '100%', height: '100%' },
+  businessInitial: { color: '#FFFFFF', fontSize: fs(32), fontWeight: '900' },
+  businessName: { color: '#FFFFFF', fontSize: fs(25), fontWeight: '900', textAlign: 'center', marginTop: rs(8) },
+  businessRole: { color: '#A5B4FC', fontSize: fs(12), fontWeight: '700', marginTop: rs(4), textAlign: 'center' },
+  businessCompany: { color: '#C4B5FD', fontSize: fs(12), fontWeight: '800', marginTop: rs(5), textAlign: 'center' },
+  businessContacts: { width: '82%', gap: rs(8), marginTop: rs(16) },
+  businessContactRow: { flexDirection: 'row', alignItems: 'center', gap: rs(7) },
+  businessContactIcon: { width: rs(26), height: rs(26), borderRadius: rs(13), backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
+  businessContactText: { flex: 1, color: 'rgba(255,255,255,0.90)', fontSize: fs(11), fontWeight: '600' },
+  businessQrColumn: { alignItems: 'center', gap: rs(8), marginTop: rs(16) },
+  businessQrBox: { width: rs(132), height: rs(132), padding: rs(8), borderRadius: rs(17), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  businessQr: { width: '100%', height: '100%' },
+  businessScanText: { color: '#C4B5FD', fontSize: fs(7), fontWeight: '900', letterSpacing: 0.6 },
+  businessCardActions: { width: '100%', flexDirection: 'row', gap: rs(10), marginTop: rs(18) },
+  businessCardActionsHidden: { opacity: 0 },
+  businessDownloadButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), borderRadius: rs(14), backgroundColor: '#27272A', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  businessShareButton: { flex: 1, minHeight: rs(48), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7), borderRadius: rs(14), backgroundColor: '#4F46E5' },
+  businessShareText: { color: '#FFFFFF', fontSize: fs(13), fontWeight: '900' },
 
   card: {
     borderRadius: rs(18),
@@ -1515,6 +1812,8 @@ const styles = StyleSheet.create({
   pbBottomPanel: {
     position: 'absolute',
     bottom: -1,
+    left: 0,
+    right: 0,
     height: rs(58),
     backgroundColor: '#F8FAFC',
     borderBottomLeftRadius: 0,
@@ -1657,4 +1956,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
-

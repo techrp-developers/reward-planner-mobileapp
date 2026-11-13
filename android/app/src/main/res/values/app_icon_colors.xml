@@ -1,0 +1,6 @@
+<resources>
+    <color name="app_icon_default_background">#FFFFFF</color>
+    <color name="app_icon_navratri_background">#920900</color>
+    <color name="app_icon_dasera_background">#09030D</color>
+    <color name="app_icon_diwali_background">#FFFFFF</color>
+</resources>

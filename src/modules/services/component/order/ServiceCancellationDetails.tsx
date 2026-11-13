@@ -348,7 +348,7 @@ export default function ServiceCancellationDetails() {
               <RefundStatusRow
                 icon="star-four-points-outline"
                 amount={details.refund.coin_refund.toLocaleString('en-IN')}
-                label="Reward Coins Reversed"
+                label="RP Points Reversed"
                 status={details.refund.coin_refund > 0 ? 'Completed' : 'Pending'}
               />
             </>

@@ -11,9 +11,9 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import LinearGradient from "react-native-linear-gradient";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -23,6 +23,8 @@ import {
   fetchProductDetailsByID,
 } from "../../api/ProductApi";
 import { getCampaignHome, getCampaignProducts } from "../../api/CampaignAPI";
+import { openCampaignPoster } from '../../utils/campaignNavigation';
+import { getPromotionalContent } from "../../api/ContentOfferAPI";
 import { queryClient } from "../../../../query/queryClient";
 import { HomeStackParamList } from "../../navigation/types";
 import BgSales from "../../../../assets/homepage/Flash_Sale_Bg.svg";
@@ -32,23 +34,57 @@ import {
   productDetailsQueryKey,
 } from "../../navigation/navigationPerformance";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import { fetchResolvedZones } from "../../../common/cms/cmsContentApi";
+import type { CmsModuleKey, CmsOfferImage as ContentZoneImage } from "../../../common/cms/cmsContentApi";
+import { useModuleContent, moduleContentQueryKey } from "../../../common/cms/useModuleContent";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
 const OFFER_WIDTH = SCREEN_WIDTH * 0.38;
-const OFFER_HEIGHT = OFFER_WIDTH * 1.8;
+const OFFER_HEIGHT = OFFER_WIDTH * 1.25;
 const CARD_WIDTH = Math.round(Math.min(Math.max(SCREEN_WIDTH * 0.33, 120), 170));
 const IMAGE_BOX_HEIGHT = Math.round(CARD_WIDTH * 0.72);
 const CARD_MARGIN = 8;
 const CAMPAIGN_HOME_QUERY_KEY = ["ecommerce", "home", "campaign-home"] as const;
+const PROMOTIONAL_CONTENT_QUERY_KEY = ["ecommerce", "home", "promotional-content"] as const;
 const FLASH_PRODUCTS_QUERY_KEY = (campaignId: number | string) =>
   ["ecommerce", "home", "flash-products", campaignId] as const;
-// The campaign-home endpoint can omit flash_sales even while the dedicated
-// flash-sale campaign remains available. Keep the configured campaign visible
-// until the API starts returning an active flash sale again.
-const DEFAULT_FLASH_CAMPAIGN_ID = 4;
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
+
+const OfferSlideImage = React.memo(({ uri }: { uri: string | null | undefined }) => {
+  const { isDark } = useAppTheme();
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  const showImage = !!uri && !failed;
+
+  return (
+    <View
+      style={[
+        styles.offerImage,
+        { backgroundColor: isDark ? "#111827" : "#FFF8E7" },
+      ]}
+    >
+      {showImage ? (
+        <RNImage
+          source={{ uri: uri as string }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="contain"
+          onError={(event) => {
+            console.log('[CMS] Offer image failed:', uri, event.nativeEvent);
+            setFailed(true);
+          }}
+        />
+      ) : null}
+    </View>
+  );
+});
+
+OfferSlideImage.displayName = "OfferSlideImage";
 
 const hasWishlistFlag = (item: any) =>
   item?.is_wishlist !== undefined || item?.is_wishlisted !== undefined;
@@ -208,7 +244,7 @@ const FlashOfferProductCard = React.memo(({
         rpPriceValue > 0
           ? `₹${rpPriceValue.toLocaleString()}`
           : null,
-      brandName: item.brand || "brand_name",
+      brandName: item.brand || item.brand_name || '',
       productTitle: item.title || item.product_name || "Product Title",
       imageUrl: getProductImageUrl(Array.isArray(item.images) ? item.images[0] : item.image),
     };
@@ -217,9 +253,15 @@ const FlashOfferProductCard = React.memo(({
   const handlePress = () => {
     if (!productId) return;
     handleNavigateWithPrefetch({
-      navigate: () => navigation.navigate("ProductDescription", { productId: String(productId) }),
-      queryKey: productDetailsQueryKey(String(productId)),
-      queryFn: () => fetchProductDetailsByID(String(productId)),
+      navigate: () =>
+        navigation.navigate("ProductDescription", {
+          productId: String(productId),
+          variantId: variantId == null ? undefined : String(variantId),
+          campaignId: item.campaign_id,
+          contentId: item.content_id,
+        }),
+        queryKey: productDetailsQueryKey(String(productId), item.campaign_id, item.content_id),
+        queryFn: () => fetchProductDetailsByID(String(productId), item.campaign_id, item.content_id),
     });
   };
 
@@ -297,8 +339,8 @@ const FlashOfferProductCard = React.memo(({
       </View>
 
       <View style={styles.infoArea}>
-        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>{displayData.brandName.toUpperCase()}</Text>
-        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.productTitle}</Text>
+        <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={2}>{displayData.productTitle}</Text>
+        <Text style={[styles.titleText, { color: theme.secondaryText }]} numberOfLines={1}>{displayData.brandName}</Text>
 
         <View style={styles.priceRow}>
           <Text style={styles.currentPrice}>₹{displayData.priceText}</Text>
@@ -334,64 +376,142 @@ FlashOfferProductCard.displayName = 'FlashOfferProductCard';
 // ---------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------
-export default function OfferHome() {
+type Props = {
+  module?: CmsModuleKey;
+};
+
+// The CMS offers-banner carousel below is module-generic; the flash-sale /
+// campaign / wishlist section is ecommerce (Product) specific business
+// logic and is intentionally NOT parameterized by module.
+export default function OfferHome({ module = "product" }: Props) {
   const navigation = useNavigation<Nav>();
+  const focused = useIsFocused();
   const { theme } = useAppTheme();
+  const { moduleContent } = useModuleContent(module);
+  const cmsOffersBanner = moduleContent?.offers_banner ?? null;
+
+  console.log('[CMS] Offers banner module:', module);
+  console.log('[CMS] Offers banner:', JSON.stringify(cmsOffersBanner));
+  console.log('[CMS] Offers images:', JSON.stringify(cmsOffersBanner?.images));
 
   const { data: campaignHome, isLoading: isCampaignLoading } = useQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
-    queryFn: getCampaignHome,
-    staleTime: 10 * 60 * 1000,
+    queryFn: () => getCampaignHome(),
+    staleTime: 30 * 1000,
+    refetchInterval: focused ? 30 * 1000 : false,
+  });
+  const { data: promotionalContent } = useQuery({
+    queryKey: PROMOTIONAL_CONTENT_QUERY_KEY,
+    queryFn: getPromotionalContent,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const flashCampaignId =
-    campaignHome?.data?.flash_sales?.[0]?.campaign_id ?? DEFAULT_FLASH_CAMPAIGN_ID;
+  const flashSales = campaignHome?.data?.show_flash_sale === false ? [] : campaignHome?.data?.flash_sales ?? [];
+  const flashCampaignId = flashSales[0]?.campaign_id;
 
-  const { data: products = [], isLoading: isProductsLoading } = useQuery({
-    queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId!),
-    queryFn: () => getCampaignProducts(flashCampaignId!),
-    enabled: flashCampaignId != null,
-    staleTime: 5 * 60 * 1000,
-    select: (res) =>
-      (res.data ?? []).map((p) => ({
+  const flashQueries = useQueries({ queries: flashSales.map(sale => ({
+    queryKey: FLASH_PRODUCTS_QUERY_KEY(sale.campaign_id),
+    queryFn: () => getCampaignProducts(sale.campaign_id),
+    staleTime: 30 * 1000,
+    refetchInterval: focused ? 30 * 1000 : false,
+    select: (res: Awaited<ReturnType<typeof getCampaignProducts>>) =>
+      (res.show_section === false ? [] : res.data ?? []).map((p) => ({
         id: p.id,
+        sale_campaign_id: sale.campaign_id,
         product_id: p.product_id,
         variant_id: p.variant_id,
+        campaign_id: p.campaign_id ?? undefined,
+        content_id: p.content_id ?? undefined,
         product_name: p.product_name,
         title: p.product_name,
         brand: p.brand_name || '',
-        price: p.price ?? p.final_price,
+        price: p.price ?? p.sale_price ?? p.final_price,
         mrp: p.mrp,
-        originalPrice: p.originalPrice ?? p.mrp,
+        originalPrice: p.original_sale_price ?? p.originalPrice ?? p.mrp,
         discount: p.discount,
         rp_price: p.rp_price,
         image: p.image || null,
         images: p.image ? [p.image] : [],
-        is_wishlisted: false,
+        is_wishlisted: p.is_wishlisted ?? p.is_wishlist ?? false,
       })),
-  });
+  })) });
+  const products = flashQueries.flatMap(query => query.data ?? []);
+  const isProductsLoading = flashQueries.some(query => query.isLoading);
 
-  const banner = useMemo(() =>
-    (campaignHome?.data?.posters ?? []).map(p => ({
-      id: p.campaign_id,
+  const banner = useMemo(() => {
+    const campaignBanners = (campaignHome?.data?.posters ?? []).map(p => ({
+      id: `campaign-${p.campaign_id}`,
+      campaignId: p.campaign_id,
+      contentId: undefined as number | undefined,
       title: p.title,
       image: p.banner_image,
       redirectType: p.redirect_type,
       redirectId: p.redirect_id,
       redirectUrl: p.redirect_url,
-    })),
-    [campaignHome]
-  );
+      poster: p,
+    }));
+    if (!promotionalContent?.contentId || !promotionalContent.imageUrl) return campaignBanners;
+    return [...campaignBanners, {
+      id: `content-${promotionalContent.contentId}`,
+      campaignId: undefined,
+      contentId: promotionalContent.contentId,
+      title: promotionalContent.title || 'Special offer',
+      image: promotionalContent.imageUrl,
+      redirectType: null,
+      redirectId: null,
+      redirectUrl: null,
+      poster: undefined,
+    }];
+  }, [campaignHome, promotionalContent]);
+
+  const cmsOffersSlides = useMemo(() => {
+    if (cmsOffersBanner?.content_type !== "image") return [];
+
+    const gallery: ContentZoneImage[] = Array.isArray(cmsOffersBanner.images)
+      ? cmsOffersBanner.images
+      : [];
+
+    return gallery
+      .filter((img) => Number(img?.is_active) === 1)
+      .slice()
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+      .map((img) => {
+        console.log('[CMS] Offer image:', {
+          imageId: img.image_id,
+          imageUrl: img.image_url,
+          sortOrder: img.sort_order,
+          isActive: img.is_active,
+        });
+        return {
+          id: String(img.image_id ?? `${cmsOffersBanner.content_id}_${img.sort_order}`),
+          image: img.image_url,
+        };
+      })
+      .filter((slide) => !!slide.image);
+  }, [cmsOffersBanner]);
+
+  const hasCmsOffersColor =
+    cmsOffersSlides.length === 0 &&
+    cmsOffersBanner?.content_type === "color" &&
+    !!cmsOffersBanner.color_value;
+  const shouldShowCmsOffersBanner =
+    cmsOffersSlides.length > 0 || hasCmsOffersColor;
 
   const flashSalesPoster = useMemo(() => {
+    if (campaignHome?.data?.flash_sales?.length !== 1) return null;
     const flash = campaignHome?.data?.flash_sales?.[0];
     return flash?.banner_image ?? null;
   }, [campaignHome]);
 
   const handleBannerPress = (offer: typeof banner[number]) => {
-    if (offer.redirectType === 'category' && offer.redirectId != null) {
-      navigation.navigate('Category', {
-        categoryId: offer.redirectId,
+    if (offer.poster) {
+      openCampaignPoster(navigation, offer.poster);
+      return;
+    }
+    if (offer.campaignId != null || offer.contentId != null) {
+      navigation.navigate('CampaignProducts', {
+        campaignId: offer.campaignId,
+        contentId: offer.contentId,
         title: offer.title,
       });
     } else if (offer.redirectType === 'url' && offer.redirectUrl) {
@@ -406,7 +526,46 @@ export default function OfferHome() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Banner Carousel */}
-      {banner.length > 0 && (
+      {shouldShowCmsOffersBanner ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.offersScroll}
+        >
+          {cmsOffersSlides.length > 0 ? (
+            cmsOffersSlides.map((offer) => (
+              <TouchableOpacity
+                key={offer.id}
+                style={[styles.offerCard, { backgroundColor: theme.card }]}
+                activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
+                onPress={() => {
+                  if (cmsOffersBanner?.redirect_link) {
+                    Linking.openURL(cmsOffersBanner.redirect_link).catch(() => undefined);
+                  }
+                }}
+                disabled={!cmsOffersBanner?.redirect_link}
+              >
+                <OfferSlideImage uri={offer.image} />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.offerCard,
+                { backgroundColor: cmsOffersBanner!.color_value! },
+              ]}
+              activeOpacity={cmsOffersBanner?.redirect_link ? 0.85 : 1}
+              onPress={() => {
+                if (cmsOffersBanner?.redirect_link) {
+                  Linking.openURL(cmsOffersBanner.redirect_link).catch(() => undefined);
+                }
+              }}
+              disabled={!cmsOffersBanner?.redirect_link}
+            />
+          )}
+        </ScrollView>
+      ) : null}
+      {banner.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -419,14 +578,14 @@ export default function OfferHome() {
               activeOpacity={0.85}
               onPress={() => handleBannerPress(offer)}
             >
-              <RNImage source={{ uri: offer.image }} style={styles.offerImage} resizeMode="cover" />
+              <OfferSlideImage uri={offer.image} />
             </TouchableOpacity>
           ))}
         </ScrollView>
-      )}
+      ) : null}
 
       {/* Flash Sales Section */}
-      <View style={styles.flashSectionContainer}>
+      {flashCampaignId != null && products.length > 0 && <View style={styles.flashSectionContainer}>
         <BgSales style={StyleSheet.absoluteFillObject} preserveAspectRatio="xMidYMid slice" />
         <View style={styles.flashContentRow}>
           <View style={styles.flashLeft}>
@@ -453,7 +612,7 @@ export default function OfferHome() {
           >
             {products.map((item: any, index: number) => (
               <View
-                key={String(item?.id ?? item?.product_id ?? index)}
+                key={`${item.sale_campaign_id}:${item.product_id}:${item.variant_id}`}
                 style={index < products.length - 1 ? styles.flashProductItem : undefined}
               >
                 <FlashOfferProductCard item={item} shouldLoadImage />
@@ -461,20 +620,26 @@ export default function OfferHome() {
             ))}
           </ScrollView>
         </View>
-      </View>
+      </View>}
     </View>
   );
 }
 
-export const prefetchOfferHomeSection = async () => {
+export const prefetchOfferHomeSection = async (module: CmsModuleKey = "product") => {
+  await queryClient.prefetchQuery({
+    queryKey: moduleContentQueryKey(module),
+    queryFn: () => fetchResolvedZones(module),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const campaignHome = await queryClient.fetchQuery({
     queryKey: CAMPAIGN_HOME_QUERY_KEY,
-    queryFn: getCampaignHome,
+    queryFn: () => getCampaignHome(),
     staleTime: 10 * 60 * 1000,
   });
 
   const flashCampaignId = campaignHome?.data?.flash_sales?.[0]?.campaign_id;
-  if (flashCampaignId == null) return;
+  if (campaignHome?.data?.show_flash_sale === false || flashCampaignId == null) return;
 
   await queryClient.prefetchQuery({
     queryKey: FLASH_PRODUCTS_QUERY_KEY(flashCampaignId),

@@ -18,6 +18,15 @@ function toDateObject(dateTimeString) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function toLocalDateTimeString(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-") + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 function buildReminderPayload(todo, reminder) {
   const isStartReminder = reminder.reminder_type === "START_15";
   const title = isStartReminder
@@ -36,6 +45,7 @@ function buildReminderPayload(todo, reminder) {
     icon: "clock",
     reference_type: "todo",
     reference_id: String(todo.id),
+    idempotency_key: `todo:reminder:${reminder.id}`,
     action_url: "/todo",
     screen: "TodoList",
     metadata: {
@@ -67,7 +77,7 @@ async function getCustomReminderInputs(todoId) {
   return rows.map((row) => row.reminder_label || row.scheduled_time);
 }
 
-async function replaceReminderSchedule(todo, customReminders = []) {
+async function replaceReminderSchedule(todo, customReminders = [], { deviceAlarm = false } = {}) {
   if (!todo?.id) return;
 
   await db.query(
@@ -94,7 +104,8 @@ async function replaceReminderSchedule(todo, customReminders = []) {
         todo.created_by,
         "START_15",
         "15 min before",
-        `${startReminderAt.toISOString().slice(0, 19).replace("T", " ")}`,
+        0,
+        toLocalDateTimeString(startReminderAt),
       ]);
     }
   }
@@ -112,7 +123,8 @@ async function replaceReminderSchedule(todo, customReminders = []) {
       todo.created_by,
       "CUSTOM",
       reminder.label || reminder.time,
-      `${scheduledAt.toISOString().slice(0, 19).replace("T", " ")}`,
+      deviceAlarm ? 1 : 0,
+      toLocalDateTimeString(scheduledAt),
     ]);
   }
 
@@ -128,6 +140,7 @@ async function replaceReminderSchedule(todo, customReminders = []) {
       user_id,
       reminder_type,
       reminder_label,
+      device_alarm,
       scheduled_for,
       status,
       created_at,
@@ -198,6 +211,7 @@ async function getDueReminders(limit = 100) {
       tr.user_id,
       tr.reminder_type,
       tr.reminder_label,
+      tr.device_alarm,
       tr.scheduled_for,
       tr.attempt_count,
       t.created_by,
@@ -212,6 +226,7 @@ async function getDueReminders(limit = 100) {
     INNER JOIN todos t ON t.id = tr.todo_id
     WHERE tr.status IN ('pending', 'failed')
       AND tr.scheduled_for <= NOW()
+      AND tr.scheduled_for >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
       AND tr.attempt_count < 5
       AND t.completed = 0
     ORDER BY tr.scheduled_for ASC, tr.id ASC
@@ -221,6 +236,19 @@ async function getDueReminders(limit = 100) {
   );
 
   return rows;
+}
+
+async function expireStaleReminders() {
+  await db.query(
+    `
+    UPDATE todo_reminders
+    SET status = 'expired',
+        last_error = 'Reminder delivery window elapsed',
+        updated_at = NOW()
+    WHERE status IN ('pending', 'failed')
+      AND scheduled_for < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+    `,
+  );
 }
 
 async function markReminderProcessing(reminderId) {
@@ -268,6 +296,7 @@ async function markReminderFailed(reminderId, error) {
 }
 
 async function processDueReminders(limit = 100) {
+  await expireStaleReminders();
   const reminders = await getDueReminders(limit);
 
   for (const reminder of reminders) {
@@ -279,13 +308,25 @@ async function processDueReminders(limit = 100) {
     const payload = buildReminderPayload(reminder, reminder);
 
     try {
-      const pushResult = await sendPushNotification(payload);
+      // The notification inbox is the durable delivery channel. A user may not
+      // have registered an FCM token yet, so persisting the reminder must not
+      // depend on push delivery succeeding.
+      const persisted = await createInAppNotification(payload);
 
-      if (!pushResult.success) {
-        throw new Error(pushResult.reason || pushResult.error?.message || "Push delivery failed");
+      // The phone already rings a local alarm for this reminder.
+      const pushResult = Number(reminder.device_alarm) === 1
+        ? { success: false, skipped: true, reason: "device_alarm" }
+        : await sendPushNotification(payload, {
+          notificationId: persisted?.notificationId,
+        });
+
+      if (!pushResult.success && !pushResult.skipped) {
+        console.warn(
+          `[TodoReminder] Push delivery failed for reminder ${reminder.id}; ` +
+            "the in-app reminder was still created.",
+        );
       }
 
-      await createInAppNotification(payload);
       await markReminderSent(reminder.id);
       console.log(
         `[TodoReminder] Reminder ${reminder.id} sent for Todo ${reminder.todo_id} (${reminder.reminder_type}).`,

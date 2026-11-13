@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import { API_V1_URL } from '../../../config/apiConfig';
+import api from '../auth/api/axios';
 
-const APP_SETTINGS_API = `${API_V1_URL}/settings/app-settings`;
+const APP_SETTINGS_API = '/v1/settings/app-settings';
 
 const STORE_URLS = {
   android: 'https://play.google.com/store/apps/details?id=com.rewardsplanners',
@@ -44,13 +44,8 @@ const isNewerVersion = (current: string, latest: string): boolean => {
 
 export const checkAppVersion = async (): Promise<AppVersionResult> => {
   try {
-    const response = await fetch(APP_SETTINGS_API, {
-      cache: 'no-store', // prevent stale cached response
-    });
-
-    if (!response.ok) return FAILED;
-
-    const result = await response.json();
+    const response = await api.get(APP_SETTINGS_API);
+    const result = response.data;
     if (!result?.success || !result?.data) return FAILED;
 
     const data = result.data;

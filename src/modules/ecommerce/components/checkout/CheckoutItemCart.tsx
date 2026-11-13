@@ -1,3 +1,5 @@
+import { formatMoney } from '../../utils/formatMoney';
+import OfferDetails from '../../../common/order/OfferDetails';
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -69,7 +71,7 @@ export default function CheckoutItemCart({
   }, [isReturnable, isReplaceable]);
 
   // price = discounted sale price, mrp = original price
-  const salePrice = toNum(item.price || item.sale_price);
+  const salePrice = toNum(item.price ?? item.sale_price);
   const mrp = toNum(item.mrp);
   const discountPct =
     mrp > salePrice && mrp > 0
@@ -124,10 +126,10 @@ export default function CheckoutItemCart({
 
           {/* Price — sale price + strikethrough MRP + discount badge */}
           <View style={styles.priceRow}>
-            <Text style={[styles.salePrice, { color: theme.text }]}>₹{salePrice.toLocaleString("en-IN")}</Text>
+            <Text style={[styles.salePrice, { color: theme.text }]}>{formatMoney(salePrice)}</Text>
             {discountPct > 0 && (
               <>
-                <Text style={styles.mrpText}>₹{mrp.toLocaleString("en-IN")}</Text>
+                <Text style={styles.mrpText}>{formatMoney(mrp)}</Text>
                 <View style={styles.discountBadge}>
                   <Text style={styles.discountText}>{discountPct}% off</Text>
                 </View>
@@ -135,6 +137,7 @@ export default function CheckoutItemCart({
             )}
           </View>
 
+          <OfferDetails item={item} />
           {/* Delivery date */}
           <View style={styles.deliveryRow}>
             <MaterialCommunityIcons name="truck-delivery-outline" size={14} color="#16A34A" />

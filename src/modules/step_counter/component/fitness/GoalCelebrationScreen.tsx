@@ -370,7 +370,7 @@ const AchievementCard: React.FC<{
 
       {achievement && (
         <View style={styles.rewardBadge}>
-          <Text style={styles.rewardText}>🪙 +{achievement.reward_coins} coins earned!</Text>
+          <Text style={styles.rewardText}>🪙 +{achievement.reward_coins} RP Points earned!</Text>
         </View>
       )}
 
@@ -489,7 +489,7 @@ const GoalCelebrationScreen: React.FC<Props> = (props) => {
         <View style={styles.totalRewardRow}>
           <Text style={styles.totalRewardText}>
             Total reward today:{" "}
-            <Text style={styles.totalRewardCoins}>🪙 {response.reward} coins</Text>
+            <Text style={styles.totalRewardCoins}>🪙 {response.reward} RP Points</Text>
           </Text>
         </View>
 

@@ -4,12 +4,14 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/modules/common/auth/context/AuthContext';
 import { AlertProvider, AlertContainer } from './src/modules/ecommerce/components/alerts';
 import { CartProvider } from './src/modules/ecommerce/context/CartContext';
+import { CmsAppShellProvider } from './src/modules/common/cms/CmsAppShellContext';
 import { NavigationContainer, LinkingOptions, NavigatorScreenParams } from "@react-navigation/native";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/query/queryClient';
 import { AppThemeProvider } from "./src/theme/ThemeContext";
 import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
 import PushNotificationManager from './src/modules/common/notifications/PushNotificationManager';
+import { useFestivalIcon } from './src/hooks/useFestivalIcon';
 type AuthModalStackParamList = {
   Login: undefined;
   LoginOTP: { identifier: string };
@@ -36,6 +38,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 export default function App() {
+  useFestivalIcon();
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -43,13 +46,15 @@ export default function App() {
           <AlertProvider>
             <AuthProvider>
               <CartProvider>
-                <NetworkGuard>
-                  <NavigationContainer linking={linking}>
-                    <PushNotificationManager />
-                    <AlertContainer />
-                    <RootNavigator />
-                  </NavigationContainer>
-                </NetworkGuard>
+                <CmsAppShellProvider>
+                  <NetworkGuard>
+                    <NavigationContainer linking={linking}>
+                      <PushNotificationManager />
+                      <AlertContainer />
+                      <RootNavigator />
+                    </NavigationContainer>
+                  </NetworkGuard>
+                </CmsAppShellProvider>
               </CartProvider>
             </AuthProvider>
           </AlertProvider>

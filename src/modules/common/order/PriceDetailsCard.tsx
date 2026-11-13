@@ -4,6 +4,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useAppTheme } from "../../../theme/ThemeContext";
 
 type Props = {
+  offerSavings?: number;
   itemTotal: number;
   deliveryFee: number;
   bagDiscount: number;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export default function PriceDetailsCard({
+  offerSavings = 0,
   itemTotal,
   deliveryFee,
   bagDiscount,
@@ -42,17 +44,18 @@ export default function PriceDetailsCard({
       {showEarnedBanner ? (
         <View style={[styles.earnedBanner, { backgroundColor: isDark ? "#143524" : "#E7FBEF" }]}>
           <Text style={styles.earnedText}>
-            {rewardEarned} Reward Coins Earned
+            {rewardEarned} RP Points Earned
           </Text>
         </View>
       ) : showPendingBanner ? (
         <View style={[styles.earnedBanner, { backgroundColor: isDark ? "#2A2410" : "#FFF7E0" }]}>
           <Text style={[styles.earnedText, styles.pendingText]}>
-            You'll earn {rewardPotential} Reward Coins on delivery
+            You'll earn {rewardPotential} RP Points on delivery
           </Text>
         </View>
       ) : null}
 
+      {offerSavings > 0 && <Row label="Offer savings (included)" value={`₹${offerSavings.toFixed(2)}`} valueStyle={styles.negative} />}
       {/* Price rows */}
       <Row label="Item Total" value={`₹${itemTotal}`} />
       <Row label="Delivery Fee" value={`₹${deliveryFee}`} />
@@ -85,7 +88,7 @@ export default function PriceDetailsCard({
       <View style={[styles.redeemedBanner, { backgroundColor: isDark ? "#2D2148" : "#F3E8FF" }]}>
         <MaterialIcons name="auto-awesome" size={18} color={theme.primary} />
         <Text style={styles.redeemedText}>
-          {rewardRedeemed} Reward Coins Redeemed
+          {rewardRedeemed} RP Points Redeemed
         </Text>
         <MaterialIcons name="auto-awesome" size={18} color={theme.primary} />
       </View>

@@ -2,20 +2,58 @@ import { getAuthHeaders } from "../../common/auth/api/AuthAPI";
 import api from "../../common/auth/api/axios";
 import { API_BASE_URL } from "../../../config/apiConfig";
 
+const BUS_REQUEST_TIMEOUT_MS = 20_000;
+// /book waits on the provider (up to 30s) or on another request that already
+// owns the provider call (up to 40s), so it needs a longer client timeout.
+const BUS_BOOK_TIMEOUT_MS = 60_000;
+const BUS_VERIFY_ATTEMPTS = 3;
+const BUS_VERIFY_RETRY_DELAY_MS = 1_500;
+
+const BUS_BOOKING_PENDING_MESSAGE =
+  "Your payment is safe. We are confirming your ticket with the operator. If it cannot be confirmed, the amount will be refunded to your original payment method.";
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+const nativeFetch = globalThis.fetch.bind(globalThis);
+const nativeConsole = globalThis.console;
+
+// Keep detailed provider and booking diagnostics out of production builds.
+const console = {
+  log: (...args: unknown[]) => {
+    if (__DEV__) nativeConsole.log(...args);
+  },
+};
+
+// Apply a deterministic timeout to every raw fetch in this API module.
+const fetch: typeof globalThis.fetch = async (input, init = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), BUS_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await nativeFetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+// `id` and `city_code` both carry the SRDV CityId as a string.
 export type City = {
   id: number | string;
+  city_code?: string;
   city_name: string;
+  district_name?: string | null;
   state_name?: string;
+  state_code?: string | null;
   city_type?: string;
-  latitude?: string | number;
-  longitude?: string | number;
 };
 
 export type BusSearchPayload = {
   sourceCityCode: string;
   destinationCityCode: string;
   journeyDate: string;
-  journeyTime: string;
 };
 
 export type BusSearchResponse = {
@@ -34,7 +72,6 @@ export type BusSearchResponse = {
     };
 
     journeyDate: string;
-    journeyTime: string;
   };
 
   traceId?: string | number | null;
@@ -44,6 +81,18 @@ export type BusSearchResponse = {
   count?: number;
 
   buses?: any[];
+};
+
+export type BusProviderBalance = {
+  availableBalance: number | null;
+  balance: number;
+  creditLimit: number;
+};
+
+export type BusProviderBalanceResponse = {
+  success: boolean;
+  message: string;
+  data: BusProviderBalance;
 };
 
 export type SeatPrice = {
@@ -90,9 +139,11 @@ export type SeatLayoutSeat = {
 
 
 export type SeatLayoutPayload = {
-  traceId: string;
-  srdvIndex: string;
+  traceId: string | number;
   resultIndex: string;
+  // Optional, but must be sent together.
+  boardingPointId?: string;
+  droppingPointId?: string;
 };
 
 
@@ -101,11 +152,13 @@ export type SeatLayoutResponse = {
 
   message: string;
 
-  traceId: string;
+  traceId: string | number;
 
-  srdvIndex: string;
+  srdvIndex?: string | null;
 
   resultIndex: string;
+
+  providerAvailableSeats?: number | string | null;
 
   paxIdRequired?: string | null;
 
@@ -116,6 +169,8 @@ export type SeatLayoutResponse = {
   seats: SeatLayoutSeat[];
 
   layout?: SeatLayoutSeat[][];
+
+  upperLayout?: SeatLayoutSeat[][];
 };
 
 /*
@@ -144,9 +199,7 @@ export type BoardingDroppingPoint = {
 
 
 export type BoardingDroppingPayload = {
-  traceId: string;
-
-  srdvIndex: string;
+  traceId: string | number;
 
   resultIndex: string;
 };
@@ -157,9 +210,9 @@ export type BoardingDroppingResponse = {
 
   message: string;
 
-  traceId: string;
+  traceId: string | number;
 
-  srdvIndex: string;
+  srdvIndex?: string | null;
 
   resultIndex: string;
 
@@ -183,10 +236,12 @@ export type BoardingDroppingResponse = {
 |--------------------------------------------------------------------------
 */
 
+// Mirrors the backend's validateBlockRequest: Email is mandatory, Gender is
+// "1" (male) or "2" (female), and exactly one LeadPassenger is true.
 export type BlockPassenger = {
 
   Title:
-    string;
+    "Mr" | "Mrs" | "Ms" | "Miss";
 
   FirstName:
     string;
@@ -195,10 +250,10 @@ export type BlockPassenger = {
     string;
 
   Gender:
-    string;
+    "1" | "2";
 
   Age:
-    string;
+    number;
 
   Email:
     string;
@@ -207,7 +262,7 @@ export type BlockPassenger = {
     string;
 
   LeadPassenger:
-    string;
+    boolean;
 
   IdNumber:
     string;
@@ -220,6 +275,18 @@ export type BlockPassenger = {
 
   SeatName:
     string;
+
+  GSTCompanyName?:
+    string | null;
+
+  GSTNumber?:
+    string | null;
+
+  GSTCompanyAddress?:
+    string | null;
+
+  GSTCompanyEmail?:
+    string | null;
 };
 
 
@@ -232,10 +299,7 @@ export type BlockPassenger = {
 export type BlockSeatPayload = {
 
   traceId:
-    string;
-
-  srdvIndex:
-    string;
+    string | number;
 
   resultIndex:
     string;
@@ -278,7 +342,7 @@ export type BlockSeatResponse = {
     string;
 
   srdvIndex:
-    string;
+    string | null;
 
   resultIndex:
     string;
@@ -348,31 +412,61 @@ export type BlockSeatResponse = {
 */
 
 export type BookBusPayload = {
-  traceId: string;
-  srdvIndex: string;
-  resultIndex: string;
+  order_ref: string;
 };
 
 
-export type BookBusResponse = {
-  success: boolean;
+// The backend books with the provider exactly once per paid order, so the
+// app only ever learns where the order ended up:
+// - confirmed: ticket issued
+// - pending:   payment is captured, the backend is still confirming with the
+//              operator (or will retry / escalate from its reconcile cron)
+// - failed:    the provider rejected the booking and a full refund was queued
+export type BusBookingOutcome =
+  | {
+      status: "confirmed";
+      orderRef: string;
+      message: string;
+      bookingId: number | string | null;
+      ticketNo: string | null;
+      travelOperatorPNR: string | null;
+    }
+  | {
+      status: "pending";
+      orderRef: string;
+      message: string;
+    }
+  | {
+      status: "failed";
+      orderRef: string;
+      message: string;
+      refundInitiated: boolean;
+    };
 
-  message: string;
 
-  traceId: string;
-
-  srdvIndex: string;
-
-  resultIndex: string;
-
-  bookingId: number | string;
-
-  bookingStatus: string;
-
-  ticketNo: string;
-
-  travelOperatorPNR: string;
+export type VerifyBusPaymentPayload = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 };
+
+
+export class BusBookingApiError extends Error {
+  status?: number;
+  code?: string;
+  // Set by /cancel when the operator only allows cancelling every remaining
+  // seat together.
+  remainingSeatNames?: string[];
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = "BusBookingApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export const BUS_SEAT_HOLD_EXPIRED_CODE = "SEAT_HOLD_EXPIRED";
 
 /*
 |--------------------------------------------------------------------------
@@ -420,45 +514,83 @@ export type CreateBusPaymentOrderResponse = {
   };
 };
 
+// Uses the same local/live environment switch as every other app module
+// (src/config/apiConfig.ts). The backend mounts this module at
+// /api/busbooking; on live that sits behind the same reverse-proxy prefix as
+// the rest of the API.
+// local: http://<dev machine>:5000/api/busbooking
+// live:  https://rewardplanners.com/api/crm/api/busbooking
+export const BUS_BOOKING_BASE_URL = API_BASE_URL.replace(/\/$/, "");
+
 /*
 |--------------------------------------------------------------------------
-| IMPORTANT
+| Provider Balance
 |--------------------------------------------------------------------------
 |
-| Physical Android phone:
-| Use your computer's LAN IP.
+| The backend owns the SRDV credentials and calls:
+| POST https://bus.srdvtest.com/v9/rest/Balance
 |
-| Example:
-| http://192.168.1.100:5000
-|
-| Android Emulator:
-| http://10.0.2.2:5000
+| The mobile app calls only the authenticated local proxy below. Never place
+| ClientId, UserName, or Password in the React Native bundle.
 |
 |--------------------------------------------------------------------------
 */
 
-/*
-|--------------------------------------------------------------------------
-| LOCAL BUS BOOKING BACKEND
-|--------------------------------------------------------------------------
-|
-| Android Emulator:
-| http://10.0.2.2:5000/api/busbooking
-|
-| Physical Android phone:
-| http://YOUR_PC_LAN_IP:5000/api/busbooking
-| Example:
-| http://192.168.1.100:5000/api/busbooking
-|
-| USB-connected Android phone with adb reverse:
-| http://localhost:5000
-|
-| Update this one constant when you want to point bus booking to a local
-| backend instead of the live server.
-|
-|--------------------------------------------------------------------------
-*/
-export const BUS_BOOKING_BASE_URL = API_BASE_URL;
+export const getBusBalanceApi = async (): Promise<BusProviderBalanceResponse> => {
+  const authHeaders = await getAuthHeaders();
+  const requestUrl = `${BUS_BOOKING_BASE_URL}/api/busbooking/balance`;
+
+  let response: Response;
+  let result: any;
+
+  try {
+    response = await fetch(requestUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({}),
+    });
+    result = await response.json();
+  } catch (error: any) {
+    console.log("[BusBooking][API][Balance] Network Error", {
+      requestUrl,
+      message: error?.message || error,
+    });
+    throw new Error(
+      "Unable to reach the bus booking service. Please try again."
+    );
+  }
+
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || "Unable to fetch bus provider balance");
+  }
+
+  const availableBalance =
+    result?.data?.availableBalance == null
+      ? NaN
+      : Number(result.data.availableBalance);
+  const balance = Number(result?.data?.balance ?? result?.Balance);
+  const creditLimit = Number(
+    result?.data?.creditLimit ?? result?.data?.credit_limit ?? result?.CreditLimit
+  );
+
+  if (!Number.isFinite(balance) || !Number.isFinite(creditLimit)) {
+    throw new Error("The bus provider returned an invalid balance response");
+  }
+
+  return {
+    success: true,
+    message: String(result?.message || "Bus provider balance fetched successfully"),
+    data: {
+      availableBalance: Number.isFinite(availableBalance) ? availableBalance : null,
+      balance,
+      creditLimit,
+    },
+  };
+};
 
 
 /*
@@ -502,7 +634,7 @@ export const searchCitiesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Please check your internet connection and ensure backend services are running"
+      "Unable to reach the bus booking service. Please try again."
     );
   }
 
@@ -573,7 +705,7 @@ export const searchBusesApi = async (
     });
 
     throw new Error(
-      "Network request failed. Please check your internet connection and ensure backend services are running"
+      "Unable to reach the bus booking service. Please try again."
     );
   }
 
@@ -898,9 +1030,6 @@ export const blockSeatApi =
         traceId:
           payload.traceId,
 
-        srdvIndex:
-          payload.srdvIndex,
-
         resultIndex:
           payload.resultIndex,
 
@@ -1090,204 +1219,222 @@ export const blockSeatApi =
   };
 /*
 |--------------------------------------------------------------------------
+| Verify Bus Razorpay Payment
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/verify-payment
+|
+| Marks the order paid on the backend, which is what allows /book to run.
+| The call is idempotent, so transient failures are retried.
+|
+| Returns false when the outcome could not be learned (offline, timeout,
+| 5xx). The payment may still have been captured; the backend's Razorpay
+| webhook and reconcile cron then book or refund the order on their own.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const verifyBusPaymentApi = async (
+  payload: VerifyBusPaymentPayload
+): Promise<boolean> => {
+  const requestUrl =
+    `${BUS_BOOKING_BASE_URL}/api/busbooking/verify-payment`;
+
+  for (let attempt = 1; attempt <= BUS_VERIFY_ATTEMPTS; attempt += 1) {
+    let status = 0;
+    let result: any = null;
+
+    try {
+      const response = await api.post(requestUrl, payload, {
+        timeout: BUS_REQUEST_TIMEOUT_MS,
+      });
+      status = response.status;
+      result = response.data;
+    } catch (error: any) {
+      status = Number(error?.response?.status || 0);
+      result = error?.response?.data ?? null;
+
+      console.log("[BusBooking][API][Payment] Verify Error", {
+        attempt,
+        status,
+        message: result?.message || error?.message || error,
+      });
+    }
+
+    if (status >= 200 && status < 300 && result?.success) {
+      return true;
+    }
+
+    // A 4xx is the backend's final answer for this payment; retrying the same
+    // request cannot change it.
+    const isDefinitive =
+      status >= 400 && status < 500 && status !== 408 && status !== 429;
+
+    if (isDefinitive) {
+      throw new BusBookingApiError(
+        status === 401
+          ? "Your login session has expired. Please login again."
+          : result?.message || "Payment could not be verified",
+        status,
+        result?.code
+      );
+    }
+
+    if (attempt < BUS_VERIFY_ATTEMPTS) {
+      await sleep(BUS_VERIFY_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  return false;
+};
+
+/*
+|--------------------------------------------------------------------------
 | Book Bus Ticket
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/book   { order_ref }
+|
+| 200 -> ticket confirmed
+| 202 -> BOOKING_PENDING (still confirming with the operator)
+| 400 -> BOOKING_FAILED  (provider rejected, refund queued)
+|
+| Once the payment is verified, a response the app cannot read (timeout,
+| offline, 5xx, rate limit) never means the booking failed: the backend keeps
+| working on the order, so it is reported as pending.
+|
 |--------------------------------------------------------------------------
 */
 
 export const bookBusTicketApi = async (
   payload: BookBusPayload
-): Promise<BookBusResponse> => {
+): Promise<BusBookingOutcome> => {
+  const orderRef = String(payload?.order_ref || "").trim();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Auth Headers
-  |--------------------------------------------------------------------------
-  */
+  if (!orderRef) {
+    throw new BusBookingApiError(
+      "Bus booking order reference is required"
+    );
+  }
 
-  const authHeaders =
-    await getAuthHeaders();
+  const requestUrl = `${BUS_BOOKING_BASE_URL}/api/busbooking/book`;
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Backend URL
-  |--------------------------------------------------------------------------
-  */
-
-  const requestUrl =
-    `${BUS_BOOKING_BASE_URL}/api/busbooking/book`;
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Request Log
-  |--------------------------------------------------------------------------
-  */
-
-  console.log(
-    "======================================"
-  );
-
-  console.log(
-    "[BusBooking][API][Book] Request",
-    {
-      requestUrl,
-
-      traceId:
-        payload.traceId,
-
-      srdvIndex:
-        payload.srdvIndex,
-
-      resultIndex:
-        payload.resultIndex,
-
-      hasAuthorization:
-        !!authHeaders.Authorization,
-    }
-  );
-
-  console.log(
-    "======================================"
-  );
-
-
-  let response: Response;
-
-  let result: any;
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | API Call
-  |--------------------------------------------------------------------------
-  */
+  let status = 0;
+  let result: any = null;
 
   try {
-
-    response =
-      await fetch(
-        requestUrl,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            ...authHeaders,
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            ),
-        }
-      );
-
-
-    result =
-      await response.json();
-
-
-  } catch (
-    error: any
-  ) {
-
-    console.log(
-      "[BusBooking][API][Book] Network Error",
-      {
-        requestUrl,
-
-        message:
-          error?.message ||
-          error,
-      }
+    const response = await api.post(
+      requestUrl,
+      { order_ref: orderRef },
+      { timeout: BUS_BOOK_TIMEOUT_MS }
     );
+    status = response.status;
+    result = response.data;
+  } catch (error: any) {
+    status = Number(error?.response?.status || 0);
+    result = error?.response?.data ?? null;
 
+    console.log("[BusBooking][API][Book] Error", {
+      status,
+      message: result?.message || error?.message || error,
+    });
+  }
 
-    throw new Error(
-      "Network request failed while booking bus ticket"
+  console.log("[BusBooking][API][Book] Response", {
+    status,
+    success: result?.success,
+    code: result?.code,
+    bookingStatus: result?.bookingStatus,
+    message: result?.message,
+  });
+
+  if (status === 200 && result?.success) {
+    return {
+      status: "confirmed",
+      orderRef: String(result?.orderRef || orderRef),
+      message: String(result?.message || "Bus ticket booked successfully"),
+      bookingId: result?.bookingId ?? null,
+      ticketNo: result?.ticketNo ?? null,
+      travelOperatorPNR: result?.travelOperatorPNR ?? null,
+    };
+  }
+
+  if (result?.code === "BOOKING_FAILED") {
+    return {
+      status: "failed",
+      orderRef: String(result?.orderRef || orderRef),
+      message: String(
+        result?.message ||
+        "Bus booking could not be completed. Your payment will be refunded to the original payment method."
+      ),
+      refundInitiated: Boolean(result?.refundInitiated),
+    };
+  }
+
+  if ([400, 401, 403, 404, 409].includes(status)) {
+    throw new BusBookingApiError(
+      status === 401
+        ? "Your login session has expired. Please login again."
+        : result?.message || "Unable to book bus ticket",
+      status,
+      result?.code
     );
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Response Log
-  |--------------------------------------------------------------------------
-  */
-
-  console.log(
-    "======================================"
-  );
-
-  console.log(
-    "[BusBooking][API][Book] Response",
-    {
-      ok:
-        response.ok,
-
-      status:
-        response.status,
-
-      success:
-        result?.success,
-
-      bookingId:
-        result?.bookingId,
-
-      bookingStatus:
-        result?.bookingStatus,
-
-      ticketNo:
-        result?.ticketNo,
-
-      travelOperatorPNR:
-        result?.travelOperatorPNR,
-
-      message:
-        result?.message,
-    }
-  );
-
-  console.log(
-    "======================================"
-  );
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Error Handling
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    !response.ok ||
-    !result?.success
-  ) {
-
-    console.log(
-      "[BusBooking][API][Book] Error",
-      result
-    );
-
-
-    throw new Error(
-      result?.message ||
-      "Unable to book bus ticket"
-    );
-  }
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Success
-  |--------------------------------------------------------------------------
-  */
-
-  return result;
+  return {
+    status: "pending",
+    orderRef: String(result?.orderRef || orderRef),
+    message: BUS_BOOKING_PENDING_MESSAGE,
+  };
 };
+
+/*
+|--------------------------------------------------------------------------
+| Complete Booking After Razorpay Checkout
+|--------------------------------------------------------------------------
+|
+| Razorpay success -> verify-payment -> book. Shared by every screen that
+| opens the bus checkout so they all treat a captured payment the same way.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const completeBusBookingApi = async (
+  orderRef: string,
+  payment: Partial<VerifyBusPaymentPayload> | null | undefined
+): Promise<BusBookingOutcome> => {
+  const cleanOrderRef = String(orderRef || "").trim();
+
+  const pending: BusBookingOutcome = {
+    status: "pending",
+    orderRef: cleanOrderRef,
+    message: BUS_BOOKING_PENDING_MESSAGE,
+  };
+
+  const razorpayOrderId = String(payment?.razorpay_order_id || "").trim();
+  const razorpayPaymentId = String(payment?.razorpay_payment_id || "").trim();
+  const razorpaySignature = String(payment?.razorpay_signature || "").trim();
+
+  // Checkout reported success without the signed fields, so the app has
+  // nothing to verify with. The backend still learns about the capture from
+  // the Razorpay webhook.
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    return pending;
+  }
+
+  const verified = await verifyBusPaymentApi({
+    razorpay_order_id: razorpayOrderId,
+    razorpay_payment_id: razorpayPaymentId,
+    razorpay_signature: razorpaySignature,
+  });
+
+  if (!verified) {
+    return pending;
+  }
+
+  return bookBusTicketApi({ order_ref: cleanOrderRef });
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1486,12 +1633,20 @@ export const createBusPaymentOrderApi =
       }
 
 
-      throw new Error(
+      // Carries the backend code (e.g. SEAT_HOLD_EXPIRED on HTTP 410) so the
+      // screen can send the user back to seat selection.
+      throw new BusBookingApiError(
         error?.response
           ?.data
           ?.message ||
-        error?.message ||
-        "Unable to create payment order"
+        (error?.response
+          ? "Unable to create payment order"
+          : "Unable to reach the bus booking service. Please try again."),
+        error?.response
+          ?.status,
+        error?.response
+          ?.data
+          ?.code
       );
     }
 
@@ -1603,3 +1758,288 @@ export const createBusPaymentOrderApi =
 
     return result;
   };
+
+/*
+|--------------------------------------------------------------------------
+| Customer Bookings
+|--------------------------------------------------------------------------
+*/
+
+export type BusOrderStatus =
+  | "pending_payment"
+  | "payment_success"
+  | "booking_in_progress"
+  | "booking_review"
+  | "confirmed"
+  | "booking_failed"
+  | "cancelled"
+  | "expired";
+
+export type BusOrderSummary = {
+  orderRef: string;
+  operatorName: string | null;
+  busType: string | null;
+  sourceCity: string | null;
+  destinationCity: string | null;
+  journeyDate: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  boardingPointName: string | null;
+  droppingPointName: string | null;
+  seatCount: number;
+  seats: string[];
+  totalAmount: number;
+  amountPaid: number;
+  status: BusOrderStatus;
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  ticketNo: string | null;
+  travelOperatorPNR: string | null;
+  bookedAt: string | null;
+};
+
+export type BusOrderPassenger = {
+  name: string;
+  gender: string | null;
+  age: number | null;
+  seatName: string;
+  leadPassenger: boolean;
+  cancellationStatus: "processing" | "succeeded" | "failed" | null;
+  refundStatus: "not_requested" | "pending" | "processed" | "failed" | null;
+  refundAmount: number | null;
+};
+
+export type BusOrderRefund = {
+  reason: "booking_failed" | "cancellation";
+  amount: number;
+  status: "pending" | "initiated" | "processed" | "failed";
+  updatedAt: string | null;
+};
+
+export type BusOrderDetail = BusOrderSummary & {
+  cancellable: boolean;
+  passengers: BusOrderPassenger[];
+  refunds: BusOrderRefund[];
+  cancellationPolicy: any[];
+};
+
+export type BusOrdersPage = {
+  data: BusOrderSummary[];
+  page: number;
+  hasMore: boolean;
+};
+
+export type BusPopularRoute = {
+  sourceCityCode: string;
+  sourceCity: string;
+  destinationCityCode: string;
+  destinationCity: string;
+  bookings: number;
+  startingFare: number;
+};
+
+export type CancelBusSeatsPayload = {
+  order_ref: string;
+  seatNames: string[];
+  remarks: string;
+};
+
+export type CancelBusSeatsResult = {
+  // true only when every requested seat was already cancelled; a new request
+  // is always confirmed later through the cancellation status endpoint.
+  completed: boolean;
+  // false when the provider outcome is unknown and our team verifies it.
+  trackable: boolean;
+  message: string;
+  cancelId: string | null;
+  status: string;
+};
+
+export type BusProviderCancellation = {
+  CancelId?: number | string;
+  Status?: string;
+  RefundStatus?: string;
+  RefundAmount?: number | string;
+  ErrorMessage?: string;
+  [key: string]: any;
+};
+
+export type BusCancellationStatus = {
+  cancellation: BusProviderCancellation | null;
+  terminal: boolean;
+};
+
+const toBusApiError = (error: any, fallback: string) => {
+  const apiError = new BusBookingApiError(
+    Number(error?.response?.status) === 401
+      ? "Your login session has expired. Please login again."
+      : error?.response?.data?.message ||
+        (error?.response
+          ? fallback
+          : "Unable to reach the bus booking service. Please try again."),
+    error?.response?.status,
+    error?.response?.data?.code
+  );
+
+  const remainingSeatNames = error?.response?.data?.remainingSeatNames;
+  if (Array.isArray(remainingSeatNames)) {
+    apiError.remainingSeatNames = remainingSeatNames.map(String);
+  }
+
+  return apiError;
+};
+
+export const getBusOrdersApi = async (
+  page = 1,
+  limit = 20
+): Promise<BusOrdersPage> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/orders`,
+      { params: { page, limit }, timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      page: Number(response.data?.page || page),
+      hasMore: Boolean(response.data?.hasMore),
+    };
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to load your bus bookings");
+  }
+};
+
+export const getBusOrderDetailApi = async (
+  orderRef: string
+): Promise<BusOrderDetail> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/orders/${encodeURIComponent(orderRef)}`,
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    if (!response.data?.success || !response.data?.data) {
+      throw new BusBookingApiError("Unable to load this bus booking");
+    }
+
+    return response.data.data;
+  } catch (error: any) {
+    if (error instanceof BusBookingApiError) throw error;
+    throw toBusApiError(error, "Unable to load this bus booking");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Cancel Booked Seats
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/cancel   { order_ref, seatNames, remarks }
+|
+| 200 -> every requested seat was already cancelled
+| 202 -> cancellation requested; poll /cancellation-status with the cancelId
+| 400 -> rejected; remainingSeatNames is set when all seats must go together
+|
+|--------------------------------------------------------------------------
+*/
+
+export const cancelBusSeatsApi = async (
+  payload: CancelBusSeatsPayload
+): Promise<CancelBusSeatsResult> => {
+  try {
+    const response = await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/cancel`,
+      payload,
+      { timeout: BUS_BOOK_TIMEOUT_MS }
+    );
+
+    const result = response.data;
+
+    if (!result?.success) {
+      throw new BusBookingApiError(
+        result?.message || "Unable to cancel bus seats",
+        response.status
+      );
+    }
+
+    const status = String(result?.data?.status || "");
+    const cancelId = result?.data?.cancelId;
+
+    return {
+      completed: response.status === 200,
+      trackable: cancelId != null && status !== "MANUAL_CHECK_REQUIRED",
+      message: String(result?.message || "Bus cancellation is in process"),
+      cancelId: cancelId == null ? null : String(cancelId),
+      status,
+    };
+  } catch (error: any) {
+    if (error instanceof BusBookingApiError) throw error;
+    throw toBusApiError(error, "Unable to cancel bus seats");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Provider Booking Details / Cancellation Status
+|--------------------------------------------------------------------------
+|
+| POST /api/busbooking/booking-details       { order_ref }
+| POST /api/busbooking/cancellation-status   { order_ref, cancel_id }
+|
+| Both fetch the provider's booking details, and the backend applies any
+| cancellation and refund updates from them to the order before replying.
+|
+|--------------------------------------------------------------------------
+*/
+
+export const syncBusBookingDetailsApi = async (
+  orderRef: string
+): Promise<void> => {
+  try {
+    await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/booking-details`,
+      { order_ref: orderRef },
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to refresh this bus booking");
+  }
+};
+
+export const getBusCancellationStatusApi = async (
+  orderRef: string,
+  cancelId: string
+): Promise<BusCancellationStatus> => {
+  try {
+    const response = await api.post(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/cancellation-status`,
+      { order_ref: orderRef, cancel_id: cancelId },
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return {
+      cancellation: response.data?.cancellation ?? null,
+      terminal: Boolean(response.data?.cancellationTerminal),
+    };
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to check the cancellation status");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Popular Routes
+|--------------------------------------------------------------------------
+*/
+
+export const getPopularBusRoutesApi = async (): Promise<BusPopularRoute[]> => {
+  try {
+    const response = await api.get(
+      `${BUS_BOOKING_BASE_URL}/api/busbooking/popular-routes`,
+      { timeout: BUS_REQUEST_TIMEOUT_MS }
+    );
+
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  } catch (error: any) {
+    throw toBusApiError(error, "Unable to load popular routes");
+  }
+};

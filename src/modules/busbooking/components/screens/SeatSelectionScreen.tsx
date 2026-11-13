@@ -1,4 +1,5 @@
 import React from "react";
+import { getVerifiedAvailableSeats, formatAvailableSeats, isSeatAvailable as toBoolean } from "../../utils/busSeatAvailability";
 import {
   ScrollView,
   StyleSheet,
@@ -66,120 +67,10 @@ type SeatItem = {
   raw?: SeatLayoutSeat;
 };
 
-const lowerDeckSeats: SeatItem[][] = [
-  [
-    { id: "L1", label: "1A", status: "available" },
-    { id: "L2", label: "1B", status: "available" },
-    { id: "lower-gap-1", label: "", spacer: true },
-    { id: "L3", label: "1C", status: "male" },
-    { id: "L4", label: "1D", status: "femaleBooked" },
-  ],
-  [
-    { id: "L5", label: "2A", status: "available" },
-    { id: "L6", label: "2B", status: "available" },
-    { id: "lower-gap-2", label: "", spacer: true },
-    { id: "L7", label: "2C", status: "maleBooked" },
-    { id: "L8", label: "2D", status: "available" },
-  ],
-  [
-    { id: "L9", label: "3A", status: "available" },
-    { id: "L10", label: "3B", status: "available" },
-    { id: "lower-gap-3", label: "", spacer: true },
-    { id: "L11", label: "3C", status: "available" },
-    { id: "L12", label: "3D", status: "available" },
-  ],
-  [
-    { id: "L13", label: "4A", status: "available" },
-    { id: "L14", label: "4B", status: "available" },
-    { id: "lower-gap-4", label: "", spacer: true },
-    { id: "L15", label: "4C", status: "available" },
-    { id: "L16", label: "4D", status: "available" },
-  ],
-  [
-    { id: "L17", label: "5A", status: "available" },
-    { id: "L18", label: "5B", status: "available" },
-    { id: "lower-gap-5", label: "", spacer: true },
-    { id: "L19", label: "5C", status: "available" },
-    { id: "L20", label: "5D", status: "available" },
-  ],
-];
-
-const upperDeckSeats: SeatItem[][] = [
-  [
-    { id: "U1", label: "11A", status: "available" },
-    { id: "U2", label: "11B", status: "available" },
-    { id: "upper-gap-1", label: "", spacer: true },
-    { id: "U3", label: "11C", status: "male" },
-    { id: "U4", label: "11D", status: "femaleBooked" },
-  ],
-  [
-    { id: "U5", label: "12A", status: "available" },
-    { id: "U6", label: "12B", status: "available" },
-    { id: "upper-gap-2", label: "", spacer: true },
-    { id: "U7", label: "12C", status: "female" },
-    { id: "U8", label: "12D", status: "available" },
-  ],
-  [
-    { id: "U9", label: "13A", status: "available" },
-    { id: "U10", label: "13B", status: "available" },
-    { id: "upper-gap-3", label: "", spacer: true },
-    { id: "U11", label: "13C", status: "maleBooked" },
-    { id: "U12", label: "13D", status: "available" },
-  ],
-  [
-    { id: "U13", label: "14A", status: "available" },
-    { id: "U14", label: "14B", status: "available" },
-    { id: "upper-gap-4", label: "", spacer: true },
-    { id: "U15", label: "14C", status: "available" },
-    { id: "U16", label: "14D", status: "maleBooked" },
-  ],
-];
-
-const seaterSeats: SeatItem[][] = [
-  [
-    { id: "S1", label: "1A", status: "available" },
-    { id: "S2", label: "1B", status: "available" },
-    { id: "seater-gap-1", label: "", spacer: true },
-    { id: "S3", label: "1C", status: "female" },
-    { id: "S4", label: "1D", status: "femaleBooked" },
-  ],
-  [
-    { id: "S5", label: "2A", status: "available" },
-    { id: "S6", label: "2B", status: "available" },
-    { id: "seater-gap-2", label: "", spacer: true },
-    { id: "S7", label: "2C", status: "male" },
-    { id: "S8", label: "2D", status: "maleBooked" },
-  ],
-  [
-    { id: "S9", label: "3A", status: "maleBooked" },
-    { id: "S10", label: "3B", status: "available" },
-    { id: "seater-gap-3", label: "", spacer: true },
-    { id: "S11", label: "3C", status: "maleBooked" },
-    { id: "S12", label: "3D", status: "available" },
-  ],
-  [
-    { id: "S13", label: "4A", status: "available" },
-    { id: "S14", label: "4B", status: "available" },
-    { id: "seater-gap-4", label: "", spacer: true },
-    { id: "S15", label: "4C", status: "available" },
-    { id: "S16", label: "4D", status: "available" },
-  ],
-];
 
 const getFareValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 const formatSeatFareLabel = (fare?: number) => `Rs ${Number(fare || 0).toFixed(0)}/-`;
 
-const toBoolean = (
-  value: unknown
-): boolean => {
-
-  return (
-    value === true ||
-    value === "true" ||
-    value === 1 ||
-    value === "1"
-  );
-};
 const getApiSeatFare = (
   seat: SeatLayoutSeat
 ): number => {
@@ -718,6 +609,26 @@ const busTypeText =
   React.useMemo<SeatLayoutSeat[]>(
     () => {
 
+      // Seats from the provider's ResultUpperSeat block are upper deck even
+      // when the seat itself does not carry IsUpper.
+      const upperLayout: SeatLayoutSeat[][] =
+        Array.isArray(seatLayout?.upperLayout)
+          ? seatLayout.upperLayout
+          : [];
+
+      if (
+        upperLayout.length > 0 &&
+        Array.isArray(seatLayout?.layout)
+      ) {
+        return [
+          ...seatLayout.layout.flat(),
+          ...upperLayout.flat().map((seat) => ({
+            ...seat,
+            IsUpper: true,
+          })),
+        ];
+      }
+
       if (
         Array.isArray(
           seatLayout?.seats
@@ -1125,9 +1036,6 @@ const handleContinue =
       const traceId =
         seatLayout?.traceId;
 
-      const srdvIndex =
-        seatLayout?.srdvIndex;
-
       const resultIndex =
         seatLayout?.resultIndex;
 
@@ -1139,8 +1047,6 @@ const handleContinue =
 
           traceId,
 
-          srdvIndex,
-
           resultIndex,
         }
       );
@@ -1148,7 +1054,6 @@ const handleContinue =
 
       if (
         !traceId ||
-        !srdvIndex ||
         !resultIndex
       ) {
 
@@ -1164,6 +1069,7 @@ const handleContinue =
         "BoardingDroppingSelectionScreen",
         {
           bus,
+          totalFare,
 
           selectedSeats,
 
@@ -1172,11 +1078,6 @@ const handleContinue =
           traceId:
             String(
               traceId
-            ),
-
-          srdvIndex:
-            String(
-              srdvIndex
             ),
 
           resultIndex:
@@ -1195,6 +1096,7 @@ const handleContinue =
       navigation,
       seatLayout,
       selectedSeats,
+      totalFare,
       isWomenBooking,
     ]
   );
@@ -1390,9 +1292,8 @@ switch (seat.status) {
   }
 >
   {
-    seatLayout
-      ?.availableSeats ?? 0
-  } SEATS LEFT
+    formatAvailableSeats(getVerifiedAvailableSeats(apiSeats))
+  }
 </Text>
           </View>
         </View>

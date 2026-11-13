@@ -80,6 +80,12 @@ export default function HomeStack() {
       <Stack.Screen name="ReviewScreen" getComponent={() => require("../screens/ReviewScreen").default} />
       <Stack.Screen name="BuyNow" getComponent={() => require("../components/product/product_section/BuyAgain").default} />
       <Stack.Screen name="ProductScreen" getComponent={() => require("../screens/ProductScreen").default} />
+      <Stack.Screen name="BrandProducts" getComponent={() => require("../screens/BrandProductsScreen").default} />
+      <Stack.Screen
+        name="CampaignProducts"
+        getComponent={() => require("../screens/CampaignProductsScreen").default}
+        options={{ animation: "slide_from_right" }}
+      />
       <Stack.Screen name="TermsAndConditions" getComponent={() => require("../profile/TermsandCondition").default} />
       <Stack.Screen name="PrivacyPolicy" getComponent={() => require("../profile/PrivacyPolicy").default} />
       <Stack.Screen
@@ -109,6 +115,8 @@ export default function HomeStack() {
       />
       <Stack.Screen name="SelectItemCancellationReason" getComponent={() => require("../components/order/SelectItemCancellationReason").default} />
       <Stack.Screen name="ItemCancellationDetails" getComponent={() => require("../screens/ItemCancellationDetailsScreen").default} />
+      <Stack.Screen name="ItemReturnRequest" getComponent={() => require("../components/order/ItemReturnRequest").default} />
+      <Stack.Screen name="ItemReturnDetails" getComponent={() => require("../screens/ItemReturnDetailsScreen").default} />
       <Stack.Screen name="OrderConfirmedScreen" getComponent={() => require("../screens/OrderConfirmedScreen").default} />
       <Stack.Screen name="HelpForm" getComponent={() => require("../constants/Support/HelpForm").default} initialParams={{ context: "ecommerce" }} />
       <Stack.Screen name="MyTickets" getComponent={() => require("../constants/Support/MyTickets").default} />

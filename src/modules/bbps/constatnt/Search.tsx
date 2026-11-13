@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SvgProps } from 'react-native-svg';
 import LinearGradient from 'react-native-linear-gradient';
@@ -37,6 +36,7 @@ import Housing from '../assets/BBPS_Service/Housing_Socity.svg';
 import Municipal from '../assets/BBPS_Service/Munsiple_taxes.svg';
 import Education from '../assets/BBPS_Service/Education.svg';
 import Hospital from '../assets/BBPS_Service/Hospital_bill.svg';
+import BBPSSafeAreaView from './BBPSSafeAreaView';
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -155,7 +155,7 @@ function Search({ navigation }: any) {
   const headerHeight = Math.round(width * 0.4);
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: bbpsTheme.colors.background }]} edges={['left', 'right', 'bottom']}>
+    <BBPSSafeAreaView style={[styles.root, { backgroundColor: bbpsTheme.colors.background }]}>
       <View style={[styles.header, { height: headerHeight }]}>
         <Image source={PaymentTop} style={styles.headerImage} resizeMode="cover" />
 
@@ -264,7 +264,7 @@ function Search({ navigation }: any) {
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </BBPSSafeAreaView>
   );
 }
 

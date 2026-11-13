@@ -26,6 +26,7 @@ type Props = {
   orderRef?: string;
   orderedOn?: string;
   itemCount?: number;
+  offerItemCount?: number;
   actionText: string;
   courierName?: string;
   awbNumber?: string;
@@ -45,6 +46,7 @@ export default function OrderItemCard({
   orderRef,
   orderedOn,
   itemCount,
+  offerItemCount,
   actionText,
   courierName,
   awbNumber,
@@ -79,14 +81,15 @@ export default function OrderItemCard({
           </Text>
 
           <View style={styles.textContainer}>
-            <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={1}>
-              {brand || "Brand"}
+            <Text style={[styles.brandText, { color: theme.text }]} numberOfLines={2}>
+              {title || "Product"}
             </Text>
             <Text style={[styles.productText, { color: theme.secondaryText }]} numberOfLines={1}>
-              {title || "Product"}
+              {brand || "Brand"}
             </Text>
           </View>
 
+          {!!offerItemCount && <Text style={[styles.metaText, { color: theme.primary }]}>{offerItemCount} {offerItemCount === 1 ? 'item' : 'items'} bought on offer</Text>}
           {(orderRef || orderedOn || itemCount) ? (
             <View style={styles.metaWrap}>
               {orderRef ? (
@@ -143,7 +146,7 @@ export default function OrderItemCard({
           <View style={styles.pointsRow}>
             <Text style={styles.points}>₹{price}</Text>
             {rewardEarned && rewardEarned > 0 ? (
-              <Text style={styles.rewardText}>+{rewardEarned} Coins</Text>
+              <Text style={styles.rewardText}>+{rewardEarned} RP Points</Text>
             ) : null}
           </View>
 

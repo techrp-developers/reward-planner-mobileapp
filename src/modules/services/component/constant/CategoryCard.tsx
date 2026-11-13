@@ -65,7 +65,7 @@ function CategoryCard({
   const parsedPriceValue = Number(String(priceText || '').replace(/[^0-9.]/g, ''));
   const hasPositivePrice = Number.isFinite(parsedPriceValue) && parsedPriceValue > 0;
   const primaryButtonText = hasPositivePrice
-    ? `${priceText} + Get Start`
+    ? `${priceText} + Get Started`
     : 'Get Started';
 
   const parsedRating = Number(rating);

@@ -11,6 +11,11 @@ const cleanupUploadedAttachment = (file) => {
   fs.promises.unlink(file.path).catch(() => {});
 };
 
+async function getSupportTicketColumnSet() {
+  const [columns] = await db.execute("SHOW COLUMNS FROM support_tickets");
+  return new Set(columns.map((column) => column.Field));
+}
+
 class SupportController {
   async getCategories(req, res) {
     try {
@@ -55,6 +60,14 @@ class SupportController {
         reference_label = null,
         // attachment_url,
       } = req.body;
+
+      const attachmentUrls = (req.files || []).map(
+        (file) => `/uploads/support/${file.filename}`,
+      );
+      let attachmentUrl =
+        attachmentUrls.length > 1
+          ? JSON.stringify(attachmentUrls)
+          : attachmentUrls[0] || null;
 
       // validation
       if (!description || !category_id) {
@@ -156,7 +169,7 @@ class SupportController {
 
       // Store the attachment in R2 (the ticket table keeps the R2 key, not a
       // local path) and drop the multer temp file once it's uploaded.
-      let attachmentUrl = null;
+      attachmentUrl = null;
       if (req.file) {
         const fileBuffer = fs.readFileSync(req.file.path);
         const extension = path.extname(req.file.originalname);
@@ -277,6 +290,17 @@ class SupportController {
         });
       }
 
+      const supportTicketColumns = await getSupportTicketColumnSet();
+      const optionalFields = [];
+
+      if (supportTicketColumns.has("product_id")) {
+        optionalFields.push("st.product_id");
+      }
+
+      if (supportTicketColumns.has("product_name")) {
+        optionalFields.push("st.product_name");
+      }
+
       const [tickets] = await db.execute(
         `SELECT
           st.ticket_id,
@@ -293,6 +317,7 @@ class SupportController {
           st.status,
           st.created_at,
           st.updated_at
+          ${optionalFields.length ? `, ${optionalFields.join(", ")}` : ""}
         FROM support_tickets st
         LEFT JOIN support_categories sc
           ON sc.category_id = st.category_id
@@ -318,6 +343,151 @@ class SupportController {
       });
     }
   }
+  async getRecentOrders(req, res) {
+    try {
+      const loggedInUserId = Number(req.user?.user_id);
+      const requestedUserId = req.query.user_id
+        ? Number(req.query.user_id)
+        : loggedInUserId;
+
+      if (!loggedInUserId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized user",
+        });
+      }
+
+      if (!requestedUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "user_id is required",
+        });
+      }
+
+      if (requestedUserId !== loggedInUserId) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only access your own orders",
+        });
+      }
+
+      const [ecommerceOrders] = await db.execute(
+        `SELECT
+          o.order_id,
+          o.order_ref,
+          o.total_amount,
+          o.product_total,
+          o.reward_discount,
+          o.reward_coins_used,
+          o.reward_earned,
+          o.reward_coins_earned,
+          o.shipping_total,
+          o.status,
+          o.cancellation_status,
+          o.expires_at,
+          o.created_at,
+          o.paid_at
+        FROM eorders o
+        WHERE o.user_id = ?
+        ORDER BY o.created_at DESC, o.order_id DESC
+        LIMIT 5`,
+        [requestedUserId],
+      );
+
+      const ecommerceOrderIds = ecommerceOrders.map((order) => order.order_id);
+      let ecommerceItems = [];
+
+      if (ecommerceOrderIds.length > 0) {
+        const placeholders = ecommerceOrderIds.map(() => "?").join(", ");
+        const [rows] = await db.execute(
+          `SELECT
+            oi.order_item_id,
+            oi.order_id,
+            oi.vendor_order_id,
+            oi.product_id,
+            oi.variant_id,
+            oi.quantity,
+            oi.price,
+            oi.reward_discount,
+            oi.reward_coins_used,
+            oi.reward_earned,
+            oi.reward_coins_earned,
+            oi.final_price,
+            oi.created_at,
+            p.product_name,
+            p.brand_name
+          FROM eorder_items oi
+          LEFT JOIN eproducts p ON p.product_id = oi.product_id
+          WHERE oi.order_id IN (${placeholders})
+          ORDER BY oi.created_at DESC, oi.order_item_id DESC`,
+          ecommerceOrderIds,
+        );
+        ecommerceItems = rows;
+      }
+
+      const ecommerceItemsByOrderId = ecommerceItems.reduce((acc, item) => {
+        if (!acc[item.order_id]) {
+          acc[item.order_id] = [];
+        }
+        acc[item.order_id].push(item);
+        return acc;
+      }, {});
+
+      const latestEcommerceOrders = ecommerceOrders.map((order) => ({
+        ...order,
+        items: ecommerceItemsByOrderId[order.order_id] || [],
+      }));
+
+      const [serviceOrders] = await db.execute(
+        `SELECT
+          so.id,
+          so.order_ref,
+          so.parent_order_id,
+          so.service_id,
+          so.variant_id,
+          so.bundle_id,
+          so.address_id,
+          so.enquiry_id,
+          so.price,
+          so.payment_id,
+          so.payment_method,
+          so.reward_coins_used,
+          so.payment_status,
+          so.status,
+          so.cancelled_at,
+          so.refund_amount,
+          so.completed_at,
+          so.reward_coins_earned,
+          so.created_at,
+          s.name AS service_name,
+          sv.variant_name,
+          sv.image_url
+        FROM service_orders so
+        LEFT JOIN services s ON s.id = so.service_id
+        LEFT JOIN service_variants sv ON sv.id = so.variant_id
+        WHERE so.user_id = ?
+        ORDER BY so.created_at DESC, so.id DESC
+        LIMIT 5`,
+        [requestedUserId],
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          user_id: requestedUserId,
+          ecommerce_orders: latestEcommerceOrders,
+          service_orders: serviceOrders,
+        },
+      });
+    } catch (error) {
+      console.error("Get recent orders error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
 
   /* ======================================================
     STAFF (RM/ADMIN) — SUPPORT ENQUIRIES
@@ -326,7 +496,7 @@ class SupportController {
   // list every ticket, across all customers
   async getAllTickets(req, res) {
     try {
-      const { status, support_module, search } = req.query;
+      const { status, search } = req.query;
 
       const conditions = [];
       const params = [];
@@ -336,51 +506,70 @@ class SupportController {
         params.push(status);
       }
 
-      if (support_module && support_module !== "all") {
-        conditions.push("st.support_module = ?");
-        params.push(support_module);
-      }
-
       if (search && String(search).trim()) {
         const like = `%${String(search).trim()}%`;
-        conditions.push(
-          "(st.subject LIKE ? OR st.description LIKE ? OR c.name LIKE ? OR c.email LIKE ?)",
-        );
-        params.push(like, like, like, like);
+        conditions.push("(st.subject LIKE ? OR st.description LIKE ?)");
+        params.push(like, like);
       }
 
       const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
       const [tickets] = await db.execute(
-        `SELECT
-          st.ticket_id,
-          st.user_id,
-          c.name AS user_name,
-          c.email AS user_email,
-          c.phone AS user_phone,
-          st.subject,
-          st.description,
-          st.category_id,
-          sc.name AS category_name,
-          st.support_module,
-          st.reference_type,
-          st.reference_id,
-          st.reference_label,
-          st.attachment_url,
-          st.status,
-          st.created_at,
-          st.updated_at
+        `SELECT st.*
         FROM support_tickets st
-        LEFT JOIN support_categories sc ON sc.category_id = st.category_id
-        LEFT JOIN customer c ON c.user_id = st.user_id
         ${whereClause}
         ORDER BY st.ticket_id DESC`,
         params,
       );
 
+      const users = new Map();
+      const categories = new Map();
+      const userIds = [...new Set(tickets.map((ticket) => Number(ticket.user_id)).filter(Number.isInteger))];
+      const categoryIds = [...new Set(tickets.map((ticket) => Number(ticket.category_id)).filter(Number.isInteger))];
+
+      if (userIds.length) {
+        try {
+          const placeholders = userIds.map(() => "?").join(",");
+          const [rows] = await db.execute(
+            `SELECT cu.user_id, cu.name, cu.email, cu.phone, co.company_name
+             FROM customer cu
+             LEFT JOIN companies co ON co.company_id = cu.company_id
+             WHERE cu.user_id IN (${placeholders})`,
+            userIds,
+          );
+          rows.forEach((row) => users.set(Number(row.user_id), row));
+        } catch (enrichmentError) {
+          console.error("Support ticket customer enrichment skipped:", enrichmentError.code);
+        }
+      }
+
+      if (categoryIds.length) {
+        try {
+          const placeholders = categoryIds.map(() => "?").join(",");
+          const [rows] = await db.execute(
+            `SELECT category_id, name FROM support_categories WHERE category_id IN (${placeholders})`,
+            categoryIds,
+          );
+          rows.forEach((row) => categories.set(Number(row.category_id), row.name));
+        } catch (enrichmentError) {
+          console.error("Support ticket category enrichment skipped:", enrichmentError.code);
+        }
+      }
+
       const formatted = tickets.map((ticket) => ({
         ...ticket,
-        attachment_url: getPublicUrl(ticket.attachment_url, ticket.updated_at),
+        user_name: users.get(Number(ticket.user_id))?.name || null,
+        user_email: users.get(Number(ticket.user_id))?.email || null,
+        user_phone: users.get(Number(ticket.user_id))?.phone || null,
+        company_name: users.get(Number(ticket.user_id))?.company_name || null,
+        category_name: categories.get(Number(ticket.category_id)) || null,
+        support_module: ticket.support_module || "general",
+        reference_type: ticket.reference_type || null,
+        reference_id: ticket.reference_id || null,
+        reference_label: ticket.reference_label || null,
+        attachment_url: ticket.attachment_url
+          ? getPublicUrl(ticket.attachment_url, ticket.updated_at)
+          : null,
       }));
 
       return res.status(200).json({
@@ -392,6 +581,7 @@ class SupportController {
       return res.status(500).json({
         success: false,
         message: "Internal server error",
+        code: error.code || "SUPPORT_TICKET_LIST_FAILED",
       });
     }
   }

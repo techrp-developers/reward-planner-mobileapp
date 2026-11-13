@@ -12,13 +12,19 @@ export type ProductCollectionSource =
 
 export type HomeStackParamList = {
   Home: undefined;
+  BrandProducts: { brandName: string };
   Category: {
     categoryId: number | string;
     title: string;
     subcategoryId?: number | string;
     subcategoryTitle?: string;
   };
-  ProductDescription: { productId: number | string; variantId?: number | string };
+  ProductDescription: {
+    productId: number | string;
+    variantId?: number | string;
+    campaignId?: number | string;
+    contentId?: number | string;
+  };
   Cart: undefined;
   AddressSelect: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   WithAddress: undefined;
@@ -27,7 +33,8 @@ export type HomeStackParamList = {
   CategoriesScreen: undefined;
   OrderReceipt:  undefined;
   Explore : undefined;
-  ProductScreen: { source: ProductCollectionSource } | undefined;
+  ProductScreen: { source: ProductCollectionSource; title?: string } | undefined;
+  CampaignProducts: { campaignId?: number | string; contentId?: number | string; title: string };
   ReviewScreen: {
     product_id: number;
     variant_id: number;
@@ -43,6 +50,8 @@ export type HomeStackParamList = {
     product_id?: number;
     variant_id?: number;
     qty?: number;
+    campaign_id?: number;
+    content_id?: number;
   };
 
   OrderConfirm: { order_id?: number; items?: any[]; total?: number };
@@ -87,6 +96,19 @@ OrderConfirmedScreen: {
   ItemCancellationDetails: {
     orderItemId: number;
   };
+  ItemReturnRequest: {
+    orderItemId: number;
+    orderId: number;
+    orderRef?: string;
+    productTitle?: string;
+    productMeta?: string;
+    canReturn: boolean;
+    canReplace: boolean;
+    windowEndsAt?: string | null;
+  };
+  ItemReturnDetails: {
+    orderItemId: number;
+  };
   EditProfile: undefined;
   Settings: undefined;
   Privacy: undefined;
@@ -107,6 +129,8 @@ export type OrderStepParams = {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
+  content_id?: number | string;
 };
 
 // Extend HomeStackParamList OrderStepUI to accept params

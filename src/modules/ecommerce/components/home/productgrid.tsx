@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import ModuleSkeleton from '../../../common/components/ModuleSkeleton';
+import React, { useCallback, useMemo, useRef } from "react";
 import {
   View,
   StyleSheet,
   Text,
   FlatList,
-  Animated,
   ViewToken,
   useWindowDimensions,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import ProductCard from "../../constants/product_cart/ProductCard";
 import { fetchAllProducts, fetchSimilarProducts } from "../../api/ProductApi";
-import SkeletonBox from "../../../services/component/constant/SkeletonBox";
 import { normalizeProduct } from "../../utils/normalizeProduct";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 
@@ -55,7 +54,6 @@ export default function ProductGrid({
   onProductPress,
 }: Props) {
   const { theme } = useAppTheme();
-  const pulse = useRef(new Animated.Value(0)).current;
   const loadedProductIdsRef = useRef<Set<string>>(new Set());
   const [, forceVisibleTick] = React.useState(0);
   const { width: screenWidth } = useWindowDimensions();
@@ -63,16 +61,7 @@ export default function ProductGrid({
   // Responsive columns: use prop if provided, otherwise auto
   const columns = propColumns ?? getResponsiveColumns(screenWidth);
 
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [pulse]);
+
 
   const effectiveTake = take ?? columns * 3;
   const shouldFetch = !propProducts || propProducts.length === 0;
@@ -171,19 +160,6 @@ export default function ProductGrid({
     (screenWidth - HORIZONTAL_PADDING - COLUMN_GAP * (columns - 1)) / columns
   );
 
-  const skeletonItemStyles = useMemo(() => {
-    return Array.from({ length: effectiveTake }, (_, index) => {
-      const isLastInRow = (index + 1) % columns === 0;
-      return {
-        key: `skeleton-${index}`,
-        wrapperStyle: {
-          width: cardWidth,
-          marginRight: isLastInRow ? 0 : COLUMN_GAP,
-          marginBottom: ROW_GAP,
-        },
-      };
-    });
-  }, [effectiveTake, columns, cardWidth]);
 
   const errorMsg = error
     ? hasRelatedContext
@@ -237,21 +213,7 @@ export default function ProductGrid({
   }, [useFlatList, hasNextPage, loadingMore, onEndReached]);
 
   if (isLoading) {
-    return (
-      <View style={[styles.listContent, { backgroundColor: theme.background }]}>
-        <View style={styles.skeletonRow}>
-          {skeletonItemStyles.map(({ key, wrapperStyle }) => (
-            <View key={key} style={wrapperStyle}>
-              <View style={[styles.skeletonCard, { backgroundColor: theme.card }]}>
-                <SkeletonBox pulse={pulse} width="100%" height={Math.round(cardWidth * 1.08)} borderRadius={12} />
-                <SkeletonBox pulse={pulse} width="88%" height={12} borderRadius={999} style={styles.skeletonText} />
-                <SkeletonBox pulse={pulse} width="56%" height={10} borderRadius={999} style={styles.skeletonTextSmall} />
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
+    return <ModuleSkeleton height={cardWidth * 1.08 + 100} />;
   }
 
   if (errorMsg) {
@@ -327,12 +289,6 @@ columnRow: {
     alignSelf: "stretch",
     marginBottom: ROW_GAP,
   },
-  skeletonRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
-    justifyContent: "flex-start",
-  },
   staticGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -345,16 +301,5 @@ columnRow: {
   },
   errorText: {
     padding: 16,
-  },
-  skeletonCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 6,
-  },
-  skeletonText: {
-    marginTop: 8,
-  },
-  skeletonTextSmall: {
-    marginTop: 6,
   },
 });

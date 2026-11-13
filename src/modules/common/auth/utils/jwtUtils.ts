@@ -4,7 +4,7 @@ const decodeBase64Url = (segment: string) => {
   return atob(padded);
 };
 
-const decodeJwtPayload = (token: string): Record<string, any> | null => {
+export const decodeJwtPayload = (token: string): Record<string, any> | null => {
   const parts = token.split(".");
   if (parts.length < 2) return null;
 

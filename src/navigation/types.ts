@@ -21,6 +21,7 @@ export type RootStackParamList = {
   Address: undefined;
   WalletHistory: undefined;
   Notification: undefined;
+  NotificationSettings: undefined;
   SearchScreen: undefined;
   BBPSHomeStack: undefined;
   ExploreModule: undefined;

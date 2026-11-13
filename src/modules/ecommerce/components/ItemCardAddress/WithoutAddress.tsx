@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
@@ -82,13 +83,14 @@ const CartRow = React.memo(function CartRow({
 
   return (
     <CartItemCard
+      offerLine={item}
       title={item.product_name}
       image={getProductImageUrl(item.image)}
       deliveryText="Delivery in 3–5 days"
       returnText="7 Days Returnable"
       mrp={mrp}
       price={price}
-      discountText={`₹${discount} off`}
+      discountText={`${formatMoney(discount)} off`}
       quantity={item.quantity}
       attributes={item.attributes || item.variant_attributes}
       onIncrease={() => onIncrease(item)}

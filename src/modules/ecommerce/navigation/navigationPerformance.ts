@@ -3,6 +3,7 @@ import { fetchProductDetailsByID } from "../api/ProductApi";
 import { fetchCartItems } from "../api/CartApi";
 import { fetchAllAddress } from "../api/AddressApi";
 import { fetchBuyNowCheckout, fetchCheckoutCart } from "../api/CheckoutApi";
+import type { DeliveryPreference } from "../api/CheckoutApi";
 
 const PRODUCT_DETAILS_STALE_TIME = 5 * 60 * 1000;
 const CART_STALE_TIME = 10 * 60 * 1000;
@@ -13,10 +14,14 @@ export const cartSummaryQueryKey = (useRewards: boolean) =>
   ["ecommerce", "cart-summary", useRewards] as const;
 
 export const checkoutPreviewQueryKey = (params?: {
+  delivery_preference?: DeliveryPreference;
+  address_id?: number;
   mode?: "buy_now" | "cart";
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const useRewards = params?.use_rewards ?? true;
@@ -29,17 +34,27 @@ export const checkoutPreviewQueryKey = (params?: {
       String(params?.product_id ?? ""),
       String(params?.variant_id ?? ""),
       String(params?.qty ?? 1),
+      String(params?.campaign_id ?? ""),
+      String(params?.content_id ?? ""),
       useRewards,
+      params?.delivery_preference ?? 'cheapest',
+      params?.address_id ?? null,
     ] as const;
   }
 
-  return ["ecommerce", "checkout-preview", "cart", useRewards] as const;
+  return ["ecommerce", "checkout-preview", "cart", useRewards, params?.delivery_preference ?? 'cheapest', params?.address_id ?? null] as const;
 };
 
-export const productDetailsQueryKey = (productId: number | string) => [
+export const productDetailsQueryKey = (
+  productId: number | string,
+  campaignId?: number | string,
+  contentId?: number | string,
+) => [
   "ecommerce",
   "product-details",
   String(productId),
+  String(campaignId ?? ""),
+  String(contentId ?? ""),
 ] as const;
 
 type NavigateWithPrefetchOptions = {
@@ -72,10 +87,14 @@ export const handleNavigateWithPrefetch = ({
   navigate();
 };
 
-export const prefetchProductDetails = (productId: number | string) => {
+export const prefetchProductDetails = (
+  productId: number | string,
+  campaignId?: number | string,
+  contentId?: number | string,
+) => {
   return queryClient.prefetchQuery({
-    queryKey: productDetailsQueryKey(productId),
-    queryFn: () => fetchProductDetailsByID(productId),
+    queryKey: productDetailsQueryKey(productId, campaignId, contentId),
+    queryFn: () => fetchProductDetailsByID(productId, campaignId, contentId),
     staleTime: PRODUCT_DETAILS_STALE_TIME,
   });
 };
@@ -105,6 +124,8 @@ export const prefetchCheckoutPreview = (params?: {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   const mode = params?.mode === "buy_now" ? "buy_now" : "cart";
@@ -125,9 +146,20 @@ export const prefetchCheckoutPreview = (params?: {
         product_id: productId,
         variant_id: variantId,
         qty,
+        campaign_id: params?.campaign_id,
+        content_id: params?.content_id,
         use_rewards: useRewards,
       }),
-      queryFn: () => fetchBuyNowCheckout(productId, variantId, qty, useRewards),
+      queryFn: () =>
+        fetchBuyNowCheckout(
+          productId,
+          variantId,
+          qty,
+          useRewards,
+          undefined,
+          params?.campaign_id == null ? null : Number(params.campaign_id),
+          params?.content_id == null ? null : Number(params.content_id),
+        ),
       staleTime: CART_STALE_TIME,
     });
   }
@@ -144,6 +176,8 @@ export const prefetchCheckoutScreenData = async (params?: {
   product_id?: number | string;
   variant_id?: number | string;
   qty?: number;
+  campaign_id?: number | string;
+  content_id?: number | string;
   use_rewards?: boolean;
 }) => {
   await Promise.allSettled([

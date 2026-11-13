@@ -1,24 +1,23 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Platform,
   Pressable,
+  ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import HeaderComponent, { type SearchOverlayState } from '../header/HeaderComponent';
 import SearchDropdown from '../header/SearchDropdown';
 import { useAuth } from '../../common/auth/context/AuthContext';
 import { getAuthHeaders } from '../../common/auth/api/AuthAPI';
 import axios from 'axios';
 import Home_Chart from '../stepcount/Home_Chart';
-import ModuleBanner from '../explore/ModuleBanner';
-import { rs, fs } from '../../../utils/responsive';
+import PromotionalBanner from '../../ecommerce/components/home/PromotionalBanner';
+import { rs } from '../../../utils/responsive';
 import ServicesModule, { type ExploreServiceTab } from '../explore/ServicesModule';
 import RewardsOverview from '../reward/Rewardsoverview';
 // import BottomTabs, { TAB_BAR_HEIGHT } from '../../ecommerce/navigation/BottomTabs';
@@ -26,37 +25,49 @@ import { useCart } from '../../ecommerce/context/CartContext';
 import type { TabKey } from '../../../bottombar/BottomTabs';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import BottomTabs, { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BirthdayCarousel from '../birthday/BirthdayCarousel';
-import type { BirthdayEmployee } from '../birthday/types';
+import CrackerCelebration, { type CrackerCelebrationHandle } from '../birthday/CrackerCelebration';
+import { fetchTodayBirthdayWishes } from '../birthday/birthdayAPI';
+import type { BirthdayEmployee, BirthdayWishesReceived } from '../birthday/types';
+import { useChatUnreadCount } from '../../chat/hooks/useChatUnreadCount';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
-import { API_V1_URL } from '../../../config/apiConfig';
+import { fetchResolvedZones } from '../../common/cms/cmsContentApi';
+import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
+import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
+import OffersBanner from '../../ecommerce/components/home/OffersBanner';
+import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
+import StatusTray from '../../status/components/StatusTray';
+import GamesDrawer from '../../games/components/GamesDrawer';
+import ModuleBanner from '../explore/ModuleBanner';
 
 const MAIN_DASHBOARD_SECTION_KEYS: readonly MainDashboardSectionKey[] = [
-  'header', 'birthdays', 'stepProgress', 'exploreModules', 'moduleBanner', 'rewardsOverview',
+  'header', 'promotionalBanner', 'birthdays', 'stepProgress', 'investmentInsurance', 'exploreModules', 'moduleBanner', 'rewardsOverview',
 ];
+
+// The CMS only stores one solid color per navbar_background entry — turn it
+// into a two-stop gradient client-side (rather than needing a second
+// gradient-end field added to the backend) by blending it toward black.
+const darkenHexColor = (hex: string, amount: number): string => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return hex;
+
+  const channel = (start: number) =>
+    Math.max(0, Math.min(255, Math.round(parseInt(normalized.slice(start, start + 2), 16) * (1 - amount))))
+      .toString(16)
+      .padStart(2, '0');
+
+  return `#${channel(0)}${channel(2)}${channel(4)}`;
+};
 
 const MODULE_ROUTE: Record<ExploreServiceTab, string> = {
   Product: 'ProductModule',
   Services: 'ServicesModule',
   Payments: 'PaymentsModule',
   DineOut: 'DineOutModule',
-};
-
-const MODULE_LAUNCH_COLOR: Record<ExploreServiceTab, string> = {
-  Product: '#5F341A',
-  Services: '#4F6BFF',
-  Payments: '#7C3AED',
-  DineOut: '#DC2626',
-};
-
-const MODULE_DISPLAY_NAME: Record<ExploreServiceTab, string> = {
-  Product: 'Product',
-  Services: 'Services',
-  Payments: 'Payments',
-  DineOut: 'Bus Booking',
 };
 
 type DashboardHeaderCache = {
@@ -66,21 +77,31 @@ type DashboardHeaderCache = {
   thought: string;
   stepGoal: number;
   birthdays: BirthdayEmployee[];
+  birthdayWishes: BirthdayWishesReceived;
   fetchedAt: number;
 };
+
+const NO_BIRTHDAY_WISHES: BirthdayWishesReceived = { count: 0, senders: [] };
+
+// Local calendar day, used to celebrate the user's own birthday only once.
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const birthdayCelebratedStorageKey = (userId: number | string) => `birthday_celebrated:${userId}:${todayKey()}`;
 
 const DASHBOARD_HEADER_CACHE_TTL_MS = 10 * 60 * 1000;
 let dashboardHeaderCache: DashboardHeaderCache | null = null;
 
 const MemoHomeChart = memo(Home_Chart);
 const MemoServicesModule = memo(ServicesModule);
-const MemoModuleBanner = memo(ModuleBanner);
 const MemoRewardsOverview = memo(RewardsOverview);
 const MemoBirthdayCarousel = memo(BirthdayCarousel);
+const MemoOffersBanner = memo(OffersBanner);
+const MemoInvestmentInsuranceOverview = memo(InvestmentInsuranceOverview);
 
 function Dashbord() {
   const { isDark } = useAppTheme();
-  const iconSize = rs(26);
   const navigation = useNavigation<any>();
   const { totalQuantity } = useCart();
   const { isAuthenticated, user } = useAuth();
@@ -101,14 +122,28 @@ function Dashbord() {
     const initialGoal = Number((user as any)?.steps?.goal_steps);
     return Number.isFinite(initialGoal) && initialGoal > 0 ? initialGoal : 5000;
   });
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const handleDashboardScroll = useCallback((event: import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>) => {
+    const y = Math.max(0, event.nativeEvent.contentOffset.y);
+    // Resizing the header can adjust the scroll offset, especially near the
+    // bottom. Do not mistake those small corrections for an upward gesture.
+    if (y < 16) setHeaderCollapsed(false);
+    else if (y > 160) setHeaderCollapsed(true);
+  }, []);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchOverlay, setSearchOverlay] = useState<SearchOverlayState | null>(null);
   const [searchDismissSignal, setSearchDismissSignal] = useState(0);
   const [birthdays, setBirthdays] = useState<BirthdayEmployee[]>(
     () => dashboardHeaderCache?.birthdays ?? [],
   );
-  const [openingModule, setOpeningModule] = useState<ExploreServiceTab | null>(null);
   const hasBirthdays = birthdays.length > 0;
+  const [birthdayWishes, setBirthdayWishes] = useState<BirthdayWishesReceived>(
+    () => dashboardHeaderCache?.birthdayWishes ?? NO_BIRTHDAY_WISHES,
+  );
+  const isMyBirthday = useMemo(() => birthdays.some((b) => b.isSelf), [birthdays]);
+  const celebrationRef = useRef<CrackerCelebrationHandle>(null);
+  const chatUnreadCount = useChatUnreadCount(isAuthenticated);
+  const isFocused = useIsFocused();
   const { data: walletBalanceResponse } = useQuery({
     queryKey: ['dashboard', 'header-wallet-balance'],
     queryFn: fetchWalletBalance,
@@ -116,7 +151,24 @@ function Dashbord() {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const { data: mobileDashboardContent } = useQuery({
+    queryKey: moduleContentQueryKey('mobile_dashboard'),
+    queryFn: () => fetchResolvedZones('mobile_dashboard'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
+  const mobileDashboardBackground = mobileDashboardContent?.navbar_background ?? null;
+  const mobileDashboardImageUrl =
+    mobileDashboardBackground?.content_type === 'image'
+      ? mobileDashboardBackground.image_url
+      : null;
+  const mobileDashboardColor =
+    mobileDashboardBackground?.content_type === 'color'
+      ? mobileDashboardBackground.color_value
+      : null;
+  const mobileDashboardTextColor = mobileDashboardBackground?.text_color ?? null;
 
   const loadHeaderInfo = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -131,6 +183,7 @@ function Dashbord() {
       setThought(dashboardHeaderCache.thought);
       setStepGoal(dashboardHeaderCache.stepGoal);
       setBirthdays(dashboardHeaderCache.birthdays);
+      setBirthdayWishes(dashboardHeaderCache.birthdayWishes);
       return;
     }
 
@@ -145,9 +198,11 @@ function Dashbord() {
 
       if (userRes.data?.success) {
         const d = userRes.data.data;
+        const nextUserImage = normalizeLocalCmsImageUrl(d.userImage);
+        const nextCompanyLogo = normalizeLocalCmsImageUrl(d.company?.logo);
         if (d.name)          setHeaderUserName((prev) => (prev === d.name ? prev : d.name));
-        if (d.userImage)     setHeaderUserImage((prev) => (prev === d.userImage ? prev : d.userImage));
-        if (d.company?.logo) setHeaderCompanyLogo((prev) => (prev === d.company.logo ? prev : d.company.logo));
+        if (nextUserImage)   setHeaderUserImage((prev) => (prev === nextUserImage ? prev : nextUserImage));
+        if (nextCompanyLogo) setHeaderCompanyLogo((prev) => (prev === nextCompanyLogo ? prev : nextCompanyLogo));
         if (d.thought)       setThought((prev) => (prev === d.thought ? prev : d.thought));
 
         const apiStepGoal = Number(d.steps?.goal_steps);
@@ -161,22 +216,33 @@ function Dashbord() {
           name:        b.name,
           designation: b.role,
           department:  b.department,
-          photo:       b.image ?? null,
+          photo:       normalizeLocalCmsImageUrl(b.image) ?? null,
+          isSelf:      Boolean(b.isSelf),
+          wished:      Boolean(b.wished),
         }));
         setBirthdays((prev) => (
           JSON.stringify(prev) === JSON.stringify(mappedBirthdays) ? prev : mappedBirthdays
         ));
 
+        const nextWishes: BirthdayWishesReceived = {
+          count: Number(d.birthday_wishes_received?.count) || 0,
+          senders: Array.isArray(d.birthday_wishes_received?.senders) ? d.birthday_wishes_received.senders : [],
+        };
+        setBirthdayWishes((prev) => (
+          prev.count === nextWishes.count && prev.senders.join() === nextWishes.senders.join() ? prev : nextWishes
+        ));
+
         dashboardHeaderCache = {
           userName: d.name || headerUserName,
-          userImage: d.userImage ?? headerUserImage,
-          companyLogo: d.company?.logo ?? headerCompanyLogo,
+          userImage: nextUserImage ?? headerUserImage,
+          companyLogo: nextCompanyLogo ?? headerCompanyLogo,
           thought: d.thought ?? thought,
           stepGoal:
             Number.isFinite(Number(d.steps?.goal_steps)) && Number(d.steps?.goal_steps) > 0
               ? Number(d.steps.goal_steps)
               : stepGoal,
           birthdays: mappedBirthdays,
+          birthdayWishes: nextWishes,
           fetchedAt: Date.now(),
         };
       }
@@ -209,10 +275,13 @@ function Dashbord() {
       require('../../services/component/screens/HomeScreen');
       require('../../bbps/navigation/BBPSHomeStack');
       require('../../bbps/screen/HomePage');
+      void Promise.allSettled([
+        require('../../services/component/home/ServicesHome').prefetchServiceCategories(),
+        require('../../bbps/component/home/ReachargeBill').prefetchBillCategories(),
+      ]);
       require('../../step_counter/navigation/RewardHomeStack');
       require('../../step_counter/component/fitness/StepWelcome');
-      require('../../busbooking/navigation/BusBookingStack');
-      require('../../busbooking/components/screens/BookingHomeScreen');
+      require('../../ecommerce/constants/ComingSoon');
     }, 900);
 
     return () => {
@@ -222,22 +291,14 @@ function Dashbord() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    setOpeningModule(null);
     loadHeaderInfo();
   }, [loadHeaderInfo]));
 
   const handleExploreModulePress = useCallback((tab: ExploreServiceTab) => {
-    setOpeningModule(tab);
-
-    // Let the lightweight module shell paint before mounting the destination.
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        navigation.navigate('Home', {
-          screen: MODULE_ROUTE[tab],
-          params: { moduleName: tab },
-          moduleName: tab,
-        });
-      }, 0);
+    navigation.navigate('Home', {
+      screen: MODULE_ROUTE[tab],
+      params: { moduleName: tab },
+      moduleName: tab,
     });
   }, [navigation]);
 
@@ -256,6 +317,9 @@ function Dashbord() {
         case 'Profile':
           navigation.navigate('Profile', { context: 'dashboard' });
           break;
+        case 'Chat':
+          navigation.navigate('Chat');
+          break;
         // 'Home' is Dashboard itself — already here, no-op
       }
     },
@@ -266,27 +330,163 @@ function Dashbord() {
     navigation.navigate('Dashboard');
   }, [navigation]);
 
+  // ── Birthday celebrations ───────────────────────────────────────────────────
+  const handleWishSent = useCallback((employee: BirthdayEmployee) => {
+    const firstName = employee.name.trim().split(/\s+/)[0] || employee.name;
+    celebrationRef.current?.fire(`🎉 Wishes sent to ${firstName}!`);
+  }, []);
+
+  // Birthday person: celebrate once, the first time they see the dashboard on their birthday.
+  // Later wishes don't replay it; they only update the "N Wishes" chip.
+  useEffect(() => {
+    const userId = user?.user_id;
+    if (!userId || !isFocused || !isMyBirthday) return;
+    let cancelled = false;
+    (async () => {
+      const key = birthdayCelebratedStorageKey(userId);
+      try {
+        if (await AsyncStorage.getItem(key)) return;
+      } catch { }
+      if (cancelled) return;
+      const firstName = headerUserName.trim().split(/\s+/)[0] || headerUserName;
+      celebrationRef.current?.fire(`🎂 Happy Birthday, ${firstName}!`);
+      try { await AsyncStorage.setItem(key, '1'); } catch { }
+    })();
+    return () => { cancelled = true; };
+  }, [headerUserName, isFocused, isMyBirthday, user?.user_id]);
+
+  const refreshBirthdayWishes = useCallback(async () => {
+    try {
+      const next = await fetchTodayBirthdayWishes();
+      setBirthdayWishes((prev) => (
+        prev.count === next.count && prev.senders.join() === next.senders.join() ? prev : next
+      ));
+      if (dashboardHeaderCache) dashboardHeaderCache = { ...dashboardHeaderCache, birthdayWishes: next };
+    } catch { }
+  }, []);
+
+  // Keeps the "N Wishes" chip current. A wish is a chat message, so re-check whenever the
+  // unread count rises — that signal arrives via socket, foreground push, or the fallback poll.
+  const prevChatUnreadRef = useRef(chatUnreadCount);
+  useEffect(() => {
+    const increased = chatUnreadCount > prevChatUnreadRef.current;
+    prevChatUnreadRef.current = chatUnreadCount;
+    if (isMyBirthday && increased) refreshBirthdayWishes();
+  }, [chatUnreadCount, isMyBirthday, refreshBirthdayWishes]);
+
+  // The user-info cache can be up to 10 minutes old; re-check on every visit.
+  useFocusEffect(
+    useCallback(() => {
+      if (isMyBirthday) refreshBirthdayWishes();
+    }, [isMyBirthday, refreshBirthdayWishes]),
+  );
+
   const dismissSearch = useCallback(() => {
     if (!isSearchOpen) return;
     setSearchDismissSignal((value) => value + 1);
   }, [isSearchOpen]);
 
-  const topSectionGradient: string[] = isDark
-    ? ['#09090B', '#111827', '#18181B']
-    : ['#111827', '#1E1B4B', '#312E81'];
+  // Default (no CMS navbar_background configured for this module) header
+  // background — matches the light, near-white reference design. Only used
+  // as a fallback: renderHeaderSection still swaps in the CMS-provided
+  // image/color first when one is published, so this never overrides
+  // dynamic content — it just fixes what shows before any is set.
+  const topSectionGradient: string[] = useMemo(
+    () => (isDark ? ['#09090B', '#111827', '#18181B'] : ['#F8FAFC', '#FFFFFF', '#F1F5F9']),
+    [isDark],
+  );
 
   const rootGradient = isDark
     ? ['#09090B', '#111827', '#151526']
-    : ['#F8FAFC', '#EEF2FF', '#FFFFFF'];
+    : ['#F8FAFC', '#FFFFFF', '#F8FAFC'];
 
-  const quoteBannerGradient: string[] = isDark
-    ? ['#18181B', '#27233A', '#4338CA']
-    : ['#111827', '#312E81', '#4F46E5'];
+  const renderHeaderSection = useCallback((key: string) => {
+    // Only override the theme-aware text colors when a CMS background
+    // (image or color) is actually active — the default fallback gradient
+    // below keeps HeaderComponent's own light/dark text, matching the
+    // reference design when no CMS content has been published yet.
+    const hasDynamicHeaderBackground = !!(mobileDashboardImageUrl || mobileDashboardColor);
+    const headerTextColor = hasDynamicHeaderBackground
+      ? mobileDashboardTextColor ?? '#FFFFFF'
+      : undefined;
 
-  const t = useMemo(() => StyleSheet.create({
-    iconContainer: { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.16)' },
-    card: { shadowColor: isDark ? '#000000' : '#312E81' },
-  }), [isDark]);
+    const headerContent = (
+      <>
+        <HeaderComponent
+          collapsed={headerCollapsed && !isSearchOpen}
+          userName={headerUserName}
+          userImageUri={headerUserImage ?? undefined}
+          companyLogoUri={headerCompanyLogo ?? undefined}
+          surface="transparent"
+          textColor={headerTextColor}
+          dismissSignal={searchDismissSignal}
+          onSearchActiveChange={setIsSearchOpen}
+          onSearchOverlayChange={setSearchOverlay}
+          onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
+          onNotificationPress={() => navigation.navigate('Notification')}
+          showRewardPoints
+          rewardPoints={rewardPoints}
+          onProfilePress={() => navigation.navigate('Profile', { context: 'dashboard' })}
+          statusContent={<StatusTray textColor={headerTextColor} />}
+        />
+      </>
+    );
+
+    if (mobileDashboardImageUrl) {
+      return (
+        <ImageBackground
+          key={key}
+          source={{ uri: mobileDashboardImageUrl }}
+          resizeMode="cover"
+          style={styles.topSection}
+          imageStyle={styles.topSectionImage}
+        >
+          <LinearGradient
+            colors={isDark ? ['rgba(9,9,11,0.70)', 'rgba(17,24,39,0.54)'] : ['rgba(17,24,39,0.56)', 'rgba(49,46,129,0.36)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {headerContent}
+        </ImageBackground>
+      );
+    }
+
+    if (mobileDashboardColor) {
+      return (
+        <LinearGradient
+          key={key}
+          colors={[mobileDashboardColor, darkenHexColor(mobileDashboardColor, 0.28)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.topSection}
+        >
+          {headerContent}
+        </LinearGradient>
+      );
+    }
+
+    return (
+      <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
+        {headerContent}
+      </LinearGradient>
+    );
+  }, [
+    headerCollapsed,
+    isSearchOpen,
+    headerCompanyLogo,
+    headerUserImage,
+    headerUserName,
+    isDark,
+    mobileDashboardColor,
+    mobileDashboardImageUrl,
+    mobileDashboardTextColor,
+    navigation,
+    rewardPoints,
+    searchDismissSignal,
+    topSectionGradient,
+  ]);
 
   return (
     <LinearGradient
@@ -295,64 +495,47 @@ function Dashbord() {
       end={{ x: 0, y: 1 }}
       style={styles.root}
     >
+      {/* Fixed — stays pinned above the scrollable sections below, rather
+          than scrolling away with the rest of the dashboard content. */}
+      {renderHeaderSection('header')}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: rs(32) + TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSearchOpen}
+        onScroll={handleDashboardScroll}
+        scrollEventThrottle={16}
         onScrollBeginDrag={dismissSearch}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         bounces
       >
         {dashboardLayout.sections.map(({ key }) => {
           switch (key as MainDashboardSectionKey) {
             case 'header':
-              return (
-                <LinearGradient key={key} colors={topSectionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topSection}>
-                  <HeaderComponent
-                    userName={headerUserName}
-                    userImageUri={headerUserImage ?? undefined}
-                    companyLogoUri={headerCompanyLogo ?? undefined}
-                    surface="transparent"
-                    dismissSignal={searchDismissSignal}
-                    onSearchActiveChange={setIsSearchOpen}
-                    onSearchOverlayChange={setSearchOverlay}
-                    onSearchSubmit={() => navigation.navigate('GlobalSearchScreen')}
-                    onNotificationPress={() => navigation.navigate('Notification')}
-                    showRewardPoints
-                    rewardPoints={rewardPoints}
-                  />
-                  <Pressable onPress={dismissSearch}>
-                    <View style={styles.bannerOuter}>
-                      <LinearGradient colors={quoteBannerGradient} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={[styles.card, t.card]}>
-                        <LinearGradient
-                          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0.10)']}
-                          locations={[0, 0.58, 1]}
-                          start={{ x: 0, y: 0.5 }}
-                          end={{ x: 1, y: 0.5 }}
-                          style={styles.quoteHighlight}
-                          pointerEvents="none"
-                        />
-                        <View style={[styles.iconContainer, t.iconContainer]}>
-                          <MaterialCommunityIcons name="lightbulb-on-outline" size={iconSize} color={isDark ? '#FFFFFF' : '#9B3DD8'} />
-                        </View>
-                        <Text style={styles.quote}>
-                          {thought ? `"${thought}"` : '"Success is the sum of small efforts,\nrepeated day in and day out."'}
-                        </Text>
-                      </LinearGradient>
-                    </View>
-                  </Pressable>
-                </LinearGradient>
-              );
+              // Rendered fixed above the ScrollView instead — skip here.
+              return null;
+            case 'promotionalBanner':
+              return <PromotionalBanner key={key} module="mobile_dashboard" />;
             case 'birthdays':
-              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} /></Pressable> : null;
+              return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} wishesReceived={birthdayWishes.count} onWishSent={handleWishSent} /></Pressable> : null;
             case 'stepProgress':
               return <Pressable key={key} onPress={dismissSearch}><MemoHomeChart goalSteps={stepGoal} /></Pressable>;
+            case 'investmentInsurance':
+              return <Pressable key={key} onPress={dismissSearch}><MemoInvestmentInsuranceOverview /></Pressable>;
             case 'exploreModules':
               return <Pressable key={key} onPress={dismissSearch}><MemoServicesModule onModulePress={handleExploreModulePress} /></Pressable>;
             case 'moduleBanner':
-              return <MemoModuleBanner key={key} />;
+              return (
+                <View key={key}>
+                <ModuleBanner />
+                <MemoOffersBanner
+                  module="mobile_dashboard"
+                  moduleContent={mobileDashboardContent}
+                />
+                </View>
+              );
             case 'rewardsOverview':
               return <Pressable key={key} onPress={dismissSearch}><MemoRewardsOverview /></Pressable>;
             default:
@@ -383,47 +566,12 @@ function Dashbord() {
         isDashboard
         activeTabKey="Home"
         cartCount={totalQuantity}
+        chatUnreadCount={chatUnreadCount}
         onTabPress={handleTabPress}
         onCenterPress={handleCenterPress}
       />
-      {openingModule && (
-        <View
-          style={[
-            styles.moduleLaunchOverlay,
-            { backgroundColor: MODULE_LAUNCH_COLOR[openingModule] },
-          ]}
-        >
-          <Text style={styles.moduleLaunchTitle}>
-            {MODULE_DISPLAY_NAME[openingModule]}
-          </Text>
-          <View
-            style={[
-              styles.moduleLaunchContent,
-              { backgroundColor: isDark ? '#09090B' : '#F8FAFC' },
-            ]}
-          >
-            <View
-              style={[
-                styles.moduleLaunchLineWide,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchLine,
-                { backgroundColor: isDark ? '#27272A' : '#E2E8F0' },
-              ]}
-            />
-            <View
-              style={[
-                styles.moduleLaunchCard,
-                { backgroundColor: isDark ? '#18181B' : '#E2E8F0' },
-              ]}
-            />
-          </View>
-        </View>
-      )}
-      {/* <FloatingBottomBar/> */}
+      {!isSearchOpen && <GamesDrawer />}
+      <CrackerCelebration ref={celebrationRef} />
     </LinearGradient>
   );
 }
@@ -449,6 +597,7 @@ const styles = StyleSheet.create({
     paddingBottom: rs(16),
     borderBottomLeftRadius: rs(30),
     borderBottomRightRadius: rs(30),
+    overflow: 'hidden',
     zIndex: 20,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: rs(12) },
@@ -456,52 +605,9 @@ const styles = StyleSheet.create({
     shadowRadius: rs(18),
     elevation: 8,
   },
-
-  bannerOuter: {
-    paddingHorizontal: rs(16),
-    paddingTop: rs(2),
-  },
-  card: {
-    borderRadius: rs(20),
-    paddingVertical: rs(13),
-    paddingHorizontal: rs(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: rs(10) },
-    shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0.24,
-    shadowRadius: rs(18),
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-  quoteHighlight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '62%',
-  },
-  iconContainer: {
-    width: rs(48),
-    height: rs(48),
-    borderRadius: rs(14),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: rs(13),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  quote: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: fs(13.5),
-    lineHeight: rs(20),
-    fontStyle: 'italic',
-    fontWeight: '600',
+  topSectionImage: {
+    borderBottomLeftRadius: rs(30),
+    borderBottomRightRadius: rs(30),
   },
 
   searchOverlay: {
@@ -523,40 +629,4 @@ const styles = StyleSheet.create({
     elevation: 32,
   },
 
-  moduleLaunchOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 500,
-    elevation: 50,
-    paddingTop: rs(72),
-  },
-  moduleLaunchTitle: {
-    color: '#FFFFFF',
-    fontSize: fs(22),
-    fontWeight: '800',
-    paddingHorizontal: rs(20),
-    paddingBottom: rs(20),
-  },
-  moduleLaunchContent: {
-    flex: 1,
-    padding: rs(18),
-    borderTopLeftRadius: rs(28),
-    borderTopRightRadius: rs(28),
-  },
-  moduleLaunchLineWide: {
-    width: '58%',
-    height: rs(18),
-    borderRadius: rs(9),
-    marginBottom: rs(12),
-  },
-  moduleLaunchLine: {
-    width: '34%',
-    height: rs(12),
-    borderRadius: rs(6),
-    marginBottom: rs(22),
-  },
-  moduleLaunchCard: {
-    width: '100%',
-    height: rs(210),
-    borderRadius: rs(18),
-  },
 });

@@ -1,9 +1,16 @@
 const db = require("../../../../config/database");
-const xpressService = require("../../../../services/ExpressBees/xpressbees_service");
+const courierService = require("../../../../services/courier/courierService");
+const { priceLines } = require("../utils/activeOffers");
+const {
+  sendEcommerceOrderStatusMail,
+} = require("../../../../services/mailBuilder/ecommerceOrderStatus");
+const {
+  enqueueEcommerceOrderStatusWhatsApp,
+} = require("../../../../services/whatsapp/ecommerceOrderStatusWhatsApp");
 
 const classifyService = (name) => {
   const lower = name.toLowerCase();
-  if (lower.includes("air")) return "express";
+  if (lower.includes("air") || lower.includes("express")) return "express";
   if (lower.includes("surface")) return "standard";
   return "economy";
 };
@@ -130,6 +137,8 @@ class LogisticsController {
           return res.status(404).json({ success: false, message: "Variant not found" });
         }
 
+        await priceLines([Object.assign(variant, { variant_id: variantId, quantity: parsedQuantity })]);
+
         vendorGroups[variant.vendor_id] = {
           totalWeightKg: parsedQuantity * Number(variant.weight),
           totalAmount: parsedQuantity * Number(variant.sale_price),
@@ -145,7 +154,7 @@ class LogisticsController {
       if (mode === "cart") {
         const [rows] = await db.execute(
           `SELECT 
-             ci.quantity, v.weight, v.length, v.breadth, v.height,
+             ci.variant_id, ci.quantity, v.weight, v.length, v.breadth, v.height,
              v.sale_price, p.vendor_id
            FROM cart_items ci
            JOIN product_variants v ON ci.variant_id = v.variant_id
@@ -153,6 +162,7 @@ class LogisticsController {
            WHERE ci.user_id = ?`,
           [userId]
         );
+        await priceLines(rows);
 
         if (!rows.length) {
           return res.status(400).json({ success: false, message: "Cart is empty" });
@@ -197,7 +207,7 @@ class LogisticsController {
 
         const weightGrams = Math.round(group.totalWeightKg * 1000);
 
-        const serviceResponse = await xpressService.checkServiceability({
+        const serviceResponse = await courierService.checkServiceability({
           origin: vendorAddress.pincode,
           destination: pincode,
           payment_type: paymentType,
@@ -282,11 +292,31 @@ class LogisticsController {
         `SELECT
            id, vendor_id, courier_name, awb_number, shipping_status, ndr_reason,
            booked_at, picked_up_at, in_transit_at, out_for_delivery_at, delivered_at,
-           expected_delivery_date
+           cancelled_at, rto_at, expected_delivery_date
          FROM order_shipments
          WHERE order_id = ?`,
         [orderId]
       );
+
+      const shipmentIds = shipments.map((shipment) => shipment.id);
+      let eventsByShipment = new Map();
+      if (shipmentIds.length) {
+        const placeholders = shipmentIds.map(() => "?").join(",");
+        const [events] = await db.query(
+          `SELECT shipment_id, status, raw_status, description, created_at
+           FROM shipment_events
+           WHERE shipment_id IN (${placeholders})
+           ORDER BY created_at ASC`,
+          shipmentIds,
+        );
+
+        eventsByShipment = events.reduce((map, event) => {
+          const list = map.get(event.shipment_id) || [];
+          list.push(event);
+          map.set(event.shipment_id, list);
+          return map;
+        }, new Map());
+      }
 
       const formattedShipments = shipments.map((s) => {
         const currentStep = mapStatusToStep(s.shipping_status);
@@ -303,6 +333,8 @@ class LogisticsController {
           { label: "In Transit", time: s.in_transit_at },
           { label: "Out for Delivery", time: s.out_for_delivery_at },
           { label: "Delivered", time: s.delivered_at },
+          { label: "Cancelled", time: s.cancelled_at },
+          { label: "Returned to Origin", time: s.rto_at },
         ].filter((t) => t.time !== null); // only include events that have happened
 
         const specialState = getSpecialState(s.shipping_status, s.ndr_reason);
@@ -316,6 +348,7 @@ class LogisticsController {
           current_step: currentStep,
           steps,
           timeline,
+          events: eventsByShipment.get(s.id) || [],
           expected_delivery_date: s.expected_delivery_date,
           special_state: specialState,
         };
@@ -372,7 +405,20 @@ class LogisticsController {
       // ==========================
       // DELEGATE TO SERVICE
       // ==========================
-      const orderId = await xpressService.cancelShipment(shipmentId);
+      const orderId = await courierService.cancelShipment(shipmentId);
+
+      sendEcommerceOrderStatusMail({
+        orderId,
+        status: "shipment_cancelled",
+      }).catch((mailError) =>
+        console.error("Shipment cancellation mail failed:", mailError),
+      );
+      enqueueEcommerceOrderStatusWhatsApp({
+        orderId,
+        status: "cancelled",
+      }).catch((whatsAppError) =>
+        console.error("Shipment cancellation WhatsApp failed:", whatsAppError),
+      );
 
       return res.json({
         success: true,
@@ -393,7 +439,7 @@ class LogisticsController {
         return res.status(400).json({ success: false, message: err.message });
       }
 
-      if (err.message === "Courier cancel failed") {
+      if (err.code === "COURIER_CANCELLATION_FAILED") {
         return res.status(502).json({ success: false, message: "Courier cancellation failed. Please try again." });
       }
 

@@ -1,6 +1,10 @@
 const jwt = require("jsonwebtoken");
 const AuthModel = require("../models/authModel");
 
+function unverifiedDevTokensAllowed(env = process.env) {
+  return env.NODE_ENV === "development" && env.ALLOW_UNVERIFIED_DEV_TOKENS === "true";
+}
+
 const auth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -14,7 +18,21 @@ const auth = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch (err) {
+      // Local development only, explicitly opted in: accept a token signed by
+      // another server (e.g. production) without checking its signature.
+      // Never active unless both conditions hold, so a forged or expired token
+      // can never authenticate in any deployed environment.
+      if (!unverifiedDevTokensAllowed()) throw err;
+      decoded = jwt.decode(token);
+      if (!decoded || !decoded.user_id) {
+        throw err;
+      }
+      console.warn("[Local Auth Debug] UNVERIFIED token accepted (ALLOW_UNVERIFIED_DEV_TOKENS): user_id =", decoded.user_id);
+    }
 
     const user = await AuthModel.findById(decoded.user_id);
 
@@ -25,10 +43,11 @@ const auth = async (req, res, next) => {
       });
     }
 
-    if (Number(user.status) !== 1) {
+    if (!AuthModel.isCustomerActive(user)) {
       return res.status(403).json({
         success: false,
-        message: "Account inactive",
+        code: "USER_INACTIVE",
+        message: "User inactive. Please contact your HR.",
       });
     }
 
@@ -50,3 +69,4 @@ const auth = async (req, res, next) => {
 };
 
 module.exports = auth;
+module.exports.unverifiedDevTokensAllowed = unverifiedDevTokensAllowed;

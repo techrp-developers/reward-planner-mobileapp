@@ -1,8 +1,10 @@
 const path = require("path");
 const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-const exclusionList = require("metro-config/private/defaults/exclusionList").default;
 
 const defaultConfig = getDefaultConfig(__dirname);
+
+// Keep local Android API access working after USB/adb reconnects.
+require('./scripts/adb-reverse').watchReverse();
 
 module.exports = mergeConfig(defaultConfig, {
   // Watchman isn't installed on this machine; spawning a missing `watchman`
@@ -18,13 +20,16 @@ module.exports = mergeConfig(defaultConfig, {
     useWatchman: false,
     assetExts: defaultConfig.resolver.assetExts.filter(ext => ext !== "svg"),
     sourceExts: [...new Set([...defaultConfig.resolver.sourceExts, "svg"])],
-    blockList: exclusionList([
-      /android\/\.gradle\/.*/,
-      /android\/\.cxx\/.*/,
-      /android\/(?:app\/)?build\/.*/,
-      /ios\/build\/.*/,
-      /ios\/Pods\/.*/,
-    ]),
+    // The crawler uses native paths; the fallback watcher normalizes to '/'.
+    // Match both without exclusionList rewriting separators on Windows.
+    blockList: [
+      // The Express backend and its dependencies are not part of the mobile bundle.
+      // Skip the directory itself so Metro does not crawl or watch its contents.
+      /[/\\]src[/\\]server(?:[/\\].*)?$/,
+      /[/\\]android[/\\](?:\.gradle|\.cxx|(?:app[/\\])?build)(?:[/\\].*)?$/,
+      /[/\\]ios[/\\](?:build|Pods)(?:[/\\].*)?$/,
+      /[/\\]__tests__(?:[/\\].*)?$/,
+    ],
 
     alias: {
       "@": path.resolve(__dirname, "src"),

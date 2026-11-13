@@ -254,6 +254,7 @@ function ServiceOrderRow({
             </Text>
           </View>
           <Text style={styles.actionText}>
+            {Number(order.offer_item_count) > 0 ? `${order.offer_item_count} on offer · ` : ''}
             View Order
           </Text>
         </View>
@@ -521,7 +522,7 @@ export default function MyOrder() {
 
       <View style={styles.statsRow}>
         <LinearGradient colors={servicesTheme.isDark ? ["#132016", "#111113"] : ["#EFFFF4", "#DDFFE8"]} style={[styles.statCard, { borderColor: servicesTheme.colors.border }]}>
-          <Text style={styles.statLabel}>Coins Earned Till Date:</Text>
+          <Text style={styles.statLabel}>RP Points Earned Till Date:</Text>
           <View style={styles.statValueRow}>
             <Coin width={22} height={22} />
             <Text style={styles.statValue}>

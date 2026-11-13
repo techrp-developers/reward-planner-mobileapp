@@ -244,7 +244,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
                 <Text style={styles.earnedLineText}>Total earned -</Text>
                 <Reward width={13} height={13} />
                 <Text style={styles.earnedLineText}>
-                  {totalEarnedPoints.toLocaleString("en-IN")} coins
+                  {totalEarnedPoints.toLocaleString("en-IN")} RP Points
                 </Text>
               </View>
             </View>

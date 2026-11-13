@@ -74,7 +74,7 @@ export default function FeaturesProduct() {
   const secondRow = useMemo(() => randomProducts.slice(5, 10), [randomProducts]);
 
   const handleExplore = useCallback(() => {
-    navigation.navigate("ProductScreen", { source: "all" });
+    navigation.navigate("ProductScreen", { source: "all", title: "Featured This Week" });
   }, [navigation]);
 
   const renderCard = React.useCallback(

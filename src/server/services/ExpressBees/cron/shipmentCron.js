@@ -1,7 +1,7 @@
 const cron = require("node-cron");
-const xpressService = require("../xpressbees_service");
+const courierService = require("../../courier/courierService");
 const db = require("../../../config/database");
-const NotificationModel = require("../../../app/common/models/notificationModel");
+const { notifyUser } = require("../../../app/common/utils/notification");
 const {
   processShipmentsAfterPayment,
 } = require("../../../app/ecommerce/v1/utils/webhook");
@@ -14,6 +14,16 @@ const { cronPing, checkCronHealth } = require("../../../services/cronMonitor");
 const {
   vendorStatusForShipment,
 } = require("../../../app/ecommerce/v1/utils/lifecyclePolicy");
+const {
+  sendEcommerceOrderStatusMail,
+} = require("../../mailBuilder/ecommerceOrderStatus");
+const {
+  enqueueEcommerceOrderStatusWhatsApp,
+} = require("../../whatsapp/ecommerceOrderStatusWhatsApp");
+const {
+  isXpressRtoDelivered,
+  mapXpressStatusCode,
+} = require("../xpressbees_policy");
 
 // =====================
 // STATUS MAPPING
@@ -107,7 +117,17 @@ const STATUS_TIME_COLUMNS = {
   rto: "rto_at",
 };
 
-function mapXpressStatus(status) {
+// Ekart tracking arrives already mapped, including null for unknown statuses.
+function resolveEventStatus(event) {
+  return event?.mapped_status !== undefined
+    ? event.mapped_status
+    : mapXpressStatus(event?.message, event?.status_code);
+}
+
+function mapXpressStatus(status, statusCode) {
+  const codeStatus = mapXpressStatusCode(statusCode);
+  if (codeStatus) return codeStatus;
+
   if (!status || typeof status !== "string") return null;
 
   const s = status.toLowerCase().trim();
@@ -198,11 +218,29 @@ async function syncOrderStatus(orderId) {
   );
 
   // =====================
-  // NOTIFICATION (ONLY ON DELIVERY)
+  // CUSTOMER NOTIFICATIONS (ONLY WHEN THE PARENT STATUS CHANGES)
   // =====================
+  if (result.affectedRows > 0 && finalStatus === "shipped") {
+    notifyUser({
+      userId,
+      module: "ecommerce",
+      type: "order_shipped",
+      title: "Order shipped",
+      message: "Your order is on its way.",
+      icon: "truck",
+      reference_type: "order",
+      reference_id: orderId,
+      action_url: `/orders/order-details/${orderId}`,
+      screen: "OrderDetails",
+    }, "order shipped notification");
+    sendEcommerceOrderStatusMail({ orderId, status: "shipped" }).catch(
+      (err) => console.error("Order shipped mail failed:", err),
+    );
+  }
+
   if (finalStatus === "delivered" && result.affectedRows > 0) {
-    NotificationModel.create({
-      user_id: userId,
+    notifyUser({
+      userId,
       module: "ecommerce",
       type: "delivery",
       title: "Order delivered",
@@ -211,19 +249,28 @@ async function syncOrderStatus(orderId) {
       reference_type: "order",
       reference_id: orderId,
       action_url: `/orders/order-details/${orderId}`,
-    }).catch((err) => console.error("Delivery notification failed:", err));
+      screen: "OrderDetails",
+    }, "order delivered notification");
+
+    sendEcommerceOrderStatusMail({ orderId, status: "delivered" }).catch(
+      (err) => console.error("Order delivered mail failed:", err),
+    );
+    enqueueEcommerceOrderStatusWhatsApp({
+      orderId,
+      status: "delivered",
+    }).catch((err) => console.error("Order delivered WhatsApp failed:", err));
 
     creditDeliveredOrderRewards(orderId).catch((err) =>
       console.error("Delivered-order reward credit failed:", err),
     );
-  }
+  }  
 }
 
 async function syncTrackingHistory(shipment, history) {
   if (!Array.isArray(history)) return;
 
   for (const event of [...history].reverse()) {
-    const status = mapXpressStatus(event?.message);
+    const status = resolveEventStatus(event);
     if (!status || !event?.event_time) continue;
 
     const timeColumn = STATUS_TIME_COLUMNS[status];
@@ -274,7 +321,7 @@ async function syncVendorOrderStatus(vendorOrderId, shipmentStatus) {
 // =====================
 async function updateShipmentTracking(shipment) {
   try {
-    const response = await xpressService.trackShipment(shipment.awb_number);
+    const response = await courierService.trackShipment(shipment);
 
     if (!response || !response.status) {
       return;
@@ -290,21 +337,40 @@ async function updateShipmentTracking(shipment) {
       [JSON.stringify(response.data), shipment.id],
     );
 
-    // The current XpressBees response uses `data.status`. The other values are
-    // fallbacks for older/newer payload variants.
+    const history = Array.isArray(response.data.history)
+      ? response.data.history
+      : [];
+    const latestHistoryEvent = history.reduce((latest, event) => {
+      if (!latest) return event;
+      return new Date(event.event_time) > new Date(latest.event_time)
+        ? event
+        : latest;
+    }, null);
+    // Prefer provider summary fields, then the chronologically latest event.
     const rawStatus =
       response.data.current_status ||
       response.data.status ||
-      response.data.history?.[0]?.message;
+      latestHistoryEvent?.message;
 
     if (!rawStatus) {
       console.warn(
-        `[tracking] XpressBees response has no status for AWB ${shipment.awb_number}`,
+        `[tracking] Courier response has no status for AWB ${shipment.awb_number}`,
       );
       return;
     }
 
-    const newStatus = mapXpressStatus(rawStatus);
+    const providerStatusCode =
+      response.data.status_code || latestHistoryEvent?.status_code;
+    const newStatus =
+      response.data.mapped_status !== undefined
+        ? response.data.mapped_status
+        : mapXpressStatus(rawStatus, providerStatusCode);
+    const rtoDelivered =
+      response.data.rto_delivered ??
+      isXpressRtoDelivered(
+        providerStatusCode,
+        response.data.rto_status === "delivered" ? "rto delivered" : rawStatus,
+      );
 
     if (!newStatus) return;
 
@@ -312,7 +378,7 @@ async function updateShipmentTracking(shipment) {
 
     if (
       newStatus === shipment.shipping_status &&
-      !(newStatus === "rto" && !shipment.rto_processed)
+      !(newStatus === "rto" && !shipment.rto_processed && rtoDelivered)
     ) {
       await syncVendorOrderStatus(shipment.vendor_order_id, newStatus);
       await syncOrderStatus(shipment.order_id);
@@ -336,7 +402,7 @@ async function updateShipmentTracking(shipment) {
     // =====================
     const timeColumn = STATUS_TIME_COLUMNS[newStatus];
     const statusEventTime = response.data.history?.find(
-      (event) => mapXpressStatus(event?.message) === newStatus,
+      (event) => resolveEventStatus(event) === newStatus,
     )?.event_time;
 
     // =====================
@@ -370,6 +436,33 @@ async function updateShipmentTracking(shipment) {
     `,
       [shipment.id, newStatus, rawStatus, rawStatus],
     );
+
+    if (newStatus === "out_for_delivery" && userId) {
+      notifyUser({
+        userId,
+        module: "ecommerce",
+        type: "order_out_for_delivery",
+        title: "Out for delivery",
+        message: "Your package is out for delivery today.",
+        icon: "truck",
+        reference_type: "order",
+        reference_id: shipment.order_id,
+        action_url: `/orders/order-details/${shipment.order_id}`,
+        screen: "OrderDetails",
+        priority: "high",
+      }, "order out-for-delivery notification");
+      sendEcommerceOrderStatusMail({
+        orderId: shipment.order_id,
+        status: "out_for_delivery",
+        awb: shipment.awb_number,
+      }).catch((err) => console.error("Out-for-delivery mail failed:", err));
+      enqueueEcommerceOrderStatusWhatsApp({
+        orderId: shipment.order_id,
+        status: "out_for_delivery",
+      }).catch((err) =>
+        console.error("Out-for-delivery WhatsApp failed:", err),
+      );
+    }
 
     // =====================
     // SLA TRACKING
@@ -421,7 +514,7 @@ async function updateShipmentTracking(shipment) {
         [shipment.id],
       );
 
-      if (!existing.length) {
+        if (!existing.length) {
         await db.query(
           `
           UPDATE order_shipments
@@ -442,9 +535,9 @@ async function updateShipmentTracking(shipment) {
           [shipment.id, rawStatus, rawStatus],
         );
 
-        if (userId) {
-          NotificationModel.create({
-            user_id: userId,
+          if (userId) {
+          notifyUser({
+            userId,
             module: "ecommerce",
             type: "ndr",
             title: "Delivery failed",
@@ -455,7 +548,12 @@ async function updateShipmentTracking(shipment) {
             reference_id: shipment.order_id,
             action_url: `/orders/order-details/${shipment.order_id}`,
             priority: "high",
-          }).catch((err) => console.error("NDR notification failed:", err));
+            }, "NDR notification");
+            sendEcommerceOrderStatusMail({
+              orderId: shipment.order_id,
+              status: "ndr",
+              awb: shipment.awb_number,
+            }).catch((err) => console.error("NDR mail failed:", err));
         }
       }
     }
@@ -463,7 +561,7 @@ async function updateShipmentTracking(shipment) {
     // =====================
     // RTO Logic
     // =====================
-    if (newStatus === "rto" && !shipment.rto_processed) {
+    if (newStatus === "rto" && !shipment.rto_processed && rtoDelivered) {
       const conn = await db.getConnection();
 
       try {
@@ -565,8 +663,8 @@ async function updateShipmentTracking(shipment) {
           );
 
           if (!existingNotif.length && userId) {
-            NotificationModel.create({
-              user_id: userId,
+            notifyUser({
+              userId,
               module: "ecommerce",
               type: "rto",
               title: "Order returned",
@@ -576,7 +674,12 @@ async function updateShipmentTracking(shipment) {
               reference_type: "order",
               reference_id: shipment.order_id,
               action_url: `/orders/order-details/${shipment.order_id}`,
-            }).catch((err) => console.error("RTO notification failed:", err));
+            }, "RTO notification");
+            sendEcommerceOrderStatusMail({
+              orderId: shipment.order_id,
+              status: "rto",
+              awb: shipment.awb_number,
+            }).catch((err) => console.error("RTO mail failed:", err));
           }
         } else {
           await conn.rollback();
@@ -602,8 +705,8 @@ cron.schedule("*/30 * * * *", async () => {
   try {
     console.log("🚚 Tracking cron running...");
     const [shipments] = await db.query(
-      `SELECT id, order_id, vendor_order_id, awb_number, shipping_status,
-              rto_processed
+      `SELECT id, order_id, vendor_order_id, courier_id, awb_number,
+              shipping_status, rto_processed
        FROM order_shipments
        WHERE awb_number IS NOT NULL
          AND (
@@ -623,6 +726,17 @@ cron.schedule("*/30 * * * *", async () => {
   } catch (err) {
     console.error("Tracking cron error:", err);
   }
+}, { name: "xpressbees-tracking", noOverlap: true });
+
+console.log("[COURIER_BOOKING] Cron ON", {
+  xpress_enabled: process.env.XPRESS_ENABLED ?? "(not set)",
+  ekart_credentials_set: Boolean(
+    process.env.EKART_CLIENT_ID &&
+      process.env.EKART_USERNAME &&
+      process.env.EKART_PASSWORD,
+  ),
+  grace_minutes: process.env.ECOMMERCE_CANCELLATION_GRACE_MINUTES ?? "(not set)",
+  skip_courier_booking: process.env.ECOMMERCE_SKIP_COURIER_BOOKING ?? "false",
 });
 
 // =====================
@@ -649,6 +763,10 @@ cron.schedule("*/10 * * * *", async () => {
       AND booking_in_progress = 0
     `);
 
+    console.log(
+      `[COURIER_BOOKING] Cron run: ${shipments.length} order(s) to book: ${shipments.map((row) => row.order_id).join(",") || "none"}`,
+    );
+
     for (const row of shipments) {
       try {
         await processShipmentsAfterPayment(row.order_id);
@@ -661,7 +779,7 @@ cron.schedule("*/10 * * * *", async () => {
   } catch (err) {
     console.error("Booking retry cron error:", err);
   }
-});
+}, { name: "xpressbees-booking-retry", noOverlap: true });
 
 // Retry courier cancellations that failed after the local order transaction
 // committed. The local cancellation stays authoritative while this converges.
@@ -677,7 +795,7 @@ cron.schedule("*/15 * * * *", async () => {
 
     for (const shipment of shipments) {
       try {
-        const result = await xpressService.cancelShipmentExpressBees(
+        const result = await courierService.cancelAtCourier(
           shipment.awb_number,
         );
         if (!result?.status) {
@@ -707,4 +825,4 @@ cron.schedule("*/15 * * * *", async () => {
   } catch (error) {
     console.error("Courier cancellation retry cron failed:", error);
   }
-});
+}, { name: "xpressbees-cancellation-retry", noOverlap: true });

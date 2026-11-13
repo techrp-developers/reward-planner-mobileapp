@@ -7,16 +7,20 @@ import React, {
   useState,
 } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { rs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
-import BirthdayCard from './BirthdayCard';
+import BirthdayCard, { type WishStatus } from './BirthdayCard';
+import BirthdayWishModal from './BirthdayWishModal';
 import type { BirthdayEmployee } from './types';
+import { sendBirthdayWish } from './birthdayAPI';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -74,10 +78,14 @@ const PaginationDot = memo(({
 
 interface Props {
   birthdays: BirthdayEmployee[];
+  // Wishes the logged-in user received today (shown on their own card)
+  wishesReceived?: number;
+  onWishSent?: (employee: BirthdayEmployee) => void;
 }
 
-const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
+const BirthdayCarousel: React.FC<Props> = ({ birthdays, wishesReceived = 0, onWishSent }) => {
   const { isDark } = useAppTheme();
+  const navigation = useNavigation<any>();
   const scrollRef     = useRef<ScrollView>(null);
   const currentIdxRef = useRef(0);
   const intervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -85,6 +93,34 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
   const jumpPendingRef = useRef(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Wish status keyed by real employee id (shared by the loop clone)
+  const [wishStatus, setWishStatus] = useState<Record<string, WishStatus>>({});
+
+  // Employee whose wish is being composed in the modal
+  const [composeFor, setComposeFor] = useState<BirthdayEmployee | null>(null);
+
+  // Resolves true once sent; on failure the modal stays open so the message isn't lost.
+  const handleSendWish = useCallback(async (employee: BirthdayEmployee, body: string): Promise<boolean> => {
+    const key = String(employee.id);
+    setWishStatus(prev => ({ ...prev, [key]: 'sending' }));
+    try {
+      await sendBirthdayWish(employee.id, body);
+      setWishStatus(prev => ({ ...prev, [key]: 'sent' }));
+      setComposeFor(null);
+      onWishSent?.(employee);
+      return true;
+    } catch (error: any) {
+      setWishStatus(prev => ({ ...prev, [key]: 'idle' }));
+      Alert.alert(
+        'Could not send wishes',
+        error?.response?.data?.message ?? 'Please try again in a moment.',
+      );
+      return false;
+    }
+  }, [onWishSent]);
+
+  const handleOpenChat = useCallback(() => navigation.navigate('Chat'), [navigation]);
 
   // Append clone of first item so the last → first wrap is invisible
   const loopData = useMemo<BirthdayEmployee[]>(() => {
@@ -170,6 +206,21 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
     startAutoScroll();
   }, [startAutoScroll]);
 
+  // ── Wish composer — pause auto-scroll so the card stays put behind the modal ─
+  const openComposer = useCallback((employee: BirthdayEmployee) => {
+    stopAutoScroll();
+    setComposeFor(employee);
+  }, [stopAutoScroll]);
+
+  const closeComposer = useCallback(() => {
+    setComposeFor(null);
+    startAutoScroll();
+  }, [startAutoScroll]);
+
+  const sendFromComposer = useCallback(async (employee: BirthdayEmployee, body: string) => {
+    if (await handleSendWish(employee, body)) startAutoScroll();
+  }, [handleSendWish, startAutoScroll]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
@@ -185,11 +236,23 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
         onMomentumScrollEnd={onMomentumScrollEnd}
         nestedScrollEnabled
       >
-        {loopData.map((item, index) => (
-          <View key={`${item.id}-${index}`} style={styles.itemWrap}>
-            <BirthdayCard employee={item} isDark={isDark} />
-          </View>
-        ))}
+        {loopData.map((item, index) => {
+          // The trailing loop clone represents the first real employee
+          const employee = index >= birthdays.length ? birthdays[0] : item;
+          const status = wishStatus[String(employee.id)] ?? (employee.wished ? 'sent' : 'idle');
+          return (
+            <View key={`${item.id}-${index}`} style={styles.itemWrap}>
+              <BirthdayCard
+                employee={employee}
+                isDark={isDark}
+                wishStatus={status}
+                onSendWish={openComposer}
+                wishesReceived={employee.isSelf ? wishesReceived : 0}
+                onOpenChat={handleOpenChat}
+              />
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Pagination dots — only shown for multiple birthdays */}
@@ -200,6 +263,13 @@ const BirthdayCarousel: React.FC<Props> = ({ birthdays }) => {
           ))}
         </View>
       )}
+
+      <BirthdayWishModal
+        employee={composeFor}
+        sending={composeFor != null && wishStatus[String(composeFor.id)] === 'sending'}
+        onCancel={closeComposer}
+        onSend={sendFromComposer}
+      />
     </View>
   );
 };

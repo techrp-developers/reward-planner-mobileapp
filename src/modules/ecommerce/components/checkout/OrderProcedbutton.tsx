@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/formatMoney';
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
@@ -44,7 +45,7 @@ export default function OrderProcedbutton({
     ]}> 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={[styles.price, { color: theme.text }]}>₹{safeTotal}</Text>
+          <Text style={[styles.price, { color: theme.text }]}>{formatMoney(safeTotal)}</Text>
           <Text style={[styles.items, { color: theme.secondaryText }]}>{count} items selected</Text>
         </View>
 

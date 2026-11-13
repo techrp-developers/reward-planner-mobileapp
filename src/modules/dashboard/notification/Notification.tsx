@@ -340,6 +340,15 @@ function Notification() {
         isDark={isDark}
       />
 
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => navigation.navigate("NotificationSettings")}
+        style={styles.preferencesButton}
+      >
+        <Text style={themed.mutedText}>Notification preferences</Text>
+        <MaterialCommunityIcons name="cog-outline" size={22} color={isDark ? "#A5B4FC" : "#6D5AE6"} />
+      </TouchableOpacity>
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#6D5AE6" />
@@ -443,6 +452,7 @@ function Notification() {
 export default Notification;
 
 const styles = StyleSheet.create({
+  preferencesButton: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14 },
   safe: {
     flex: 1,
     backgroundColor: "#F5F3FA",

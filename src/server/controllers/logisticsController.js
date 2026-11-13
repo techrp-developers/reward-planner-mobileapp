@@ -1,5 +1,5 @@
 const db = require("../config/database");
-const xpressService = require("../services/ExpressBees/xpressbees_service");
+const courierService = require("../services/courier/courierService");
 
 class LogisticsController {
   // Resolve NDR
@@ -8,7 +8,7 @@ class LogisticsController {
       const { shipmentId } = req.params;
       const { action, new_address_id, notes } = req.body;
 
-      const allowedActions = ["retry", "address_update", "cancel", "rto"];
+      const allowedActions = ["retry", "address_update", "cancel"];
 
       if (!allowedActions.includes(action)) {
         return res.status(400).json({
@@ -29,7 +29,7 @@ class LogisticsController {
       //   "notes": "Customer confirmed availability"
       // }
 
-      await xpressService.resolveNDR({
+      await courierService.resolveNDR({
         shipmentId,
         action,
         new_address_id,
