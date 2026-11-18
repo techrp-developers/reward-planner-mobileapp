@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from "react";
 import {
   StyleSheet,
@@ -96,6 +97,7 @@ const fetchNewArrivalsData = async () => {
 };
 
 function NewArrivals() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
 
@@ -138,7 +140,7 @@ function NewArrivals() {
           activeOpacity={0.7}
           onPress={handleViewAll}
         >
-          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
+          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:viewAll')}</Text>
           <MaterialIcons name="chevron-right" size={18} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from "react-native";
 import { ScrollView } from "react-native";
@@ -22,6 +23,7 @@ type RouteProps = RouteProp<
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function SelectItemCancellationReason() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const { isDark, theme } = useAppTheme();
     const [comment, setComment] = useState("");
@@ -69,8 +71,8 @@ export default function SelectItemCancellationReason() {
             );
 
             if (res?.success) {
-                Alert.alert("Success", "Item cancellation request submitted successfully", [
-                    { text: "OK", onPress: () => navigation.goBack() },
+                Alert.alert(translateUi('common:success'), "Item cancellation request submitted successfully", [
+                    { text: translateUi('common:ok'), onPress: () => navigation.goBack() },
                 ]);
                 return;
             }
@@ -78,7 +80,7 @@ export default function SelectItemCancellationReason() {
             Alert.alert("Cancellation failed", res?.message || "Unable to submit cancellation request");
         } catch (error) {
             __DEV__ && console.log("Cancel item failed", error);
-            Alert.alert("Error", "Unable to submit cancellation request. Please try again.");
+            Alert.alert(translateUi('common:error'), "Unable to submit cancellation request. Please try again.");
         } finally {
             setSubmitting(false);
         }

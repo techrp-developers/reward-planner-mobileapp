@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   View,
@@ -15,6 +16,7 @@ import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 
 const CashlessReviewScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -45,7 +47,7 @@ const CashlessReviewScreen: React.FC = () => {
           >
             <MaterialCommunityIcons name="arrow-left" size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Cashless Claim</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:cashlessClaim')}</Text>
         </View>
 
         <TouchableOpacity style={[styles.backBtn, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]} activeOpacity={0.7}>
@@ -59,7 +61,7 @@ const CashlessReviewScreen: React.FC = () => {
           <View style={[styles.stepCircleDone, { backgroundColor: '#10B981' }]}>
             <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Member</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:member')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: '#10B981' }]} />
@@ -68,7 +70,7 @@ const CashlessReviewScreen: React.FC = () => {
           <View style={[styles.stepCircleDone, { backgroundColor: '#10B981' }]}>
             <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Hospital</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:hospital')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: '#10B981' }]} />
@@ -77,7 +79,7 @@ const CashlessReviewScreen: React.FC = () => {
           <View style={[styles.stepCircleDone, { backgroundColor: '#10B981' }]}>
             <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Documents</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:documents')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: '#10B981' }]} />
@@ -86,7 +88,7 @@ const CashlessReviewScreen: React.FC = () => {
           <View style={[styles.stepCircleActive, { borderColor: '#005b7f', backgroundColor: '#005b7f' }]}>
             <Text style={styles.stepCircleActiveText}>4</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: '#005b7f', fontWeight: '700' }]}>Review</Text>
+          <Text style={[styles.stepLabel, { color: '#005b7f', fontWeight: '700' }]}>{translateUi('common:review')}</Text>
         </View>
       </View>
 
@@ -97,30 +99,30 @@ const CashlessReviewScreen: React.FC = () => {
           <View style={styles.briefHeader}>
             <Text style={styles.briefLogoText}>care</Text>
             <View style={styles.briefStatusBadge}>
-              <Text style={styles.briefStatusText}>Active</Text>
+              <Text style={styles.briefStatusText}>{translateUi('common:active')}</Text>
             </View>
           </View>
           <View style={styles.briefInfoGrid}>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Policy Number</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:policyNumber')}</Text>
               <Text style={styles.briefVal}>B7812841</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Employee ID</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:employeeId')}</Text>
               <Text style={styles.briefVal}>EMP124567</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Covered Members</Text>
-              <Text style={styles.briefVal}>4 Members</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:coveredMembers')}</Text>
+              <Text style={styles.briefVal}>{translateUi('common:fourMembers')}</Text>
             </View>
           </View>
           <View style={[styles.briefInfoGrid, { marginTop: rs(6) }]}>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Valid Till</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:validTill')}</Text>
               <Text style={styles.briefVal}>28 Jun 2027</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Member ID</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:memberId')}</Text>
               <Text style={styles.briefVal}>00SWITRN10</Text>
             </View>
             <View style={styles.briefInfoCol} />
@@ -152,7 +154,7 @@ const CashlessReviewScreen: React.FC = () => {
                 <Text style={[styles.detailsVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>Planned</Text>
               </View>
               <View style={styles.detailsCol}>
-                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Admission Date</Text>
+                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:admissionDate')}</Text>
                 <Text style={[styles.detailsVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>22 Aug 2026</Text>
               </View>
             </View>
@@ -183,8 +185,8 @@ const CashlessReviewScreen: React.FC = () => {
                 <MaterialCommunityIcons name="check-circle" size={12} color="#10B981" style={styles.checkBadgeMini} />
                 <MaterialCommunityIcons name="card-bulleted-outline" size={20} color="#10B981" />
               </View>
-              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>Health E-Card</Text>
-              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>Uploaded</Text>
+              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:healthECard')}</Text>
+              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>{translateUi('common:uploaded')}</Text>
             </View>
 
             <View style={styles.docCheckItem}>
@@ -192,8 +194,8 @@ const CashlessReviewScreen: React.FC = () => {
                 <MaterialCommunityIcons name="check-circle" size={12} color="#10B981" style={styles.checkBadgeMini} />
                 <MaterialCommunityIcons name="badge-account-outline" size={20} color="#10B981" />
               </View>
-              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>ID Proof</Text>
-              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>Uploaded</Text>
+              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:idProof')}</Text>
+              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>{translateUi('common:uploaded')}</Text>
             </View>
 
             <View style={styles.docCheckItem}>
@@ -201,8 +203,8 @@ const CashlessReviewScreen: React.FC = () => {
                 <MaterialCommunityIcons name="check-circle" size={12} color="#10B981" style={styles.checkBadgeMini} />
                 <MaterialCommunityIcons name="file-document-outline" size={20} color="#10B981" />
               </View>
-              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>Prescription</Text>
-              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>Uploaded</Text>
+              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:prescription')}</Text>
+              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>{translateUi('common:uploaded')}</Text>
             </View>
 
             <View style={styles.docCheckItem}>
@@ -210,8 +212,8 @@ const CashlessReviewScreen: React.FC = () => {
                 <MaterialCommunityIcons name="check-circle" size={12} color="#10B981" style={styles.checkBadgeMini} />
                 <MaterialCommunityIcons name="hospital-marker" size={20} color="#10B981" />
               </View>
-              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>Admission Advice</Text>
-              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>Uploaded</Text>
+              <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:admissionAdvice')}</Text>
+              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>{translateUi('common:uploaded')}</Text>
             </View>
 
             <View style={styles.docCheckItem}>
@@ -220,7 +222,7 @@ const CashlessReviewScreen: React.FC = () => {
                 <MaterialCommunityIcons name="file-chart-outline" size={20} color="#10B981" />
               </View>
               <Text style={[styles.docCheckLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>Estimated Bill</Text>
-              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>Uploaded</Text>
+              <Text style={[styles.docCheckSub, { color: '#10B981' }]}>{translateUi('common:uploaded')}</Text>
             </View>
           </View>
         </View>
@@ -242,7 +244,7 @@ const CashlessReviewScreen: React.FC = () => {
               <Text style={[styles.summaryVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>Ravi Sharma</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Hospital</Text>
+              <Text style={[styles.summaryLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:hospital')}</Text>
               <Text style={[styles.summaryVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>Manipal Hospital</Text>
             </View>
             <View style={styles.summaryRow}>

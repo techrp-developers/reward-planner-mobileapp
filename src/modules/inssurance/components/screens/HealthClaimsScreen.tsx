@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -28,6 +29,7 @@ interface StepData {
 }
 
 const HealthClaimsScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark, theme } = useAppTheme();
 
@@ -131,7 +133,7 @@ const HealthClaimsScreen: React.FC = () => {
             <View style={[styles.quickClaimIconBox, { backgroundColor: '#e5f6fd' }]}>
               <MaterialCommunityIcons name="file-document-outline" size={24} color="#005b7f" />
             </View>
-            <Text style={[styles.quickClaimBtnTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Cashless Claim</Text>
+            <Text style={[styles.quickClaimBtnTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:cashlessClaim')}</Text>
             <Text style={[styles.quickClaimBtnSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>At network hospital</Text>
           </TouchableOpacity>
 
@@ -144,7 +146,7 @@ const HealthClaimsScreen: React.FC = () => {
             <View style={[styles.quickClaimIconBox, { backgroundColor: '#FDF2F8' }]}>
               <MaterialCommunityIcons name="credit-card-outline" size={24} color="#DB2777" />
             </View>
-            <Text style={[styles.quickClaimBtnTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Reimbursement Claim</Text>
+            <Text style={[styles.quickClaimBtnTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:reimbursementClaim')}</Text>
             <Text style={[styles.quickClaimBtnSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Submit bills post treatment</Text>
           </TouchableOpacity>
         </View>
@@ -263,7 +265,7 @@ const HealthClaimsScreen: React.FC = () => {
                       </View>
                     </View>
                     <View style={styles.cardDetailsRight}>
-                      <Text style={[styles.amtLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Amount</Text>
+                      <Text style={[styles.amtLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:amount')}</Text>
                       <Text style={[styles.amtVal, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
                         ₹{displayAmt ? Number(displayAmt).toLocaleString('en-IN') : '—'}
                       </Text>
@@ -284,17 +286,17 @@ const HealthClaimsScreen: React.FC = () => {
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#18181B' : '#FFFFFF', borderTopColor: isDark ? '#27272A' : '#E4E4E7' }]}>
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('HealthDashboard')}>
           <MaterialCommunityIcons name="home-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Home</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:home')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6}>
           <MaterialCommunityIcons name="file-document" size={24} color="#005b7f" />
-          <Text style={[styles.tabLabel, { color: '#005b7f', fontWeight: '700' }]}>Claims</Text>
+          <Text style={[styles.tabLabel, { color: '#005b7f', fontWeight: '700' }]}>{translateUi('common:claims')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('Profile')}>
           <MaterialCommunityIcons name="account-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Profile</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

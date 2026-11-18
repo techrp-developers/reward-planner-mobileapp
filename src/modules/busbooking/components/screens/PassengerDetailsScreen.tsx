@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   ActivityIndicator,
@@ -167,6 +168,7 @@ const createBlockRefId = () =>
     .padStart(3, "0")}`;
 
 export default function PassengerDetailsScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const route = useRoute<RouteProp<BusBookingStackParamList, "PassengerDetailsScreen">>();
   const { popup, showPopup, hidePopup } = useBusBookingPopup();
@@ -586,7 +588,7 @@ export default function PassengerDetailsScreen() {
           <MaterialCommunityIcons name="chevron-left" size={28} color="#77737B" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Passenger Details</Text>
+        <Text style={styles.headerTitle}>{translateUi('common:passengerDetails')}</Text>
 
         <View style={styles.headerActions} />
       </View>
@@ -639,7 +641,7 @@ export default function PassengerDetailsScreen() {
                     style={styles.quickSelectDeleteButton}
                   >
                     <MaterialCommunityIcons name="delete-outline" size={14} color="#D31637" />
-                    <Text style={styles.quickSelectDeleteText}>Delete</Text>
+                    <Text style={styles.quickSelectDeleteText}>{translateUi('common:delete')}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -686,7 +688,7 @@ export default function PassengerDetailsScreen() {
                   </View>
                   {isActivePassenger ? (
                     <View style={styles.activeFormBadge}>
-                      <Text style={styles.activeFormBadgeText}>Active</Text>
+                      <Text style={styles.activeFormBadgeText}>{translateUi('common:active')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -890,7 +892,7 @@ export default function PassengerDetailsScreen() {
                 <Text style={[styles.continueButtonText, { marginLeft: 8 }]}>Blocking seat...</Text>
               </>
             ) : (
-              <Text style={styles.continueButtonText}>Continue</Text>
+              <Text style={styles.continueButtonText}>{translateUi('common:continue')}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

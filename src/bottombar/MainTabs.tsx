@@ -1,5 +1,6 @@
 // src/modules/ecommerce/navigation/MainTabs.tsx
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   createBottomTabNavigator,
 } from "@react-navigation/bottom-tabs";
@@ -95,6 +96,7 @@ function CustomTabBar({ navigation, state, isAuthenticated }: CustomTabBarProps)
 }
 
 export default function MainTabs() {
+  const { t } = useTranslation('common');
   const { isAuthenticated } = useAuth();
 
   const renderTabBar = React.useCallback(
@@ -113,7 +115,7 @@ export default function MainTabs() {
       screenOptions={{ headerShown: false }}
       tabBar={renderTabBar}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: "Home" }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: t("common:home") }} />
     </Tab.Navigator>
   );
 }

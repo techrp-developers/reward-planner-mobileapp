@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,6 +32,7 @@ type RouteT = RouteProp<HomeStackParamList, 'ServiceCancellationRequest'>;
 const PURPLE = '#7C3AED';
 
 export default function ServiceCancellationRequest() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
@@ -95,10 +97,10 @@ export default function ServiceCancellationRequest() {
         return;
       }
 
-      Alert.alert('Request failed', res?.message || 'Unable to submit cancellation request.');
+      Alert.alert(translateUi('common:requestFailed'), res?.message || 'Unable to submit cancellation request.');
     } catch (err: any) {
       Alert.alert(
-        'Request failed',
+        translateUi('common:requestFailed'),
         err?.message || 'Unable to submit cancellation request.'
       );
     } finally {
@@ -245,7 +247,7 @@ export default function ServiceCancellationRequest() {
                 No cancellation reasons are available right now.
               </Text>
               <TouchableOpacity onPress={loadReasons} style={styles.retryReasonsButton}>
-                <Text style={[styles.retryReasonsText, { color: servicesTheme.colors.primary }]}>Retry</Text>
+                <Text style={[styles.retryReasonsText, { color: servicesTheme.colors.primary }]}>{translateUi('common:retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}

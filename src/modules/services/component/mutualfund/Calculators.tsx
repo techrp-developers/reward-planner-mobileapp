@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -95,6 +96,7 @@ const bannerStyle = StyleSheet.create({
 // 1. SIP CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const SIPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [monthly, setMonthly] = useState(5000);
   const [rate, setRate] = useState(12);
   const [years, setYears] = useState(10);
@@ -110,12 +112,12 @@ export const SIPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => 
     >
       <MaturityBanner label="Estimated Maturity Value" value={formatCurrency(result.maturity)} />
       <Card>
-        <SectionHeader title="Parameters" subtitle="Adjust to see projections" />
+        <SectionHeader title={translateUi('common:parameters')} subtitle="Adjust to see projections" />
         <SliderRow label="Monthly Investment" value={monthly} min={500} max={100000} step={500}
           onChange={setMonthly} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
-        <SliderRow label="Investment Duration" value={years} min={1} max={40} step={1}
+        <SliderRow label={translateUi('common:investmentDuration')} value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />
       </Card>
       <Card>
@@ -134,6 +136,7 @@ export const SIPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => 
 // 2. GOAL SIP CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const GoalSIPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [goal, setGoal] = useState(1000000);
   const [rate, setRate] = useState(12);
   const [years, setYears] = useState(10);
@@ -152,7 +155,7 @@ export const GoalSIPCalculator: React.FC<{ navigation: any }> = ({ navigation })
         <SectionHeader title="Goal Details" />
         <SliderRow label="Target Goal Amount" value={goal} min={10000} max={50000000} step={10000}
           onChange={setGoal} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
         <SliderRow label="Time to Achieve Goal" value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />
@@ -174,6 +177,7 @@ export const GoalSIPCalculator: React.FC<{ navigation: any }> = ({ navigation })
 // 3. SMART GOAL CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const SmartGoalCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [goal, setGoal] = useState(2000000);
   const [currentSavings, setCurrentSavings] = useState(200000);
   const [rate, setRate] = useState(12);
@@ -198,7 +202,7 @@ export const SmartGoalCalculator: React.FC<{ navigation: any }> = ({ navigation 
           onChange={setGoal} prefix="₹" />
         <SliderRow label="Current Savings / Investments" value={currentSavings} min={0} max={5000000} step={10000}
           onChange={setCurrentSavings} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
         <SliderRow label="Time Horizon" value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />
@@ -220,6 +224,7 @@ export const SmartGoalCalculator: React.FC<{ navigation: any }> = ({ navigation 
 // 4. INFLATION CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const InflationCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [expense, setExpense] = useState(50000);
   const [inflation, setInflation] = useState(6);
   const [years, setYears] = useState(10);
@@ -238,7 +243,7 @@ export const InflationCalculator: React.FC<{ navigation: any }> = ({ navigation 
     >
       <MaturityBanner label="Future Value of Expenses" value={formatCurrency(result.futureValue)} />
       <Card>
-        <SectionHeader title="Parameters" />
+        <SectionHeader title={translateUi('common:parameters')} />
         <SliderRow label="Current Monthly Expense" value={expense} min={1000} max={500000} step={1000}
           onChange={setExpense} prefix="₹" />
         <SliderRow label="Expected Inflation Rate" value={inflation} min={1} max={20} step={0.5}
@@ -262,6 +267,7 @@ export const InflationCalculator: React.FC<{ navigation: any }> = ({ navigation 
 // 5. COST OF DELAY CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const CostOfDelayCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [monthly, setMonthly] = useState(5000);
   const [rate, setRate] = useState(12);
   const [years, setYears] = useState(15);
@@ -281,12 +287,12 @@ export const CostOfDelayCalculator: React.FC<{ navigation: any }> = ({ navigatio
     >
       <MaturityBanner label="Wealth Lost Due to Delay" value={formatCurrency(result.loss)} />
       <Card>
-        <SectionHeader title="Parameters" />
+        <SectionHeader title={translateUi('common:parameters')} />
         <SliderRow label="Monthly Investment" value={monthly} min={500} max={100000} step={500}
           onChange={setMonthly} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
-        <SliderRow label="Investment Duration" value={years} min={5} max={40} step={1}
+        <SliderRow label={translateUi('common:investmentDuration')} value={years} min={5} max={40} step={1}
           onChange={setYears} suffix=" yr" />
         <SliderRow label="Delay Period" value={delay} min={1} max={60} step={1}
           onChange={setDelay} suffix=" mo" />
@@ -307,6 +313,7 @@ export const CostOfDelayCalculator: React.FC<{ navigation: any }> = ({ navigatio
 // 6. LUMPSUM CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const LumpsumCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [principal, setPrincipal] = useState(100000);
   const [rate, setRate] = useState(12);
   const [years, setYears] = useState(10);
@@ -328,9 +335,9 @@ export const LumpsumCalculator: React.FC<{ navigation: any }> = ({ navigation })
         <SectionHeader title="Investment Details" />
         <SliderRow label="One-Time Investment Amount" value={principal} min={1000} max={10000000} step={1000}
           onChange={setPrincipal} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
-        <SliderRow label="Investment Duration" value={years} min={1} max={40} step={1}
+        <SliderRow label={translateUi('common:investmentDuration')} value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />
       </Card>
       <Card>
@@ -417,6 +424,7 @@ export const RetirementCalculator: React.FC<{ navigation: any }> = ({ navigation
 // 8. STEP-UP SIP CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const StepUpSIPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [monthly, setMonthly] = useState(5000);
   const [rate, setRate] = useState(12);
   const [years, setYears] = useState(10);
@@ -437,14 +445,14 @@ export const StepUpSIPCalculator: React.FC<{ navigation: any }> = ({ navigation 
     >
       <MaturityBanner label="Maturity with Step-Up" value={formatCurrency(result.maturity)} />
       <Card>
-        <SectionHeader title="Parameters" />
+        <SectionHeader title={translateUi('common:parameters')} />
         <SliderRow label="Initial Monthly SIP" value={monthly} min={500} max={100000} step={500}
           onChange={setMonthly} prefix="₹" />
         <SliderRow label="Annual Step-Up Percentage" value={stepUp} min={1} max={50} step={1}
           onChange={setStepUp} suffix="%" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
-        <SliderRow label="Investment Duration" value={years} min={1} max={40} step={1}
+        <SliderRow label={translateUi('common:investmentDuration')} value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />
       </Card>
       <Card>
@@ -465,6 +473,7 @@ export const StepUpSIPCalculator: React.FC<{ navigation: any }> = ({ navigation 
 // 9. SWP CALCULATOR
 // ═══════════════════════════════════════════════════════════════════
 export const SWPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const [principal, setPrincipal] = useState(1000000);
   const [withdrawal, setWithdrawal] = useState(10000);
   const [rate, setRate] = useState(10);
@@ -484,12 +493,12 @@ export const SWPCalculator: React.FC<{ navigation: any }> = ({ navigation }) => 
     >
       <MaturityBanner label="Remaining Balance" value={formatCurrency(result.finalBalance)} />
       <Card>
-        <SectionHeader title="Parameters" />
+        <SectionHeader title={translateUi('common:parameters')} />
         <SliderRow label="Total Investment" value={principal} min={10000} max={50000000} step={10000}
           onChange={setPrincipal} prefix="₹" />
         <SliderRow label="Monthly Withdrawal" value={withdrawal} min={1000} max={500000} step={1000}
           onChange={setWithdrawal} prefix="₹" />
-        <SliderRow label="Expected Annual Return" value={rate} min={1} max={30} step={0.5}
+        <SliderRow label={translateUi('common:annualReturn')} value={rate} min={1} max={30} step={0.5}
           onChange={setRate} suffix="%" />
         <SliderRow label="Withdrawal Duration" value={years} min={1} max={40} step={1}
           onChange={setYears} suffix=" yr" />

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -112,6 +113,7 @@ function PreferenceRow({
 }
 
 export default function ReviewScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const route = useRoute<ReviewRoute>();
   const { isAuthenticated } = useAuth();
@@ -176,7 +178,7 @@ export default function ReviewScreen() {
 
   const handleOpenCamera = async () => {
     if (reviewMedia.length >= MAX_REVIEW_MEDIA) {
-      Alert.alert("Media Limit", `You can upload up to ${MAX_REVIEW_MEDIA} photos.`);
+      Alert.alert(translateUi('common:mediaLimit'), `You can upload up to ${MAX_REVIEW_MEDIA} photos.`);
       return;
     }
 
@@ -190,24 +192,24 @@ export default function ReviewScreen() {
 
       if (result.didCancel) return;
       if (result.errorMessage) {
-        Alert.alert("Camera", result.errorMessage);
+        Alert.alert(translateUi('common:camera'), result.errorMessage);
         return;
       }
 
       if (!result.assets?.length) {
-        Alert.alert("Camera", "Could not capture photo. Please try again.");
+        Alert.alert(translateUi('common:camera'), "Could not capture photo. Please try again.");
         return;
       }
 
       appendMedia(result.assets);
     } catch {
-      Alert.alert("Camera", "Unable to open camera right now.");
+      Alert.alert(translateUi('common:camera'), "Unable to open camera right now.");
     }
   };
 
   const handlePickFromGallery = async () => {
     if (reviewMedia.length >= MAX_REVIEW_MEDIA) {
-      Alert.alert("Media Limit", `You can upload up to ${MAX_REVIEW_MEDIA} photos.`);
+      Alert.alert(translateUi('common:mediaLimit'), `You can upload up to ${MAX_REVIEW_MEDIA} photos.`);
       return;
     }
 
@@ -221,18 +223,18 @@ export default function ReviewScreen() {
 
       if (result.didCancel) return;
       if (result.errorMessage) {
-        Alert.alert("Gallery", result.errorMessage);
+        Alert.alert(translateUi('common:gallery'), result.errorMessage);
         return;
       }
 
       if (!result.assets?.length) {
-        Alert.alert("Gallery", "No photos selected.");
+        Alert.alert(translateUi('common:gallery'), "No photos selected.");
         return;
       }
 
       appendMedia(result.assets);
     } catch {
-      Alert.alert("Gallery", "Unable to open gallery right now.");
+      Alert.alert(translateUi('common:gallery'), "Unable to open gallery right now.");
     }
   };
 
@@ -249,7 +251,7 @@ export default function ReviewScreen() {
     }
 
     if (!isAuthenticated) {
-      Alert.alert("Login Required", "Please login to submit your review.");
+      Alert.alert(translateUi('common:loginRequired'), "Please login to submit your review.");
       return;
     }
 
@@ -279,12 +281,12 @@ export default function ReviewScreen() {
       const res = await createReview(payload);
 
       if (res?.success === false) {
-        Alert.alert("Review", String(res?.message || "Failed to submit review"));
+        Alert.alert(translateUi('common:review'), String(res?.message || "Failed to submit review"));
         return;
       }
 
       Alert.alert("Thank You", "Your review has been submitted.", [
-        { text: "OK", onPress: () => navigation.goBack() },
+        { text: translateUi('common:ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
       const message =
@@ -292,7 +294,7 @@ export default function ReviewScreen() {
         error?.response?.data?.error ||
         error?.message ||
         "Failed to submit review";
-      Alert.alert("Review", String(message));
+      Alert.alert(translateUi('common:review'), String(message));
     } finally {
       setSubmitting(false);
     }
@@ -352,7 +354,7 @@ export default function ReviewScreen() {
                 onPress={handlePickFromGallery}
               >
                 <MaterialCommunityIcons name="image-multiple-outline" size={20} color="#D946EF" />
-                <Text style={styles.galleryButtonText}>Gallery</Text>
+                <Text style={styles.galleryButtonText}>{translateUi('common:gallery')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.cameraButton, { backgroundColor: theme.card }]} activeOpacity={0.75} onPress={handleOpenCamera}>
@@ -441,7 +443,7 @@ export default function ReviewScreen() {
               {submitting ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitText}>Submit</Text>
+                <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

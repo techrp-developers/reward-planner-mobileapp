@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -116,6 +117,7 @@ const CartRow = React.memo(function CartRow({
 })
 
 export default function WithAddress() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>()
   const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
   const { isAuthenticated } = useAuth()
@@ -417,7 +419,7 @@ export default function WithAddress() {
   if (!loading && items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+        <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <EmptyCart onBrowse={() => navigation.navigate('Home')} />
       </View>
     )
@@ -426,7 +428,7 @@ export default function WithAddress() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+        <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -440,7 +442,7 @@ export default function WithAddress() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+      <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
 
       <FlatList
         data={items}

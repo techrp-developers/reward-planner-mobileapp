@@ -1,0 +1,12 @@
+{
+  "incomplete": "सेवा की जानकारी अधूरी है।",
+  "bundleMissing": "सेवा पैकेज की जानकारी उपलब्ध नहीं है",
+  "emptyCart": "आपका सेवा कार्ट खाली है। शुरू करने के लिए सेवाएँ देखें।",
+  "serviceDetails": "सेवा की जानकारी",
+  "recommended": "सुझाई गई सेवाएँ",
+  "scheduleAppointment": "अपॉइंटमेंट तय करें",
+  "appointmentDetails": "अपॉइंटमेंट की जानकारी",
+  "serviceBooking": "सेवा की बुकिंग",
+  "serviceHistory": "सेवा का इतिहास",
+  "serviceCategory": "सेवा की श्रेणी"
+}

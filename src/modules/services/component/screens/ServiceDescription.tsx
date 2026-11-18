@@ -1,4 +1,5 @@
-    import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+    import { useTranslation } from 'react-i18next';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
     import { View, ScrollView, StyleSheet, Text, Alert, unstable_batchedUpdates } from 'react-native';
     import { useRoute, useNavigation } from '@react-navigation/native';
     import type { RouteProp } from '@react-navigation/native';
@@ -80,6 +81,7 @@
     }
 
     function ServiceDescription() {
+      const { t: translateUi } = useTranslation('common');
         const route = useRoute<CartRouteProps>();
         const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
         const servicesTheme = useServicesTheme();
@@ -479,7 +481,7 @@
                     {/* 4. Required documents */}
                     {requiredDocuments.length > 0 && (
                         <View style={[styles.documentsCard, { backgroundColor: servicesTheme.colors.surface, shadowColor: servicesTheme.colors.shadow }]}>
-                            <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Required Documents</Text>
+                            <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:requiredDocuments')}</Text>
                             {requiredDocuments.map((doc) => (
                                 <View key={String(doc.id) + doc.name} style={styles.documentRow}>
                                     <View
@@ -500,7 +502,7 @@
                                     </Text>
                                     {doc.mandatory && (
                                         <View style={styles.mandatoryBadge}>
-                                            <Text style={styles.mandatoryText}>Required</Text>
+                                            <Text style={styles.mandatoryText}>{translateUi('common:required')}</Text>
                                         </View>
                                     )}
                                 </View>

@@ -1,3 +1,5 @@
+import appI18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Animated, ScrollView, StyleSheet, View, Text, TouchableOpacity, Alert, InteractionManager, unstable_batchedUpdates } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -57,6 +59,7 @@ const isVariantAvailable = (variant: any) =>
 
 export default function
   ProductDescriptionScreen() {
+    const { t: translateUi } = useTranslation('common');
   const route = useRoute<RouteT>();
   const {
     productId,
@@ -114,7 +117,7 @@ export default function
 
   const handleBuyNow = useCallback(() => {
     if (!isAuthenticated) {
-      Alert.alert("Login Required", "Please login to buy products.");
+      Alert.alert(appI18n.t('common:loginRequired'), "Please login to buy products.");
       const parent = (navigation as any)?.getParent?.();
       if (parent && typeof parent.navigate === "function") {
         parent.navigate("AuthStack");
@@ -400,7 +403,7 @@ export default function
     if (adding) return;
 
     if (!isAuthenticated) {
-      Alert.alert("Login Required", "Please login to add products to cart.");
+      Alert.alert(appI18n.t('common:loginRequired'), "Please login to add products to cart.");
       return;
     }
 
@@ -473,12 +476,12 @@ export default function
     );
 
     if (!parsedProductId || Number.isNaN(parsedProductId)) {
-      Alert.alert("Wishlist", "Invalid product");
+      Alert.alert(appI18n.t('common:wishlist'), appI18n.t('common:invalidProduct'));
       return;
     }
 
     if (!parsedVariantId || Number.isNaN(parsedVariantId)) {
-      Alert.alert("Wishlist", "Product variant is missing");
+      Alert.alert(appI18n.t('common:wishlist'), appI18n.t('common:missingVariant'));
       return;
     }
 
@@ -492,7 +495,7 @@ export default function
         error?.response?.data?.error ||
         error?.message ||
         "Failed to update wishlist";
-      Alert.alert("Wishlist", String(message));
+      Alert.alert(appI18n.t('common:wishlist'), String(message));
     } finally {
       setWishLoading(false);
     }
@@ -647,7 +650,7 @@ export default function
         </View>
 
         <View style={styles.relatedSection}>
-          <Text style={[styles.relatedTitle, { color: theme.text }]}>Related Products</Text>
+          <Text style={[styles.relatedTitle, { color: theme.text }]}>{translateUi('common:relatedProducts')}</Text>
           <ProductGrid
             key={`related-${relatedProductId}`}
             useFlatList={false}

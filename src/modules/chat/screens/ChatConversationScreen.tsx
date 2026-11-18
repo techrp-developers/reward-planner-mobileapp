@@ -1,3 +1,5 @@
+import appI18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -73,6 +75,7 @@ const clientId = (id?: number) =>
   `${id || 'user'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function ChatConversationScreen() {
+  const { t: translateUi } = useTranslation(['common', 'chat']);
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<Route>();
   const conversation = params.conversation;
@@ -125,7 +128,7 @@ export default function ChatConversationScreen() {
       })
       .catch(error =>
         Alert.alert(
-          'Messages unavailable',
+          appI18n.t('chat:messagesUnavailable'),
           chatError(error, 'Unable to load messages.'),
         ),
       )
@@ -317,7 +320,7 @@ export default function ChatConversationScreen() {
       );
     } catch (error) {
       setText(body);
-      Alert.alert('Message not sent', chatError(error, 'Please try again.'));
+      Alert.alert(translateUi('chat:messageNotSent'), chatError(error, 'Please try again.'));
     } finally {
       setSending(false);
     }
@@ -346,7 +349,7 @@ export default function ChatConversationScreen() {
         ),
       );
     } catch (error) {
-      Alert.alert('Image not sent', chatError(error, 'Please try again.'));
+      Alert.alert(translateUi('chat:imageNotSent'), chatError(error, 'Please try again.'));
     } finally {
       setSending(false);
     }
@@ -383,7 +386,7 @@ export default function ChatConversationScreen() {
       );
     } catch (error: any) {
       if (error?.code !== 'OPERATION_CANCELED')
-        Alert.alert('Document not sent', chatError(error, 'Please try again.'));
+        Alert.alert(translateUi('chat:documentNotSent'), chatError(error, 'Please try again.'));
     } finally {
       setSending(false);
     }
@@ -408,17 +411,17 @@ export default function ChatConversationScreen() {
       ),
     );
   const confirmDelete = (message: ChatMessage) =>
-    Alert.alert('Delete message?', 'This message will be deleted for everyone in this chat.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(translateUi('chat:deleteTitle'), translateUi('chat:deleteBody'), [
+      { text: translateUi('common:cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: translateUi('common:delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             const deleted = await deleteChatMessage(conversation.conversation_id, message.message_id);
             markDeleted(message.message_id, deleted.deleted_at);
           } catch (error) {
-            Alert.alert('Message not deleted', chatError(error, 'Please try again.'));
+            Alert.alert(translateUi('chat:deleteFailed'), chatError(error, 'Please try again.'));
           }
         },
       },
@@ -436,7 +439,7 @@ export default function ChatConversationScreen() {
     );
   };
   const peerOnline = conversation.type === 'direct' && online;
-  const directStatus = peerOnline ? 'online' : lastSeenLabel(lastSeenAt);
+  const directStatus = peerOnline ? translateUi('chat:online') : lastSeenLabel(lastSeenAt);
 
   const selectedTheme = getChatTheme(chatThemeKey);
   const changeTheme = async (nextTheme: ChatThemeKey) => {
@@ -448,7 +451,7 @@ export default function ChatConversationScreen() {
       await updateConversationTheme(conversation.conversation_id, nextTheme);
     } catch (error) {
       setChatThemeKey(previous);
-      Alert.alert('Theme not changed', chatError(error, 'Please try again.'));
+      Alert.alert(translateUi('chat:themeFailed'), chatError(error, 'Please try again.'));
     } finally {
       setThemeSaving(false);
     }
@@ -523,7 +526,7 @@ export default function ChatConversationScreen() {
             </View>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Chat settings" onPress={() => setSettingsVisible(true)} style={styles.settingsButton}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('chat:settings')} onPress={() => setSettingsVisible(true)} style={styles.settingsButton}>
           <MaterialCommunityIcons
             name="pencil-outline"
             size={21}
@@ -597,7 +600,7 @@ export default function ChatConversationScreen() {
                   >
                     {item.deleted_at ? (
                       <Text style={[styles.messageText, styles.deletedText, { color: foreground }]}>
-                        This message was deleted
+                        {translateUi('chat:messageDeleted')}
                       </Text>
                     ) : item.message_type === 'image' && item.attachment_url ? (
                       <Image
@@ -689,7 +692,7 @@ export default function ChatConversationScreen() {
                 color={theme.primary}
               />
               <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
-                Say hello to start the conversation
+                {translateUi('chat:sayHello')}
               </Text>
             </View>
           }
@@ -713,7 +716,7 @@ export default function ChatConversationScreen() {
         >
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Add attachment or poll"
+            accessibilityLabel={translateUi('chat:attachments')}
             onPress={showAttachmentMenu}
             disabled={sending}
             style={[styles.attach, { backgroundColor: theme.primary }]}
@@ -743,7 +746,7 @@ export default function ChatConversationScreen() {
               setEmojiOpen(false);
               setTimeout(() => scrollToLatest(), 250);
             }}
-            placeholder="Message"
+            placeholder={translateUi('chat:message')}
             placeholderTextColor={theme.secondaryText}
             style={[styles.input, { color: theme.text }]}
             multiline

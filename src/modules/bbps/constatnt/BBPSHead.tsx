@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onChangePress }) => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const bbpsTheme = useBbpsTheme();
   const operatorInitial = user?.operatorInitial?.trim()?.charAt(0)?.toUpperCase() || 'O';
@@ -72,7 +74,7 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
                 <View style={styles.typeRow}>
                   <Text style={[styles.typeText, { color: bbpsTheme.colors.muted }]}>{user.type} - </Text>
                   <TouchableOpacity onPress={onChangePress}>
-                    <Text style={[styles.changeText, { color: bbpsTheme.colors.primary }]}>Change</Text>
+                    <Text style={[styles.changeText, { color: bbpsTheme.colors.primary }]}>{translateUi('common:change')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -91,7 +93,7 @@ const BBPSHead: React.FC<Props> = ({ title, user, onBackPress, onHelpPress, onCh
               <MaskedView style={styles.maskedView} maskElement={
                 <View style={styles.row}>
                   <MaterialIcons name="chat-bubble-outline" size={18} color="black" />
-                  <Text style={styles.helpText}>Help</Text>
+                  <Text style={styles.helpText}>{translateUi('common:help')}</Text>
                 </View>
               }>
                 <LinearGradient colors={bbpsTheme.gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fullStretch} />

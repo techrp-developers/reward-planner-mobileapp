@@ -1,15 +1,17 @@
+import { goBackInFitness } from "../../utils/fitnessNavigation";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from './FitnessGradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,11 +31,15 @@ import {
 } from '../../utils/theme';
 
 import Coin from '../../../../assets/product/rewards.svg';
+import { useTranslation } from "react-i18next";
+import i18n from "../../../../i18n";
+
+import { useStepStyles } from "../../utils/useStepTheme";
 
 type PointsNavProp = NativeStackNavigationProp<FitnessStackParamList, 'CoinHistory'>;
 
 // Violet Dusk palette — all on-dark, matching Dashboard/CoinHistoryAndPlan
-const VD = {
+const VD_DARK = {
   bg: ['#070A16', '#111735', '#201A3F'],
   accent: '#8EA2FF',
   accentDark: '#B9C4FF',
@@ -51,19 +57,55 @@ const VD = {
   warning: '#F8B84E',
   warningBg: 'rgba(248,184,78,0.12)',
   warningBorder: 'rgba(248,184,78,0.25)',
+  heroGrad: ["#27305F", "#1B2148", "#2A1E50"],
+  heroBorder: "rgba(174,188,255,0.28)",
+  heroText: "rgba(255,255,255,0.76)",
+  heroTextSoft: "rgba(255,255,255,0.7)",
+  glassStrong: "rgba(255,255,255,0.16)",
+  glassMid: "rgba(255,255,255,0.12)",
+  glassBorder: "rgba(255,255,255,0.14)",
+};
+
+type Palette = typeof VD_DARK;
+
+const VD_LIGHT: Palette = {
+  bg: ["#F5F9FF", "#EEF4FF", "#F3EEFF"],
+  accent: "#426BFF",
+  accentDark: "#5B3FD9",
+  accentDim: "rgba(66,107,255,0.22)",
+  accentFaint: "rgba(66,107,255,0.10)",
+  white: "#10152D",
+  whiteMid: "#4A5275",
+  whiteLow: "#777FA5",
+  whiteGhost: "#E3EBFA",
+  cardBg: "#FFFFFF",
+  cardBorder: "#E9EEFA",
+  success: "#16A34A",
+  successBg: "rgba(34,197,94,0.10)",
+  successBorder: "rgba(34,197,94,0.28)",
+  warning: "#C27C00",
+  warningBg: "rgba(245,165,36,0.12)",
+  warningBorder: "rgba(245,165,36,0.30)",
+  heroGrad: ["#E8F0FF", "#EEF2FF", "#F1ECFF"],
+  heroBorder: "#E1E7F7",
+  heroText: "#4A5275",
+  heroTextSoft: "#777FA5",
+  glassStrong: "rgba(66,107,255,0.10)",
+  glassMid: "rgba(66,107,255,0.08)",
+  glassBorder: "rgba(66,107,255,0.16)",
 };
 
 const formatNumber = (value: number) =>
-  Number.isFinite(value) ? value.toLocaleString('en-IN') : '0';
+  Number.isFinite(value) ? value.toLocaleString(i18n.language) : '0';
 
 const formatDateParts = (value: string | null) => {
   if (!value) return { date: '--', year: '' };
 
-  const date = new Date(`${value}T00:00:00`);
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) return { date: value, year: '' };
 
   return {
-    date: new Intl.DateTimeFormat('en-US', {
+    date: new Intl.DateTimeFormat(i18n.language, {
       month: 'short',
       day: '2-digit',
     }).format(date),
@@ -72,12 +114,12 @@ const formatDateParts = (value: string | null) => {
 };
 
 const formatFullDate = (value: string | null) => {
-  if (!value) return 'No expiry';
+  if (!value) return i18n.t("stepCounter:ui.noExpiry");
 
-  const date = new Date(`${value}T00:00:00`);
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(i18n.language, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -85,7 +127,11 @@ const formatFullDate = (value: string | null) => {
 };
 
 const PointsStatementScreen: React.FC = () => {
+  const { palette: VD, styles, isDark } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { t: tx } = useTranslation();
   const navigation = useNavigation<PointsNavProp>();
+  // Includes the RP Move tab bar floating over this screen.
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const contentMaxWidth = Math.min(width - RESPONSIVE.horizontalPadding * 2, 560);
   const [history, setHistory] = useState<StepHistoryItem[]>([]);
@@ -116,7 +162,7 @@ const PointsStatementScreen: React.FC = () => {
 
     if (!historyRes.success || !summaryRes.success) {
       setErrorMessage(
-        historyRes.message || summaryRes.message || 'Failed to fetch coin history'
+        historyRes.message || summaryRes.message || i18n.t("stepCounter:r2.failedToFetchCoinHistory")
       );
     }
 
@@ -143,13 +189,14 @@ const PointsStatementScreen: React.FC = () => {
   }, [history]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={VD.bg[0]} />
       <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingHorizontal: RESPONSIVE.horizontalPadding },
+            { paddingHorizontal: RESPONSIVE.horizontalPadding, paddingBottom: bottomInset + 16 },
           ]}
         >
           <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
@@ -157,16 +204,16 @@ const PointsStatementScreen: React.FC = () => {
               <TouchableOpacity
                 activeOpacity={0.82}
                 style={styles.backButton}
-                onPress={() => navigation.goBack()}
+                onPress={() => goBackInFitness(navigation)}
               >
                 <Icon name="chevron-left" size={24} color={VD.accentDark} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>RP Points Statement</Text>
+              <Text style={styles.headerTitle}>{tx("stepCounter:pointStatement.pointsStatement")}</Text>
               <View style={styles.headerPlaceholder} />
             </View>
 
             <LinearGradient
-              colors={['#27305F', '#1B2148', '#2A1E50']}
+              colors={VD.heroGrad}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.balanceGradient}
@@ -176,20 +223,21 @@ const PointsStatementScreen: React.FC = () => {
                   <Coin width={40} height={40} />
                 </View>
                 <View style={styles.balanceTextContainer}>
-                  <Text style={styles.balanceTitle}>My Balance</Text>
-                  <Text style={styles.balanceValue}>
-                    {formatNumber(summary?.balance || 0)} RP Points
+                  <Text style={styles.balanceTitle}>{tx("stepCounter:pointStatement.myBalance")}</Text>
+                  <Text style={styles.balanceValue} maxFontSizeMultiplier={1.25}>
+                    {formatNumber(summary?.balance || 0)}
+                    <Text style={styles.balanceUnit}>{" "}{tx("stepCounter:ui.coins")}</Text>
                   </Text>
                 </View>
               </View>
 
               <View style={styles.balanceMetaRow}>
                 <View style={styles.balanceMiniCard}>
-                  <Text style={styles.balanceMiniLabel}>Credited</Text>
+                  <Text style={styles.balanceMiniLabel}>{tx("stepCounter:pointStatement.credited")}</Text>
                   <Text style={styles.balanceMiniValue}>+{formatNumber(totals.credited)}</Text>
                 </View>
                 <View style={styles.balanceMiniCard}>
-                  <Text style={styles.balanceMiniLabel}>Used</Text>
+                  <Text style={styles.balanceMiniLabel}>{tx("stepCounter:pointStatement.used")}</Text>
                   <Text style={styles.balanceMiniValue}>-{formatNumber(totals.debited)}</Text>
                 </View>
               </View>
@@ -202,27 +250,27 @@ const PointsStatementScreen: React.FC = () => {
                 </View>
                 <View style={styles.expiryCopy}>
                   <Text style={styles.expiryText}>
-                    {formatNumber(summary?.expiring_coins || 0)} RP Coins Expiring
+                    {tx("stepCounter:ui.expiringCoins", { count: summary?.expiring_coins || 0 })}
                   </Text>
                   <Text style={styles.expiryDate}>
-                    Expiry: {formatFullDate(summary?.expiry_date || null)}
+                    {tx("stepCounter:ui.expiry", { date: formatFullDate(summary?.expiry_date || null) })}
                   </Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, styles.dateColumn]}>Date</Text>
-              <Text style={[styles.tableHeaderText, styles.activityColumn]}>Activity</Text>
-              <Text style={[styles.tableHeaderText, styles.amountColumn]}>Amount</Text>
+              <Text style={[styles.tableHeaderText, styles.dateColumn]}>{tx("stepCounter:pointStatement.date")}</Text>
+              <Text style={[styles.tableHeaderText, styles.activityColumn]}>{tx("stepCounter:pointStatement.activity")}</Text>
+              <Text style={[styles.tableHeaderText, styles.amountColumn]}>{tx("stepCounter:pointStatement.amount")}</Text>
             </View>
 
             {loading ? (
-              <StateBox loading message="Loading your coin history..." />
+              <StateBox loading message={tx("stepCounter:pointStatement.loadingYourCoinHistory")} />
             ) : errorMessage ? (
               <StateBox message={errorMessage} onRetry={loadWallet} />
             ) : history.length === 0 ? (
-              <StateBox message="No coin activity yet." />
+              <StateBox message={tx("stepCounter:pointStatement.noCoinActivityYet")} />
             ) : (
               <View style={styles.transactionsContainer}>
                 {history.map((item) => (
@@ -238,6 +286,8 @@ const PointsStatementScreen: React.FC = () => {
 };
 
 const TransactionRow = React.memo(({ item }: { item: StepHistoryItem }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  useTranslation(); // re-render memoized content on language change
   const isDebit = item.type === 'debit';
   const dateParts = formatDateParts(item.date);
 
@@ -249,11 +299,11 @@ const TransactionRow = React.memo(({ item }: { item: StepHistoryItem }) => {
       </View>
 
       <View style={styles.activityContainer}>
-        <Text numberOfLines={1} style={styles.activityTitle}>
-          {item.title || (isDebit ? 'RP Points Used' : 'RP Points Credited')}
+        <Text style={styles.activityTitle}>
+          {item.title || (isDebit ? i18n.t("stepCounter:r2.coinsUsed") : i18n.t("stepCounter:r2.coinsCredited"))}
         </Text>
-        <Text numberOfLines={2} style={styles.activityDesc}>
-          {item.description || item.category || 'Step wallet activity'}
+        <Text style={styles.activityDesc}>
+          {item.description || item.category || i18n.t("stepCounter:r2.stepWalletActivity")}
         </Text>
       </View>
 
@@ -277,7 +327,10 @@ const StateBox = React.memo(({
   loading?: boolean;
   message: string;
   onRetry?: () => void;
-}) => (
+}) => {
+  const { palette: VD, styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { t: tx } = useTranslation();
+  return (
   <View style={styles.stateBox}>
     {loading ? (
       <ActivityIndicator color={VD.accent} />
@@ -287,13 +340,14 @@ const StateBox = React.memo(({
     <Text style={styles.stateText}>{message}</Text>
     {onRetry ? (
       <TouchableOpacity activeOpacity={0.86} style={styles.retryButton} onPress={onRetry}>
-        <Text style={styles.retryText}>Retry</Text>
+        <Text style={styles.retryText}>{tx("stepCounter:pointStatement.retry")}</Text>
       </TouchableOpacity>
     ) : null}
   </View>
-));
+);
+});
 
-const styles = StyleSheet.create({
+const createStyles = (VD: Palette) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: VD.bg[0],
@@ -328,8 +382,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
+    flex: 1,
     color: VD.white,
     textAlign: 'center',
+    paddingHorizontal: SPACING.sm,
   },
   headerPlaceholder: {
     width: 42,
@@ -337,10 +393,11 @@ const styles = StyleSheet.create({
   },
   balanceGradient: {
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(174,188,255,0.28)',
+    borderColor: VD.heroBorder,
   },
   balanceContent: {
     flexDirection: 'row',
@@ -352,20 +409,27 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.large,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: VD.glassStrong,
     marginRight: SPACING.md,
   },
   balanceTextContainer: {
     flex: 1,
+    minWidth: 0,
   },
   balanceTitle: {
     ...TYPOGRAPHY.body,
-    color: 'rgba(255,255,255,0.76)',
+    color: VD.heroText,
   },
   balanceValue: {
     ...TYPOGRAPHY.h2,
+    flexShrink: 1,
     color: VD.white,
     marginTop: 2,
+  },
+  balanceUnit: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: VD.heroText,
   },
   balanceMetaRow: {
     flexDirection: 'row',
@@ -374,18 +438,21 @@ const styles = StyleSheet.create({
   },
   balanceMiniCard: {
     flex: 1,
+    minWidth: 0,
     borderRadius: BORDER_RADIUS.large,
-    padding: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: VD.glassMid,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: VD.glassBorder,
   },
   balanceMiniLabel: {
     ...TYPOGRAPHY.caption,
-    color: 'rgba(255,255,255,0.7)',
+    color: VD.heroTextSoft,
   },
   balanceMiniValue: {
     ...TYPOGRAPHY.bodyMedium,
+    paddingVertical: 2,
     color: VD.white,
     marginTop: 2,
   },
@@ -412,6 +479,7 @@ const styles = StyleSheet.create({
   },
   expiryCopy: {
     flex: 1,
+    minWidth: 0,
   },
   expiryText: {
     ...TYPOGRAPHY.bodyMedium,
@@ -433,14 +501,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   dateColumn: {
-    width: 74,
+    width: 60,
   },
   activityColumn: {
     flex: 1,
     paddingHorizontal: SPACING.sm,
   },
   amountColumn: {
-    width: 86,
+    minWidth: 56,
+    flexShrink: 1,
     textAlign: 'right',
   },
   transactionsContainer: {
@@ -457,10 +526,11 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
   },
   dateContainer: {
-    width: 74,
+    width: 60,
   },
   dateMain: {
     ...TYPOGRAPHY.bodyMedium,
+    paddingVertical: 2,
     color: VD.white,
   },
   dateYear: {
@@ -470,10 +540,12 @@ const styles = StyleSheet.create({
   },
   activityContainer: {
     flex: 1,
+    minWidth: 0,
     paddingHorizontal: SPACING.sm,
   },
   activityTitle: {
     ...TYPOGRAPHY.bodyMedium,
+    paddingVertical: 2,
     color: VD.white,
   },
   activityDesc: {
@@ -482,11 +554,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   amountContainer: {
-    width: 86,
+    minWidth: 56,
+    flexShrink: 1,
     alignItems: 'flex-end',
   },
   coinContainer: {
     minHeight: 32,
+    paddingVertical: 6,
+    gap: 4,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.sm,

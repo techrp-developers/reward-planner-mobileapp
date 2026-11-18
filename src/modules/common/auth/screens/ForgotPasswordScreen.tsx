@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   View,
@@ -26,6 +27,7 @@ type ForgotPasswordNavigationProp = NativeStackNavigationProp<
 >;
 
 function ForgotPasswordScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<ForgotPasswordNavigationProp>();
   const alert = useAlert();
   const { isDark } = useAppTheme();
@@ -92,7 +94,7 @@ function ForgotPasswordScreen() {
               ]}
             >
               <TextInput
-                placeholder="Email"
+                placeholder={translateUi('common:email')}
                 placeholderTextColor={isDark ? "#71717A" : "#999"}
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -123,7 +125,7 @@ function ForgotPasswordScreen() {
             <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#555" }]}>
               Return to Login Screen -{" "}
               <Text onPress={() => navigation.navigate("Login")} style={[styles.signUp, { color: isDark ? "#F472B6" : "#852BAF" }]}>
-                Login
+                {translateUi('common:login')}
               </Text>
             </Text>
           </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -32,6 +33,7 @@ const STATUS_CARDS = [
 ];
 
 export default function NoInternetScreen({ onRetry }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark } = useAppTheme();
   const [retrying, setRetrying] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
@@ -203,10 +205,10 @@ export default function NoInternetScreen({ onRetry }: Props) {
           </View>
         </Animated.View>
 
-        <Text style={[styles.eyebrow, { color: colors.primary }]}>CONNECTION LOST</Text>
-        <Text style={[styles.title, { color: colors.text }]}>No Internet Connection</Text>
+        <Text style={[styles.eyebrow, { color: colors.primary }]}>{translateUi('common:connectionLost')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{translateUi('common:noInternet')}</Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
-          We are holding your place. Reconnect to continue shopping, booking, and redeeming rewards.
+          {translateUi('common:reconnect')}
         </Text>
 
         <View style={styles.statusGrid}>
@@ -245,19 +247,19 @@ export default function NoInternetScreen({ onRetry }: Props) {
             {retrying ? (
               <>
                 <ActivityIndicator color="#FFFFFF" size="small" />
-                <Text style={styles.btnText}>Checking...</Text>
+                <Text style={styles.btnText}>{translateUi('common:checking')}</Text>
               </>
             ) : (
               <>
                 <MaterialCommunityIcons name="refresh" size={20} color="#FFFFFF" />
-                <Text style={styles.btnText}>Try Again</Text>
+                <Text style={styles.btnText}>{translateUi('common:tryAgain')}</Text>
               </>
             )}
           </LinearGradient>
         </TouchableOpacity>
 
         <Text style={[styles.helperText, { color: colors.subtle }]}>
-          Check Wi-Fi, mobile data, or airplane mode.
+          {translateUi('common:noWifi')}
         </Text>
       </View>
     </SafeAreaView>

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import type { TranslationKey } from '../i18n/resources';
 import BusBookingIcon from '../assets/sampleImages/Bus_Booking.svg';
 import React from "react";
 import {
@@ -238,12 +240,20 @@ const ACTIVE_TAB_SCALE = 1;
 const PRESSED_SCALE_DELTA = 0.06;
 const NAV_TABS_H_PADDING = rs(16);
 const NAV_TAB_GAP = rs(10);
-const SEARCH_PLACEHOLDERS: Record<string, string[]> = {
-  product: ["Search products and offers", "Search brands and categories", "Search rewards and deals"],
-  service: ["Search PAN and Aadhaar", "Search passport services", "Search insurance and SIP"],
-  payment: ["Search mobile recharge", "Search electricity bills", "Search water and DTH bills"],
-  dineout: ["Search bus routes", "Search bus tickets", "Search destinations"],
-};
+const SEARCH_PLACEHOLDERS = {
+  product: ["searchProductsOffers", "searchBrandsCategories", "searchRewardsDeals"],
+  service: ["searchPanAadhaar", "searchPassport", "searchInsuranceSip"],
+  payment: ["searchMobile", "searchElectricity", "searchWaterDth"],
+  dineout: ["searchBusRoutes", "searchBusTickets", "searchDestinations"],
+} satisfies Record<string, TranslationKey<'dashboard'>[]>;
+
+const STANDARD_MODULE_LABELS = new Map<string, `dashboard:${TranslationKey<'dashboard'>}` | `common:${TranslationKey<'common'>}`>([
+  ['Product', 'dashboard:product'],
+  ['Products', 'common:products'],
+  ['Services', 'common:services'],
+  ['Payments', 'common:payments'],
+  ['Bus Booking', 'common:busBooking'],
+]);
 
 function RotatingSearchPlaceholder({
   moduleKey,
@@ -252,7 +262,8 @@ function RotatingSearchPlaceholder({
   moduleKey: string;
   color: string;
 }) {
-  const placeholders = SEARCH_PLACEHOLDERS[moduleKey] ?? SEARCH_PLACEHOLDERS.product;
+  const { t } = useTranslation('dashboard');
+  const placeholders = SEARCH_PLACEHOLDERS[moduleKey as keyof typeof SEARCH_PLACEHOLDERS] ?? SEARCH_PLACEHOLDERS.product;
   const [index, setIndex] = React.useState(0);
   const opacity = React.useRef(new Animated.Value(1)).current;
 
@@ -279,7 +290,7 @@ function RotatingSearchPlaceholder({
       style={[styles.searchPlaceholder, { color, opacity }]}
       numberOfLines={1}
     >
-      {placeholders[index]}
+      {t(`dashboard:${placeholders[index]}`)}
     </Animated.Text>
   );
 }
@@ -436,6 +447,7 @@ const TopIconWithLabel = React.memo(
 );
 
 export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
+  const { t: translateUi } = useTranslation('common');
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
@@ -858,7 +870,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
               <View style={styles.deliveryTextBlock}>
                 <View style={styles.deliveryTitleRow}>
                   <Text style={[styles.deliveryPrefix, { color: navbarMutedColor }]} numberOfLines={1}>
-                    Deliver to
+                    {translateUi('common:deliverTo')}
                   </Text>
                   <Text style={[styles.deliveryTitle, { color: navbarIconColor }]} numberOfLines={1}>
                     {customerName}
@@ -934,6 +946,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         >
           {modules.map((module) => {
             const active = module.module_key === selectedModuleKey;
+            const labelKey = STANDARD_MODULE_LABELS.get(module.label);
             const iconUrl = active
               ? module.active_icon_url || module.icon_url
               : module.icon_url;
@@ -946,7 +959,7 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
                 iconUrl={iconUrl}
                 fallbackIconUrl={module.icon_url}
                 moduleKey={module.module_key}
-                label={module.label}
+                label={labelKey ? translateUi(labelKey) : module.label}
                 activeTint={
                   isScrolledWhite
                     ? module.active_color || "#B77900"

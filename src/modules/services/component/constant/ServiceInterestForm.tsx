@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -40,6 +41,7 @@ const ServiceInterestForm: React.FC<Props> = ({
   onSubmit,
   canSubmit,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const [showReasonModal, setShowReasonModal] = useState(false);
 
   return (
@@ -136,7 +138,7 @@ const ServiceInterestForm: React.FC<Props> = ({
         style={!canSubmit ? styles.submitBtnDisabled : undefined}
       >
         <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.submitBtn}>
-          <Text style={styles.submitText}>Submit</Text>
+          <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
         </LinearGradient>
       </TouchableOpacity>
 

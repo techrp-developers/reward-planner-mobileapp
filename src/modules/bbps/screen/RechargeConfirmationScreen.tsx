@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -50,6 +51,7 @@ const getPlanData = (plan: any) =>
   String(plan?.data || plan?.dataBenefit || plan?.benefits || '');
 
 const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
+  const { t: translateUi } = useTranslation('common');
   const { user } = useAuth();
   const alert = useAlert();
   const bbpsTheme = useBbpsTheme();
@@ -292,7 +294,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
             </View>
           </View>
 
-          <Text style={[styles.detailsTitle, { color: bbpsTheme.colors.textStrong }]}>Details</Text>
+          <Text style={[styles.detailsTitle, { color: bbpsTheme.colors.textStrong }]}>{translateUi('common:details')}</Text>
           <Text style={[styles.detailsText, { color: bbpsTheme.colors.text }]}>
             {plan?.description || 'No description available'}
           </Text>
@@ -316,7 +318,7 @@ const RechargeConfirmationScreenComponent = ({ navigation, route }: any) => {
                   onPress={handleCreateOrder}
                 >
                   <MaterialIcons name="refresh" size={16} color="#FFFFFF" />
-                  <Text style={styles.errorRetryText}>Retry</Text>
+                  <Text style={styles.errorRetryText}>{translateUi('common:retry')}</Text>
                 </TouchableOpacity>
                 {__DEV__ && <TouchableOpacity
                   style={styles.errorCopyBtn}

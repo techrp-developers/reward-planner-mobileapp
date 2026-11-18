@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -31,6 +32,7 @@ type AuthModalStackParamList = {
 type Nav = NativeStackNavigationProp<AuthModalStackParamList>;
 
 export default function RegisterScreen() {
+  const { t: translateUi } = useTranslation('common');
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { register, loading } = useAuth();
@@ -53,14 +55,14 @@ export default function RegisterScreen() {
         cpassword: confirmPassword,
       });
 
-      Alert.alert("Registration", "Please verify your email before login.");
+      Alert.alert(translateUi('common:registration'), "Please verify your email before login.");
       navigation.navigate("VerifyEmail", { email: email.trim() });
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         "Registration failed";
-      Alert.alert("Registration", String(message));
+      Alert.alert(translateUi('common:registration'), String(message));
     }
   };
 
@@ -84,7 +86,7 @@ export default function RegisterScreen() {
 
             <View style={styles.inputWrap}>
               <TextInput
-                placeholder="Name"
+                placeholder={translateUi('common:name')}
                 placeholderTextColor="#999"
                 style={styles.input}
                 value={name}
@@ -94,7 +96,7 @@ export default function RegisterScreen() {
 
             <View style={styles.inputWrap}>
               <TextInput
-                placeholder="Email ID"
+                placeholder={translateUi('common:emailId')}
                 placeholderTextColor="#999"
                 style={styles.input}
                 keyboardType="email-address"
@@ -170,9 +172,9 @@ export default function RegisterScreen() {
 
         <View style={[styles.bottomWrap, { paddingBottom: insets.bottom + 10 }]}> 
           <View style={styles.bottomRow}>
-            <Text style={styles.bottomText}>Already have an account?</Text>
+            <Text style={styles.bottomText}>{translateUi('common:alreadyAccount')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-              <Text style={styles.signUp}>Login</Text>
+              <Text style={styles.signUp}>{translateUi('common:login')}</Text>
             </TouchableOpacity>
           </View>
         </View>

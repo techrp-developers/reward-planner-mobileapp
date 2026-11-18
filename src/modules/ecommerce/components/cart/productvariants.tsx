@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -39,6 +40,7 @@ export default function ProductVariants({
   variants,
   onChange,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const variantList = Array.isArray(variants) ? variants : [];
   const attrEntries = Object.entries(attributes || {}).sort(([a], [b]) => {
@@ -199,11 +201,11 @@ export default function ProductVariants({
                     ) : null}
 
                     {isOutOfStock ? (
-                      <Text style={styles.metaText}>Out of stock</Text>
+                      <Text style={styles.metaText}>{translateUi('common:outOfStock')}</Text>
                     ) : isUnavailable ? (
                       <Text style={styles.metaText}>Unavailable</Text>
                     ) : !variant && !isSelected ? (
-                      <Text style={styles.availableMetaText}>Available</Text>
+                      <Text style={styles.availableMetaText}>{translateUi('common:available')}</Text>
                     ) : null}
                   </TouchableOpacity>
                 );

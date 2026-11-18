@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import ModuleSkeleton from '../../../common/components/ModuleSkeleton';
 import React from "react";
 import {
@@ -153,6 +154,7 @@ const CategoryTile = React.memo(function CategoryTile({
 
 
 export default function CategoriesSection() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
   const { isDark, theme } = useAppTheme();
@@ -224,7 +226,7 @@ export default function CategoriesSection() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.headerRow}>
-          <Text style={[styles.heading, { color: theme.text }]}>Categories</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{translateUi('common:categories')}</Text>
         </View>
         <ModuleSkeleton variant="categories" height={layout.imageHeight + 64} />
       </View>
@@ -236,14 +238,14 @@ export default function CategoriesSection() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.headerRow}>
-        <Text style={[styles.heading, { color: theme.text }]}>Categories</Text>
+        <Text style={[styles.heading, { color: theme.text }]}>{translateUi('common:categories')}</Text>
 
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => navigation.navigate("CategoriesScreen")}
           style={styles.exploreBtn}
         >
-          <Text style={[styles.exploreText, { color: theme.text }]}>View All</Text>
+          <Text style={[styles.exploreText, { color: theme.text }]}>{translateUi('common:viewAll')}</Text>
           <MaterialIcons name="chevron-right" size={18} color={theme.text} />
         </TouchableOpacity>
       </View>

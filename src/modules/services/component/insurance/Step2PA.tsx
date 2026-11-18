@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -100,7 +101,8 @@ function formatDobInput(raw: string) {
   return `${p1}/${p2}/${p3}`;
 }
 
-export default function Step2PA({ data, setData, onNext, onBack }: Props) {  const insets = useSafeAreaInsets();  const servicesTheme = useServicesTheme();  const [citySearchTerm, setCitySearchTerm] = useState("");
+export default function Step2PA({ data, setData, onNext, onBack }: Props) {
+  const { t: translateUi } = useTranslation('common');  const insets = useSafeAreaInsets();  const servicesTheme = useServicesTheme();  const [citySearchTerm, setCitySearchTerm] = useState("");
   const [filteredCities, setFilteredCities] = useState<string[]>(CITIES);
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -120,8 +122,8 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
     const checkAuthAndLoadUser = async () => {
       try {
         if (!isAuthenticated()) {
-          Alert.alert("Login Required", "Please log in to get insurance quotes", [
-            { text: "OK", onPress: () => onBack() },
+          Alert.alert(translateUi('common:loginRequired'), translateUi('common:loginForQuotes'), [
+            { text: translateUi('common:ok'), onPress: () => onBack() },
           ]);
           setChecking(false);
           return;
@@ -226,7 +228,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
   const handleContinue = () => {
     if (!isFormValid) {
       Alert.alert(
-        "Validation",
+        translateUi('common:validation'),
         "Please complete all personal details to continue"
       );
       return;
@@ -239,7 +241,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
       <SafeAreaView style={[styles.safeArea, { backgroundColor: servicesTheme.colors.background }]}>
         <View style={styles.centerContainer}>
           <MaterialIcons name="lock-outline" size={50} color={servicesTheme.colors.primary} />
-          <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>Verifying authentication...</Text>
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>{translateUi('common:verifyingAuth')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -271,9 +273,9 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
         extraScrollHeight={Platform.OS === "ios" ? 16 : 120}
       >
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Personal Details</Text>
+          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:personalDetails')}</Text>
           <Text style={[styles.headerSubtitle, { color: servicesTheme.colors.muted }]}>
-            This information helps us personalize your insurance quotes.
+            {translateUi('common:personalizeQuotes')}
           </Text>
         </View>
 
@@ -365,7 +367,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
                 <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                   <TextInput
                     style={[styles.textInput, { color: servicesTheme.colors.text }]}
-                    placeholder="Enter pincode"
+                    placeholder={translateUi('common:enterPincode')}
                     placeholderTextColor={servicesTheme.colors.subtle}
                     keyboardType="numeric"
                     maxLength={6}
@@ -422,7 +424,7 @@ export default function Step2PA({ data, setData, onNext, onBack }: Props) {  con
           </TouchableOpacity>
           <View style={styles.footerButtonWrapper}>
             <GradientButton
-              title="Continue"
+              title={translateUi('common:continue')}
               onPress={handleContinue}
               disabled={!isFormValid}
               style={styles.continueButton}

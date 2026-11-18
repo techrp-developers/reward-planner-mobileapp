@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
@@ -53,6 +54,7 @@ const formatDisplayDate = (value?: string | null) => {
 };
 
 export default function ItemReturnRequest() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const route = useRoute<RouteProps>();
     const { isDark, theme } = useAppTheme();
@@ -119,12 +121,12 @@ export default function ItemReturnRequest() {
                 Alert.alert(
                     "Request submitted",
                     `Your ${type} request has been sent to the seller for review.`,
-                    [{ text: "OK", onPress: () => navigation.goBack() }]
+                    [{ text: translateUi('common:ok'), onPress: () => navigation.goBack() }]
                 );
                 return;
             }
 
-            Alert.alert("Request failed", res?.message || "Unable to submit request");
+            Alert.alert(translateUi('common:requestFailed'), res?.message || "Unable to submit request");
         } finally {
             setSubmitting(false);
         }

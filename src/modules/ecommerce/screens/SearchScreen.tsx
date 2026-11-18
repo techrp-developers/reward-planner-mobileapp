@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Alert,
@@ -42,6 +43,7 @@ type SearchHistoryItem = string | { keyword?: string; title?: string; q?: string
 const BRAND_PURPLE_LIGHT = "#A654CD";
 
 function SearchScreen() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     const { isDark, theme } = useAppTheme();
     const [search, setSearch] = useState("");
@@ -201,7 +203,7 @@ function SearchScreen() {
                                     <MaterialCommunityIcons name="text-search" size={26} color={BRAND_PURPLE_LIGHT} />
                                 </View>
                                 <Text style={[styles.noResultText, { color: theme.text }]}>No product found</Text>
-                                <Text style={[styles.emptySubText, { color: theme.secondaryText }]}>Try a different keyword</Text>
+                                <Text style={[styles.emptySubText, { color: theme.secondaryText }]}>{translateUi('common:differentKeyword')}</Text>
                             </View>
                         ) : (
                             suggestions.map((item) => {
@@ -244,12 +246,12 @@ function SearchScreen() {
                                 const res = await clearSearchHistory();
                                 if (res?.success) {
                                   await loadHistory();
-                                  Alert.alert("Success", "Search history cleared.");
+                                  Alert.alert(translateUi('common:success'), "Search history cleared.");
                                 } else {
                                   throw new Error("Failed to clear history");
                                 }
                               } catch {
-                                Alert.alert("Error", "Unable to clear search history. Please try again.");
+                                Alert.alert(translateUi('common:error'), "Unable to clear search history. Please try again.");
                               }
                             }}
                             style={[styles.actionButton, styles.actionButtonDanger]}

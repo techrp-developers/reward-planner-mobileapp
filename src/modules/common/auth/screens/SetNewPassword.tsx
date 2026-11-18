@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   View,
@@ -24,6 +25,7 @@ type SetNewPasswordNavigationProp = NativeStackNavigationProp<AuthStackParamList
 type SetNewPasswordRouteProp = RouteProp<AuthStackParamList, "SetNewPassword">;
 
 function SetNewPassword() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<SetNewPasswordNavigationProp>();
   const route = useRoute<SetNewPasswordRouteProp>();
   const alert = useAlert();
@@ -131,7 +133,7 @@ function SetNewPassword() {
             </View>
 
             {/* Confirm Password */}
-            <Text style={[styles.label, { color: isDark ? "#D4D4D8" : "#555" }]}>Confirm your New Password</Text>
+            <Text style={[styles.label, { color: isDark ? "#D4D4D8" : "#555" }]}>{translateUi('common:confirmNewPassword')}</Text>
             <View
               style={[
                 styles.inputWrap,
@@ -142,7 +144,7 @@ function SetNewPassword() {
               ]}
             >
               <TextInput
-                placeholder="Confirm your New Password"
+                placeholder={translateUi('common:confirmNewPassword')}
                 placeholderTextColor={isDark ? "#71717A" : "#999"}
                 secureTextEntry={!confirmVisible}
                 style={[styles.input, { color: isDark ? "#FFFFFF" : "#333" }]}

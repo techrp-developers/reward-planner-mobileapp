@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -128,6 +129,7 @@ const OrderCard = ({ order, bbpsTheme }: { order: TemporaryOrder; bbpsTheme: Bbp
 );
 
 function OrderHistory({ navigation }: any) {
+  const { t: translateUi } = useTranslation('common');
   const bbpsTheme = useBbpsTheme();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BBPSOrderStatus>('');
@@ -171,7 +173,7 @@ function OrderHistory({ navigation }: any) {
   return (
     <BBPSSafeAreaView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <OrderHeading
-        title="My Orders"
+        title={translateUi('common:myOrders')}
         onBackPress={() => navigation.goBack()}
         onHelpPress={() => navigation.navigate('HelpForm')}
       />
@@ -211,7 +213,7 @@ function OrderHistory({ navigation }: any) {
           <View style={styles.emptyState}>
             <Text style={[styles.emptyTitle, { color: bbpsTheme.colors.text }]}>Could not load transactions</Text>
             <TouchableOpacity style={[styles.retryButton, { borderColor: bbpsTheme.colors.primary }]} onPress={() => refetch()}>
-              <Text style={[styles.retryText, { color: bbpsTheme.colors.primary }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: bbpsTheme.colors.primary }]}>{translateUi('common:retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : groupedOrders.length === 0 ? (

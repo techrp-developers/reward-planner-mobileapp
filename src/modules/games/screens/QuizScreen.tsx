@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, BackHandler, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -16,6 +17,7 @@ const quizInfoCards = [
 ];
 
 export default function QuizScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const cardWidth = Math.min(160, (Math.min(width, 540) - 40) * 0.5);
@@ -126,7 +128,7 @@ export default function QuizScreen() {
             <Text style={styles.brand}>Quivio <Text style={styles.gold}>🏆</Text></Text>
           </View>
           <View style={[styles.hero, { height: heroHeight }]}>
-            <Image source={require('../assets/quiz-host.png')} style={styles.host} resizeMode="contain" accessibilityLabel="Quivio host in a purple suit" />
+            <Image source={require('../assets/quiz-host.png')} style={styles.host} resizeMode="contain" accessibilityLabel={translateUi('games:host')} />
             <View style={styles.facts}>
               {quizInfoCards.map(card => (
                   <Image
@@ -142,20 +144,20 @@ export default function QuizScreen() {
           </View>
           <LinearGradient colors={['#071A32', '#030812']} style={styles.arena}>
             <View style={styles.trophy}><Icon name="trophy" size={40} color="#FFCB42" /></View>
-            <Text style={styles.playTitle}>Play Smart Quiz Every Day</Text>
+            <Text style={styles.playTitle}>{translateUi('games:dailyQuiz')}</Text>
             <Text style={styles.tagline}>Boost knowledge daily, win challenges,{ '\n' }become smarter every day.</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Start quiz" disabled={busy || loadingLeaders} onPress={start} style={styles.startWrap}>
+            <Pressable accessibilityRole="button" accessibilityLabel={translateUi('games:startQuiz')} disabled={busy || loadingLeaders} onPress={start} style={styles.startWrap}>
               <LinearGradient colors={['#FFE363', '#FFB800', '#FF9C00']} style={styles.start}>
                 {busy || loadingLeaders ? <ActivityIndicator color="#121212" /> : <><Text style={styles.startText}>{session?.status === 'playing' ? 'Resume' : 'Start'}</Text><Icon name="play-outline" size={25} color="#121212" /></>}
               </LinearGradient>
             </Pressable>
             <View style={styles.leaderboard}>
-              <Text accessibilityRole="header" style={styles.leaderTitle}>Leaderboard 🏆</Text>
+              <Text accessibilityRole="header" style={styles.leaderTitle}>{translateUi('games:leaderboardTrophy')}</Text>
               <View style={styles.table}>
                 <View style={styles.tableRow}>
-                  <Text style={[styles.tableHeading, styles.rank]}>Rank</Text>
-                  <Text style={[styles.tableHeading, styles.player]}>Player</Text>
-                  <Text style={[styles.tableHeading, styles.score]}>Score</Text>
+                  <Text style={[styles.tableHeading, styles.rank]}>{translateUi('games:rank')}</Text>
+                  <Text style={[styles.tableHeading, styles.player]}>{translateUi('games:player')}</Text>
+                  <Text style={[styles.tableHeading, styles.score]}>{translateUi('games:score')}</Text>
                 </View>
                 {leaders.map((player, index) => (
                   <View key={player.user_id} style={styles.tableRow}>
@@ -171,26 +173,26 @@ export default function QuizScreen() {
                 ))}
               </View>
               {loadingLeaders && <ActivityIndicator color="#00DFED" />}
-              {!loadingLeaders && !error && leaders.length === 0 && <Text style={styles.previewNote}>Be the first to complete a quiz!</Text>}
+              {!loadingLeaders && !error && leaders.length === 0 && <Text style={styles.previewNote}>{translateUi('games:emptyLeaderboard')}</Text>}
             </View>
-            <Text style={styles.previewNote}>Best completed score · Quiz points are separate from wallet rewards</Text>
-            {!!error && <Pressable accessibilityRole="button" onPress={loadLeaders}><Text style={styles.error}>{error} Tap to retry.</Text></Pressable>}
+            <Text style={styles.previewNote}>{translateUi('games:scoreFootnote')}</Text>
+            {!!error && <Pressable accessibilityRole="button" onPress={loadLeaders}><Text style={styles.error}>{error}{' '}{translateUi('games:retry')}</Text></Pressable>}
           </LinearGradient>
         </ScrollView>
       ) : page === 'question' && session && question ? (
         <View style={styles.questionContainer}>
         <ScrollView key={questionIndex} contentContainerStyle={styles.questionPage} showsVerticalScrollIndicator={false}>
           <View style={styles.questionHeader}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Back to leaderboard" onPress={goBack} style={styles.back}><Icon name="chevron-left" color="#FFFFFF" size={28} /></Pressable>
-            <Text accessibilityRole="header" style={styles.questionCount}>Question {questionIndex + 1} of {session.total}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={translateUi('games:backLabel')} onPress={goBack} style={styles.back}><Icon name="chevron-left" color="#FFFFFF" size={28} /></Pressable>
+            <Text accessibilityRole="header" style={styles.questionCount}>{translateUi('games:questionProgress', { current: questionIndex + 1, total: session.total })}</Text>
           </View>
-          <View style={styles.progress} accessibilityLabel={`Question ${questionIndex + 1} of ${session.total}`}>
+          <View style={styles.progress} accessibilityLabel={translateUi('games:questionProgress', { current: questionIndex + 1, total: session.total })}>
             {Array.from({ length: session.total }, (_, index) => <View key={index} style={[styles.segment, index <= questionIndex && styles.segmentActive]} />)}
           </View>
-          <Text style={styles.points}>Score: {session.score} · Wrong attempt −{rules.wrongPenalty}</Text>
+          <Text style={styles.points}>{translateUi('games:runningScore', { score: session.score, penalty: rules.wrongPenalty })}</Text>
           <View style={styles.timerSpace}>
-            <View style={[styles.timer, seconds <= 5 && !correct && styles.timerUrgent]} accessibilityLabel={`${seconds} seconds remaining`}>
-              <Text style={styles.timerValue}>00:{String(seconds).padStart(2, '0')}</Text><Text style={styles.seconds}>Seconds</Text>
+            <View style={[styles.timer, seconds <= 5 && !correct && styles.timerUrgent]} accessibilityLabel={translateUi('games:secondsRemaining', { count: seconds })}>
+              <Text style={styles.timerValue}>00:{String(seconds).padStart(2, '0')}</Text><Text style={styles.seconds}>{translateUi('games:seconds')}</Text>
             </View>
           </View>
           <Text accessibilityRole="header" style={styles.question}>{question.question}</Text>
@@ -221,20 +223,25 @@ export default function QuizScreen() {
           <Text accessibilityLiveRegion="polite" style={styles.feedback}>{timedOut ? `Time’s up! −${rules.timeoutPenalty} point` : selected === null ? ' ' : correct ? `Correct! +${rules.correctPoints} points` : `Incorrect. −${rules.wrongPenalty} point. Try another answer.`}</Text>
           {!!error && <Text style={styles.error}>{error}</Text>}
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || (!error && selected === null && !timedOut) }} disabled={busy || (!error && selected === null && !timedOut)} onPress={advance} style={[styles.action, styles.questionAction, !error && selected === null && !timedOut && styles.disabledAction, wrong && styles.retryAction]}>
-            {busy ? <ActivityIndicator color="#030B12" /> : <Text style={[styles.actionText, styles.questionActionText]}>{error ? 'Reconnect' : wrong ? 'Try Again' : questionIndex === session.total - 1 ? 'Finish' : 'Continue'}</Text>}
+            {busy ? <ActivityIndicator color="#030B12" /> : <Text style={[styles.actionText, styles.questionActionText]}>{translateUi(error ? 'games:reconnect' : wrong ? 'common:tryAgain' : questionIndex === session.total - 1 ? 'games:finish' : 'common:continue')}</Text>}
           </Pressable>
         </View>
         </View>
       ) : (
         <View style={styles.result}>
           <Icon name="trophy" size={88} color="#FFCB42" />
-          <Text accessibilityRole="header" style={styles.resultTitle}>Quiz complete!</Text>
-          <Text style={styles.resultScore}>{session?.score ?? 0} pts</Text>
-          <Text style={styles.resultCopy}>Correct: {session?.correctCount ?? 0} / {session?.total ?? 5} · Wrong attempts: {session?.wrongCount ?? 0}{'\n'}Timed out: {(session?.total ?? 5) - (session?.correctCount ?? 0)}</Text>
-          <Text style={styles.previewNote}>Score saved · Your best round counts on the leaderboard</Text>
+          <Text accessibilityRole="header" style={styles.resultTitle}>{translateUi('games:quizComplete')}</Text>
+          <Text style={styles.resultScore}>{translateUi('games:quizPoints', { points: session?.score ?? 0 })}</Text>
+          <Text style={styles.resultCopy}>{translateUi('games:result', {
+            correct: session?.correctCount ?? 0,
+            total: session?.total ?? 5,
+            wrong: session?.wrongCount ?? 0,
+            unanswered: (session?.total ?? 5) - (session?.correctCount ?? 0),
+          })}</Text>
+          <Text style={styles.previewNote}>{translateUi('games:bestRound')}</Text>
           {!!error && <Text style={styles.error}>{error}</Text>}
-          <Pressable accessibilityRole="button" disabled={busy} onPress={start} style={styles.action}>{busy ? <ActivityIndicator color="#030B12" /> : <Text style={styles.actionText}>Play Again</Text>}</Pressable>
-          <Pressable accessibilityRole="button" onPress={goBack} style={styles.touchTarget}><Text style={styles.skip}>Back to Leaderboard</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={start} style={styles.action}>{busy ? <ActivityIndicator color="#030B12" /> : <Text style={styles.actionText}>{translateUi('games:playAgain')}</Text>}</Pressable>
+          <Pressable accessibilityRole="button" onPress={goBack} style={styles.touchTarget}><Text style={styles.skip}>{translateUi('games:back')}</Text></Pressable>
         </View>
       )}
     </SafeAreaView>

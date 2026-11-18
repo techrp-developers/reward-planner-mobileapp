@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { memo, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,6 +35,7 @@ interface Props {
 }
 
 const BirthdayWishModal: React.FC<Props> = ({ employee, sending, onCancel, onSend }) => {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const [message, setMessage] = useState('');
 
@@ -63,7 +65,7 @@ const BirthdayWishModal: React.FC<Props> = ({ employee, sending, onCancel, onSen
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Pressable style={styles.backdrop} onPress={sending ? undefined : onCancel} accessibilityLabel="Close" />
+        <Pressable style={styles.backdrop} onPress={sending ? undefined : onCancel} accessibilityLabel={translateUi('common:close')} />
 
         <View style={[styles.sheet, { backgroundColor: sheetBg, borderColor: theme.border }]}>
           {/* Header */}
@@ -114,7 +116,7 @@ const BirthdayWishModal: React.FC<Props> = ({ employee, sending, onCancel, onSen
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.cancelText, { color: theme.text }]}>Cancel</Text>
+              <Text style={[styles.cancelText, { color: theme.text }]}>{translateUi('common:cancel')}</Text>
             </Pressable>
 
             <Pressable

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -39,6 +40,7 @@ const STATUS_PRESENTATION: Record<
 };
 
 const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
+  const { t: translateUi } = useTranslation('common');
   const bbpsTheme = useBbpsTheme();
   const transactionId = route?.params?.transactionId;
   const [status, setStatus] = useState<TransactionStatus>('PENDING');
@@ -80,7 +82,7 @@ const TransactionStatusScreenComponent = ({ navigation, route }: any) => {
 
   return (
     <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
-      <BBPSHead title="Payment Status" onBackPress={handleGoHome} />
+      <BBPSHead title={translateUi('payments:paymentStatus')} onBackPress={handleGoHome} />
 
       <View style={styles.container}>
         <View

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
@@ -6,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '@/navigation/types'
 
 export default function CheckoutSummary() {
+  const { t: translateUi } = useTranslation('common');
     useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
   return (
@@ -26,7 +28,7 @@ export default function CheckoutSummary() {
             end={{ x: 1, y: 0 }}
             style={styles.button}
           >
-            <Text style={styles.buttonText}>Proceed To Buy</Text>
+            <Text style={styles.buttonText}>{translateUi('common:proceedToBuy')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

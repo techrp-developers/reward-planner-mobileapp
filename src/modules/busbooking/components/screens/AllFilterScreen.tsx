@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   ScrollView,
@@ -124,6 +125,7 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 export default function AllFilterScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const route = useRoute<RouteProp<BusBookingStackParamList, "AllFilterScreen">>();
   const facets: BusListingFacets = route.params.facets;
@@ -290,7 +292,7 @@ export default function AllFilterScreen() {
           <TextInput
             value={operatorSearch}
             onChangeText={setOperatorSearch}
-            placeholder="Search"
+            placeholder={translateUi('common:search')}
             placeholderTextColor="#7F7D83"
             style={styles.searchPillInput}
           />

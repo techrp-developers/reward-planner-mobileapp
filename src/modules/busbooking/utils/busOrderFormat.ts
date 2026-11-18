@@ -2,6 +2,7 @@ import type {
   BusOrderStatus,
   BusOrderSummary,
 } from "../services/busBookingApi";
+import { formatINR, getAppLocale } from "../../../i18n/format";
 
 export type BusOrderStatusTone = "success" | "warning" | "error" | "neutral";
 
@@ -31,7 +32,7 @@ export const formatBusDate = (value?: string | null) => {
   const date = parseBusDateTime(value);
 
   return date
-    ? date.toLocaleDateString("en-IN", {
+    ? date.toLocaleDateString(getAppLocale(), {
         weekday: "short",
         day: "2-digit",
         month: "short",
@@ -47,9 +48,10 @@ export const formatBusTime = (value?: string | null) => {
 };
 
 export const formatBusAmount = (value?: number | null) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", {
+  formatINR(Number(value || 0), {
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  })}`;
+  });
 
 export const getBusOrderStatus = (
   status: BusOrderStatus,

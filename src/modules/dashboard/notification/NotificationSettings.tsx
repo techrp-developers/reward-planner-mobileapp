@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -81,6 +82,7 @@ const REGISTRATION_LABELS: Record<string, string> = {
 };
 
 function NotificationSettings() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark, theme } = useAppTheme();
   const [permission, setPermission] = useState<NotificationPermissionState | null>(null);
@@ -207,14 +209,14 @@ function NotificationSettings() {
   return (
     <SafeAreaView style={[styles.safe, themed.screen]}>
       <OrderHeading
-        title="Notification settings"
+        title={translateUi('common:notificationSettings')}
         onBackPress={() => navigation.goBack()}
         showHelp={false}
         isDark={isDark}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.sectionTitle, themed.mutedText]}>This device</Text>
+        <Text style={[styles.sectionTitle, themed.mutedText]}>{translateUi('notifications:thisDevice')}</Text>
         <View style={[styles.card, themed.card]}>
           <View style={styles.row}>
             <MaterialCommunityIcons
@@ -245,19 +247,19 @@ function NotificationSettings() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity accessibilityRole="button" onPress={() => openNotificationSystemSettings()}>
-              <Text style={[styles.linkText, styles.settingsLink]}>Open notification settings</Text>
+              <Text style={[styles.linkText, styles.settingsLink]}>{translateUi('notifications:openSettings')}</Text>
             </TouchableOpacity>
           )}
           <View style={[styles.divider, themed.divider]} />
           <View style={styles.statusRow}>
-            <Text style={[styles.rowDescription, themed.mutedText]}>Push device registration</Text>
+            <Text style={[styles.rowDescription, themed.mutedText]}>{translateUi('notifications:registration')}</Text>
             <Text style={[styles.rowDescription, themed.text]}>
               {REGISTRATION_LABELS[registrationState] || "Not connected"}
             </Text>
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, themed.mutedText]}>What you receive</Text>
+        <Text style={[styles.sectionTitle, themed.mutedText]}>{translateUi('notifications:whatYouReceive')}</Text>
         <View style={[styles.card, themed.card]}>
           {ALWAYS_ON.map((item, index) => {
             const status = channelLabel(channels.find(channel => channel.id === item.channelId));
@@ -266,7 +268,7 @@ function NotificationSettings() {
                 {index > 0 ? <View style={[styles.divider, themed.divider]} /> : null}
                 <TouchableOpacity
                   accessibilityRole="button"
-                  accessibilityHint="Opens this alert type in Android settings"
+                  accessibilityHint={translateUi('notifications:opensAndroid')}
                   style={styles.row}
                   onPress={() => openNotificationSystemSettings(item.channelId)}
                 >
@@ -288,10 +290,10 @@ function NotificationSettings() {
           ) : unavailable || !preferences ? (
             <View style={styles.unavailable}>
               <Text style={[styles.rowDescription, themed.mutedText]}>
-                These options could not be loaded right now.
+                {translateUi('notifications:loadFailed')}
               </Text>
               <TouchableOpacity onPress={loadPreferences}>
-                <Text style={styles.linkText}>Try again</Text>
+                <Text style={styles.linkText}>{translateUi('common:tryAgainSentence')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -319,9 +321,9 @@ function NotificationSettings() {
           {preferences && !loading && !unavailable ? (
             <View>
               <View style={[styles.divider, themed.divider]} />
-              <Text style={[styles.rowTitle, themed.text]}>Quiet hours</Text>
+              <Text style={[styles.rowTitle, themed.text]}>{translateUi('notifications:quietHours')}</Text>
               <Text style={[styles.rowDescription, themed.mutedText]}>
-                Offers and reminders wait until quiet hours end. Important updates still arrive.
+                {translateUi('notifications:quietHoursDescription')}
               </Text>
               <View style={styles.chipRow}>
                 {quietHourChoices.map(choice => {

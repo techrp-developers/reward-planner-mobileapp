@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -41,6 +42,7 @@ const QuotesResult: React.FC<Props> = ({
   insuranceType = "health",
   enquiryId,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { warning, info } = useAlert();
   const servicesTheme = useServicesTheme();
@@ -354,7 +356,7 @@ const QuotesResult: React.FC<Props> = ({
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
-            <Text style={styles.ctaButtonText}>Enquire Now</Text>
+            <Text style={styles.ctaButtonText}>{translateUi('common:enquireNow')}</Text>
             <MaterialIcons name="arrow-forward" size={16} color="#FFF" />
             
           </TouchableOpacity>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -37,6 +38,7 @@ type Transaction = {
 const FILTERS = ["All Transactions", "Additions", "Deductions", "Expired"];
 
 export default function WalletHistoryScreen({ navigation }: any) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const [activeFilter, setActiveFilter] = useState("All Transactions");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -231,7 +233,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
                 <Reward width={30} height={30} />
               </View>
               <View style={styles.balanceBlock}>
-                <Text style={styles.label}>My Balance</Text>
+                <Text style={styles.label}>{translateUi('common:myBalance')}</Text>
                 <Text style={styles.balance}>{balance.toLocaleString("en-IN")}</Text>
               </View>
             </View>
@@ -279,7 +281,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
       </View>
 
       {/* TITLE */}
-      <Text style={[styles.sectionHeading, themed.text]}>Transaction History</Text>
+      <Text style={[styles.sectionHeading, themed.text]}>{translateUi('common:transactionHistory')}</Text>
 
       {/* FILTERS */}
       <FlatList
@@ -327,7 +329,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
 
       {/* ✅ HEADER */}
       <ProductHeadColor
-        title="Wallet"
+        title={translateUi('common:wallet')}
         onBackPress={() => navigation.goBack()}
         showSearch={false}
         isDark={isDark}
@@ -335,7 +337,7 @@ export default function WalletHistoryScreen({ navigation }: any) {
 
       <View style={[styles.screen, themed.screen]}>
         {loading ? (
-          <Text style={[styles.loading, themed.mutedText]}>Loading...</Text>
+          <Text style={[styles.loading, themed.mutedText]}>{translateUi('common:loading')}</Text>
         ) : (
           <FlatList
             data={transactions}

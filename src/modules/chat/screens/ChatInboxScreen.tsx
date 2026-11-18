@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -16,6 +17,8 @@ import BottomTabs, { TAB_BAR_HEIGHT, type TabKey } from '../../../bottombar/Bott
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
 
 export default function ChatInboxScreen() {
+  const { t: translateUi, i18n } = useTranslation(['common', 'chat']);
+  const language = i18n.language;
   const navigation = useNavigation<Navigation>();
   const { user, accessToken } = useAuth();
   const { theme } = useAppTheme();
@@ -74,37 +77,37 @@ export default function ChatInboxScreen() {
       const memberNames = conversation.members.map(member => member.name).join(' ');
       return `${title} ${memberNames} ${conversation.description || ''}`.toLowerCase().includes(normalized);
     });
-  }, [items, query, user?.user_id]);
+  }, [items, query, user?.user_id, language]);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={translateUi('common:back')}
           onPress={() => (appNavigation?.canGoBack() ? appNavigation.goBack() : appNavigation?.navigate('Dashboard'))}
           style={[styles.backButton, { backgroundColor: theme.card, borderColor: theme.border }]}
         >
           <MaterialCommunityIcons name="arrow-left" size={22} color={theme.text} />
         </TouchableOpacity>
-        <View style={styles.headerText}><Text style={[styles.title, { color: theme.text }]}>Chats</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>Your company conversations</Text></View>
+        <View style={styles.headerText}><Text style={[styles.title, { color: theme.text }]}>{translateUi('chat:chats')}</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>{translateUi('chat:companyConversations')}</Text></View>
       </View>
       <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <MaterialCommunityIcons name="magnify" size={22} color={theme.secondaryText} />
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search people or groups"
+          placeholder={translateUi('chat:searchPeople')}
           placeholderTextColor={theme.secondaryText}
           style={[styles.searchInput, { color: theme.text }]}
           returnKeyType="search"
           autoCorrect={false}
         />
-        {query ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')} style={styles.clearSearch}><MaterialCommunityIcons name="close-circle" size={20} color={theme.secondaryText} /></TouchableOpacity> : null}
+        {query ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:clearSearch')} onPress={() => setQuery('')} style={styles.clearSearch}><MaterialCommunityIcons name="close-circle" size={20} color={theme.secondaryText} /></TouchableOpacity> : null}
       </View>
       {loading && !items.length ? <View style={styles.center}><ActivityIndicator color={theme.primary} size="large" /></View> : null}
-      {!loading && error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-alert-outline" size={42} color={theme.secondaryText} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Couldn’t load chats</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>{error}</Text><TouchableOpacity onPress={() => load()} style={styles.retry}><Text style={styles.retryText}>Try again</Text></TouchableOpacity></View> : null}
-      {!loading && !error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-text-outline" size={48} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Start a conversation</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>Chat privately with a coworker or create a group.</Text></View> : null}
+      {!loading && error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-alert-outline" size={42} color={theme.secondaryText} /><Text style={[styles.emptyTitle, { color: theme.text }]}>{translateUi('chat:loadFailed')}</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>{error}</Text><TouchableOpacity onPress={() => load()} style={styles.retry}><Text style={styles.retryText}>{translateUi('common:tryAgainSentence')}</Text></TouchableOpacity></View> : null}
+      {!loading && !error && !items.length ? <View style={styles.center}><MaterialCommunityIcons name="message-text-outline" size={48} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>{translateUi('chat:startConversation')}</Text><Text style={[styles.emptyText, { color: theme.secondaryText }]}>{translateUi('chat:chatPrivately')}</Text></View> : null}
       <FlatList
         data={filteredItems}
         scrollEnabled
@@ -114,23 +117,23 @@ export default function ChatInboxScreen() {
         windowSize={9}
         removeClippedSubviews
         keyExtractor={item => String(item.conversation_id)}
-        extraData={presenceVersion}
+        extraData={`${presenceVersion}:${language}`}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.primary} />}
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + 12 }]}
         renderItem={({ item }) => {
           const title = conversationTitle(item, user?.user_id);
           const member = otherMember(item, user?.user_id);
-          const preview = item.last_message_type === 'image' ? '📷 Photo' : item.last_message_type === 'file' ? '📎 File' : item.last_message || 'No messages yet';
+          const preview = item.last_message_type === 'image' ? translateUi('chat:photoPreview') : item.last_message_type === 'file' ? translateUi('chat:filePreview') : item.last_message || translateUi('common:noMessages');
           return <TouchableOpacity style={[styles.row, { borderBottomColor: theme.border }]} onPress={() => navigation.navigate('ChatConversation', { conversation: item })}>
             <ChatAvatar name={title} uri={item.type === 'direct' ? member?.user_image : item.image_url} online={item.type === 'direct' && chatSocket.isUserOnline(member?.user_id)} />
             <View style={styles.rowBody}><View style={styles.rowTop}><Text numberOfLines={1} style={[styles.name, { color: theme.text }]}>{title}</Text><Text style={[styles.time, { color: item.unread_count ? theme.primary : theme.secondaryText }]}>{chatTime(item.last_message_at || item.updated_at)}</Text></View><View style={styles.rowBottom}><Text numberOfLines={1} style={[styles.preview, { color: theme.secondaryText }, item.unread_count > 0 && { color: theme.text, fontWeight: '700' }]}>{preview}</Text>{item.unread_count > 0 ? <View style={[styles.badge, { backgroundColor: theme.primary }]}><Text style={styles.badgeText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text></View> : null}</View></View>
           </TouchableOpacity>;
         }}
-        ListEmptyComponent={!loading && !error && items.length > 0 && query.trim() ? <View style={styles.searchEmpty}><MaterialCommunityIcons name="account-search-outline" size={38} color={theme.secondaryText} /><Text style={[styles.searchEmptyTitle, { color: theme.text }]}>No chats found</Text><Text style={[styles.searchEmptyText, { color: theme.secondaryText }]}>Try searching with another name.</Text></View> : null}
+        ListEmptyComponent={!loading && !error && items.length > 0 && query.trim() ? <View style={styles.searchEmpty}><MaterialCommunityIcons name="account-search-outline" size={38} color={theme.secondaryText} /><Text style={[styles.searchEmptyTitle, { color: theme.text }]}>{translateUi('chat:noChats')}</Text><Text style={[styles.searchEmptyText, { color: theme.secondaryText }]}>{translateUi('chat:searchAnother')}</Text></View> : null}
       />
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel="Start a new chat"
+        accessibilityLabel={translateUi('chat:startChat')}
         onPress={() => navigation.navigate('NewChat')}
         style={[styles.newButton, { bottom: TAB_BAR_HEIGHT + 14 }]}
       >

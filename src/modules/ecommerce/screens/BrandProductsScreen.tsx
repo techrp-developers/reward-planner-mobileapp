@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import type { HomeStackParamList } from '../navigation/types';
 import { useAppTheme } from '../../../theme/ThemeContext';
 
 export default function BrandProductsScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const { params } = useRoute<RouteProp<HomeStackParamList, 'BrandProducts'>>();
   const brandName = params.brandName.trim();
@@ -63,7 +65,7 @@ export default function BrandProductsScreen() {
             accessibilityLabel="Close search and show all brand products"
             onPress={() => { setSearchText(''); setSearch(''); setShowSearch(false); }}
           >
-            <Text style={{ color: theme.text }}>Cancel</Text>
+            <Text style={{ color: theme.text }}>{translateUi('common:cancel')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}

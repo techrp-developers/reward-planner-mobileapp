@@ -1,3 +1,5 @@
+import appI18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -104,6 +106,7 @@ const getDayName = (date: Date) => {
 };
 
 const TodoListScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const handleFooterPress = useCallback((tab: TabKey) => {
     if (tab === "Chat") navigation.navigate("Chat");
@@ -211,7 +214,7 @@ const TodoListScreen = () => {
       setTodos(normalizeTodos(res?.data || []));
     } catch (error: any) {
       Alert.alert(
-        "Todo",
+        appI18n.t('common:todo'),
         error?.response?.data?.message ||
           error?.message ||
           "Failed to load todos"
@@ -377,12 +380,12 @@ const TodoListScreen = () => {
   const saveTodo = async () => {
     try {
       if (!title.trim()) {
-        Alert.alert("Todo", "Please enter task title");
+        Alert.alert(translateUi('common:todo'), "Please enter task title");
         return;
       }
 
       if (!startTime || !endTime) {
-        Alert.alert("Todo", "Please select start and end time");
+        Alert.alert(translateUi('common:todo'), "Please select start and end time");
         return;
       }
 
@@ -413,7 +416,7 @@ const TodoListScreen = () => {
       warnIfAlarmsBlocked(deviceAlarm, Boolean(reminderTime));
     } catch (error: any) {
       Alert.alert(
-        "Todo",
+        translateUi('common:todo'),
         error?.response?.data?.message ||
           error?.message ||
           "Failed to save todo"
@@ -427,9 +430,9 @@ const TodoListScreen = () => {
     if (!selectedTodo) return;
 
     Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
-      { text: "Cancel" },
+      { text: translateUi('common:cancel') },
       {
-        text: "Delete",
+        text: translateUi('common:delete'),
         style: "destructive",
         onPress: async () => {
           try {
@@ -439,7 +442,7 @@ const TodoListScreen = () => {
             syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
-              "Todo",
+              translateUi('common:todo'),
               error?.response?.data?.message ||
                 error?.message ||
                 "Failed to delete todo"
@@ -454,9 +457,9 @@ const TodoListScreen = () => {
     if (selectedTodoIds.length === 0) return;
 
     Alert.alert("Delete Tasks", "Delete all selected tasks?", [
-      { text: "Cancel" },
+      { text: translateUi('common:cancel') },
       {
-        text: "Delete",
+        text: translateUi('common:delete'),
         style: "destructive",
         onPress: async () => {
           try {
@@ -466,7 +469,7 @@ const TodoListScreen = () => {
             syncTodoAlarmsSafely();
           } catch (error: any) {
             Alert.alert(
-              "Todo",
+              translateUi('common:todo'),
               error?.response?.data?.message ||
                 error?.message ||
                 "Failed to delete selected todos"
@@ -505,7 +508,7 @@ const TodoListScreen = () => {
       syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
-        "Todo",
+        translateUi('common:todo'),
         error?.response?.data?.message ||
           error?.message ||
           "Failed to complete todo"
@@ -523,7 +526,7 @@ const TodoListScreen = () => {
       syncTodoAlarmsSafely();
     } catch (error: any) {
       Alert.alert(
-        "Todo",
+        translateUi('common:todo'),
         error?.response?.data?.message ||
           error?.message ||
           "Failed to complete selected todos"
@@ -686,7 +689,7 @@ const TodoListScreen = () => {
         <View style={styles.topBar}>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={translateUi('common:back')}
             style={styles.headerActionBtn}
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("Dashboard"))}
           >
@@ -753,19 +756,19 @@ const TodoListScreen = () => {
         {selectedTodo && !showCheckbox && !selectedTodo.completed && (
           <View style={[styles.actionBar, themed.surface]}>
             <TouchableOpacity onPress={openEditModal}>
-              <Text style={[styles.actionText, themed.accentText]}>Edit</Text>
+              <Text style={[styles.actionText, themed.accentText]}>{translateUi('common:edit')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={shareTodo}>
-              <Text style={[styles.actionText, themed.accentText]}>Share</Text>
+              <Text style={[styles.actionText, themed.accentText]}>{translateUi('common:share')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleDeleteTodo}>
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text style={styles.deleteText}>{translateUi('common:delete')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleCompleteTodo}>
-              <Text style={styles.completeText}>Done</Text>
+              <Text style={styles.completeText}>{translateUi('common:done')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -773,15 +776,15 @@ const TodoListScreen = () => {
         {showCheckbox && selectedTodoIds.length > 0 && (
           <View style={[styles.actionBar, themed.surface]}>
             <TouchableOpacity onPress={shareSelectedTodos}>
-              <Text style={[styles.actionText, themed.accentText]}>Share</Text>
+              <Text style={[styles.actionText, themed.accentText]}>{translateUi('common:share')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleDeleteSelectedTodos}>
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text style={styles.deleteText}>{translateUi('common:delete')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleCompleteSelectedTodos}>
-              <Text style={styles.completeText}>Done</Text>
+              <Text style={styles.completeText}>{translateUi('common:done')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1148,7 +1151,7 @@ const TodoListScreen = () => {
                 style={styles.cancelBtn}
                 onPress={() => setTimePickerVisible(false)}
               >
-                <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
+                <Text style={[styles.cancelText, themed.text]}>{translateUi('common:cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={() => selectTime(draftTime)}>
                 <Text style={styles.saveText}>Set Time</Text>
@@ -1175,7 +1178,7 @@ const TodoListScreen = () => {
                 style={styles.cancelBtn}
                 onPress={() => setAlarmModalVisible(false)}
               >
-                <Text style={[styles.cancelText, themed.text]}>Cancel</Text>
+                <Text style={[styles.cancelText, themed.text]}>{translateUi('common:cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.saveBtn} onPress={saveReminder}>

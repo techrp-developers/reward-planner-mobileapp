@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -72,6 +73,7 @@ const isUserInputField = (field: OperatorField) =>
   field.param_name !== 'recharge_plan_id';
 
 const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProps) => {
+  const { t: translateUi } = useTranslation('common');
   const alert = useAlert();
   const alertRef = useRef(alert);
   const { user } = useAuth();
@@ -466,7 +468,7 @@ const BillDetailsScreenComponent = ({ route, navigation }: BillDetailsScreenProp
             {isLoading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={styles.buttonText}>{translateUi('common:continue')}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

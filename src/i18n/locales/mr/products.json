@@ -1,0 +1,13 @@
+{
+  "emptyCart": "तुमचे कार्ट रिकामे आहे",
+  "emptyWishlist": "तुमची आवडीची यादी रिकामी आहे",
+  "deliveryAddress": "डिलिव्हरीचा पत्ता",
+  "savedForLater": "नंतरसाठी जतन केलेले",
+  "productDetails": "उत्पादनाचा तपशील",
+  "deliveryInstructions": "डिलिव्हरीच्या सूचना",
+  "paymentMethod": "पेमेंटची पद्धत",
+  "removeWishlist": "आवडीच्या यादीतून काढा",
+  "goToCart": "कार्टमध्ये जा",
+  "priceDetails": "किमतीचा तपशील",
+  "selectVariant": "उत्पादनाचा पर्याय निवडा"
+}

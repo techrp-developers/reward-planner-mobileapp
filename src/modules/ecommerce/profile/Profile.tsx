@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import ProductHead from '../constants/heading/Product_Head_Img';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, useWindowDimensions, Alert, ScrollView, Switch } from "react-native";
@@ -21,6 +22,7 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type RootNav = NativeStackNavigationProp<RootStackParamList>;
 
 function Profile() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const rootNavigation = navigation.getParent() as RootNav | undefined;
     const { isAuthenticated, user, logout } = useAuth();
@@ -93,11 +95,11 @@ function Profile() {
                     routes: [{ name: 'Auth' }],
                 });
             } else {
-                Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+                Alert.alert(translateUi('common:deleteFailed'), translateUi('common:deleteAccountFailed'));
             }
         } catch (error) {
             console.error('Delete account failed', error);
-            Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+            Alert.alert(translateUi('common:deleteFailed'), translateUi('common:deleteAccountFailed'));
         } finally {
             setDeleteLoading(false);
         }
@@ -230,10 +232,10 @@ function Profile() {
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.scrollContent}
                         >
-                            <OutlineButton title="My Orders" onPress={handleOpenOrders} />
+                            <OutlineButton title={translateUi('common:myOrders')} onPress={handleOpenOrders} />
                             <OutlineButton title="Buy Again" onPress={() => navigation.navigate('BuyNow')} />
-                            <OutlineButton title="Wishlist" onPress={() => navigation.navigate("WishList")} />
-                            <OutlineButton title="RP Points" onPress={() => navigation.navigate("WalletHistory")}
+                            <OutlineButton title={translateUi('common:wishlist')} onPress={() => navigation.navigate("WishList")} />
+                            <OutlineButton title={translateUi('common:rpPoints')} onPress={() => navigation.navigate("WalletHistory")}
                             />
                         </ScrollView>
                     </View>
@@ -300,12 +302,12 @@ function Profile() {
                     {/* <MenuItem title="Languages" />
                 <View style={styles.menuDivider} /> */}
 
-                    <MenuItem title="Privacy Policy" onPress={() => navigation.navigate('PrivacyPolicy')} isDark={isDark} />
+                    <MenuItem title={translateUi('common:privacyPolicy')} onPress={() => navigation.navigate('PrivacyPolicy')} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
 
-                    <MenuItem title="Terms & Conditions" onPress={() => navigation.navigate('TermsAndConditions')} isDark={isDark} />
+                    <MenuItem title={translateUi('common:terms')} onPress={() => navigation.navigate('TermsAndConditions')} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
-                    <MenuItem title="Delete Account" onPress={handleDeleteAccount} isDark={isDark} />
+                    <MenuItem title={translateUi('common:deleteAccount')} onPress={handleDeleteAccount} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
 
                     <MenuItem title="Logout" onPress={handleLogoutPress} isDark={isDark} />
@@ -328,7 +330,7 @@ function Profile() {
                     isDark={isDark}
                     danger
                     icon="delete-outline"
-                    title="Delete Account"
+                    title={translateUi('common:deleteAccount')}
                     description="Are you sure you want to permanently delete your account?"
                     subText="This action cannot be undone."
                     confirmText="Delete Account"

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -42,6 +43,7 @@ export default function BuySection({
     isAdding = false,
     isInCart = false,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
   const [open, setOpen] = React.useState(false);
@@ -137,7 +139,7 @@ export default function BuySection({
           <Text style={styles.lowStockText}>Only {stock} left in stock!</Text>
         )}
 
-        {!inStock && <Text style={styles.outStockText}>Out of stock</Text>}
+        {!inStock && <Text style={styles.outStockText}>{translateUi('common:outOfStock')}</Text>}
 
         {/* Add to Cart / Go to Cart */}
         <TouchableOpacity 

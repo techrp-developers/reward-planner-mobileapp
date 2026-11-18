@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
     View,
@@ -34,6 +35,7 @@ interface Props {
 const ArticleSeparator = () => <View style={styles.separator} />;
 
 const MFBeginners: React.FC<Props> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
     const servicesTheme = useServicesTheme();
     const [articles, setArticles] = useState<SliderArticle[]>([]);
     const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ const MFBeginners: React.FC<Props> = ({ navigation }) => {
                         sectionId: item.sectionId,
                     })}
                 >
-                    <Text style={styles.readMore}>Read More</Text>
+                    <Text style={styles.readMore}>{translateUi('common:readMore')}</Text>
                     <Text style={styles.readMoreArrow}> ›</Text>
                 </TouchableOpacity>
             </View>
@@ -154,7 +156,7 @@ const MFBeginners: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('MFInvestorsDetail', { categoryId: BEGINNERS_CATEGORY_ID })}
                 activeOpacity={0.8}
             >
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={styles.viewAllText}>{translateUi('common:viewAll')}</Text>
             </TouchableOpacity>
         </View>
     );

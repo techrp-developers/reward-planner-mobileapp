@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -116,6 +117,7 @@ const CartRow = React.memo(function CartRow({
 })
 
 export default function WithoutAddress() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>()
   const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
   const { isAuthenticated } = useAuth()
@@ -401,7 +403,7 @@ export default function WithoutAddress() {
   if (!loading && items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+        <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <EmptyCart onBrowse={() => navigation.navigate('Home')} />
       </View>
     )
@@ -410,7 +412,7 @@ export default function WithoutAddress() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+        <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom, backgroundColor: theme.background }]}>
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -423,7 +425,7 @@ export default function WithoutAddress() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ProductHeadColor title="Cart" onBackPress={() => navigation.goBack()} />
+      <ProductHeadColor title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
 
       <FlatList
         data={items}
@@ -444,7 +446,7 @@ export default function WithoutAddress() {
       <View style={[styles.bottomBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.navigate('AddressSelect')}>
           <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.button}>
-            <Text style={styles.buttonText}>Select Address</Text>
+            <Text style={styles.buttonText}>{translateUi('common:selectAddress')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -455,7 +457,7 @@ export default function WithoutAddress() {
         <Animated.View style={[styles.sheet, { top: slideAnim, backgroundColor: theme.card }]}>
           <View style={[styles.handle, { backgroundColor: isDark ? '#52525B' : '#CCC' }]} />
           <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: theme.text }]}>Select Address</Text>
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>{translateUi('common:selectAddress')}</Text>
             <TouchableOpacity>
               <Text style={styles.close}>✕</Text>
             </TouchableOpacity>

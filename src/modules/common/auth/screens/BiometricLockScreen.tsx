@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -171,6 +172,7 @@ function BiometricLockScreenComponent({
   onSuccess,
   onUseFallback,
 }: BiometricLockScreenProps) {
+  const { t: translateUi } = useTranslation('common');
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [biometricType, setBiometricType] = useState<BiometricType>('none');
 
@@ -317,7 +319,7 @@ function BiometricLockScreenComponent({
             <Image source={Logo} style={styles.logoImage} resizeMode="contain" />
           </LinearGradient>
           <Text style={styles.appName}>Reward Planners</Text>
-          <Text style={styles.lockLabel}>Secure access</Text>
+          <Text style={styles.lockLabel}>{translateUi('auth:secureAccess')}</Text>
         </Animated.View>
 
         {/* Biometric icon */}

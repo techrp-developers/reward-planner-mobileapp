@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -73,6 +74,7 @@ const CityInputDropdown: React.FC<{
   isOtherCitySelected,
   customCity,
 }) => {
+  const { t: translateUi } = useTranslation('common');
     const servicesTheme = useServicesTheme();
     const displayCity = isOtherCitySelected ? (customCity || "Other") : selectedCity;
 
@@ -96,7 +98,7 @@ const CityInputDropdown: React.FC<{
               <MaterialIcons name="location-city" size={24} color="#8665FF" />
             </View>
             <View style={styles.cityTextContainer}>
-              <Text style={[styles.cityLabel, { color: servicesTheme.colors.textStrong }]}>City</Text>
+              <Text style={[styles.cityLabel, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:city')}</Text>
               <Text style={[styles.citySubLabel, { color: servicesTheme.colors.muted }]}>Select your location</Text>
             </View>
           </View>
@@ -151,6 +153,7 @@ const CityInputDropdown: React.FC<{
   };
 
 export default function Step3({ data, setData, onBack, onShowResults }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const insets = useSafeAreaInsets();
   const servicesTheme = useServicesTheme();
 
@@ -167,8 +170,8 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
     const checkAuthAndLoadUser = async () => {
       try {
         if (!isAuthenticated()) {
-          Alert.alert("Login Required", "Please log in to get insurance quotes", [
-            { text: "OK", onPress: () => onBack() },
+          Alert.alert(translateUi('common:loginRequired'), translateUi('common:loginForQuotes'), [
+            { text: translateUi('common:ok'), onPress: () => onBack() },
           ]);
           setChecking(false);
           return;
@@ -305,18 +308,18 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
 
   const handleSubmit = async () => {
     if (!isFormValid) {
-      Alert.alert("Validation", "Please fill all required fields");
+      Alert.alert(translateUi('common:validation'), translateUi('common:requiredFields'));
       return;
     }
 
     if (!isAuthenticated()) {
-      Alert.alert("Authentication Required", "Please log in to continue");
+      Alert.alert(translateUi('common:authRequired'), translateUi('common:loginToContinue'));
       return;
     }
 
     const enquiryId = data.details.enquiryId;
     if (!enquiryId) {
-      Alert.alert("Error", "Session expired. Please go back to Step 1 and restart.");
+      Alert.alert(translateUi('common:error'), translateUi('common:sessionRestart'));
       return;
     }
 
@@ -367,10 +370,10 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
           enquiryId,
         });
       } else {
-        Alert.alert("Error", "No quotes could be fetched. Please try again.");
+        Alert.alert(translateUi('common:error'), translateUi('common:noQuotes'));
       }
     } catch (error: any) {
-      Alert.alert("Error", error?.response?.data?.message || error?.message || "Something went wrong");
+      Alert.alert(translateUi('common:error'), error?.response?.data?.message || error?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -387,7 +390,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
         >
           <View style={styles.centerContainer}>
             <MaterialIcons name="lock-outline" size={50} color="#8665FF" />
-            <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>Verifying authentication...</Text>
+            <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>{translateUi('common:verifyingAuth')}</Text>
           </View>
         </LinearGradient>
       </SafeAreaView>
@@ -410,16 +413,16 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Personal Details</Text>
+            <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:personalDetails')}</Text>
             <Text style={[styles.headerSubtitle, { color: servicesTheme.colors.muted }]}>
-              This information helps us personalize your insurance quotes.
+              {translateUi('common:personalizeQuotes')}
             </Text>
           </View>
 
           <View style={styles.formContainer}>
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Text style={[styles.label, { color: servicesTheme.colors.text }]}>First Name</Text>
+                    <Text style={[styles.label, { color: servicesTheme.colors.text }]}>{translateUi('common:firstName')}</Text>
                     <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                       <TextInput
                         style={[styles.textInput, { color: servicesTheme.colors.text }]}
@@ -450,7 +453,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
                 </View>
 
                 <View style={styles.fieldWrapper}>
-                  <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Mobile Number</Text>
+                  <Text style={[styles.label, { color: servicesTheme.colors.text }]}>{translateUi('common:mobileNumber')}</Text>
                   <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                     <TextInput
                       style={[styles.textInput, styles.mobileInput, { color: servicesTheme.colors.text }]}
@@ -468,7 +471,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
 
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Text style={[styles.label, { color: servicesTheme.colors.text }]}>Pincode</Text>
+                    <Text style={[styles.label, { color: servicesTheme.colors.text }]}>{translateUi('common:pincode')}</Text>
                     <View style={[styles.inputBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border, shadowColor: servicesTheme.colors.shadow }]}>
                       <TextInput
                         style={[styles.textInput, { color: servicesTheme.colors.text }]}
@@ -550,7 +553,7 @@ export default function Step3({ data, setData, onBack, onShowResults }: Props) {
                     {data.details.agreeToTerms && <MaterialIcons name="check" size={14} color="#FFF" />}
                   </View>
                   <Text style={[styles.termsLabel, { color: servicesTheme.colors.muted }]}>
-                    I agree to the <Text style={styles.boldLink}>Terms & Conditions</Text>
+                    I agree to the <Text style={styles.boldLink}>{translateUi('common:terms')}</Text>
                   </Text>
                 </TouchableOpacity>
           </View>

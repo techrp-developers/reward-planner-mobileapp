@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -83,6 +84,7 @@ const normalizeName = (value?: string | null) =>
     .replace(/[^a-z0-9]+/g, ' ');
 
 export default function ServiceCancellationDetails() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
@@ -171,7 +173,7 @@ export default function ServiceCancellationDetails() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
-          title="Order Details"
+          title={translateUi('common:orderDetails')}
           onBack={() => navigation.goBack()}
           onHelp={() => navigation.navigate('HelpForm')}
         />
@@ -187,7 +189,7 @@ export default function ServiceCancellationDetails() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
         <Header
-          title="Order Details"
+          title={translateUi('common:orderDetails')}
           onBack={() => navigation.goBack()}
           onHelp={() => navigation.navigate('HelpForm')}
         />
@@ -195,7 +197,7 @@ export default function ServiceCancellationDetails() {
           <MaterialCommunityIcons name="alert-circle-outline" size={46} color="#DC2626" />
           <Text style={[styles.errorText, { color: servicesTheme.colors.muted }]}>{error || 'Cancellation details not found.'}</Text>
           <TouchableOpacity style={[styles.retryBtn, { backgroundColor: servicesTheme.colors.primary }]} onPress={() => fetchDetails()}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{translateUi('common:tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -245,7 +247,7 @@ export default function ServiceCancellationDetails() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
       <Header
-        title="Order Details"
+        title={translateUi('common:orderDetails')}
         onBack={() => navigation.goBack()}
         onHelp={() => navigation.navigate('HelpForm')}
       />
@@ -407,6 +409,7 @@ function Header({
   onBack: () => void;
   onHelp: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
 
   return (
@@ -426,7 +429,7 @@ function Header({
           color="#EC4899"
           style={styles.helpIcon}
         />
-        <Text style={styles.helpText}>Help</Text>
+        <Text style={styles.helpText}>{translateUi('common:help')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -473,11 +476,12 @@ function InvoiceDownloadRow({
   downloading: boolean;
   onDownload: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
 
   return (
     <View style={[styles.invoiceRow, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
-      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>Save a copy of your order</Text>
+      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>{translateUi('common:saveOrderCopy')}</Text>
       <TouchableOpacity
         style={styles.invoiceAction}
         activeOpacity={0.75}
@@ -487,7 +491,7 @@ function InvoiceDownloadRow({
         {downloading ? (
           <ActivityIndicator size="small" color={servicesTheme.colors.primary} />
         ) : (
-          <Text style={[styles.invoiceActionText, { color: servicesTheme.colors.primary }]}>Download Invoice</Text>
+          <Text style={[styles.invoiceActionText, { color: servicesTheme.colors.primary }]}>{translateUi('common:downloadInvoice')}</Text>
         )}
       </TouchableOpacity>
     </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -13,6 +14,7 @@ type Route = NativeStackScreenProps<ChatStackParamList, 'MemberProfile'>['route'
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
 
 export default function MemberProfileScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<Route>();
   const { member } = params;
@@ -29,10 +31,10 @@ export default function MemberProfileScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 7, backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => navigation.goBack()} style={styles.back}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:back')} onPress={() => navigation.goBack()} style={styles.back}>
           <MaterialCommunityIcons name="arrow-left" size={25} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Profile</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{translateUi('common:profile')}</Text>
       </View>
 
       <View style={styles.summary}>
@@ -44,7 +46,7 @@ export default function MemberProfileScreen() {
         {member.role === 'admin' ? (
           <View style={[styles.adminBadge, { borderColor: theme.primary }]}>
             <MaterialCommunityIcons name="shield-account-outline" size={15} color={theme.primary} />
-            <Text style={[styles.adminText, { color: theme.primary }]}>Group admin</Text>
+            <Text style={[styles.adminText, { color: theme.primary }]}>{translateUi('chat:groupAdmin')}</Text>
           </View>
         ) : null}
       </View>
@@ -60,7 +62,7 @@ export default function MemberProfileScreen() {
               <Text style={[styles.detailValue, { color: theme.text }]}>{detail.value}</Text>
             </View>
           </View>
-        )) : <Text style={[styles.noDetails, { color: theme.secondaryText }]}>No additional profile details available.</Text>}
+        )) : <Text style={[styles.noDetails, { color: theme.secondaryText }]}>{translateUi('chat:noProfileDetails')}</Text>}
       </View>
     </View>
   );

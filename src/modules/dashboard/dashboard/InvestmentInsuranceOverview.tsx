@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -34,6 +35,7 @@ const Sparkline = () => (
 );
 
 const InvestmentInsuranceOverview: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const { theme } = useAppTheme();
   const navigation = useNavigation<any>();
 
@@ -103,7 +105,7 @@ const InvestmentInsuranceOverview: React.FC = () => {
               <MaterialCommunityIcons name="shield-check" size={13} color={PURPLE} />
             </View>
             <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
-              Insurance
+              {translateUi('common:insurance')}
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={16} color={theme.secondaryText} />
           </View>

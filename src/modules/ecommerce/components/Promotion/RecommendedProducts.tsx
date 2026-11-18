@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ const fetchRecommendedData = async () => {
 };
 
 function RecommendedProducts() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const { isAuthenticated, user } = useAuth();
     const { isDark, theme } = useAppTheme();
@@ -95,7 +97,7 @@ function RecommendedProducts() {
                     activeOpacity={0.85}
                     onPress={handleExplore}
                 >
-                    <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+                    <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:exploreMore')}</Text>
                     <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
                 </TouchableOpacity>
             </View>

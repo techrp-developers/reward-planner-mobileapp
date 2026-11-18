@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
     StyleSheet,
@@ -49,6 +50,7 @@ const fetchRecentProductsData = async () => {
 };
 
 const RecentProduct = () => {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const { user, isAuthenticated } = useAuth();
     const { isDark, theme } = useAppTheme();
@@ -101,7 +103,7 @@ const RecentProduct = () => {
                             { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.45)" },
                         ]}
                     >
-                        <Text style={[styles.viewAllText, { color: isDark ? "#FFFFFF" : "#111827" }]}>View All</Text>
+                        <Text style={[styles.viewAllText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:viewAll')}</Text>
                     </TouchableOpacity>
                 </View>
 

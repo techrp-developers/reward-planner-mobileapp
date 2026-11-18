@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
@@ -31,6 +32,7 @@ export default function CheckoutSummary({
   bottomOffset,
   onLayout,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>()
   const autoSticky = useStickyBottomCTA()
   const { theme } = useAppTheme()
@@ -68,7 +70,7 @@ export default function CheckoutSummary({
 
         <TouchableOpacity onPress={() => (onProceedToBuy ? onProceedToBuy() : navigation.navigate('OrderStepUI'))}>
           <LinearGradient colors={['#8665FF', '#5B47A3']} style={styles.button}>
-            <Text style={styles.buttonText}>Proceed To Buy</Text>
+            <Text style={styles.buttonText}>{translateUi('common:proceedToBuy')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

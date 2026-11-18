@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -49,6 +50,7 @@ const formatExpiryLabel = (txn: any) => {
 };
 
 export default function TransactionHistory() {
+  const { t: translateUi } = useTranslation('common');
   const [active, setActive] = useState("All");
   const [data, setData] = useState<UITransaction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -98,7 +100,7 @@ export default function TransactionHistory() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Transaction History</Text>
+      <Text style={styles.heading}>{translateUi('common:transactionHistory')}</Text>
 
       {/* FILTERS */}
       <View style={styles.filters}>
@@ -128,7 +130,7 @@ export default function TransactionHistory() {
 
       {/* LOADING */}
       {loading ? (
-        <Text style={styles.loading}>Loading...</Text>
+        <Text style={styles.loading}>{translateUi('common:loading')}</Text>
       ) : (
         <FlatList
           data={data}

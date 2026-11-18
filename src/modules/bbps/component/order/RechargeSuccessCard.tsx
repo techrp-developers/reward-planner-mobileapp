@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { Share, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient'; // Ensure this package is installed
@@ -9,6 +10,7 @@ type RechargeSuccessCardProps = {
 };
 
 const RechargeSuccessCard = ({ onPayAnother }: RechargeSuccessCardProps) => {
+  const { t: translateUi } = useTranslation('common');
   const bbpsTheme = useBbpsTheme();
 
   const handleShare = () => {
@@ -86,7 +88,7 @@ const RechargeSuccessCard = ({ onPayAnother }: RechargeSuccessCardProps) => {
               ]}
               onPress={handleShare}
             >
-              <Text style={[styles.shareText, { color: bbpsTheme.colors.primary }]}>Share</Text>
+              <Text style={[styles.shareText, { color: bbpsTheme.colors.primary }]}>{translateUi('common:share')}</Text>
             </TouchableOpacity>
           </View>
         </View>

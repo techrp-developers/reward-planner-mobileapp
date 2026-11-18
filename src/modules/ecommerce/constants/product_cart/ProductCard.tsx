@@ -1,3 +1,4 @@
+import appI18n from '../../../../i18n';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -229,12 +230,12 @@ const ProductCardComponent = ({
     const parsedVariantId = Number(resolvedVariantId ?? variantId);
 
     if (!parsedProductId || Number.isNaN(parsedProductId)) {
-      Alert.alert("Wishlist", "Invalid product");
+      Alert.alert(appI18n.t('common:wishlist'), appI18n.t('common:invalidProduct'));
       return;
     }
 
     if (!parsedVariantId || Number.isNaN(parsedVariantId)) {
-      Alert.alert("Wishlist", "Product variant is missing");
+      Alert.alert(appI18n.t('common:wishlist'), appI18n.t('common:missingVariant'));
       return;
     }
 
@@ -248,7 +249,7 @@ const ProductCardComponent = ({
         error?.response?.data?.error ||
         error?.message ||
         "Failed to update wishlist";
-      Alert.alert("Wishlist", String(message));
+      Alert.alert(appI18n.t('common:wishlist'), String(message));
     } finally {
       setWishLoading(false);
     }

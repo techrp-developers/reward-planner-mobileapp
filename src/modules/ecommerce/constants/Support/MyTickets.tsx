@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -265,6 +266,7 @@ const FilterCard = ({
 );
 
 export default function MyTickets({ navigation }: any) {
+  const { t: translateUi } = useTranslation('common');
   const tabBarInset = useBottomTabsInset();
   const { isDark } = useAppTheme();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -395,7 +397,7 @@ export default function MyTickets({ navigation }: any) {
                 onPress={() => setActiveFilter("open")}
               />
               <FilterCard
-                label="In Progress"
+                label={translateUi('common:inProgress')}
                 count={ticketCounts.in_progress}
                 active={activeFilter === "in_progress"}
                 isDark={isDark}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,6 +20,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 type Method = "phone" | "email";
 
 export default function LoginScreen({ navigation }: Props) {
+  const { t: authText } = useTranslation(['auth', 'common']);
   const { requestLoginOtp } = useAuth();
   const { theme, isDark } = useAppTheme();
   const alert = useAlert();
@@ -76,7 +78,7 @@ export default function LoginScreen({ navigation }: Props) {
     if (sendingRef.current || !limiter.canResend || hintLoading) return;
     const parsed = parseLoginIdentifier(method === "phone" ? mobile : email);
     if (parsed.kind !== method || (parsed.kind !== "phone" && parsed.kind !== "email")) {
-      setError(method === "phone" ? "Enter a valid 10-digit Indian mobile number." : "Enter a valid email address.");
+      setError(method === "phone" ? authText('auth:invalidMobile') : authText('auth:invalidEmail'));
       return;
     }
     setError("");
@@ -94,12 +96,12 @@ export default function LoginScreen({ navigation }: Props) {
       navigation.navigate("LoginOTP", { identifier: parsed.normalized, resendAvailableAt: deadline });
     } catch (failure) {
       if (isUserInactiveError(failure)) {
-        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        alert.error(authText('auth:inactiveTitle'), authErrorMessage(failure, authText('auth:inactive')));
         return;
       }
       const retryAfter = rateLimitDelay(failure);
       if (retryAfter) limiter.reset(retryAfter);
-      setError(authErrorMessage(failure, "We couldn't send your code. Please try again."));
+      setError(authErrorMessage(failure, authText('auth:sendFailed')));
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -109,20 +111,20 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <AuthLayout welcome={!method} onBack={method && !sending ? backToMethods : undefined}>
       {!method ? <>
-        <Text style={[authStyles.title, { color: theme.text }]}>Welcome</Text>
-        <Text style={[authStyles.description, { color: theme.secondaryText }]}>Access the benefits your workplace has chosen for you.</Text>
-        <AuthButton animatePress title="Continue with Mobile" onPress={() => { void chooseMethod("phone"); }} />
-        <AuthPressable onPress={() => { void chooseMethod("email"); }} accessibilityRole="button" accessibilityLabel="Continue with Email" style={[styles.emailButton, { borderColor: theme.border }]}>
+        <Text style={[authStyles.title, { color: theme.text }]}>{authText('auth:welcome')}</Text>
+        <Text style={[authStyles.description, { color: theme.secondaryText }]}>{authText('auth:benefits')}</Text>
+        <AuthButton animatePress title={authText('auth:continueMobile')} onPress={() => { void chooseMethod("phone"); }} />
+        <AuthPressable onPress={() => { void chooseMethod("email"); }} accessibilityRole="button" accessibilityLabel={authText('common:continueEmail')} style={[styles.emailButton, { borderColor: theme.border }]}>
           <MaterialCommunityIcons name="email-outline" size={21} color={theme.text} />
-          <Text style={[styles.emailButtonText, { color: theme.text }]}>Continue with Email</Text>
+          <Text style={[styles.emailButtonText, { color: theme.text }]}>{authText('common:continueEmail')}</Text>
         </AuthPressable>
-        <Text style={[styles.hint, { color: theme.secondaryText }]}>Sign in securely with a verification code. No password needed.</Text>
+        <Text style={[styles.hint, { color: theme.secondaryText }]}>{authText('auth:signInSecurely')}</Text>
       </> : <>
-        <Text style={[authStyles.title, { color: theme.text }]}>{method === "phone" ? "Mobile Number" : "Email Address"}</Text>
+        <Text style={[authStyles.title, { color: theme.text }]}>{method === "phone" ? authText('common:mobileNumber') : authText('auth:emailTitle')}</Text>
         <Text style={[authStyles.description, { color: theme.secondaryText }]}>
-          {method === "phone" ? "Use your registered mobile number. Your code will arrive on WhatsApp." : "Use the email address registered with your employer."}
+          {method === "phone" ? authText('auth:registeredMobile') : authText('auth:registeredEmail')}
         </Text>
-        <Text style={[authStyles.label, { color: theme.text }]}>{method === "phone" ? "Mobile number" : "Email address"}</Text>
+        <Text style={[authStyles.label, { color: theme.text }]}>{method === "phone" ? authText('auth:mobileLabel') : authText('auth:emailLabel')}</Text>
         <View style={[styles.inputWrap, { backgroundColor: theme.card, borderColor: error ? "#C62842" : theme.border }]}>
           {method === "phone" && <Text style={[styles.prefix, { color: theme.text }]}>+91</Text>}
           <TextInput key={method} ref={input} value={method === "phone" ? mobile : email}
@@ -131,7 +133,7 @@ export default function LoginScreen({ navigation }: Props) {
               if (method === "phone") setMobile(normalizeIndianMobile(value) || value);
               else setEmail(value);
             }}
-            accessibilityLabel={method === "phone" ? "Mobile number" : "Email address"}
+            accessibilityLabel={method === "phone" ? authText('auth:mobileLabel') : authText('auth:emailLabel')}
             placeholder={method === "phone" ? "98765 43210" : "you@company.com"}
             placeholderTextColor={theme.secondaryText} keyboardType={method === "phone" ? "phone-pad" : "email-address"}
             textContentType={method === "phone" ? "telephoneNumber" : "emailAddress"}
@@ -141,11 +143,11 @@ export default function LoginScreen({ navigation }: Props) {
             returnKeyType="done" onSubmitEditing={() => { void onContinue(); }}
             style={[styles.input, { color: theme.text }]} />
         </View>
-        {hintLoading && <Text style={[styles.hint, { color: theme.secondaryText }]}>Choose a number, or dismiss the picker to enter one.</Text>}
+        {hintLoading && <Text style={[styles.hint, { color: theme.secondaryText }]}>{authText('auth:chooseNumber')}</Text>}
         {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[authStyles.error, isDark && styles.darkError]}>{error}</Text>}
-        <AuthButton title={sending ? "Sending code…" : limiter.secondsLeft > 0 ? `Try again in ${limiter.secondsLeft}s` : "Continue"}
+        <AuthButton title={sending ? authText('auth:sending') : limiter.secondsLeft > 0 ? authText('auth:retryIn', { count: limiter.secondsLeft }) : authText('common:continue')}
           onPress={() => { void onContinue(); }} busy={sending} disabled={hintLoading || !limiter.canResend} />
-        <Text style={[styles.hint, { color: theme.secondaryText }]}>Use the contact details provided to your employer.</Text>
+        <Text style={[styles.hint, { color: theme.secondaryText }]}>{authText('auth:employerContact')}</Text>
       </>}
     </AuthLayout>
   );

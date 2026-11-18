@@ -3,7 +3,11 @@
 // API:    GET /v1/auth/user-info  (via getAuthHeaders)
 // Deps:   useAuth, useAppTheme, LogoutConfirmationModal, rs, fs
 
+import appI18n from '../../../i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LANGUAGES, isAppLanguage } from '../../../i18n/languages';
+import { getAppLocale } from '../../../i18n/format';
 import { Svg, Path } from 'react-native-svg';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
@@ -96,7 +100,7 @@ const formatDate = (dateStr: string): string => {
   if (!dateStr) return '—';
   try {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString(getAppLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
   } catch { return dateStr; }
 };
 
@@ -152,6 +156,9 @@ const CardPattern: React.FC = () => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const ProfileScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
+  const { t, i18n } = useTranslation('language');
+  const language = isAppLanguage(i18n.language) ? i18n.language : 'en';
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
   const rootNavigation = findRootNavigation(navigation);
@@ -264,7 +271,7 @@ const ProfileScreen: React.FC = () => {
         }
       } catch {
         setAvatarUri(null);
-        Alert.alert('Upload Failed', 'Could not update profile photo. Please try again.');
+        Alert.alert(appI18n.t('profile:photoUploadFailed'), appI18n.t('profile:photoUpdateError'));
       } finally {
         setImageUploading(false);
       }
@@ -307,10 +314,10 @@ const ProfileScreen: React.FC = () => {
           gracePeriodDays,
         });
       } else {
-        Alert.alert('Failed', 'Could not delete account. Please try again.');
+        Alert.alert(appI18n.t('common:failed'), 'Could not delete account. Please try again.');
       }
     } catch {
-      Alert.alert('Failed', 'Could not delete account. Please try again.');
+      Alert.alert(appI18n.t('common:failed'), 'Could not delete account. Please try again.');
     } finally {
       setDeleteLoading(false);
     }
@@ -350,7 +357,7 @@ const ProfileScreen: React.FC = () => {
       setVisitCardQr(qrUri);
       return qrUri;
     } catch (error: any) {
-      Alert.alert('Visiting card unavailable', error?.message || 'Could not load your QR code. Please try again.');
+      Alert.alert(appI18n.t('profile:visitingCardUnavailable'), error?.message || 'Could not load your QR code. Please try again.');
       return null;
     } finally {
       setVisitCardLoading(false);
@@ -374,9 +381,9 @@ const ProfileScreen: React.FC = () => {
       }
       const uri = await captureVisitCard();
       await CameraRoll.save(uri, { type: 'photo', album: Platform.OS === 'android' ? 'Reward Planners' : undefined });
-      Alert.alert('Card saved', 'Your visiting card JPG has been saved to Photos.');
+      Alert.alert(appI18n.t('profile:cardSaved'), appI18n.t('profile:cardSavedToPhotos'));
     } catch (error: any) {
-      Alert.alert('Could not save card', error?.message || 'Please try again.');
+      Alert.alert(appI18n.t('profile:saveCardFailed'), error?.message || 'Please try again.');
     } finally { setVisitCardExporting(false); }
   }, [captureVisitCard]);
 
@@ -392,7 +399,7 @@ const ProfileScreen: React.FC = () => {
         failOnCancel: false,
       });
     } catch (error: any) {
-      Alert.alert('Could not share card', error?.message || 'Please try again.');
+      Alert.alert(appI18n.t('profile:shareCardFailed'), error?.message || 'Please try again.');
     } finally { setVisitCardExporting(false); }
   }, [captureVisitCard, displayName, userInfo]);
 
@@ -453,7 +460,7 @@ const ProfileScreen: React.FC = () => {
             <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="arrow-left" size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
             </TouchableOpacity>
-            <Text style={[styles.heroTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>My Profile</Text>
+            <Text style={[styles.heroTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('profile:myProfile')}</Text>
             <View style={styles.heroBtnGhost} />
           </View>
           {/* Swipable Carousel for Profile Card and Policybazaar Card */}
@@ -527,7 +534,7 @@ const ProfileScreen: React.FC = () => {
                         <Text style={styles.heroMetricValue} numberOfLines={1}>
                           {userInfo?.rewardPoints?.toLocaleString() ?? '0'}
                         </Text>
-                        <Text style={styles.heroMetricLabel}>Points</Text>
+                        <Text style={styles.heroMetricLabel}>{translateUi('common:points')}</Text>
                       </View>
                     </View>
 
@@ -543,7 +550,7 @@ const ProfileScreen: React.FC = () => {
                         <Text style={styles.heroMetricValue} numberOfLines={1}>
                           {userInfo?.company?.name ?? 'Company'}
                         </Text>
-                        <Text style={styles.heroMetricLabel}>Company</Text>
+                        <Text style={styles.heroMetricLabel}>{translateUi('profile:company')}</Text>
                       </View>
                     </View>
                   </View>
@@ -574,7 +581,7 @@ const ProfileScreen: React.FC = () => {
                           <View style={styles.pbActiveIconCircle}>
                             <MaterialCommunityIcons name="check" size={8} color="#10B981" />
                           </View>
-                          <Text style={styles.pbActiveText}>Active Policy</Text>
+                          <Text style={styles.pbActiveText}>{translateUi('insurance:activePolicy')}</Text>
                         </View>
                       </View>
 
@@ -582,7 +589,7 @@ const ProfileScreen: React.FC = () => {
                         <View style={styles.pbMiddleLeft}>
                           <Text style={styles.pbNameText}>{gmcDetails.name || displayName}</Text>
                           <Text style={styles.pbInsurerText}>{gmcDetails.policy_company_name || 'Care Health Insurance'}</Text>
-                          <Text style={styles.pbPolicyLabel}>Policy No.</Text>
+                          <Text style={styles.pbPolicyLabel}>{translateUi('insurance:policyNo')}</Text>
                           <Text style={styles.pbPolicyNoText}>{gmcDetails.policy_number || 'N/A'}</Text>
                         </View>
 
@@ -603,7 +610,7 @@ const ProfileScreen: React.FC = () => {
                       <View style={styles.pbBottomCol}>
                         <MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005b7f" />
                         <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>Member ID</Text>
+                          <Text style={styles.pbBottomLabel}>{translateUi('common:memberId')}</Text>
                           <Text style={styles.pbBottomVal}>{gmcDetails.member_id || '—'}</Text>
                         </View>
                       </View>
@@ -613,7 +620,7 @@ const ProfileScreen: React.FC = () => {
                       <View style={styles.pbBottomCol}>
                         <MaterialCommunityIcons name="calendar-clock" size={14} color="#005b7f" />
                         <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>Valid Till</Text>
+                          <Text style={styles.pbBottomLabel}>{translateUi('common:validTill')}</Text>
                           <Text style={styles.pbBottomVal}>{gmcDetails.valid_till || '—'}</Text>
                         </View>
                       </View>
@@ -623,7 +630,7 @@ const ProfileScreen: React.FC = () => {
                       <View style={styles.pbBottomCol}>
                         <MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" />
                         <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>Policy Type</Text>
+                          <Text style={styles.pbBottomLabel}>{translateUi('common:policyType')}</Text>
                           <Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails.policy_type || 'Group Card'}</Text>
                         </View>
                       </View>
@@ -649,14 +656,14 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.body}>
           {isDashboardProfile && (
             <>
-              <SectionHead title="My Cards" isDark={isDark} />
+              <SectionHead title={translateUi('profile:myCards')} isDark={isDark} />
               <TouchableOpacity style={[styles.cardDirectoryItem, cardColor(isDark, theme)]} onPress={handleOpenVisitCard} activeOpacity={0.78}>
                 <LinearGradient colors={['#4F46E5', '#7C3AED']} style={styles.cardDirectoryIcon}>
                   <MaterialCommunityIcons name="card-account-details-outline" size={24} color="#FFFFFF" />
                 </LinearGradient>
                 <View style={styles.cardDirectoryCopy}>
-                  <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Visiting Card</Text>
-                  <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view, download or share your digital card</Text>
+                  <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>{translateUi('profile:visitingCard')}</Text>
+                  <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>{translateUi('profile:visitingCardActions')}</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={21} color="#8B5CF6" />
               </TouchableOpacity>
@@ -672,16 +679,16 @@ const ProfileScreen: React.FC = () => {
                         <Text style={styles.mediclaimCareText}>care</Text>
                       </View>
                       <View>
-                        <Text style={styles.mediclaimHealthText}>HEALTH</Text>
-                        <Text style={styles.mediclaimInsuranceText}>INSURANCE</Text>
+                        <Text style={styles.mediclaimHealthText}>{translateUi('common:health')}</Text>
+                        <Text style={styles.mediclaimInsuranceText}>{translateUi('common:insuranceHeading')}</Text>
                       </View>
                     </View>
                     <View style={styles.mediclaimCardLine} />
                     <View style={styles.mediclaimCardLineShort} />
                   </LinearGradient>
                   <View style={styles.cardDirectoryCopy}>
-                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>Mediclaim Card</Text>
-                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>Tap to view your health insurance card</Text>
+                    <Text style={[styles.cardDirectoryTitle, { color: theme.text }]}>{translateUi('profile:mediclaimCard')}</Text>
+                    <Text style={[styles.cardDirectorySubtitle, { color: theme.secondaryText }]}>{translateUi('profile:showHealthCard')}</Text>
                   </View>
                   <MaterialCommunityIcons name="chevron-right" size={21} color="#007CA5" />
                 </TouchableOpacity>
@@ -695,7 +702,7 @@ const ProfileScreen: React.FC = () => {
           {isDashboardProfile && gmcDetails && (
             <>
               {/* Health Insurance Section */}
-              <SectionHead title="Health Insurance" isDark={isDark} />
+              <SectionHead title={translateUi('common:healthInsurance')} isDark={isDark} />
               <TouchableOpacity
                 style={[styles.horizontalClaimCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}
                 onPress={() => navigation.navigate('InssuranceStack' as any)}
@@ -713,7 +720,7 @@ const ProfileScreen: React.FC = () => {
                     </View>
                     <View style={{ marginLeft: rs(10) }}>
                       <Text style={[styles.claimTitle, { color: isDark ? '#FFFFFF' : '#003950' }]}>Mediclaim</Text>
-                      <Text style={[styles.claimSub, { color: isDark ? 'rgba(255,255,255,0.7)' : '#005b7f' }]}>Raise & track claims easily</Text>
+                      <Text style={[styles.claimSub, { color: isDark ? 'rgba(255,255,255,0.7)' : '#005b7f' }]}>{translateUi('insurance:raiseTrackClaims')}</Text>
                     </View>
                   </View>
                   <MaterialCommunityIcons name="chevron-right" size={20} color={isDark ? '#FFFFFF' : '#005b7f'} />
@@ -724,26 +731,26 @@ const ProfileScreen: React.FC = () => {
 
           {isDashboardProfile && (
             <>
-              <SectionHead title="User Info" isDark={isDark} />
+              <SectionHead title={translateUi('profile:userInfo')} isDark={isDark} />
               <View style={[styles.userInfoCard, cardColor(isDark, theme)]}>
-            <InfoGroupTitle title="Contact Info" isDark={isDark} />
+            <InfoGroupTitle title={translateUi('profile:contactInfo')} isDark={isDark} />
             <InfoTableRow
                 icon="phone-outline"
-                label="Mobile"
+                label={translateUi('common:mobile')}
                 value={formatPhone(userInfo?.phone ?? '')}
                 isDark={isDark}
                 theme={theme}
               />
               <InfoTableRow
                 icon="email-outline"
-                label="Email"
+                label={translateUi('common:email')}
                 value={userInfo?.email ?? ''}
                 isDark={isDark}
                 theme={theme}
               />
               <InfoTableRow
                 icon="identifier"
-                label="User ID"
+                label={translateUi('profile:userId')}
                 value={`#RP-${String(userInfo?.userId ?? 0).padStart(5, '0')}`}
                 isDark={isDark}
                 theme={theme}
@@ -751,12 +758,12 @@ const ProfileScreen: React.FC = () => {
                 last={!showRole && !showDepartment && !showJoining}
               />
               {(showRole || showDepartment || showJoining) && (
-                <InfoGroupTitle title="Work Info" isDark={isDark} />
+                <InfoGroupTitle title={translateUi('profile:workInfo')} isDark={isDark} />
               )}
               {showRole && (
                 <InfoTableRow
                   icon="briefcase-outline"
-                  label="Role"
+                  label={translateUi('profile:role')}
                   value={emp!.role}
                   isDark={isDark}
                   theme={theme}
@@ -766,7 +773,7 @@ const ProfileScreen: React.FC = () => {
               {showDepartment && (
                 <InfoTableRow
                   icon="domain"
-                  label="Department"
+                  label={translateUi('profile:department')}
                   value={emp!.department}
                   isDark={isDark}
                   theme={theme}
@@ -776,7 +783,7 @@ const ProfileScreen: React.FC = () => {
               {showJoining && (
                 <InfoTableRow
                   icon="calendar-check-outline"
-                  label="Joined"
+                  label={translateUi('profile:joined')}
                   value={formatDate(emp!.dateOfJoining)}
                   isDark={isDark}
                   theme={theme}
@@ -815,29 +822,29 @@ const ProfileScreen: React.FC = () => {
                 <MaterialCommunityIcons name={profileContext === 'services' ? 'briefcase-check-outline' : 'shopping-outline'} size={17} color="#4F46E5" />
               </View>
               <View style={styles.flex1}>
-                <Text style={[styles.rowVal, { color: theme.text }]}>My Orders</Text>
+                <Text style={[styles.rowVal, { color: theme.text }]}>{translateUi('common:myOrders')}</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
-                {profileContext === 'ecommerce' && <AccountRow icon="heart-outline" label="Wishlist" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('WishList' as any)} />}
+                {profileContext === 'ecommerce' && <AccountRow icon="heart-outline" label={translateUi('common:wishlist')} isDark={isDark} theme={theme} last onPress={() => navigation.navigate('WishList' as any)} />}
               </View>
             </>
           )}
 
-          <SectionHead title="Address" isDark={isDark} />
+          <SectionHead title={translateUi('common:address')} isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
-            <AccountRow icon="map-marker-outline" label="Saved Addresses" isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect', { manageOnly: true } as any)} />
+            <AccountRow icon="map-marker-outline" label={translateUi('common:savedAddresses')} isDark={isDark} theme={theme} last onPress={() => navigation.navigate('AddressSelect', { manageOnly: true } as any)} />
           </View>
 
           {isDashboardProfile && (
             <>
-              <SectionHead title="All Orders" isDark={isDark} />
+              <SectionHead title={translateUi('common:allOrders')} isDark={isDark} />
               <View style={[styles.card, cardColor(isDark, theme)]}>
                 <AccountRow
                   icon="clipboard-list-outline"
-                  label="All Orders"
-                  sub="Products, services, BBPS, and more"
+                  label={translateUi('common:allOrders')}
+                  sub={translateUi('profile:orderTypes')}
                   isDark={isDark}
                   theme={theme}
                   last
@@ -852,18 +859,26 @@ const ProfileScreen: React.FC = () => {
           {/* ════════════════════════════════════
               OTHERS / ACCOUNT
           ════════════════════════════════════ */}
-          <SectionHead title="Others" isDark={isDark} />
+          <SectionHead title={t('language:settings')} isDark={isDark} />
           <View style={[styles.card, cardColor(isDark, theme)]}>
             <DarkModeRow isDark={isDark} theme={theme} onToggle={toggleTheme} />
-            <AccountRow icon="file-document-outline" label="Terms & Conditions" isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
-            <AccountRow icon="shield-lock-outline"   label="Privacy Policy"     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
-            <AccountRow icon="star-outline"          label="Rate Us"            isDark={isDark} theme={theme} onPress={handleRateUs} />
-            <AccountRow icon="help-circle-outline"   label="Help & Support"     isDark={isDark} theme={theme} last onPress={() => navigation.navigate('HelpForm' as any, { context: profileContext })} />
+            <AccountRow
+              icon="translate"
+              label={t('language:title')}
+              sub={LANGUAGES[language].nativeName}
+              isDark={isDark}
+              theme={theme}
+              onPress={() => rootNavigation.navigate('App', { screen: 'AppLanguage' })}
+            />
+            <AccountRow icon="file-document-outline" label={translateUi('common:terms')} isDark={isDark} theme={theme} onPress={() => navigation.navigate('TermsAndConditions' as any)} />
+            <AccountRow icon="shield-lock-outline"   label={translateUi('common:privacyPolicy')}     isDark={isDark} theme={theme} onPress={() => navigation.navigate('PrivacyPolicy' as any)} />
+            <AccountRow icon="star-outline"          label={translateUi('common:rateUs')}            isDark={isDark} theme={theme} onPress={handleRateUs} />
+            <AccountRow icon="help-circle-outline"   label={translateUi('common:helpAndSupport')}     isDark={isDark} theme={theme} last onPress={() => navigation.navigate('HelpForm' as any, { context: profileContext })} />
           </View>
 
           <View style={[styles.dangerCard, cardColor(isDark, theme)]}>
-            <AccountRow icon="logout"        label="Log Out"        isDark={isDark} theme={theme} danger onPress={() => setLogoutModalVisible(true)} />
-            <AccountRow icon="delete-outline" label="Delete Account" sub="30-day recovery period" isDark={isDark} theme={theme} danger last onPress={handleDeleteAccount} />
+            <AccountRow icon="logout"        label={translateUi('common:logout')}        isDark={isDark} theme={theme} danger onPress={() => setLogoutModalVisible(true)} />
+            <AccountRow icon="delete-outline" label={translateUi('common:deleteAccount')} sub={translateUi('profile:recoveryPeriod')} isDark={isDark} theme={theme} danger last onPress={handleDeleteAccount} />
           </View>
 
           {/* ════════════════════════════════════
@@ -873,7 +888,7 @@ const ProfileScreen: React.FC = () => {
             
             {userInfo?.created_at ? (
               <Text style={[styles.footerMember, { color: theme.secondaryText }]}>
-                Member since {formatDate(userInfo.created_at)}
+                {translateUi('profile:memberSince', { date: formatDate(userInfo.created_at) })}
               </Text>
             ) : null}
           </View>
@@ -883,10 +898,10 @@ const ProfileScreen: React.FC = () => {
 
       <Modal visible={mediclaimCardModalVisible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setMediclaimCardModalVisible(false)}>
         <View style={styles.mediclaimModalBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setMediclaimCardModalVisible(false)} accessibilityLabel="Close mediclaim card" />
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setMediclaimCardModalVisible(false)} accessibilityLabel={translateUi('profile:closeMediclaim')} />
           <View style={styles.mediclaimModalContent}>
             <View style={styles.mediclaimModalHeader}>
-              <Text style={styles.mediclaimModalTitle}>Mediclaim Card</Text>
+              <Text style={styles.mediclaimModalTitle}>{translateUi('profile:mediclaimCard')}</Text>
               <TouchableOpacity style={styles.mediclaimModalClose} onPress={() => setMediclaimCardModalVisible(false)}>
                 <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
               </TouchableOpacity>
@@ -901,14 +916,14 @@ const ProfileScreen: React.FC = () => {
                   </View>
                   <View style={styles.pbActiveBadge}>
                     <View style={styles.pbActiveIconCircle}><MaterialCommunityIcons name="check" size={8} color="#10B981" /></View>
-                    <Text style={styles.pbActiveText}>Active Policy</Text>
+                    <Text style={styles.pbActiveText}>{translateUi('insurance:activePolicy')}</Text>
                   </View>
                 </View>
                 <View style={styles.pbCardMiddle}>
                   <View style={styles.pbMiddleLeft}>
                     <Text style={styles.pbNameText}>{gmcDetails?.name || displayName}</Text>
                     <Text style={styles.pbInsurerText}>{gmcDetails?.policy_company_name || 'Care Health Insurance'}</Text>
-                    <Text style={styles.pbPolicyLabel}>Policy No.</Text>
+                    <Text style={styles.pbPolicyLabel}>{translateUi('insurance:policyNo')}</Text>
                     <Text style={styles.pbPolicyNoText}>{gmcDetails?.policy_number || 'N/A'}</Text>
                   </View>
                   <View style={styles.pbMiddleRight}>
@@ -917,11 +932,11 @@ const ProfileScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.pbBottomPanel}>
-                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Member ID</Text><Text style={styles.pbBottomVal}>{gmcDetails?.member_id || '—'}</Text></View></View>
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>{translateUi('common:memberId')}</Text><Text style={styles.pbBottomVal}>{gmcDetails?.member_id || '—'}</Text></View></View>
                 <View style={styles.pbVerticalLine} />
-                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="calendar-clock" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Valid Till</Text><Text style={styles.pbBottomVal}>{gmcDetails?.valid_till || '—'}</Text></View></View>
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="calendar-clock" size={14} color="#005B7F" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>{translateUi('common:validTill')}</Text><Text style={styles.pbBottomVal}>{gmcDetails?.valid_till || '—'}</Text></View></View>
                 <View style={styles.pbVerticalLine} />
-                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>Policy Type</Text><Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails?.policy_type || 'Group Card'}</Text></View></View>
+                <View style={styles.pbBottomCol}><MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" /><View style={styles.mediclaimFieldCopy}><Text style={styles.pbBottomLabel}>{translateUi('common:policyType')}</Text><Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails?.policy_type || 'Group Card'}</Text></View></View>
               </View>
             </LinearGradient>
           </View>
@@ -930,7 +945,7 @@ const ProfileScreen: React.FC = () => {
 
       <Modal visible={visitCardModalVisible} transparent animationType="fade" statusBarTranslucent onShow={handleVisitCardModalShown} onRequestClose={() => setVisitCardModalVisible(false)}>
         <View style={styles.cardModalBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel="Close visiting card" />
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setVisitCardModalVisible(false)} accessibilityLabel={translateUi('profile:closeVisiting')} />
           <View style={styles.cardModalSheet}>
             <View style={styles.cardModalHandle} />
             <View style={styles.cardModalHeader}>
@@ -959,16 +974,16 @@ const ProfileScreen: React.FC = () => {
                       <View style={styles.businessQrBox}>
                         {visitCardQr ? <Image source={{ uri: visitCardQr, headers: visitCardHeaders }} style={styles.businessQr} resizeMode="contain" /> : <ActivityIndicator color="#4F46E5" />}
                       </View>
-                      <Text style={styles.businessScanText}>SCAN TO CONNECT</Text>
+                      <Text style={styles.businessScanText}>{translateUi('profile:scanContact')}</Text>
                     </View>
                     <View style={[styles.businessCardActions, visitCardActionsHidden && styles.businessCardActionsHidden]}>
                       <TouchableOpacity style={styles.businessDownloadButton} onPress={handleDownloadVisitCard} disabled={visitCardExporting}>
                         {visitCardExporting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="download-outline" size={17} color="#FFFFFF" />}
-                        <Text style={styles.businessShareText}>Download</Text>
+                        <Text style={styles.businessShareText}>{translateUi('common:download')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.businessShareButton} onPress={handleShareVisitCard} disabled={visitCardExporting}>
                         <MaterialCommunityIcons name="share-variant-outline" size={17} color="#FFFFFF" />
-                        <Text style={styles.businessShareText}>Share</Text>
+                        <Text style={styles.businessShareText}>{translateUi('common:share')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -992,8 +1007,8 @@ const ProfileScreen: React.FC = () => {
         isDark={isDark}
         danger
         icon="delete-outline"
-        title="Delete Account"
-        description="Schedule your account for permanent deletion?"
+        title={translateUi('common:deleteAccount')}
+        description={translateUi('profile:askDelete')}
         subText="Your account and data will be retained for 30 days. Logging in during this period will restore your account."
         confirmText="Schedule Deletion"
         loadingText="Scheduling..."
@@ -1005,7 +1020,7 @@ const ProfileScreen: React.FC = () => {
         isLoading={deletionExitLoading}
         isDark={isDark}
         icon="calendar-check-outline"
-        title="Deletion Scheduled"
+        title={translateUi('profile:deletionScheduled')}
         description={`Your account will be permanently deleted ${deletionScheduled?.deadline ?? 'after 30 days'}.`}
         subText={`Changed your mind? Log in again within ${deletionScheduled?.gracePeriodDays ?? 30} days to restore your account and all retained data.`}
         confirmText="Got It"
@@ -1104,6 +1119,7 @@ const AccountRow: React.FC<AccountRowProps> = ({
     }]}
     onPress={onPress}
     activeOpacity={0.7}
+    accessibilityRole="button"
   >
     <View style={[styles.micon, {
       backgroundColor: danger

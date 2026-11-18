@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -104,6 +105,7 @@ const mapPointToUi = (
 };
 
 export default function BoardingDroppingSelectionScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation =
     useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
 
@@ -543,7 +545,7 @@ export default function BoardingDroppingSelectionScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.continueButton}
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>{translateUi('common:continue')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -37,6 +38,7 @@ const options = [
 ] as const;
 
 export default function ChatAttachmentSheet({ visible, onClose, onImage, onDocument, onPoll }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const actions = { image: onImage, document: onDocument, poll: onPoll };
@@ -52,7 +54,7 @@ export default function ChatAttachmentSheet({ visible, onClose, onImage, onDocum
               <Text style={[styles.title, { color: theme.text }]}>Share in chat</Text>
               <Text style={[styles.subtitle, { color: theme.secondaryText }]}>Choose what you want to send</Text>
             </View>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={[styles.closeButton, { backgroundColor: theme.background }]}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:close')} onPress={onClose} style={[styles.closeButton, { backgroundColor: theme.background }]}>
               <MaterialCommunityIcons name="close" size={21} color={theme.secondaryText} />
             </TouchableOpacity>
           </View>

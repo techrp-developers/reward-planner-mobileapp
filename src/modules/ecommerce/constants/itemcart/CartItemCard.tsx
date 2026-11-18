@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import OfferDetails from '../../../common/order/OfferDetails';
 import type { OfferLine } from '../../../common/order/appliedOffer';
@@ -47,6 +48,7 @@ export default function CartItemCard({
   onBuyNow,
   onPress,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme()
 
   return (
@@ -110,7 +112,7 @@ export default function CartItemCard({
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtn} onPress={onRemove}>
           <MaterialIcons name="delete-outline" size={18} color={theme.secondaryText} />
-          <Text style={[styles.actionText, { color: theme.text }]}>Remove Item</Text>
+          <Text style={[styles.actionText, { color: theme.text }]}>{translateUi('common:removeItem')}</Text>
         </TouchableOpacity>
 
         <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -71,6 +72,7 @@ const CategoryCard: React.FC<{
   articleCount: number;
   onPress: () => void;
 }> = ({ item, theme, articleCount, onPress }) => {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
 
   return (
@@ -96,7 +98,7 @@ const CategoryCard: React.FC<{
     <Text style={[styles.cardTitle, { color: servicesTheme.colors.textStrong }]} numberOfLines={2}>{item.title}</Text>
 
     <View style={styles.cardCta}>
-      <Text style={[styles.ctaText, { color: theme.gradientColors[0] }]}>View All</Text>
+      <Text style={[styles.ctaText, { color: theme.gradientColors[0] }]}>{translateUi('common:viewAll')}</Text>
       <Text style={[styles.ctaArrow, { color: theme.gradientColors[0] }]}>{' '}›</Text>
     </View>
   </TouchableOpacity>
@@ -106,6 +108,7 @@ const CategoryCard: React.FC<{
 // ─── Screen ────────────────────────────────────────────────────────
 
 const CommonQuestionsScreen: React.FC<Props> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const [categories, setCategories] = useState<MFCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +174,7 @@ const CommonQuestionsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Commonly Asked Questions</Text>
+          <Text style={styles.headerTitle}>{translateUi('common:faq')}</Text>
           <Text style={styles.headerSubtitle}>Your guide to investing smarter</Text>
         </View>
       </LinearGradient>

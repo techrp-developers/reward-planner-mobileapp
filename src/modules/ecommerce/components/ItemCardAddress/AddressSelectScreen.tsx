@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import {
   SafeAreaView,
@@ -55,6 +56,7 @@ type ApiAddress = {
 };
 
 export default function AddressSelectScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
@@ -343,7 +345,7 @@ export default function AddressSelectScreen() {
   return (
     <SafeAreaView style={[styles.safe, isDark && darkStyles.safe]}>
       <ProductHeadColor
-        title="Select Address"
+        title={translateUi('common:selectAddress')}
         onBackPress={() => navigation.goBack()}
         showSearch={false}
         isDark={isDark}
@@ -380,7 +382,7 @@ export default function AddressSelectScreen() {
                   color={theme.primary}
                 />
               </View>
-              <Text style={[styles.rowTitlePurple, isDark && darkStyles.accentText]}>Add New Address</Text>
+              <Text style={[styles.rowTitlePurple, isDark && darkStyles.accentText]}>{translateUi('common:addNewAddress')}</Text>
             </View>
 
             <MaterialCommunityIcons
@@ -391,7 +393,7 @@ export default function AddressSelectScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, isDark && darkStyles.secondaryText]}>Saved Addresses</Text>
+        <Text style={[styles.sectionTitle, isDark && darkStyles.secondaryText]}>{translateUi('common:savedAddresses')}</Text>
         {isInitialLoad && loading && (
           <Text style={[styles.loadingText, isDark && darkStyles.secondaryText]}>
             Loading addresses...
@@ -432,7 +434,7 @@ export default function AddressSelectScreen() {
                         <Text style={[styles.addrTitle, isDark && darkStyles.primaryText]}>{item.title}</Text>
                         {item.isDefault ? (
                           <View style={[styles.defaultPill, isDark && darkStyles.defaultPill]}>
-                            <Text style={[styles.defaultPillText, isDark && darkStyles.secondaryText]}>Default</Text>
+                            <Text style={[styles.defaultPillText, isDark && darkStyles.secondaryText]}>{translateUi('common:default')}</Text>
                           </View>
                         ) : null}
                       </View>

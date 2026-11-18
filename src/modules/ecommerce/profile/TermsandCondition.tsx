@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -76,6 +77,7 @@ const TermCard = ({ title, content, iconText, isDark }: TermCardProps) => (
 // ─────────────────────────────────────────────────────────────
 
 const TermsAndConditionsScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const alert = useAlert();
   const { isDark, theme } = useAppTheme();
 
@@ -258,7 +260,7 @@ const TermsAndConditionsScreen = () => {
                     </View>
                     <Text style={[styles.checkboxText, isDark && darkStyles.bodyText]}>
                       I have read and agree to the{" "}
-                      <Text style={[styles.checkboxBold, isDark && darkStyles.primaryText]}>Terms & Conditions</Text>
+                      <Text style={[styles.checkboxBold, isDark && darkStyles.primaryText]}>{translateUi('common:terms')}</Text>
                     </Text>
                   </TouchableOpacity>
 

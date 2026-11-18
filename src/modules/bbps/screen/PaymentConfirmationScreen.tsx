@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { formatINR, getAppLocale } from '../../../i18n/format';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
@@ -74,7 +76,7 @@ const formatAmount = (value?: string | number) => {
   return Number.isNaN(amount) ? normalized : amount.toString();
 };
 
-const formatBillDate = (value?: string | number | null) => {
+const formatBillDate = (value: string | number | null | undefined, locale: string) => {
   if (!hasDisplayValue(value)) {
     return '-';
   }
@@ -101,7 +103,7 @@ const formatBillDate = (value?: string | number | null) => {
     return rawValue;
   }
 
-  return date.toLocaleDateString('en-IN', {
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -127,6 +129,8 @@ const InfoRow: React.FC<InfoRowProps> = React.memo(({ icon, label, value, bbpsTh
 InfoRow.displayName = 'InfoRow';
 
 const PaymentConfirmationScreenComponent = () => {
+  const { t: translateUi } = useTranslation('common');
+  const locale = getAppLocale();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const alert = useAlert();
@@ -160,8 +164,12 @@ const PaymentConfirmationScreenComponent = () => {
   }, [params.nickname, customerName]);
 
   const billAmount = useMemo(() => formatAmount(bill.amount), [bill.amount]);
-  const billDate = useMemo(() => formatBillDate(bill.billDate), [bill.billDate]);
-  const dueDate = useMemo(() => formatBillDate(bill.dueDate), [bill.dueDate]);
+  const displayAmount = formatINR(Number(billAmount || '0'), {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 20,
+  });
+  const billDate = useMemo(() => formatBillDate(bill.billDate, locale), [bill.billDate, locale]);
+  const dueDate = useMemo(() => formatBillDate(bill.dueDate, locale), [bill.dueDate, locale]);
   const billFetchId = useMemo(() => params.fetchBillData?.data?.billFetchId, [params.fetchBillData]);
   const rawMessage = useMemo(() => params.fetchBillData?.data?.raw?.message || '', [params.fetchBillData]);
 
@@ -320,22 +328,22 @@ const PaymentConfirmationScreenComponent = () => {
             </LinearGradient>
 
             <View style={styles.customerCardBody}>
-              <InfoRow icon="apartment" label="Operator" value={operatorName} bbpsTheme={bbpsTheme} />
+              <InfoRow icon="apartment" label={translateUi('payments:operator')} value={operatorName} bbpsTheme={bbpsTheme} />
               <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
-              <InfoRow icon="category" label="Category" value={categoryName} bbpsTheme={bbpsTheme} />
+              <InfoRow icon="category" label={translateUi('common:category')} value={categoryName} bbpsTheme={bbpsTheme} />
             </View>
           </View>
 
           {/* Bill Summary Card */}
           <View style={[styles.billSummaryCard, { backgroundColor: bbpsTheme.colors.surface, borderColor: bbpsTheme.colors.border }]}>
-            <Text style={[styles.cardSectionTitle, { color: bbpsTheme.colors.textStrong }]}>Bill Summary</Text>
-            <InfoRow icon="confirmation-number" label="Bill Number" value={bill.billNumber || '-'} bbpsTheme={bbpsTheme} />
+            <Text style={[styles.cardSectionTitle, { color: bbpsTheme.colors.textStrong }]}>{translateUi('payments:billSummary')}</Text>
+            <InfoRow icon="confirmation-number" label={translateUi('payments:billNumber')} value={bill.billNumber || '-'} bbpsTheme={bbpsTheme} />
             <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
-            <InfoRow icon="event" label="Bill Date" value={billDate} bbpsTheme={bbpsTheme} />
+            <InfoRow icon="event" label={translateUi('payments:billDate')} value={billDate} bbpsTheme={bbpsTheme} />
             <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
-            <InfoRow icon="event-busy" label="Due Date" value={dueDate} bbpsTheme={bbpsTheme} />
+            <InfoRow icon="event-busy" label={translateUi('common:dueDate')} value={dueDate} bbpsTheme={bbpsTheme} />
             <View style={[styles.infoRowDivider, { backgroundColor: bbpsTheme.colors.divider }]} />
-            <InfoRow icon="person-outline" label="Consumer No." value={String(consumerNumber)} bbpsTheme={bbpsTheme} />
+            <InfoRow icon="person-outline" label={translateUi('payments:consumerNo')} value={String(consumerNumber)} bbpsTheme={bbpsTheme} />
           </View>
 
           {/* Conditional Warning Notification Banner */}
@@ -351,14 +359,14 @@ const PaymentConfirmationScreenComponent = () => {
 
           {/* Amount Card */}
           <View style={[styles.amountCard, { backgroundColor: bbpsTheme.colors.surface }]}>
-            <Text style={[styles.amountCardLabel, { color: bbpsTheme.colors.muted }]}>Amount Payable</Text>
+            <Text style={[styles.amountCardLabel, { color: bbpsTheme.colors.muted }]}>{translateUi('common:amountPayable')}</Text>
             <LinearGradient
               colors={bbpsTheme.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.amountPill}
             >
-              <Text style={styles.amountPillText}>₹{billAmount || '0'}</Text>
+              <Text style={styles.amountPillText}>{displayAmount}</Text>
             </LinearGradient>
           </View>
 
@@ -366,8 +374,8 @@ const PaymentConfirmationScreenComponent = () => {
           <View style={styles.securityTrustCard}>
             <MaterialIcons name="shield" size={22} color={COLOR_SUCCESS} style={styles.securityShieldIcon} />
             <View style={styles.securityContextWrap}>
-              <Text style={styles.securityCardTitle}>100% Secure Payment</Text>
-              <Text style={styles.securityCardSub}>Powered by Razorpay</Text>
+              <Text style={styles.securityCardTitle}>{translateUi('payments:secure')}</Text>
+              <Text style={styles.securityCardSub}>{translateUi('payments:razorpay')}</Text>
             </View>
           </View>
 
@@ -403,12 +411,12 @@ const PaymentConfirmationScreenComponent = () => {
             {processing ? (
               <>
                 <ActivityIndicator color="#FFFFFF" size="small" />
-                <Text style={styles.premiumCTAText}> Processing Payment...</Text>
+                <Text style={styles.premiumCTAText}> {translateUi('payments:processing')}</Text>
               </>
             ) : (
               <>
                 <Text style={styles.premiumCTAText}>
-                  Pay ₹{billAmount || '0'}
+                  {translateUi('payments:payAmount', { amount: displayAmount })}
                 </Text>
                 <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" style={styles.ctaForwardArrow} />
               </>

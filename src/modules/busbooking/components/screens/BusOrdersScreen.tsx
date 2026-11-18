@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   ActivityIndicator,
@@ -28,6 +29,7 @@ import {
 const PAGE_SIZE = 20;
 
 export default function BusOrdersScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation =
     useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
 
@@ -191,7 +193,7 @@ export default function BusOrdersScreen() {
             style={styles.retryButton}
             onPress={handleRefresh}
           >
-            <Text style={styles.retryButtonText}>Try again</Text>
+            <Text style={styles.retryButtonText}>{translateUi('common:tryAgainSentence')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

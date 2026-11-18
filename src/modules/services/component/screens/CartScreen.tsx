@@ -1,3 +1,5 @@
+import appI18n from '../../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -172,6 +174,7 @@ const normalizeCartRewards = (response: any) => {
 };
 
 function CartScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
   // MainLayout already reserves space for the services-module bottom bar via
@@ -281,7 +284,7 @@ function CartScreen() {
     // =========================
     if (item.isBundle) {
       if (!item.bundle_id || !item.bundle_items) {
-        Alert.alert('Error', 'Bundle data missing');
+        Alert.alert(appI18n.t('common:error'), appI18n.t('services:bundleMissing'));
         return;
       }
 
@@ -308,7 +311,7 @@ function CartScreen() {
     // ✅ SINGLE SERVICE FLOW
     // =========================
     if (!item.service_id || !item.variant_id) {
-      Alert.alert('Unable to continue', 'Service information is incomplete.');
+      Alert.alert('Unable to continue', appI18n.t('services:incomplete'));
       return;
     }
 
@@ -446,11 +449,11 @@ function CartScreen() {
   if (!loading && !error && !refreshing && items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-        <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <EmptyCart
           variant="services"
           onBrowse={() => navigation.goBack()}
-          message="Your service cart is empty. Browse services to get started."
+          message={translateUi('services:emptyCart')}
         />
       </View>
     );
@@ -459,7 +462,7 @@ function CartScreen() {
   if (showInitialSkeleton) {
     return (
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-        <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={[styles.skeletonScrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}>
           <SkeletonBox pulse={pulse} width="100%" height={98} borderRadius={14} />
           <SkeletonBox pulse={pulse} width="100%" height={118} borderRadius={14} style={styles.skeletonGap} />
@@ -474,11 +477,11 @@ function CartScreen() {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-        <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
         <View style={styles.centeredWrap}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={[styles.retryButton, { backgroundColor: servicesTheme.colors.textStrong }]} onPress={() => loadCart()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{translateUi('common:retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -487,7 +490,7 @@ function CartScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-      <ScreenHeader title="Cart" onBackPress={() => navigation.goBack()} />
+      <ScreenHeader title={translateUi('common:cart')} onBackPress={() => navigation.goBack()} />
 
       <FlatList
         data={items}

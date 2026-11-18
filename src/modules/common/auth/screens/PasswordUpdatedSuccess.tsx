@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from "react";
 import {
   View,
@@ -16,6 +17,7 @@ import { useAppTheme } from "../../../../theme/ThemeContext";
 type Nav = NativeStackNavigationProp<AuthStackParamList>;
 
 function PasswordSuccessComponent() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark } = useAppTheme();
 
@@ -58,7 +60,7 @@ function PasswordSuccessComponent() {
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-              Return to Login Screen
+              {translateUi('common:returnLogin')}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

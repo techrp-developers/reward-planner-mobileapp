@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -65,6 +66,7 @@ type DocCardProps = {
 };
 
 const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -152,7 +154,7 @@ const DocCard = ({ doc, index, onPick, onRemove, disabled }: DocCardProps) => {
           </Text>
           {doc.is_mandatory && (
             <View style={styles.mandatoryBadge}>
-              <Text style={styles.mandatoryText}>Required</Text>
+              <Text style={styles.mandatoryText}>{translateUi('common:required')}</Text>
             </View>
           )}
         </View>
@@ -286,6 +288,7 @@ const ProgressBar = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const DocumentUpload = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
@@ -598,7 +601,7 @@ const DocumentUpload = () => {
           <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#DC2626" />
           <Text style={[styles.errorText, { color: '#F87171' }]}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadDocs}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
+            <Text style={styles.retryBtnText}>{translateUi('common:tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -623,7 +626,7 @@ const DocumentUpload = () => {
               <>
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionDot} />
-                  <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>Required Documents</Text>
+                  <Text style={[styles.sectionTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:requiredDocuments')}</Text>
                 </View>
                 {mandatoryDocs.map((doc, i) => (
                   <DocCard

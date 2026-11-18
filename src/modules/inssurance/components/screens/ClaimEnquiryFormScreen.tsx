@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -27,6 +28,7 @@ const MONTH_NAMES = [
 const WEEK_DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const ClaimEnquiryFormScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { isDark } = useAppTheme();
@@ -330,7 +332,7 @@ const ClaimEnquiryFormScreen: React.FC = () => {
             {/* Field: Admission Date & Discharge Date */}
             <View style={styles.flexRow}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: rs(8) }]}>
-                <Text style={[styles.inputLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>Admission Date</Text>
+                <Text style={[styles.inputLabel, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:admissionDate')}</Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => openCalendar('admission')}
@@ -641,7 +643,7 @@ const ClaimEnquiryFormScreen: React.FC = () => {
               onPress={() => setCalendarVisible(false)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.calendarCancelText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Cancel</Text>
+              <Text style={[styles.calendarCancelText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

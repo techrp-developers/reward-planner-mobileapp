@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Animated,
@@ -123,6 +124,7 @@ const chunkItems = (items: any[], size: number) => {
 };
 
 const CategoriesScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavigationProp>();
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -282,7 +284,7 @@ const CategoriesScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ProductHeadColor
-          title="Categories"
+          title={translateUi('common:categories')}
           onBackPress={() => navigation.goBack()}
         />
         <View style={styles.loadingSkeletonWrap}>
@@ -297,7 +299,7 @@ const CategoriesScreen = () => {
   return (
     <View style={styles.screen}>
       <ProductHeadColor
-        title="All Categories"
+        title={translateUi('common:allCategories')}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -317,7 +319,7 @@ const CategoriesScreen = () => {
               <View style={styles.sidebarIconContainer}>
                 <AllIcons width={32} height={32} />
               </View>
-              <Text style={styles.sidebarText}>All</Text>
+              <Text style={styles.sidebarText}>{translateUi('common:all')}</Text>
             </TouchableOpacity>
 
             {/* Dynamic Categories */}

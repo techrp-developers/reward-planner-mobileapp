@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from 'react';
 import {
   View,
@@ -23,6 +24,7 @@ const REWARDS: RewardItem[] = [
 ];
 
 const ProductScreenComponent = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation();
   const bbpsTheme = useBbpsTheme();
 
@@ -68,7 +70,7 @@ const ProductScreenComponent = () => {
     <BBPSSafeAreaView style={[styles.safeArea, { backgroundColor: bbpsTheme.colors.background }]}>
       {/* Strict use of custom ScreenHeader */}
       <BBPSHead
-        title="Rewards"
+        title={translateUi('common:rewards')}
         onBackPress={handleBackPress}
       />
 

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import { View, Button, Alert, ActivityIndicator, StyleSheet } from "react-native";
 import RazorpayCheckout from "react-native-razorpay";
@@ -5,6 +6,7 @@ import { checkPaymentStatus, createPaymentOrder, verifyPayment } from "../api/Pa
 
 
 const PaymentScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const orderId = 101;
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +46,7 @@ const PaymentScreen = () => {
             });
 
             if (verifyRes.success) {
-              Alert.alert("Success", "Payment verified successfully 🎉");
+              Alert.alert(translateUi('common:success'), "Payment verified successfully 🎉");
             } else {
               Alert.alert("Verification Failed", "Please contact support");
             }
@@ -72,7 +74,7 @@ const PaymentScreen = () => {
           }
 
           Alert.alert(
-            "Payment Failed",
+            translateUi('common:paymentFailed'),
             String(errorText || "Payment cancelled")
           );
         });
@@ -80,7 +82,7 @@ const PaymentScreen = () => {
     } catch (error: any) {
       setLoading(false);
       Alert.alert(
-        "Error",
+        translateUi('common:error'),
         error?.response?.data?.message || "Failed to create order"
       );
     }
@@ -96,7 +98,7 @@ const PaymentScreen = () => {
         const res = await checkPaymentStatus(orderId);
 
         if (res.status === "paid" || res.status === "captured") {
-          Alert.alert("Success", "Payment verified successfully 🎉");
+          Alert.alert(translateUi('common:success'), "Payment verified successfully 🎉");
           return;
         }
 

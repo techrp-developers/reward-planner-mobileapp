@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+import appI18n from '../../../i18n';
+import { getAppLocale } from '../../../i18n/format';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -9,10 +12,11 @@ import { fetchLivePolls, submitPollVote } from '../api/pollApi';
 import type { LivePoll } from '../types';
 
 function errorMessage(error: any) {
-  return error?.response?.data?.message || error?.message || 'Unable to submit your vote';
+  return error?.response?.data?.message || error?.message || appI18n.t('polls:voteError');
 }
 
 function LivePollCard() {
+  const { t: translateUi } = useTranslation('polls');
   const { isAuthenticated } = useAuth();
   const { isDark } = useAppTheme();
   const [now, setNow] = useState(Date.now());
@@ -63,7 +67,7 @@ function LivePollCard() {
     } catch (error: any) {
       if (error?.response?.status === 404) {
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-polls'] });
-      } else Alert.alert('Vote not submitted', errorMessage(error));
+      } else Alert.alert(appI18n.t('polls:voteFailed'), errorMessage(error));
     } finally { setSubmitting(false); }
   }, [poll, submitting]);
 
@@ -75,17 +79,18 @@ function LivePollCard() {
 
   if (!poll) return null;
   const totalVotes = poll.options.reduce((sum, option) => sum + option.vote_count, 0);
+  const voteCount = { count: poll.participant_count };
 
   return (
     <View style={[styles.outer, { backgroundColor: isDark ? '#111B21' : '#E7F7EF' }]}>
       <View style={[styles.bubble, { backgroundColor: isDark ? '#202C33' : '#FFFFFF' }]}>
         <Pressable disabled={!poll.has_voted} onPress={() => setExpanded(value => !value)} style={styles.titleRow}>
           <MaterialCommunityIcons name="poll" size={21} color="#25A866" />
-          <View style={styles.questionWrap}><Text numberOfLines={expanded ? undefined : 1} style={[styles.question, { color: isDark ? '#F1F5F7' : '#111B21' }]}>{poll.question}</Text>{poll.has_voted && !expanded && <Text style={styles.votedLabel}>Voted · {poll.participant_count} {poll.participant_count === 1 ? 'vote' : 'votes'}</Text>}</View>
+          <View style={styles.questionWrap}><Text numberOfLines={expanded ? undefined : 1} style={[styles.question, { color: isDark ? '#F1F5F7' : '#111B21' }]}>{poll.question}</Text>{poll.has_voted && !expanded && <Text style={styles.votedLabel}>{translateUi('polls:voted', voteCount)}</Text>}</View>
           {poll.has_voted && <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={23} color="#8696A0" />}
         </Pressable>
         {expanded && <>
-        <Text style={styles.hint}>{poll.allow_multiple ? 'Select one or more options' : 'Select one option'}</Text>
+        <Text style={styles.hint}>{translateUi(poll.allow_multiple ? 'polls:multipleOptions' : 'polls:oneOption')}</Text>
         {poll.options.map(option => {
           const checked = selected.includes(option.option_id);
           const percent = totalVotes ? Math.round(option.vote_count * 100 / totalVotes) : 0;
@@ -96,9 +101,9 @@ function LivePollCard() {
             </Pressable>
           );
         })}
-        {poll.allow_multiple && <Pressable disabled={!selected.length || submitting} onPress={() => vote(selected)} style={[styles.voteButton, (!selected.length || submitting) && styles.voteButtonDisabled]}>{submitting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.voteText}>Vote</Text>}</Pressable>}
+        {poll.allow_multiple && <Pressable disabled={!selected.length || submitting} onPress={() => vote(selected)} style={[styles.voteButton, (!selected.length || submitting) && styles.voteButtonDisabled]}>{submitting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.voteText}>{translateUi('polls:vote')}</Text>}</Pressable>}
         {!poll.allow_multiple && submitting && <ActivityIndicator style={styles.loader} size="small" color="#25A866" />}
-        <View style={styles.footer}><Text style={styles.footerText}>{poll.participant_count} {poll.participant_count === 1 ? 'vote' : 'votes'}</Text>{poll.closes_at && <Text style={styles.footerText}>Closes {new Date(poll.closes_at).toLocaleString()}</Text>}</View>
+        <View style={styles.footer}><Text style={styles.footerText}>{translateUi('polls:votes', voteCount)}</Text>{poll.closes_at && <Text style={styles.footerText}>{translateUi('polls:closesAt', { date: new Date(poll.closes_at).toLocaleString(getAppLocale()) })}</Text>}</View>
         </>}
       </View>
     </View>

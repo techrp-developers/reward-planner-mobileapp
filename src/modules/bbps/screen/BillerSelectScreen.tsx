@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -137,6 +138,7 @@ const filterSections = (
 };
 
 const BillerSelectScreenComponent = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
@@ -283,7 +285,7 @@ const BillerSelectScreenComponent = () => {
             style={[styles.retryButton, { backgroundColor: bbpsTheme.colors.primary, shadowColor: bbpsTheme.colors.shadow }]}
             onPress={handleRetry}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{translateUi('common:retry')}</Text>
           </TouchableOpacity>
         </View>
       </BBPSSafeAreaView>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -29,6 +30,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function FilterBottomSheet({ visible, onClose, currentTime, currentStatus, onApply }) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const TIME_OPTIONS = useMemo(() => getDynamicTimeOptions(), []);
   const [selectedTime, setSelectedTime] = useState(currentTime);
@@ -41,13 +43,13 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
         <View style={[styles.handle, { backgroundColor: theme.border }]} />
         
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>Filter Orders</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{translateUi('common:filterOrders')}</Text>
           <TouchableOpacity onPress={() => { setSelectedTime('30days'); setSelectedStatus(''); }}>
-            <Text style={styles.reset}>Reset</Text>
+            <Text style={styles.reset}>{translateUi('common:reset')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>Order Time</Text>
+        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>{translateUi('common:orderTime')}</Text>
         <View style={styles.chipGrid}>
           {TIME_OPTIONS.map((item) => (
             <TouchableOpacity 
@@ -73,7 +75,7 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>Order Status</Text>
+        <Text style={[styles.sectionLabel, { color: theme.secondaryText }]}>{translateUi('common:orderStatus')}</Text>
         <View style={styles.chipGrid}>
           {STATUS_OPTIONS.map((item) => (
             <TouchableOpacity 
@@ -106,7 +108,7 @@ export default function FilterBottomSheet({ visible, onClose, currentTime, curre
             end={{ x: 1, y: 0 }}
             style={styles.applyBtn}
           >
-            <Text style={styles.applyBtnText}>Apply Filters</Text>
+            <Text style={styles.applyBtnText}>{translateUi('common:applyFilters')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

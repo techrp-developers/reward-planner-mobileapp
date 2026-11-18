@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   View,
@@ -27,6 +28,7 @@ type LoginAccountNavigationProp = NativeStackNavigationProp<
 >;
 
 function AccountActivate() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<LoginAccountNavigationProp>();
   const alert = useAlert();
   const { isDark } = useAppTheme();
@@ -129,7 +131,7 @@ function AccountActivate() {
           ]}
         >
           <View style={styles.bottomRow}>
-            <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#666" }]}>Already have an account?</Text>
+            <Text style={[styles.bottomText, { color: isDark ? "#A1A1AA" : "#666" }]}>{translateUi('common:alreadyAccount')}</Text>
 
             <TouchableOpacity
               onPress={() => navigation.navigate("Login")}

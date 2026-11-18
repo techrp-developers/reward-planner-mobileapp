@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -133,6 +134,7 @@ const extractReviews = (response: any): ReviewItem[] => {
 export default function CustomerReviewsView({
   productId,
 }: CustomerReviewsViewProps) {
+  const { t: translateUi } = useTranslation('common');
   const { theme } = useAppTheme();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -200,7 +202,7 @@ export default function CustomerReviewsView({
       }
     } catch {
       setReviews(previous);
-      Alert.alert("Review", "Unable to update helpful status right now.");
+      Alert.alert(translateUi('common:review'), "Unable to update helpful status right now.");
     }
   };
 
@@ -293,7 +295,7 @@ export default function CustomerReviewsView({
 
                 <TouchableOpacity style={styles.shareBtn} onPress={() => handleShare(review)}>
                   <MaterialCommunityIcons name="share-variant-outline" size={16} color={theme.text} />
-                  <Text style={[styles.btnText, { color: theme.text }]}>Share</Text>
+                  <Text style={[styles.btnText, { color: theme.text }]}>{translateUi('common:share')}</Text>
                 </TouchableOpacity>
               </View>
 

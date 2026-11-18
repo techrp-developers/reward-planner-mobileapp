@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const FAQSection: React.FC<Props> = ({ navigation }) => {
+  const { t: translateUi } = useTranslation('common');
     const servicesTheme = useServicesTheme();
     const [categories, setCategories] = useState<MFCategory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ const FAQSection: React.FC<Props> = ({ navigation }) => {
             <View style={styles.headingRow}>
                 <View>
                     <Text style={[styles.eyebrow, { color: servicesTheme.colors.primary }]}>QUICK CLARITY</Text>
-                    <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Commonly Asked Questions</Text>
+                    <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:faq')}</Text>
                 </View>
                 <View style={[styles.headingIcon, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
                     <MaterialCommunityIcons name="lightbulb-on-outline" size={18} color="#3545A3" />

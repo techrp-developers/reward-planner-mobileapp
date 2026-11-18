@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -38,6 +39,7 @@ const GradientText = ({ text, bbpsTheme }: { text: string; bbpsTheme: BbpsTheme 
 );
 
 function RewardProductCard() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const bbpsTheme = useBbpsTheme();
   const [products, setProducts] = useState<any[]>([]);
@@ -129,7 +131,7 @@ function RewardProductCard() {
   return (
     <View style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]}>
       <View style={styles.headerRow}>
-        <Text style={[styles.heading, { color: bbpsTheme.colors.textStrong }]}>Rewards</Text>
+        <Text style={[styles.heading, { color: bbpsTheme.colors.textStrong }]}>{translateUi('common:rewards')}</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ProductScreen')}>
           <GradientText text="View More" bbpsTheme={bbpsTheme} />
         </TouchableOpacity>

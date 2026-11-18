@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo, useRef, useEffect } from "react";
 import {
     View,
@@ -48,6 +49,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
     loading: _loading = false,
     cardWidth,
 }) => {
+  const { t: translateUi } = useTranslation('common');
     const { isDark, theme } = useAppTheme();
 
     const screenWidth = Dimensions.get("window").width;
@@ -150,7 +152,7 @@ const StepsCounterCard: React.FC<StepsCounterCardProps> = ({
                                     {steps.toLocaleString("en-IN")}
                                 </Text>
                                 <Text style={[styles.goalLabel, t.goalLabel]}>/ {goalSteps.toLocaleString("en-IN")}</Text>
-                                <Text style={styles.stepsWord}>Steps</Text>
+                                <Text style={styles.stepsWord}>{translateUi('common:steps')}</Text>
                             </View>
                         </View>
 

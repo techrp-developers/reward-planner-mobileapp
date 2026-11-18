@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   View,
@@ -26,6 +27,7 @@ const PointsButton: React.FC<Props> = ({
   redeemCoins = 0,
   onPress,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   return (
     <Pressable
       onPress={onPress}
@@ -68,7 +70,7 @@ const PointsButton: React.FC<Props> = ({
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              Redeem
+              {translateUi('common:redeem')}
             </Text>
             <View style={styles.valueRow}>
               <Text

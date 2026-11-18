@@ -14,6 +14,11 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
 import type { PlanOverview, OverallSummary } from "../../api/Stepsapi";
+import { useTranslation } from "react-i18next";
+import i18n from "../../../../i18n";
+import { translateSourceText } from "../../../../i18n/sourceText";
+import { formatNumber } from "../../../../i18n/format";
+import { useStepStyles } from "../../utils/useStepTheme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,7 +115,9 @@ const ConfettiPiece: React.FC<{ index: number }> = ({ index }) => {
 const GoalIllustration: React.FC<{
   scale: Animated.Value;
   planType: string;
-}> = ({ scale, planType }) => (
+}> = ({ scale, planType }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  return (
   <Animated.View style={[styles.illustrationBox, { transform: [{ scale }] }]}>
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {Array.from({ length: CONFETTI_COUNT }).map((_, i) => (
@@ -120,7 +127,7 @@ const GoalIllustration: React.FC<{
 
     <View style={styles.goalScene}>
       <View style={styles.signBoard}>
-        <Text style={styles.signBoardText}>GOAL</Text>
+        <Text style={styles.signBoardText}>{i18n.t("stepCounter:todayGoalCompletedScreen.goal")}</Text>
       </View>
       <View style={styles.postsRow}>
         <View style={styles.signPost} />
@@ -146,7 +153,8 @@ const GoalIllustration: React.FC<{
       <Text style={styles.illustrationBold}>{planType} plan.</Text>
     </Text>
   </Animated.View>
-);
+  );
+};
 
 // ─── Animated Section Card ────────────────────────────────────────────────────
 const SectionCard: React.FC<{
@@ -154,7 +162,9 @@ const SectionCard: React.FC<{
   fadeAnim: Animated.Value;
   slideAnim: Animated.Value;
   highlighted?: boolean;
-}> = ({ children, fadeAnim, slideAnim, highlighted }) => (
+}> = ({ children, fadeAnim, slideAnim, highlighted }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  return (
   <Animated.View
     style={[
       styles.sectionCard,
@@ -164,10 +174,12 @@ const SectionCard: React.FC<{
   >
     {children}
   </Animated.View>
-);
+  );
+};
 
 // ─── Gradient Progress Bar ────────────────────────────────────────────────────
 const GradientBar: React.FC<{ progress: number }> = ({ progress }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   const widthAnimRef = useRef(new Animated.Value(0));
   const widthAnim    = widthAnimRef.current;
 
@@ -199,6 +211,8 @@ const GradientBar: React.FC<{ progress: number }> = ({ progress }) => {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
+  const { palette: VD, styles, isDark } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { t: tx } = useTranslation();
   const overlay = isOverlay(props);
 
   const planOverview   = overlay ? props.planOverview   : props.route.params.planOverview;
@@ -245,22 +259,22 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
   const stepsProgress = Math.min(overallSummary.steps / (planOverview.daily_target * 1.2), 1);
 
   const planRows = [
-    { label: "Plan Type",           value: planOverview.plan_type,                          color: VD.accentDark },
-    { label: "Total Plan Duration", value: `${planOverview.total_duration_days} days`,      color: VD.white },
-    { label: "Today",               value: `Day ${planOverview.current_day}`,                color: VD.accentDark },
-    { label: "Daily Target",        value: `${planOverview.daily_target.toLocaleString()} steps`, color: VD.white },
+    { label: tx("stepCounter:plan.type"), value: translateSourceText("stepCounter", planOverview.plan_type), color: VD.accentDark },
+    { label: tx("stepCounter:plan.duration"), value: tx("stepCounter:plan.days", { count: planOverview.total_duration_days }), color: VD.white },
+    { label: tx("stepCounter:plan.today"), value: tx("stepCounter:plan.dayN", { n: planOverview.current_day }), color: VD.accentDark },
+    { label: tx("stepCounter:plan.dailyTarget"), value: tx("stepCounter:units.stepsN", { value: formatNumber(planOverview.daily_target) }), color: VD.white },
   ];
 
   const summaryRows = [
-    { icon: "🥾", label: "Steps",          value: `${overallSummary.steps.toLocaleString()} steps` },
-    { icon: "🔥", label: "Calories Burned", value: `${overallSummary.calories} kcal` },
-    { icon: "📍", label: "Distance",        value: `${overallSummary.distance_km} km` },
-    { icon: "⏱️", label: "Active Hours",    value: formatMinutes(overallSummary.active_minutes) },
+    { icon: "🥾", label: tx("stepCounter:summary.steps"), value: tx("stepCounter:units.stepsN", { value: formatNumber(overallSummary.steps) }) },
+    { icon: "🔥", label: tx("stepCounter:summary.calories"), value: tx("stepCounter:units.kcalN", { value: overallSummary.calories }) },
+    { icon: "📍", label: tx("stepCounter:summary.distance"), value: tx("stepCounter:units.kmN", { value: overallSummary.distance_km }) },
+    { icon: "⏱️", label: tx("stepCounter:summary.activeHours"), value: formatMinutes(overallSummary.active_minutes) },
   ];
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={VD.bg0} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={VD.bg0} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -273,7 +287,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
           <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Today's Goal Completed</Text>
+          <Text style={styles.headerTitle}>{tx("stepCounter:todayGoalCompletedScreen.todaySGoalCompleted")}</Text>
           <Text style={styles.headerSub}>• {planOverview.plan_type} Plan</Text>
         </View>
         <View style={styles.headerSpacer} />
@@ -284,7 +298,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
         <GoalIllustration scale={heroScale} planType={planOverview.plan_type} />
 
         <SectionCard fadeAnim={anims[0].fade} slideAnim={anims[0].slide} highlighted>
-          <Text style={styles.sectionTitle}>Plan Overview</Text>
+          <Text style={styles.sectionTitle}>{tx("stepCounter:todayGoalCompletedScreen.planOverview")}</Text>
           {planRows.map((row, i) => (
             <View key={i} style={[styles.infoRow, i < planRows.length - 1 && styles.rowDivider]}>
               <Text style={styles.infoLabel}>{row.label}</Text>
@@ -294,7 +308,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
         </SectionCard>
 
         <SectionCard fadeAnim={anims[1].fade} slideAnim={anims[1].slide} highlighted>
-          <Text style={styles.sectionTitle}>Overall Summary</Text>
+          <Text style={styles.sectionTitle}>{tx("stepCounter:todayGoalCompletedScreen.overallSummary")}</Text>
           {summaryRows.map((row, i) => (
             <View key={i} style={[styles.summaryRow, i < summaryRows.length - 1 && styles.rowDivider]}>
               <Text style={styles.summaryIcon}>{row.icon}</Text>
@@ -311,10 +325,10 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
           <View style={styles.streakRow}>
             <View>
               <Text style={styles.sectionTitle}>
-                Current Streak {"  "}
+                {i18n.t("stepCounter:ui.currentStreak")} {"  "}
                 <Text style={styles.streakLightning}>⚡</Text>
               </Text>
-              <Text style={styles.streakSub}>You're building strong habits.</Text>
+              <Text style={styles.streakSub}>{tx("stepCounter:todayGoalCompletedScreen.youReBuildingStrongHabits")}</Text>
             </View>
             <Text style={styles.streakDays}>{currentStreak} Days</Text>
           </View>
@@ -323,7 +337,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
         {reward > 0 && (
           <SectionCard fadeAnim={anims[3].fade} slideAnim={anims[3].slide}>
             <View style={styles.rewardRow}>
-              <Text style={styles.rewardLabel}>RP Points Earned Today</Text>
+              <Text style={styles.rewardLabel}>{tx("stepCounter:todayGoalCompletedScreen.coinsEarnedToday")}</Text>
               <Text style={styles.rewardValue}>+{reward}</Text>
             </View>
           </SectionCard>
@@ -339,7 +353,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
           onPress={handleContinue}
           activeOpacity={0.87}
         >
-          <Text style={styles.continueTxt}>Continue</Text>
+          <Text style={styles.continueTxt}>{tx("stepCounter:todayGoalCompletedScreen.continue")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -349,7 +363,7 @@ const TodayGoalCompletedScreen: React.FC<Props> = (props) => {
 export default TodayGoalCompletedScreen;
 
 // ─── Step counter dark palette (mirrors Dashboard.tsx) ───────────────────────
-const VD = {
+const VD_DARK = {
   bg0:         "#070A16",
   bg1:         "#111735",
   bg2:         "#201A3F",
@@ -367,8 +381,28 @@ const VD = {
   warning:     "#F5B86B",
 };
 
+type Palette = typeof VD_DARK;
+
+const VD_LIGHT: Palette = {
+  bg0: "#F5F9FF",
+  bg1: "#EEF4FF",
+  bg2: "#F3EEFF",
+  accent: "#426BFF",
+  accentDark: "#5B3FD9",
+  accentFaint: "rgba(66,107,255,0.10)",
+  accentDim: "rgba(66,107,255,0.22)",
+  cardBg: "#FFFFFF",
+  cardBorder: "#E9EEFA",
+  white: "#10152D",
+  whiteMid: "#4A5275",
+  whiteLow: "#777FA5",
+  whiteGhost: "#E3EBFA",
+  success: "#16A34A",
+  warning: "#C27C00",
+};
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (VD: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: VD.bg0 },
 
   header: {
@@ -382,7 +416,7 @@ const styles = StyleSheet.create({
     borderBottomColor: VD.cardBorder,
   },
   backBtn:      { width: 36, alignItems: "flex-start", justifyContent: "center" },
-  backArrow:    { fontSize: 34, color: VD.accentDark, lineHeight: 38, fontWeight: "300" },
+  backArrow:    { fontSize: 34, color: VD.accentDark, lineHeight: 41, fontWeight: "300" },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle:  { fontSize: 16, fontWeight: "800", color: VD.white, letterSpacing: -0.2 },
   headerSub:    { fontSize: 11.5, fontWeight: "700", color: VD.whiteMid, marginTop: 2, letterSpacing: 0.2 },

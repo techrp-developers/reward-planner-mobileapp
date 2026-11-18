@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { Linking, View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,6 +9,7 @@ const CONTACT_NUMBER = '918660583751';
 const CONTACT_NUMBER_DISPLAY = '+91 8660 583751';
 
 export default function NeedHelpBanner() {
+  const { t: translateUi } = useTranslation('common');
   return (
     <LinearGradient
       colors={['#F8F9FF', '#EEF1FF']}
@@ -22,7 +24,7 @@ export default function NeedHelpBanner() {
         <View style={styles.textCol}>
           <Text style={styles.eyebrow}>WE'RE HERE TO HELP</Text>
           <Text style={styles.title}>
-            Govt. Document <Text style={styles.titleAccent}>Help</Text>
+            Govt. Document <Text style={styles.titleAccent}>{translateUi('common:help')}</Text>
           </Text>
           <Text style={styles.subtitle}>Quick guidance from our team</Text>
         </View>

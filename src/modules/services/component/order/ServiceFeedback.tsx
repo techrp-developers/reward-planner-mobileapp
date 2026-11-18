@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -59,6 +60,7 @@ const REUSE_OPTIONS = [
 ];
 
 export default function ServiceFeedback() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
@@ -104,7 +106,7 @@ export default function ServiceFeedback() {
       if (res?.success) {
         Alert.alert('Thank you!', 'Your feedback has been submitted successfully.', [
           {
-            text: 'OK',
+            text: translateUi('common:ok'),
             onPress: () => navigation.navigate('ServiceOrderDetail', { parent_order_id }),
           },
         ]);
@@ -211,7 +213,7 @@ export default function ServiceFeedback() {
             {submitting ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.submitText}>Submit</Text>
+              <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

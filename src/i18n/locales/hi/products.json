@@ -1,0 +1,13 @@
+{
+  "emptyCart": "आपका कार्ट खाली है",
+  "emptyWishlist": "आपकी पसंदीदा सूची खाली है",
+  "deliveryAddress": "डिलीवरी का पता",
+  "savedForLater": "बाद के लिए सेव किए गए",
+  "productDetails": "उत्पाद की जानकारी",
+  "deliveryInstructions": "डिलीवरी के निर्देश",
+  "paymentMethod": "भुगतान का तरीका",
+  "removeWishlist": "पसंदीदा सूची से हटाएँ",
+  "goToCart": "कार्ट में जाएँ",
+  "priceDetails": "कीमत की जानकारी",
+  "selectVariant": "उत्पाद का विकल्प चुनें"
+}

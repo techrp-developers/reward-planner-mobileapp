@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from "react";
 import { Dropdown } from "react-native-element-dropdown";
 import {
@@ -132,6 +133,7 @@ function AddressDetailsSheet({
   onClose,
   onSubmit,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const insets = useSafeAreaInsets();
   const alert = useAlert();
   const { isDark, theme } = useAppTheme();
@@ -326,7 +328,7 @@ function AddressDetailsSheet({
             {...themedInputProps}
             value={fields.flatHouseBuilding}
             onChangeText={t => setField("flatHouseBuilding", t)}
-            placeholder="Enter here"
+            placeholder={translateUi('common:enterHere')}
             maxLength={120}
             style={[
               styles.input,
@@ -344,7 +346,7 @@ function AddressDetailsSheet({
             {...themedInputProps}
             value={fields.areaLocality}
             onChangeText={t => setField("areaLocality", t)}
-            placeholder="Enter here"
+            placeholder={translateUi('common:enterHere')}
             maxLength={120}
             style={[
               styles.input,
@@ -362,7 +364,7 @@ function AddressDetailsSheet({
             {...themedInputProps}
             value={fields.landmark}
             onChangeText={t => setField("landmark", t)}
-            placeholder="Enter here"
+            placeholder={translateUi('common:enterHere')}
             maxLength={100}
             style={[styles.input, isDark && darkStyles.input]}
           />
@@ -374,7 +376,7 @@ function AddressDetailsSheet({
             onChangeText={t => setField("pincode", t.replace(/\D/g, ""))}
             keyboardType="number-pad"
             maxLength={6}
-            placeholder="Enter pincode"
+            placeholder={translateUi('common:enterPincode')}
             style={[styles.input, isDark && darkStyles.input, touched.pincode && errors.pincode && styles.inputError]}
             onBlur={() => markTouched("pincode")}
           />

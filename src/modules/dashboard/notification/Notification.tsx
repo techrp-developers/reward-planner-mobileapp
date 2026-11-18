@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -119,6 +120,7 @@ function isUnread(item: NotificationItem) {
 }
 
 function Notification() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -282,9 +284,9 @@ function Notification() {
       "Delete notification",
       "Remove this notification from your list?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: translateUi('common:cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: translateUi('common:delete'),
           style: "destructive",
           onPress: async () => {
             const previousNotifications = notifications;
@@ -379,7 +381,7 @@ function Notification() {
   return (
     <SafeAreaView style={[styles.safe, themed.screen]}>
       <OrderHeading
-        title="Notifications"
+        title={translateUi('common:notifications')}
         onBackPress={() => navigation.goBack()}
         showHelp={false}
         isDark={isDark}
@@ -395,7 +397,7 @@ function Notification() {
           <MaterialCommunityIcons name="alert-circle-outline" size={42} color="#DC2626" />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => loadNotifications()}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{translateUi('common:tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -447,7 +449,7 @@ function Notification() {
                 </View>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  accessibilityLabel="Notification settings"
+                  accessibilityLabel={translateUi('common:notificationSettings')}
                   activeOpacity={0.78}
                   style={[styles.summaryIcon, styles.settingsButton]}
                   onPress={() => navigation.navigate("NotificationSettings")}

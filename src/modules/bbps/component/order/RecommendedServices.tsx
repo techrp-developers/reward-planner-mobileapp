@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -51,6 +52,7 @@ const ServiceItem = ({ icon, iconName, label, onPress, bbpsTheme }: ServiceItemP
 );
 
 function RecommendedServices() {
+  const { t: translateUi } = useTranslation('common');
   const bbpsTheme = useBbpsTheme();
 
   return (
@@ -63,7 +65,7 @@ function RecommendedServices() {
         },
       ]}
     >
-      <Text style={[styles.mainTitle, { color: bbpsTheme.colors.textStrong }]}>Recommended Services</Text>
+      <Text style={[styles.mainTitle, { color: bbpsTheme.colors.textStrong }]}>{translateUi('services:recommended')}</Text>
       <View style={styles.grid}>
         {SERVICES.map((service) => (
           <ServiceItem

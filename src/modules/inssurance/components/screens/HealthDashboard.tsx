@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { Svg, Path } from 'react-native-svg';
 import {
@@ -81,6 +82,7 @@ const CardPattern: React.FC = () => {
 };
 
 const HealthDashboard: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark, theme } = useAppTheme();
 
@@ -152,7 +154,7 @@ const HealthDashboard: React.FC = () => {
         {/* Title Block */}
         <View style={styles.titleBlock}>
           <Text style={[styles.titleText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-            Health Insurance
+            {translateUi('common:healthInsurance')}
           </Text>
           <Text style={[styles.subTitleText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>
             Your health. Our priority.
@@ -182,8 +184,8 @@ const HealthDashboard: React.FC = () => {
                     <Text style={styles.careLogoText}>care</Text>
                   </View>
                   <View style={styles.careLogoSubBox}>
-                    <Text style={styles.careLogoSubText}>HEALTH</Text>
-                    <Text style={styles.careLogoSubTextMin}>INSURANCE</Text>
+                    <Text style={styles.careLogoSubText}>{translateUi('common:health')}</Text>
+                    <Text style={styles.careLogoSubTextMin}>{translateUi('common:insuranceHeading')}</Text>
                   </View>
                 </View>
                 
@@ -202,7 +204,7 @@ const HealthDashboard: React.FC = () => {
                 {/* Members Table - Spanning 100% full width */}
                 <View style={styles.groupTableContainer}>
                   <View style={styles.groupTableHeader}>
-                    <Text style={[styles.groupColHeader, { width: '50%' }]}>Name</Text>
+                    <Text style={[styles.groupColHeader, { width: '50%' }]}>{translateUi('common:name')}</Text>
                     <Text style={[styles.groupColHeader, { width: '27%' }]}>Client Id</Text>
                     <Text style={[styles.groupColHeader, { width: '23%' }]}>Dob</Text>
                   </View>
@@ -232,7 +234,7 @@ const HealthDashboard: React.FC = () => {
                   onPress={() => navigation.navigate('MyECardScreen')}
                 >
                   <MaterialCommunityIcons name="card-bulleted-outline" size={12} color="#007ca5" style={{ marginRight: 4 }} />
-                  <Text style={[styles.eCardBtnText, { color: '#007ca5' }]}>View E-Card</Text>
+                  <Text style={[styles.eCardBtnText, { color: '#007ca5' }]}>{translateUi('common:viewECard')}</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -252,40 +254,40 @@ const HealthDashboard: React.FC = () => {
                     <Text style={styles.careLogoText}>care</Text>
                   </View>
                   <View style={styles.careLogoSubBox}>
-                    <Text style={styles.careLogoSubText}>HEALTH</Text>
-                    <Text style={styles.careLogoSubTextMin}>INSURANCE</Text>
+                    <Text style={styles.careLogoSubText}>{translateUi('common:health')}</Text>
+                    <Text style={styles.careLogoSubTextMin}>{translateUi('common:insuranceHeading')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.activeBadge}>
                   <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" style={{ marginRight: 2 }} />
-                  <Text style={styles.activeText}>Active</Text>
+                  <Text style={styles.activeText}>{translateUi('common:active')}</Text>
                 </View>
               </View>
 
               <View style={styles.carePolicyRowDashboard}>
-                <Text style={styles.cardLabel}>Policy Type</Text>
+                <Text style={styles.cardLabel}>{translateUi('common:policyType')}</Text>
                 <Text style={styles.cardValue}>{gmcDetails.policy_type || 'Personal Health Card'}</Text>
               </View>
 
               <View style={[styles.cardInfoGrid, { marginTop: rs(10) }]}>
                 <View style={styles.cardInfoCol}>
-                  <Text style={styles.cardLabel}>Policy Number</Text>
+                  <Text style={styles.cardLabel}>{translateUi('common:policyNumber')}</Text>
                   <Text style={styles.cardValue}>{gmcDetails.policy_number || '—'}</Text>
                 </View>
                 <View style={[styles.cardInfoCol, { alignItems: 'flex-end' }]}>
-                  <Text style={styles.cardLabel}>Member ID</Text>
+                  <Text style={styles.cardLabel}>{translateUi('common:memberId')}</Text>
                   <Text style={styles.cardValue}>{gmcDetails.member_id || '—'}</Text>
                 </View>
               </View>
 
               <View style={[styles.cardInfoGrid, { marginTop: rs(12) }]}>
                 <View style={styles.cardInfoCol}>
-                  <Text style={styles.cardLabel}>Employee ID</Text>
+                  <Text style={styles.cardLabel}>{translateUi('common:employeeId')}</Text>
                   <Text style={styles.cardValue}>{gmcDetails.employee_id || '—'}</Text>
                 </View>
                 <View style={styles.cardInfoCol}>
-                  <Text style={styles.cardLabel}>Valid Till</Text>
+                  <Text style={styles.cardLabel}>{translateUi('common:validTill')}</Text>
                   <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar" size={11} color="rgba(255,255,255,0.7)" style={{ marginRight: 3 }} />
                     <Text style={styles.cardValue}>{gmcDetails.valid_till || '—'}</Text>
@@ -315,7 +317,7 @@ const HealthDashboard: React.FC = () => {
                   onPress={() => navigation.navigate('MyECardScreen')}
                 >
                   <MaterialCommunityIcons name="card-bulleted-outline" size={13} color={isDark ? '#0F172A' : '#007ca5'} style={{ marginRight: 4 }} />
-                  <Text style={[styles.eCardBtnText, { color: isDark ? '#0F172A' : '#007ca5' }]}>View E-Card</Text>
+                  <Text style={[styles.eCardBtnText, { color: isDark ? '#0F172A' : '#007ca5' }]}>{translateUi('common:viewECard')}</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -324,7 +326,7 @@ const HealthDashboard: React.FC = () => {
           /* NO GMC CARD FALLBACK */
           <View style={[styles.careCard, { justifyContent: 'center', alignItems: 'center', minHeight: rs(140), backgroundColor: isDark ? '#1E1E24' : '#F1F5F9' }]}>
             <MaterialCommunityIcons name="shield-alert-outline" size={32} color={isDark ? '#52525B' : '#94A3B8'} />
-            <Text style={{ color: isDark ? '#A1A1AA' : '#64748B', fontSize: fs(11), fontWeight: '700', marginTop: rs(6) }}>No active health card available</Text>
+            <Text style={{ color: isDark ? '#A1A1AA' : '#64748B', fontSize: fs(11), fontWeight: '700', marginTop: rs(6) }}>{translateUi('common:noHealthCard')}</Text>
           </View>
         )}
 
@@ -366,7 +368,7 @@ const HealthDashboard: React.FC = () => {
             <View style={[styles.actionIconBox, { backgroundColor: '#e5f6fd' }]}>
               <MaterialCommunityIcons name="file-document-outline" size={24} color="#005b7f" />
             </View>
-            <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Cashless Claim</Text>
+            <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:cashlessClaim')}</Text>
             <Text style={[styles.actionSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Get treatment at network hospital</Text>
           </TouchableOpacity>
 
@@ -379,7 +381,7 @@ const HealthDashboard: React.FC = () => {
             <View style={[styles.actionIconBox, { backgroundColor: '#FDF2F8' }]}>
               <MaterialCommunityIcons name="credit-card-outline" size={24} color="#DB2777" />
             </View>
-            <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Reimbursement Claim</Text>
+            <Text style={[styles.actionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:reimbursementClaim')}</Text>
             <Text style={[styles.actionSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Submit bills and refund expenses</Text>
           </TouchableOpacity>
         </View>
@@ -396,7 +398,7 @@ const HealthDashboard: React.FC = () => {
           {/* Benefit 1 */}
           <View style={[styles.benefitCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
             <MaterialCommunityIcons name="shield-outline" size={22} color="#005b7f" style={styles.benefitIcon} />
-            <Text style={[styles.benefitLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Sum Insured</Text>
+            <Text style={[styles.benefitLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('insurance:sumInsured')}</Text>
             <Text style={[styles.benefitVal, { color: '#005b7f' }]}>₹10,00,000</Text>
           </View>
 
@@ -455,7 +457,7 @@ const HealthDashboard: React.FC = () => {
               <Text style={styles.processStepText}>2</Text>
             </View>
             <MaterialCommunityIcons name="shield-search" size={20} color="#EA580C" />
-            <Text style={[styles.processTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Review</Text>
+            <Text style={[styles.processTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:review')}</Text>
             <Text style={[styles.processSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>We review your documents</Text>
           </View>
 
@@ -507,7 +509,7 @@ const HealthDashboard: React.FC = () => {
                 activeOpacity={0.6}
                 onPress={() => navigation.navigate('HealthClaimsScreen')}
               >
-                <Text style={styles.viewAllTextCompact}>View All</Text>
+                <Text style={styles.viewAllTextCompact}>{translateUi('common:viewAll')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -582,7 +584,7 @@ const HealthDashboard: React.FC = () => {
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#18181B' : '#FFFFFF', borderTopColor: isDark ? '#27272A' : '#E4E4E7' }]}>
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6}>
           <MaterialCommunityIcons name="home" size={24} color="#005b7f" />
-          <Text style={[styles.tabLabel, { color: '#005b7f', fontWeight: '700' }]}>Home</Text>
+          <Text style={[styles.tabLabel, { color: '#005b7f', fontWeight: '700' }]}>{translateUi('common:home')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -591,12 +593,12 @@ const HealthDashboard: React.FC = () => {
           onPress={() => navigation.navigate('HealthClaimsScreen')}
         >
           <MaterialCommunityIcons name="file-document-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Claims</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:claims')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('Profile')}>
           <MaterialCommunityIcons name="account-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Profile</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

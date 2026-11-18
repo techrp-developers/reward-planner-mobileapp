@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -30,6 +31,7 @@ export default function PriceDetailsCard({
   rewardRedeemed,
   paymentMethod,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
 
   const showEarnedBanner = isRewardCredited && rewardEarned > 0;
@@ -38,7 +40,7 @@ export default function PriceDetailsCard({
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
       {/* Title */}
-      <Text style={[styles.title, { color: theme.text }]}>Price Details</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{translateUi('products:priceDetails')}</Text>
 
       {/* Green reward earned banner */}
       {showEarnedBanner ? (
@@ -55,17 +57,17 @@ export default function PriceDetailsCard({
         </View>
       ) : null}
 
-      {offerSavings > 0 && <Row label="Offer savings (included)" value={`₹${offerSavings.toFixed(2)}`} valueStyle={styles.negative} />}
+      {offerSavings > 0 && <Row label={translateUi('common:includedSavings')} value={`₹${offerSavings.toFixed(2)}`} valueStyle={styles.negative} />}
       {/* Price rows */}
-      <Row label="Item Total" value={`₹${itemTotal}`} />
-      <Row label="Delivery Fee" value={`₹${deliveryFee}`} />
+      <Row label={translateUi('common:itemTotal')} value={`₹${itemTotal}`} />
+      <Row label={translateUi('common:deliveryFee')} value={`₹${deliveryFee}`} />
       <Row
-        label="Bag Discount"
+        label={translateUi('common:bagDiscount')}
         value={`-₹${bagDiscount}`}
         valueStyle={styles.negative}
       />
       <Row
-        label="Reward Discount"
+        label={translateUi('common:rewardDiscount')}
         value={`-₹${rewardDiscount}`}
         valueStyle={styles.negative}
       />
@@ -74,13 +76,13 @@ export default function PriceDetailsCard({
 
       {/* Order total */}
       <View style={styles.rowBetween}>
-        <Text style={[styles.totalLabel, { color: theme.text }]}>Order Total</Text>
+        <Text style={[styles.totalLabel, { color: theme.text }]}>{translateUi('common:orderTotal')}</Text>
         <Text style={[styles.totalValue, { color: theme.text }]}>₹{orderTotal}</Text>
       </View>
 
       {/* Payment method */}
       <View style={styles.rowBetween}>
-        <Text style={[styles.paymentLabel, { color: theme.secondaryText }]}>Payment Method</Text>
+        <Text style={[styles.paymentLabel, { color: theme.secondaryText }]}>{translateUi('products:paymentMethod')}</Text>
         <Text style={[styles.paymentValue, { color: theme.text }]}>{paymentMethod}</Text>
       </View>
 

@@ -13,6 +13,7 @@ import NetworkGuard from './src/modules/common/noInternet/NetworkGuard';
 import PushNotificationManager from './src/modules/common/notifications/PushNotificationManager';
 import { navigationRef } from './src/navigation/navigationRef';
 import { useFestivalIcon } from './src/hooks/useFestivalIcon';
+import { LanguageProvider } from './src/i18n/LanguageContext';
 type AuthModalStackParamList = {
   Login: undefined;
   LoginOTP: { identifier: string };
@@ -46,17 +47,19 @@ export default function App() {
         <AppThemeProvider>
           <AlertProvider>
             <AuthProvider>
-              <CartProvider>
-                <CmsAppShellProvider>
-                  <NetworkGuard>
-                    <NavigationContainer ref={navigationRef} linking={linking}>
-                      <PushNotificationManager />
-                      <AlertContainer />
-                      <RootNavigator />
-                    </NavigationContainer>
-                  </NetworkGuard>
-                </CmsAppShellProvider>
-              </CartProvider>
+              <LanguageProvider>
+                <CartProvider>
+                  <CmsAppShellProvider>
+                    <NetworkGuard>
+                      <NavigationContainer ref={navigationRef} linking={linking}>
+                        <PushNotificationManager />
+                        <AlertContainer />
+                        <RootNavigator />
+                      </NavigationContainer>
+                    </NetworkGuard>
+                  </CmsAppShellProvider>
+                </CartProvider>
+              </LanguageProvider>
             </AuthProvider>
           </AlertProvider>
         </AppThemeProvider>

@@ -1,5 +1,7 @@
 import { normalizeLocalCmsImageUrl } from '../../config/apiConfig';
 import type { ChatConversation, ChatMember } from './types';
+import i18n from '../../i18n';
+import { formatDisplayTime, getAppLocale } from '../../i18n/format';
 
 export const chatImageUrl = (value?: string | null) => normalizeLocalCmsImageUrl(value) ?? undefined;
 
@@ -9,8 +11,8 @@ export function otherMember(conversation: ChatConversation, currentUserId?: numb
 
 export function conversationTitle(conversation: ChatConversation, currentUserId?: number) {
   return conversation.type === 'group'
-    ? conversation.name || 'Group chat'
-    : otherMember(conversation, currentUserId)?.name || 'Chat';
+    ? conversation.name || i18n.t('chat:groupChat')
+    : otherMember(conversation, currentUserId)?.name || i18n.t('common:chat');
 }
 
 export function initials(name?: string | null) {
@@ -23,28 +25,28 @@ export function chatTime(value?: string | null) {
   if (Number.isNaN(date.getTime())) return '';
   const today = new Date();
   if (date.toDateString() === today.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return formatDisplayTime(date, { hour: '2-digit' });
   }
-  return date.toLocaleDateString([], { day: '2-digit', month: 'short' });
+  return date.toLocaleDateString(getAppLocale(), { day: '2-digit', month: 'short' });
 }
 
 // WhatsApp-style status: "last seen today at 4:05 pm", "yesterday at …", "on 12 Oct at …".
 export function lastSeenLabel(value?: string | null) {
-  if (!value) return 'status unavailable';
+  if (!value) return i18n.t('chat:presenceUnavailable');
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'status unavailable';
-  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (Number.isNaN(date.getTime())) return i18n.t('chat:presenceUnavailable');
+  const time = formatDisplayTime(date, { hour: '2-digit' });
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return `last seen today at ${time}`;
-  if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
-  const day = date.toLocaleDateString([], {
+  if (date.toDateString() === today.toDateString()) return i18n.t('chat:lastSeenToday', { time });
+  if (date.toDateString() === yesterday.toDateString()) return i18n.t('chat:lastSeenYesterday', { time });
+  const day = date.toLocaleDateString(getAppLocale(), {
     day: '2-digit',
     month: 'short',
     ...(date.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
   });
-  return `last seen on ${day} at ${time}`;
+  return i18n.t('chat:lastSeenDate', { date: day, time });
 }
 
 export function chatError(error: any, fallback: string) {

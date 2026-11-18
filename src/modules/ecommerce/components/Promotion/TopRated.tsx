@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from "react";
 import {
   StyleSheet,
@@ -81,6 +82,7 @@ export const prefetchTopRatedSection = async () => {
 };
 
 function TopRated() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const pulse = useState(() => new Animated.Value(0))[0];
   const { isDark, theme } = useAppTheme();
@@ -136,7 +138,7 @@ function TopRated() {
           activeOpacity={0.85}
           onPress={handleExplore}
         >
-          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:exploreMore')}</Text>
           <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>

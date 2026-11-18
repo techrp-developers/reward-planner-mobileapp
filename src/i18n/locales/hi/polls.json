@@ -1,0 +1,12 @@
+{
+  "voteFailed": "वोट जमा नहीं हुआ",
+  "vote": "वोट दें",
+  "voteError": "आपका वोट जमा नहीं हो सका",
+  "oneOption": "एक विकल्प चुनें",
+  "multipleOptions": "एक या अधिक विकल्प चुनें",
+  "votes_one": "{{count}} वोट",
+  "votes_other": "{{count}} वोट",
+  "voted_one": "वोट दिया · {{count}} वोट",
+  "voted_other": "वोट दिया · {{count}} वोट",
+  "closesAt": "{{date}} को बंद होगा"
+}

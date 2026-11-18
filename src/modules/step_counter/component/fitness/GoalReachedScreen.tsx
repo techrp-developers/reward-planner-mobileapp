@@ -12,6 +12,10 @@ import {
   ViewStyle,
 } from "react-native";
 import type { OverallSummary } from "../../api/Stepsapi";
+import { useTranslation } from "react-i18next";
+import i18n from "../../../../i18n";
+import { formatNumber } from "../../../../i18n/format";
+import { useStepStyles } from "../../utils/useStepTheme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 // Dashboard-overlay only (no registered route) — shown right after the
@@ -95,7 +99,9 @@ const ConfettiPiece: React.FC<{ index: number }> = ({ index }) => {
 };
 
 // ─── Goal Illustration ────────────────────────────────────────────────────────
-const GoalIllustration: React.FC<{ scale: Animated.Value }> = ({ scale }) => (
+const GoalIllustration: React.FC<{ scale: Animated.Value }> = ({ scale }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  return (
   <Animated.View style={[styles.illustrationBox, { transform: [{ scale }] }]}>
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {Array.from({ length: CONFETTI_COUNT }).map((_, i) => (
@@ -105,7 +111,7 @@ const GoalIllustration: React.FC<{ scale: Animated.Value }> = ({ scale }) => (
 
     <View style={styles.goalScene}>
       <View style={styles.signBoard}>
-        <Text style={styles.signBoardText}>GOAL</Text>
+        <Text style={styles.signBoardText}>{i18n.t("stepCounter:goalReachedScreen.goal")}</Text>
       </View>
       <View style={styles.postsRow}>
         <View style={styles.signPost} />
@@ -126,7 +132,8 @@ const GoalIllustration: React.FC<{ scale: Animated.Value }> = ({ scale }) => (
       </View>
     </View>
   </Animated.View>
-);
+  );
+};
 
 // ─── Animated Section Card ────────────────────────────────────────────────────
 const SectionCard: React.FC<{
@@ -134,7 +141,9 @@ const SectionCard: React.FC<{
   fadeAnim: Animated.Value;
   slideAnim: Animated.Value;
   highlighted?: boolean;
-}> = ({ children, fadeAnim, slideAnim, highlighted }) => (
+}> = ({ children, fadeAnim, slideAnim, highlighted }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  return (
   <Animated.View
     style={[
       styles.sectionCard,
@@ -144,10 +153,12 @@ const SectionCard: React.FC<{
   >
     {children}
   </Animated.View>
-);
+  );
+};
 
 // ─── Gradient Progress Bar ────────────────────────────────────────────────────
 const GradientBar: React.FC<{ progress: number }> = ({ progress }) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   const widthAnimRef = useRef(new Animated.Value(0));
   const widthAnim    = widthAnimRef.current;
 
@@ -185,6 +196,8 @@ const GoalReachedScreen: React.FC<Props> = ({
   onContinue,
   onBack,
 }) => {
+  const { palette: VD, styles, isDark } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { t: tx } = useTranslation();
   const heroScaleRef = useRef(new Animated.Value(0.8));
   const heroScale    = heroScaleRef.current;
 
@@ -213,9 +226,9 @@ const GoalReachedScreen: React.FC<Props> = ({
   }, [heroScale, anims]);
 
   const summaryRows = [
-    { icon: "🥾", label: "Steps",          value: `${overallSummary.steps.toLocaleString()} steps` },
-    { icon: "🔥", label: "Calories Burned", value: `${overallSummary.calories} kcal` },
-    { icon: "📍", label: "Distance",        value: `${overallSummary.distance_km} km` },
+    { icon: "🥾", label: tx("stepCounter:summary.steps"), value: tx("stepCounter:units.stepsN", { value: formatNumber(overallSummary.steps) }) },
+    { icon: "🔥", label: tx("stepCounter:summary.calories"), value: tx("stepCounter:units.kcalN", { value: overallSummary.calories }) },
+    { icon: "📍", label: tx("stepCounter:summary.distance"), value: tx("stepCounter:units.kmN", { value: overallSummary.distance_km }) },
   ];
 
   // No daily_target here (that's the detailed screen's job) — use a fixed
@@ -224,7 +237,7 @@ const GoalReachedScreen: React.FC<Props> = ({
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EDEEF8" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={VD.bg0} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -237,7 +250,7 @@ const GoalReachedScreen: React.FC<Props> = ({
           <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Goal Completed</Text>
+          <Text style={styles.headerTitle}>{tx("stepCounter:goalReachedScreen.goalCompleted")}</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -247,14 +260,14 @@ const GoalReachedScreen: React.FC<Props> = ({
         <GoalIllustration scale={heroScale} />
 
         <View style={styles.targetReachedBox}>
-          <Text style={styles.targetReachedTitle}>Target Reached!</Text>
+          <Text style={styles.targetReachedTitle}>{tx("stepCounter:goalReachedScreen.targetReached")}</Text>
           <Text style={styles.targetReachedSub}>
-            You successfully completed your goal for today. Keep the momentum going.
+            {tx("stepCounter:goalReachedScreen.youSuccessfullyCompletedYourGoal")}
           </Text>
         </View>
 
         <SectionCard fadeAnim={anims[0].fade} slideAnim={anims[0].slide} highlighted>
-          <Text style={styles.sectionTitle}>Overall Summary</Text>
+          <Text style={styles.sectionTitle}>{tx("stepCounter:goalReachedScreen.overallSummary")}</Text>
           {summaryRows.map((row, i) => (
             <View key={i} style={[styles.summaryRow, i < summaryRows.length - 1 && styles.rowDivider]}>
               <Text style={styles.summaryIcon}>{row.icon}</Text>
@@ -271,7 +284,7 @@ const GoalReachedScreen: React.FC<Props> = ({
           <View style={styles.streakRow}>
             <View>
               <Text style={styles.sectionTitle}>
-                Current Streak {"  "}
+                {i18n.t("stepCounter:ui.currentStreak")} {"  "}
                 <Text style={styles.streakLightning}>⚡</Text>
               </Text>
             </View>
@@ -281,7 +294,7 @@ const GoalReachedScreen: React.FC<Props> = ({
 
         {reward > 0 && (
           <View style={styles.rewardBadge}>
-            <Text style={styles.rewardText}>🪙 +{reward} RP Points earned!</Text>
+            <Text style={styles.rewardText}>🪙 +{reward} coins earned!</Text>
           </View>
         )}
 
@@ -295,7 +308,7 @@ const GoalReachedScreen: React.FC<Props> = ({
           onPress={onContinue}
           activeOpacity={0.87}
         >
-          <Text style={styles.continueTxt}>Continue</Text>
+          <Text style={styles.continueTxt}>{tx("stepCounter:goalReachedScreen.continue")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -305,7 +318,7 @@ const GoalReachedScreen: React.FC<Props> = ({
 export default GoalReachedScreen;
 
 // ─── Violet Dusk palette (mirrors TodayGoalCompletedScreen.tsx) ─────────────
-const VD = {
+const VD_DARK = {
   bg0:         "#1A1040",
   accent:      "#C4A8FF",
   accentDim:   "rgba(196,168,255,0.25)",
@@ -316,10 +329,29 @@ const VD = {
   whiteLow:    "rgba(255,255,255,0.45)",
   success:     "#4ADE80",
   warning:     "#FBBF24",
+  glassFaint: "rgba(255,255,255,0.05)",
+  track: "rgba(255,255,255,0.10)",
+};
+
+type Palette = typeof VD_DARK;
+
+const VD_LIGHT: Palette = {
+  bg0: "#F4F0FF",
+  accent: "#773CFF",
+  accentDim: "rgba(119,60,255,0.18)",
+  cardBg: "#FFFFFF",
+  cardBorder: "rgba(119,60,255,0.16)",
+  white: "#10152D",
+  whiteMid: "rgba(16,21,45,0.70)",
+  whiteLow: "rgba(16,21,45,0.45)",
+  success: "#16A34A",
+  warning: "#C27C00",
+  glassFaint: "#F7F4FF",
+  track: "rgba(119,60,255,0.12)",
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (VD: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: VD.bg0 },
 
   header: {
@@ -328,12 +360,12 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 58 : 28,
     paddingBottom: 10,
     paddingHorizontal: 16,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: VD.glassFaint,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: VD.cardBorder,
   },
   backBtn:      { width: 36, alignItems: "flex-start", justifyContent: "center" },
-  backArrow:    { fontSize: 34, color: VD.accent, lineHeight: 38, fontWeight: "300" },
+  backArrow:    { fontSize: 34, color: VD.accent, lineHeight: 41, fontWeight: "300" },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle:  { fontSize: 16, fontWeight: "800", color: VD.white, letterSpacing: -0.2 },
   headerSpacer: { width: 36 },
@@ -404,7 +436,7 @@ const styles = StyleSheet.create({
   summaryValue:    { fontSize: 13.5, fontWeight: "700", color: VD.accent },
   gradBarContainer:{ marginTop: 12 },
 
-  gradBarTrack: { height: 8, backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 6, overflow: "hidden" },
+  gradBarTrack: { height: 8, backgroundColor: VD.track, borderRadius: 6, overflow: "hidden" },
   gradBarFill:  { height: "100%", borderRadius: 6, backgroundColor: VD.accent },
 
   streakRow:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -426,7 +458,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: Platform.OS === "ios" ? 38 : 22,
     paddingTop: 10,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: VD.glassFaint,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: VD.cardBorder,
   },

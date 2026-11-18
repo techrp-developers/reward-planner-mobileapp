@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   View,
@@ -159,6 +160,7 @@ const AgeInputDropdown: React.FC<{
 };
 
 export default function Step2({ data, setData, onNext, onBack }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
@@ -238,7 +240,7 @@ export default function Step2({ data, setData, onNext, onBack }: Props) {
           </TouchableOpacity>
           <View style={styles.buttonWrapper}>
             <GradientButton
-              title="Next"
+              title={translateUi('common:next')}
               onPress={onNext}
               disabled={isNextDisabled}
               style={styles.nextButton}

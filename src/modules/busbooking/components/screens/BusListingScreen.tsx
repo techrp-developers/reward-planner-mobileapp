@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { getVerifiedAvailableSeats, formatAvailableSeats as toSeatLabel } from "../../utils/busSeatAvailability";
 
@@ -345,6 +346,7 @@ const SORT_LABELS: Record<BusSortId, string> = {
 };
 
 export default function BusListingScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation =
     useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const { popup, showPopup, hidePopup } = useBusBookingPopup();
@@ -899,7 +901,7 @@ item.id ? (
           : null,
       ]}
     >
-      Loading...
+      {translateUi('common:loading')}
     </Text>
 
   </View>

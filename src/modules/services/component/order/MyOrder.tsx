@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -292,6 +293,7 @@ function FilterBottomSheet({
   onApply: (time: string, status: string) => void;
   servicesTheme: ServicesTheme;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const [selectedTime, setSelectedTime] = useState(currentTime);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 
@@ -309,18 +311,18 @@ function FilterBottomSheet({
         <View style={[styles.handle, { backgroundColor: servicesTheme.colors.divider }]} />
 
         <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: servicesTheme.colors.textStrong }]}>Filter Orders</Text>
+          <Text style={[styles.sheetTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:filterOrders')}</Text>
           <TouchableOpacity
             onPress={() => {
               setSelectedTime("");
               setSelectedStatus("");
             }}
           >
-            <Text style={styles.resetText}>Reset</Text>
+            <Text style={styles.resetText}>{translateUi('common:reset')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>Order Time</Text>
+        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>{translateUi('common:orderTime')}</Text>
         <View style={styles.chipGrid}>
           {TIME_FILTERS.map(item => (
             <TouchableOpacity
@@ -346,7 +348,7 @@ function FilterBottomSheet({
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>Order Status</Text>
+        <Text style={[styles.sectionLabel, { color: servicesTheme.colors.muted }]}>{translateUi('common:orderStatus')}</Text>
         <View style={styles.chipGrid}>
           {STATUS_FILTERS.map(item => (
             <TouchableOpacity
@@ -382,7 +384,7 @@ function FilterBottomSheet({
             end={{ x: 1, y: 0 }}
             style={styles.applyBtn}
           >
-            <Text style={styles.applyBtnText}>Apply Filters</Text>
+            <Text style={styles.applyBtnText}>{translateUi('common:applyFilters')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -391,6 +393,7 @@ function FilterBottomSheet({
 }
 
 export default function MyOrder() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
   const { isAuthenticated } = useAuth();
@@ -497,7 +500,7 @@ export default function MyOrder() {
         <View style={[styles.searchBox, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
           <MaterialCommunityIcons name="magnify" size={20} color={servicesTheme.colors.muted} />
           <TextInput
-            placeholder="Search your orders here"
+            placeholder={translateUi('common:searchOrders')}
             placeholderTextColor={servicesTheme.colors.subtle}
             style={[styles.searchInput, { color: servicesTheme.colors.text }]}
             value={searchQuery}
@@ -516,7 +519,7 @@ export default function MyOrder() {
           activeOpacity={0.78}
         >
           <MaterialCommunityIcons name="tune-variant" size={20} color={servicesTheme.colors.muted} />
-          <Text style={[styles.filterText, { color: servicesTheme.colors.muted }]}>Filters</Text>
+          <Text style={[styles.filterText, { color: servicesTheme.colors.muted }]}>{translateUi('common:filters')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -553,13 +556,13 @@ export default function MyOrder() {
         <View style={styles.stateWrap}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => loadOrders(1)}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{translateUi('common:tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    return <Text style={[styles.emptyText, { color: servicesTheme.colors.muted }]}>No orders found</Text>;
+    return <Text style={[styles.emptyText, { color: servicesTheme.colors.muted }]}>{translateUi('common:noOrders')}</Text>;
   };
 
   return (
@@ -572,7 +575,7 @@ export default function MyOrder() {
         >
           <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headingTitle, { color: servicesTheme.colors.textStrong }]}>My Orders</Text>
+        <Text style={[styles.headingTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:myOrders')}</Text>
         <TouchableOpacity
           activeOpacity={0.85}
           style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}
@@ -584,7 +587,7 @@ export default function MyOrder() {
             color="#EC4899"
             style={styles.helpIcon}
           />
-          <Text style={styles.helpText}>Help</Text>
+          <Text style={styles.helpText}>{translateUi('common:help')}</Text>
         </TouchableOpacity>
       </View>
 

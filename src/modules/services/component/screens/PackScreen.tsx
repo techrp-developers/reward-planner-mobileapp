@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Text, Image, ActivityIndicator, Alert } from 'react-native';
 
@@ -100,6 +101,7 @@ const parseTrustStat = (raw: string): StatItem => {
 
 
 function PackScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProp>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<PackRouteProp>();
@@ -357,7 +359,7 @@ function PackScreen() {
       const finalBundleId = Number(resolvedBundleId);
 
       if (!finalBundleId) {
-        Alert.alert('Error', 'Bundle ID missing');
+        Alert.alert(translateUi('common:error'), 'Bundle ID missing');
         return;
       }
 
@@ -389,7 +391,7 @@ function PackScreen() {
 
     } catch (error: any) {
       console.error("❌ Buy Now Bundle Error:", error);
-      Alert.alert("Error", error?.message || "Failed to proceed");
+      Alert.alert(translateUi('common:error'), error?.message || "Failed to proceed");
     }
   };
 

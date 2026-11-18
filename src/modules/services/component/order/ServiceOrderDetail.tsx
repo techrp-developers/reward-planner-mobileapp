@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -102,6 +103,7 @@ function formatDate(dateStr: string): string {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ServiceOrderDetail() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
   const route = useRoute<RouteT>();
@@ -285,7 +287,7 @@ export default function ServiceOrderDetail() {
           <MaterialCommunityIcons name="alert-circle-outline" size={52} color="#DC2626" />
           <Text style={styles.errorText}>{error || 'Order not found.'}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchOrder()}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{translateUi('common:tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -422,7 +424,7 @@ export default function ServiceOrderDetail() {
               <Text style={styles.statValue}>
                 {order.items.length + order.bundles.reduce((s, b) => s + b.items.length, 0)}
               </Text>
-              <Text style={styles.statLabel}>Services</Text>
+              <Text style={styles.statLabel}>{translateUi('common:services')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
@@ -539,6 +541,7 @@ export default function ServiceOrderDetail() {
 
 // ── Local layout helpers (not exported — presentational only) ─────────────────
 function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
 
   return (
@@ -550,7 +553,7 @@ function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) 
       >
         <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
       </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Order Details</Text>
+      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:orderDetails')}</Text>
       <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
         <MaterialCommunityIcons
           name="chat-outline"
@@ -558,7 +561,7 @@ function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) 
           color="#EC4899"
           style={styles.helpIcon}
         />
-        <Text style={styles.helpText}>Help</Text>
+        <Text style={styles.helpText}>{translateUi('common:help')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -598,6 +601,7 @@ function OrderDocumentsCard({
   onPay: () => void;
   onUpload: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const complete = pending === 0;
 
@@ -611,7 +615,7 @@ function OrderDocumentsCard({
         />
       </View>
       <View style={styles.documentsCopy}>
-        <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>Documents</Text>
+        <Text style={[styles.documentsTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:documents')}</Text>
         <Text style={[styles.documentsText, { color: servicesTheme.colors.muted }]}>
           {complete
             ? `${uploaded} of ${total} documents uploaded`
@@ -627,7 +631,7 @@ function OrderDocumentsCard({
         </View>
       ) : canUpload ? (
         <TouchableOpacity style={styles.uploadDocumentsButton} onPress={onUpload}>
-          <Text style={styles.uploadDocumentsText}>Upload</Text>
+          <Text style={styles.uploadDocumentsText}>{translateUi('common:upload')}</Text>
           <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
         </TouchableOpacity>
       ) : (
@@ -661,11 +665,12 @@ function InvoiceDownloadRow({
   downloading: boolean;
   onDownload: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
 
   return (
     <View style={[styles.invoiceRow, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
-      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>Save a copy of your order</Text>
+      <Text style={[styles.invoiceText, { color: servicesTheme.colors.text }]}>{translateUi('common:saveOrderCopy')}</Text>
 
       <TouchableOpacity
         style={[styles.invoiceButton, downloading && styles.invoiceButtonDisabled]}
@@ -676,7 +681,7 @@ function InvoiceDownloadRow({
         {downloading ? (
           <ActivityIndicator size="small" color={servicesTheme.colors.primary} />
         ) : (
-          <Text style={[styles.invoiceButtonText, { color: servicesTheme.colors.primary }]}>Download Invoice</Text>
+          <Text style={[styles.invoiceButtonText, { color: servicesTheme.colors.primary }]}>{translateUi('common:downloadInvoice')}</Text>
         )}
       </TouchableOpacity>
     </View>

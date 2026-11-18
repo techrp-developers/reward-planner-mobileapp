@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   StyleSheet,
@@ -26,6 +27,7 @@ const MODULE_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const ComingSoonScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const route = useRoute<RouteProp<ComingSoonRouteParams, 'ComingSoon'>>();
   const rawModuleName = route?.params?.moduleName || 'Dashboard';
   const moduleName = MODULE_DISPLAY_NAMES[rawModuleName] ?? rawModuleName;
@@ -66,7 +68,7 @@ const ComingSoonScreen = () => {
               ) : (
                 <View style={styles.placeholderBox}>
                   <Text style={styles.placeholderText}>🚀</Text>
-                  <Text style={styles.placeholderLabel}>Coming Soon</Text>
+                  <Text style={styles.placeholderLabel}>{translateUi('common:comingSoon')}</Text>
                 </View>
               )}
             </View>

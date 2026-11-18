@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -81,6 +82,7 @@ const getCategoryFromWork = (selectedWork?: string): number | null => {
 };
 
 export default function Step3PA({ data, setData, onBack, onShowResults }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const [dropdownVisibleFor, setDropdownVisibleFor] = useState<string | null>(
     null
@@ -93,9 +95,9 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
       try {
         if (!isAuthenticated()) {
           Alert.alert(
-            "Login Required",
-            "Please log in to get insurance quotes",
-            [{ text: "OK", onPress: () => onBack() }]
+            translateUi('common:loginRequired'),
+            translateUi('common:loginForQuotes'),
+            [{ text: translateUi('common:ok'), onPress: () => onBack() }]
           );
           setChecking(false);
           return;
@@ -178,24 +180,24 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
 
   const handleSubmit = async () => {
     if (!isFormValid) {
-      Alert.alert("Validation", "Please fill all required fields");
+      Alert.alert(translateUi('common:validation'), translateUi('common:requiredFields'));
       return;
     }
 
     const category = getCategoryFromWork(data.details.natureOfWork);
     if (!category) {
-      Alert.alert("Validation", "Please select a valid nature of work");
+      Alert.alert(translateUi('common:validation'), "Please select a valid nature of work");
       return;
     }
 
     if (!isAuthenticated()) {
-      Alert.alert("Authentication Required", "Please log in to continue");
+      Alert.alert(translateUi('common:authRequired'), translateUi('common:loginToContinue'));
       return;
     }
 
     const enquiryId = data.details.enquiryId;
     if (!enquiryId) {
-      Alert.alert("Error", "Session expired. Please go back to Step 1 and restart.");
+      Alert.alert(translateUi('common:error'), translateUi('common:sessionRestart'));
       return;
     }
 
@@ -253,10 +255,10 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
           enquiryId,
         });
       } else {
-        Alert.alert("Error", "No quotes could be fetched. Please try again.");
+        Alert.alert(translateUi('common:error'), translateUi('common:noQuotes'));
       }
     } catch (error: any) {
-      Alert.alert("Error", error?.response?.data?.message || error?.message || "Something went wrong");
+      Alert.alert(translateUi('common:error'), error?.response?.data?.message || error?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -273,7 +275,7 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
         >
         <View style={styles.centerContainer}>
           <MaterialIcons name="lock-outline" size={50} color={servicesTheme.colors.primary} />
-          <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>Verifying authentication...</Text>
+          <Text style={[styles.loadingText, { color: servicesTheme.colors.primary }]}>{translateUi('common:verifyingAuth')}</Text>
         </View>
         </LinearGradient>
       </SafeAreaView>
@@ -437,8 +439,8 @@ export default function Step3PA({ data, setData, onBack, onShowResults }: Props)
                 )}
               </View>
               <Text style={[styles.termsLabel, { color: servicesTheme.colors.muted }]}>
-                I agree to the <Text style={styles.boldLink}>Terms & Conditions</Text>{" "}
-                and <Text style={styles.boldLink}>Privacy Policy</Text>
+                I agree to the <Text style={styles.boldLink}>{translateUi('common:terms')}</Text>{" "}
+                and <Text style={styles.boldLink}>{translateUi('common:privacyPolicy')}</Text>
               </Text>
             </TouchableOpacity>
           </View>

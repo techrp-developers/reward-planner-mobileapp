@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { 
   View, 
@@ -16,6 +17,7 @@ import Share from 'react-native-share';
 import CenterIcon from "../../../assets/menu/Menu_Home.svg"; 
 
 const InvoiceScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   // In a real app, this would come from: const { orderId } = route.params; 
   // followed by a useEffect fetch call.
   const invoiceData = {
@@ -96,7 +98,7 @@ const InvoiceScreen = () => {
         ...(Platform.OS === 'android' ? ({ useInternalStorage: true } as Record<string, unknown>) : {}),
       });
     } catch {
-      Alert.alert('Error', 'Could not generate PDF');
+      Alert.alert(translateUi('common:error'), 'Could not generate PDF');
     }
   };
 
@@ -118,7 +120,7 @@ const InvoiceScreen = () => {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionHeader}>Order Summary</Text>
+          <Text style={styles.sectionHeader}>{translateUi('common:orderSummary')}</Text>
           {invoiceData.items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <Text style={styles.itemName}>{item.name} (x{item.quantity})</Text>

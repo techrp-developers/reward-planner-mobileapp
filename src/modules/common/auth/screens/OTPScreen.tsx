@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from "react";
 import { BackHandler, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -13,6 +14,7 @@ import { useAlert } from "../../../ecommerce/components/alerts";
 type Props = NativeStackScreenProps<AuthStackParamList, "LoginOTP">;
 
 export default function OTPScreen({ route, navigation }: Props) {
+  const { t: authText } = useTranslation('auth');
   const { verifyLoginOtp, requestLoginOtp } = useAuth();
   const { theme, isDark } = useAppTheme();
   const alert = useAlert();
@@ -65,7 +67,7 @@ export default function OTPScreen({ route, navigation }: Props) {
     } catch (failure) {
       if (!mounted.current) return;
       if (isUserInactiveError(failure)) {
-        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        alert.error(authText('auth:inactiveTitle'), authErrorMessage(failure, authText('auth:inactive')));
         return;
       }
       const retryAfter = rateLimitDelay(failure);
@@ -73,7 +75,7 @@ export default function OTPScreen({ route, navigation }: Props) {
         rateLimit.reset(retryAfter);
         cooldown.reset(Math.max(retryAfter, cooldown.secondsLeft));
       }
-      setError(authErrorMessage(failure, "This code couldn't be verified. Check the code or request a new one."));
+      setError(authErrorMessage(failure, authText('auth:verifyFailed')));
       inputs.current[0]?.focus();
     } finally {
       inFlight.current = false;
@@ -107,11 +109,11 @@ export default function OTPScreen({ route, navigation }: Props) {
       cooldown.reset();
       lastAutoCode.current = null;
       applyDigits(emptyOtp());
-      setNotice(isPhone ? "A new code was requested on WhatsApp. Use the latest code." : "A new code was requested by email. Use the latest code.");
+      setNotice(isPhone ? authText('auth:newCodeWhatsapp') : authText('auth:newCodeEmail'));
     } catch (failure) {
       if (!mounted.current) return;
       if (isUserInactiveError(failure)) {
-        alert.error("Account Inactive", authErrorMessage(failure, "User inactive. Please contact your HR."));
+        alert.error(authText('auth:inactiveTitle'), authErrorMessage(failure, authText('auth:inactive')));
         return;
       }
       const retryAfter = rateLimitDelay(failure);
@@ -119,7 +121,7 @@ export default function OTPScreen({ route, navigation }: Props) {
         cooldown.reset(retryAfter);
         rateLimit.reset(retryAfter);
       }
-      setError(authErrorMessage(failure, "We couldn't resend your code. Please try again."));
+      setError(authErrorMessage(failure, authText('auth:resendFailed')));
     } finally {
       inFlight.current = false;
       if (mounted.current) {
@@ -138,16 +140,16 @@ export default function OTPScreen({ route, navigation }: Props) {
 
   return (
     <AuthLayout onBack={busy ? undefined : changeDestination}>
-      <Text style={[authStyles.title, { color: theme.text }]}>{isPhone ? "Verify your mobile number" : "Verify your email"}</Text>
-      <Text style={[styles.caption, { color: theme.secondaryText }]}>{isPhone ? "Look for your verification code on WhatsApp at:" : "Look for your verification code in the inbox for:"}</Text>
+      <Text style={[authStyles.title, { color: theme.text }]}>{isPhone ? authText('auth:verifyMobile') : authText('auth:verifyEmail')}</Text>
+      <Text style={[styles.caption, { color: theme.secondaryText }]}>{isPhone ? authText('auth:whatsappCode') : authText('auth:emailCode')}</Text>
       <Text style={[styles.destination, { color: theme.text }]}>{destination}</Text>
-      <Text style={[styles.caption, { color: theme.secondaryText }]}>Enter or paste your {OTP_LENGTH}-digit code.</Text>
+      <Text style={[styles.caption, { color: theme.secondaryText }]}>{authText('auth:enterCode', { length: OTP_LENGTH })}</Text>
       <View style={styles.otpRow}>
         {digits.map((digit, index) => <TextInput
           key={index}
           ref={ref => { inputs.current[index] = ref; }}
           testID={`otp-digit-${index}`}
-          accessibilityLabel={`Code digit ${index + 1} of ${OTP_LENGTH}`}
+          accessibilityLabel={authText('auth:codeDigit', { position: index + 1, length: OTP_LENGTH })}
           value={digit} keyboardType="number-pad" inputMode="numeric"
           // Allow a full pasted code in any field; updateOtpDigits distributes it.
           selectTextOnFocus selection={{ start: 0, end: digit.length }}
@@ -175,19 +177,19 @@ export default function OTPScreen({ route, navigation }: Props) {
       </View>
       {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[authStyles.error, isDark && styles.darkError]}>{error}</Text>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={[styles.notice, { color: theme.secondaryText }]}>{notice}</Text>}
-      <AuthButton title={verifying ? "Verifying…" : "Verify"} onPress={() => { void verify(digitsRef.current.join(""), false); }}
+      <AuthButton title={verifying ? authText('auth:verifying') : authText('auth:verify')} onPress={() => { void verify(digitsRef.current.join(""), false); }}
         busy={verifying} disabled={!complete || resending || !rateLimit.canResend} />
-      <Text style={[styles.autoHint, { color: theme.secondaryText }]}>{rateLimit.secondsLeft > 0 ? `Try again in ${rateLimit.secondsLeft}s` : "We'll verify automatically when your code is complete."}</Text>
+      <Text style={[styles.autoHint, { color: theme.secondaryText }]}>{rateLimit.secondsLeft > 0 ? authText('auth:retryIn', { count: rateLimit.secondsLeft }) : authText('auth:verifyAutomatic')}</Text>
       <TouchableOpacity accessibilityRole="button" disabled={busy || !cooldown.canResend || !rateLimit.canResend}
         onPress={() => { void resend(); }}>
         <Text style={[authStyles.link, { color: busy || !cooldown.canResend ? theme.secondaryText : theme.primary }]}>
-          {resending ? "Sending code…" : cooldown.secondsLeft > 0 ? `Resend in ${cooldown.secondsLeft}s` : "Resend OTP"}
+          {resending ? authText('auth:sending') : cooldown.secondsLeft > 0 ? authText('auth:resendIn', { count: cooldown.secondsLeft }) : authText('auth:resendOtp')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity accessibilityRole="button" onPress={changeDestination} disabled={busy}>
-        <Text style={[authStyles.link, { color: theme.primary, opacity: busy ? 0.5 : 1 }]}>{isPhone ? "Change Mobile Number" : "Change Email"}</Text>
+        <Text style={[authStyles.link, { color: theme.primary, opacity: busy ? 0.5 : 1 }]}>{isPhone ? authText('auth:changeMobile') : authText('auth:changeEmail')}</Text>
       </TouchableOpacity>
-      <Text style={[styles.help, { color: theme.secondaryText }]}>Haven't received a code? Check your registered details with your employer{isPhone ? "." : " and your spam folder."}</Text>
+      <Text style={[styles.help, { color: theme.secondaryText }]}>{authText(isPhone ? 'auth:otpHelpPhone' : 'auth:otpHelpEmail')}</Text>
     </AuthLayout>
   );
 }

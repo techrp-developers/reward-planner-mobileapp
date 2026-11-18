@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -30,6 +31,7 @@ export default function OrderHeading({
   showHelp = true,
   isDark = false,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const appTheme = useAppTheme();
   const darkMode = isDark || appTheme.isDark;
@@ -95,7 +97,7 @@ export default function OrderHeading({
               color="#EC4899"
               style={styles.helpIcon}
             />
-            <Text style={styles.helpText}>Help</Text>
+            <Text style={styles.helpText}>{translateUi('common:help')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>

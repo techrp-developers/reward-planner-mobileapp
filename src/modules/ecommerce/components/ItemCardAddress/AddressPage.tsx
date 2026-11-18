@@ -1,4 +1,5 @@
 
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -28,6 +29,7 @@ type AddressItem = {
 };
 
 export default function AddressPage() {
+  const { t: translateUi } = useTranslation('common');
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -67,10 +69,10 @@ export default function AddressPage() {
         onPress={() => setShowForm(!showForm)}
       >
         <Text style={styles.plus}>＋</Text>
-        <Text style={styles.addText}>Add New Address</Text>
+        <Text style={styles.addText}>{translateUi('common:addNewAddress')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.section}>Saved Addresses</Text>
+      <Text style={styles.section}>{translateUi('common:savedAddresses')}</Text>
 
       {addresses.map(item => (
         <TouchableOpacity
@@ -80,7 +82,7 @@ export default function AddressPage() {
         >
           <View style={styles.cardContent}>
             <Text style={styles.name}>{item.name}</Text>
-            {item.isDefault && <Text style={styles.default}>Default</Text>}
+            {item.isDefault && <Text style={styles.default}>{translateUi('common:default')}</Text>}
             <Text style={styles.address}>{item.address}</Text>
           </View>
 

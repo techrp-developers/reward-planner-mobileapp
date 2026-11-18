@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +23,7 @@ const GRID_GAP = 12;
 const fallbackImg = require('../../assete/gov_documet/domacile_certificate.png');
 
 export default function QuickServices() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const servicesTheme = useServicesTheme();
   const { data: homeData, isLoading, error } = useServiceHome();
@@ -85,7 +87,7 @@ export default function QuickServices() {
           onPress={() => navigation.navigate('ServiceSearch')}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
         >
-          <Text style={[styles.viewAll, { color: servicesTheme.colors.primary }]}>View All</Text>
+          <Text style={[styles.viewAll, { color: servicesTheme.colors.primary }]}>{translateUi('common:viewAll')}</Text>
         </TouchableOpacity>
       </View>
 

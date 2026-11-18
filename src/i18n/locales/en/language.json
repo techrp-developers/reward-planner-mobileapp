@@ -1,0 +1,17 @@
+{
+  "welcome": "Welcome to Reward Planners",
+  "choose": "Choose your preferred language",
+  "intro": "Select the language you'd like to use in Reward Planners. You can change it anytime from your profile settings.",
+  "title": "App Language",
+  "description": "Choose the language you prefer to use across Reward Planners.",
+  "settings": "Settings",
+  "saveError": "We couldn't save your language. Please try again.",
+  "welcomeBonus": "Welcome Bonus",
+  "accountActive": "Your account is now active",
+  "firstLoginBonus": "First Login Bonus",
+  "rewardCredited": "Successfully Credited",
+  "rewardWallet": "Reward wallet",
+  "rewardReady": "Ready to use",
+  "rewardDetails": "Congratulations!\n\nAs a welcome gift, we have credited <points>{{amount}} RP Points</points> to your account.\n\nStart earning, shopping, and redeeming exciting rewards with Reward Planners.",
+  "startExploring": "Start Exploring"
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useRef, useEffect, useState } from "react";
 import {
   Animated,
@@ -32,6 +33,7 @@ let globalSearchHeaderCache: {
 } | null = null;
 
 function GlobalSearchScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { isDark } = useAppTheme();
   const { isAuthenticated, user } = useAuth();
@@ -234,8 +236,8 @@ function GlobalSearchScreen() {
               <View style={[styles.emptyIconCircle, { backgroundColor: tk.iconAccentBg }]}>
                 <MaterialCommunityIcons name="text-search" size={26} color={tk.iconAccent} />
               </View>
-              <Text style={[styles.noResultText, { color: tk.titleColor }]}>No results found</Text>
-              <Text style={[styles.emptySubText, { color: tk.subTextColor }]}>Try a different keyword</Text>
+              <Text style={[styles.noResultText, { color: tk.titleColor }]}>{translateUi('common:noResults')}</Text>
+              <Text style={[styles.emptySubText, { color: tk.subTextColor }]}>{translateUi('common:differentKeyword')}</Text>
             </View>
           ) : sections.length === 0 ? (
             <View style={styles.emptyStateWrap}>
@@ -243,7 +245,7 @@ function GlobalSearchScreen() {
                 <MaterialCommunityIcons name="magnify" size={26} color={tk.iconAccent} />
               </View>
               <Text style={[styles.emptySubText, { color: tk.subTextColor }]}>
-                Type at least 2 characters
+                {translateUi('common:atLeastTwo')}
               </Text>
             </View>
           ) : (
@@ -297,7 +299,7 @@ function GlobalSearchScreen() {
             <MaterialCommunityIcons name="magnify" size={26} color={tk.iconAccent} />
           </View>
           <Text style={[styles.emptySubText, { color: tk.subTextColor }]}>
-            Search products or services
+            {translateUi('dashboard:searchProductsServices')}
           </Text>
         </View>
       )}

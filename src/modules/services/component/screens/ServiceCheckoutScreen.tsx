@@ -1,3 +1,5 @@
+import appI18n from '../../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -339,6 +341,7 @@ const serviceCheckoutQueryKey = (
 };
 
 export default function ServiceCheckoutScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
   // MainLayout already reserves space for the services-module bottom bar via
@@ -534,10 +537,10 @@ export default function ServiceCheckoutScreen() {
         setPlacing(false);
         paymentFlowInProgress.current = false;
         Alert.alert(
-          "Select Address",
-          "Please select an address.",
+          appI18n.t('common:selectAddress'),
+          appI18n.t('common:chooseAddress'),
           [
-            { text: "Cancel", style: "cancel" },
+            { text: appI18n.t('common:cancel'), style: "cancel" },
             { text: "Add Address", onPress: () => navigation.navigate('AddressSelect') },
           ],
         );
@@ -842,7 +845,7 @@ export default function ServiceCheckoutScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-        <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title={translateUi('common:checkout')} onBackPress={() => navigation.goBack()} />
         <View style={styles.loadingWrapper}>
           <View style={[styles.checkoutSkeletonCard, { backgroundColor: servicesTheme.colors.surface }]}>
             <SkeletonBox pulse={pulse} width="60%" height={24} borderRadius={10} />
@@ -860,7 +863,7 @@ export default function ServiceCheckoutScreen() {
   if (!isLoading && hasStarted && !isCheckoutFetching && items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-        <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title={translateUi('common:checkout')} onBackPress={() => navigation.goBack()} />
         <EmptyCart
           variant="services"
           onBrowse={() => navigation.goBack()}
@@ -877,7 +880,7 @@ export default function ServiceCheckoutScreen() {
   // ── main checkout UI ───────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-      <ScreenHeader title="Checkout" onBackPress={() => navigation.goBack()} />
+      <ScreenHeader title={translateUi('common:checkout')} onBackPress={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: stickyCTA.scrollContentPaddingBottom }]}

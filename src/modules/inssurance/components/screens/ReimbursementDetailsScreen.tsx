@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   View,
@@ -15,6 +16,7 @@ import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 
 const ReimbursementDetailsScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -45,7 +47,7 @@ const ReimbursementDetailsScreen: React.FC = () => {
           >
             <MaterialCommunityIcons name="arrow-left" size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Reimbursement Claim</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:reimbursementClaim')}</Text>
         </View>
 
         <TouchableOpacity style={[styles.backBtn, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]} activeOpacity={0.7}>
@@ -77,7 +79,7 @@ const ReimbursementDetailsScreen: React.FC = () => {
           <View style={[styles.stepCirclePending, { borderColor: isDark ? '#52525B' : '#CBD5E1' }]}>
             <Text style={[styles.stepCirclePendingText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>3</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Documents</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:documents')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: isDark ? '#27272A' : '#E2E8F0' }]} />
@@ -86,7 +88,7 @@ const ReimbursementDetailsScreen: React.FC = () => {
           <View style={[styles.stepCirclePending, { borderColor: isDark ? '#52525B' : '#CBD5E1' }]}>
             <Text style={[styles.stepCirclePendingText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>4</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Review</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:review')}</Text>
         </View>
       </View>
 
@@ -97,30 +99,30 @@ const ReimbursementDetailsScreen: React.FC = () => {
           <View style={styles.briefHeader}>
             <Text style={styles.briefLogoText}>care</Text>
             <View style={styles.briefStatusBadge}>
-              <Text style={styles.briefStatusText}>Active</Text>
+              <Text style={styles.briefStatusText}>{translateUi('common:active')}</Text>
             </View>
           </View>
           <View style={styles.briefInfoGrid}>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Policy Number</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:policyNumber')}</Text>
               <Text style={styles.briefVal}>B7812841</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Employee ID</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:employeeId')}</Text>
               <Text style={styles.briefVal}>EMP124567</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Covered Members</Text>
-              <Text style={styles.briefVal}>4 Members</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:coveredMembers')}</Text>
+              <Text style={styles.briefVal}>{translateUi('common:fourMembers')}</Text>
             </View>
           </View>
           <View style={[styles.briefInfoGrid, { marginTop: rs(6) }]}>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Valid Till</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:validTill')}</Text>
               <Text style={styles.briefVal}>28 Jun 2027</Text>
             </View>
             <View style={styles.briefInfoCol}>
-              <Text style={styles.briefLabel}>Member ID</Text>
+              <Text style={styles.briefLabel}>{translateUi('common:memberId')}</Text>
               <Text style={styles.briefVal}>00SWITRN10</Text>
             </View>
             <View style={styles.briefInfoCol} />
@@ -137,18 +139,18 @@ const ReimbursementDetailsScreen: React.FC = () => {
           <View style={styles.detailsGrid}>
             <View style={styles.detailsRow}>
               <View style={styles.detailsCol}>
-                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Member</Text>
+                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:member')}</Text>
                 <Text style={[styles.detailsVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>Ravi Sharma - Self</Text>
               </View>
               <View style={styles.detailsCol}>
-                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Hospital</Text>
+                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:hospital')}</Text>
                 <Text style={[styles.detailsVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>Apollo Hospital Bengaluru</Text>
               </View>
             </View>
 
             <View style={[styles.detailsRow, { marginTop: rs(8) }]}>
               <View style={styles.detailsCol}>
-                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Admission Date</Text>
+                <Text style={[styles.detailsLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:admissionDate')}</Text>
                 <Text style={[styles.detailsVal, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>18 Aug 2026</Text>
               </View>
               <View style={styles.detailsCol}>

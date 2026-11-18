@@ -1,4 +1,5 @@
 import api from "../../common/auth/api/axios";
+import i18n from "../../../i18n";
 
 // =========================================
 // TYPES
@@ -60,7 +61,7 @@ export const updateBasicProfile = async (
     if (!VALID_GOALS.includes(payload.goal_type)) {
       return {
         success: false,
-        message: "Invalid goal type",
+        message: i18n.t("stepCounter:r2.invalidGoalType"),
       };
     }
 
@@ -124,7 +125,14 @@ export type WeeklyPlanItem = {
 };
 
 export type ProfilePlanResponse = {
-  bmi: string;
+  // null until body measurements are saved.
+  bmi: string | null;
+  // Saved profile details; returned by newer servers only.
+  gender?: string | null;
+  age?: number | null;
+  goal_type?: GoalType | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
   category: string;
   recommended_steps: number;
   recommended_minutes: number;
@@ -180,7 +188,7 @@ export const selectUserGoal = async (
     if (!payload?.daily_steps || payload.daily_steps <= 0) {
       return {
         success: false,
-        message: "Invalid daily steps value",
+        message: i18n.t("stepCounter:r2.invalidDailyStepsValue"),
       };
     }
 

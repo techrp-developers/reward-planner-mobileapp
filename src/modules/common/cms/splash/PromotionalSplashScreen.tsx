@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, BackHandler, Image, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +24,7 @@ type Props = {
 // Plain full-screen View rendered inside the Splash route, over the logo it
 // fades in from. Deliberately not a Modal.
 function PromotionalSplashScreen({ campaign, actionable, onShown, onFinish }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const [visible, setVisible] = useState(false);
@@ -124,10 +126,10 @@ function PromotionalSplashScreen({ campaign, actionable, onShown, onFinish }: Pr
           hitSlop={12}
           style={[styles.skip, { top: insets.top + 12, right: insets.right + 16 }]}
           accessibilityRole="button"
-          accessibilityLabel="Skip"
+          accessibilityLabel={translateUi('common:skip')}
           testID="promo-splash-skip"
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{translateUi('common:skip')}</Text>
         </Pressable>
       ) : null}
     </Animated.View>

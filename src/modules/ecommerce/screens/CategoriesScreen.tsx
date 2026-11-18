@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import {
   Animated,
@@ -45,6 +46,7 @@ interface CategoryWithSubcategories extends Category {
 }
 
 const CategoriesScreen = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavigationProp>();
   const { isDark, theme } = useAppTheme();
   const [loading, setLoading] = useState(true);
@@ -167,7 +169,7 @@ const CategoriesScreen = () => {
   if (loading) {
     return (
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <ProductHeadColor title="All Categories" onBackPress={() => navigation.goBack()} isDark={isDark} />
+        <ProductHeadColor title={translateUi('common:allCategories')} onBackPress={() => navigation.goBack()} isDark={isDark} />
         <View style={styles.mainContainer}>
           <View style={[styles.sidebar, { backgroundColor: theme.card, borderRightColor: theme.border }]}>
             {Array.from({ length: 5 }).map((_, index) => (
@@ -196,7 +198,7 @@ const CategoriesScreen = () => {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <ProductHeadColor
-        title="All Categories"
+        title={translateUi('common:allCategories')}
         onBackPress={() => navigation.goBack()}
         isDark={isDark}
       />
@@ -218,7 +220,7 @@ const CategoriesScreen = () => {
               <View style={[styles.iconContainer, { backgroundColor: isDark ? "#111827" : "#F3F4F6" }]}>
                 <AllIcons width={34} height={34} />
               </View>
-              <Text style={[styles.sidebarText, { color: theme.text }]}>All</Text>
+              <Text style={[styles.sidebarText, { color: theme.text }]}>{translateUi('common:all')}</Text>
             </TouchableOpacity>
 
             {allData.map((category) => (

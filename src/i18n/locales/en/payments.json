@@ -1,0 +1,22 @@
+{
+  "operator": "Operator",
+  "billSummary": "Bill Summary",
+  "billNumber": "Bill Number",
+  "billDate": "Bill Date",
+  "consumerNo": "Consumer No.",
+  "secure": "100% Secure Payment",
+  "razorpay": "Powered by Razorpay",
+  "processing": "Processing Payment...",
+  "mobileRecharge": "Mobile Recharge",
+  "electricityBill": "Electricity Bill",
+  "viewBill": "View Bill",
+  "fetchBill": "Fetch Bill",
+  "selectOperator": "Select Operator",
+  "rechargeNow": "Recharge Now",
+  "receipt": "Payment Receipt",
+  "payAmount": "Pay {{amount}}",
+  "enterNumber": "Enter Mobile Number",
+  "operatorCircle": "Operator & Circle",
+  "paymentStatus": "Payment Status",
+  "totalAmount": "Total Amount"
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -44,6 +45,7 @@ const categories = [
 const COLUMNS = 8;
 
 export default function ChatEmojiPanel({ onSelect, onBackspace }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { theme } = useAppTheme();
   const [active, setActive] = useState(categories[0].key);
   const emojis = categories.find(category => category.key === active)!.emojis;
@@ -85,7 +87,7 @@ export default function ChatEmojiPanel({ onSelect, onBackspace }: Props) {
         ))}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Delete"
+          accessibilityLabel={translateUi('common:delete')}
           onPress={onBackspace}
           style={styles.tab}
         >

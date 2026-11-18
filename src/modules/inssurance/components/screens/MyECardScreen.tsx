@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -68,6 +69,7 @@ const CardPattern: React.FC = () => {
 };
 
 const MyECardScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -535,7 +537,7 @@ const MyECardScreen: React.FC = () => {
       const downloadUrl = `${INSURANCE_BASE_URL}/v1/gmc/download-pdf?userId=${gmcDetails.user_id || 37}`;
       await Linking.openURL(downloadUrl);
     } catch (err: any) {
-      Alert.alert('Download Failed', 'Could not open the download link: ' + err.message);
+      Alert.alert(translateUi('common:downloadFailed'), 'Could not open the download link: ' + err.message);
     }
   };
 
@@ -558,7 +560,7 @@ const MyECardScreen: React.FC = () => {
 
         <TouchableOpacity style={styles.helpBtn} activeOpacity={0.7}>
           <MaterialCommunityIcons name="help-circle-outline" size={14} color="#005b7f" style={{ marginRight: 3 }} />
-          <Text style={styles.helpText}>Help</Text>
+          <Text style={styles.helpText}>{translateUi('common:help')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -588,8 +590,8 @@ const MyECardScreen: React.FC = () => {
                       <Text style={styles.careLogoText}>care</Text>
                     </View>
                     <View style={styles.careLogoSubBox}>
-                      <Text style={styles.careLogoSubText}>HEALTH</Text>
-                      <Text style={styles.careLogoSubTextMin}>INSURANCE</Text>
+                      <Text style={styles.careLogoSubText}>{translateUi('common:health')}</Text>
+                      <Text style={styles.careLogoSubTextMin}>{translateUi('common:insuranceHeading')}</Text>
                     </View>
                   </View>
                   
@@ -608,7 +610,7 @@ const MyECardScreen: React.FC = () => {
                   {/* Members Table - Spanning 100% full width */}
                   <View style={styles.groupTableContainer}>
                     <View style={styles.groupTableHeader}>
-                      <Text style={[styles.groupColHeader, { width: '50%' }]}>Name</Text>
+                      <Text style={[styles.groupColHeader, { width: '50%' }]}>{translateUi('common:name')}</Text>
                       <Text style={[styles.groupColHeader, { width: '27%' }]}>Client Id</Text>
                       <Text style={[styles.groupColHeader, { width: '23%' }]}>Dob</Text>
                     </View>
@@ -638,42 +640,42 @@ const MyECardScreen: React.FC = () => {
                       <Text style={styles.careLogoText}>care</Text>
                     </View>
                     <View style={styles.careLogoSubBox}>
-                      <Text style={styles.careLogoSubText}>HEALTH</Text>
-                      <Text style={styles.careLogoSubTextMin}>INSURANCE</Text>
+                      <Text style={styles.careLogoSubText}>{translateUi('common:health')}</Text>
+                      <Text style={styles.careLogoSubTextMin}>{translateUi('common:insuranceHeading')}</Text>
                     </View>
                   </View>
 
                   <View style={styles.activeBadge}>
                     <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" style={{ marginRight: 2 }} />
-                    <Text style={styles.activeText}>Active</Text>
+                    <Text style={styles.activeText}>{translateUi('common:active')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.cardInfoGrid}>
                   <View style={styles.cardInfoCol}>
-                    <Text style={styles.cardLabel}>Policy Type</Text>
+                    <Text style={styles.cardLabel}>{translateUi('common:policyType')}</Text>
                     <Text style={styles.cardValue} numberOfLines={1}>{gmcDetails.policy_type || 'Personal Health Card'}</Text>
                   </View>
                   <View style={styles.cardInfoCol}>
-                    <Text style={styles.cardLabel}>Policy Number</Text>
+                    <Text style={styles.cardLabel}>{translateUi('common:policyNumber')}</Text>
                     <Text style={styles.cardValue}>{gmcDetails.policy_number || '—'}</Text>
                   </View>
                 </View>
 
                 <View style={[styles.cardInfoGrid, { marginTop: rs(10) }]}>
                   <View style={styles.cardInfoCol}>
-                    <Text style={styles.cardLabel}>Member ID</Text>
+                    <Text style={styles.cardLabel}>{translateUi('common:memberId')}</Text>
                     <Text style={styles.cardValue}>{gmcDetails.member_id || '—'}</Text>
                   </View>
                   <View style={styles.cardInfoCol}>
-                    <Text style={styles.cardLabel}>Valid Till</Text>
+                    <Text style={styles.cardLabel}>{translateUi('common:validTill')}</Text>
                     <View style={styles.dateRow}>
                       <MaterialCommunityIcons name="calendar" size={11} color="rgba(255,255,255,0.7)" style={{ marginRight: 3 }} />
                       <Text style={styles.cardValue}>{gmcDetails.valid_till || '—'}</Text>
                     </View>
                   </View>
                   <View style={styles.cardInfoCol}>
-                    <Text style={styles.cardLabel}>Employee ID</Text>
+                    <Text style={styles.cardLabel}>{translateUi('common:employeeId')}</Text>
                     <Text style={styles.cardValue}>{gmcDetails.employee_id || '—'}</Text>
                   </View>
                 </View>
@@ -758,7 +760,7 @@ const MyECardScreen: React.FC = () => {
           </View>
         ) : (
           <View style={[styles.eCard, { justifyContent: 'center', alignItems: 'center', minHeight: rs(140), backgroundColor: '#E2E8F0' }]}>
-            <Text style={{ color: '#64748B' }}>No active health card available</Text>
+            <Text style={{ color: '#64748B' }}>{translateUi('common:noHealthCard')}</Text>
           </View>
         )}
 
@@ -785,7 +787,7 @@ const MyECardScreen: React.FC = () => {
         {/* Covered Members List */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Covered Members</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:coveredMembers')}</Text>
           </View>
  
           <View style={[styles.listContainer, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
@@ -822,7 +824,7 @@ const MyECardScreen: React.FC = () => {
             <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Recent Claim Status</Text>
             {claims.length > 0 && (
               <TouchableOpacity activeOpacity={0.6}>
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={styles.viewAllText}>{translateUi('common:viewAll')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -928,7 +930,7 @@ const MyECardScreen: React.FC = () => {
           <View style={styles.benefitsContainer}>
             <View style={[styles.benefitCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
               <MaterialCommunityIcons name="shield-outline" size={22} color="#005b7f" style={styles.benefitIcon} />
-              <Text style={[styles.benefitLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Sum Insured</Text>
+              <Text style={[styles.benefitLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('insurance:sumInsured')}</Text>
               <Text style={[styles.benefitVal, { color: '#005b7f' }]}>₹10,00,000</Text>
             </View>
             <View style={[styles.benefitCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
@@ -939,7 +941,7 @@ const MyECardScreen: React.FC = () => {
             <View style={[styles.benefitCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
               <MaterialCommunityIcons name="account-group-outline" size={22} color="#7C3AED" style={styles.benefitIcon} />
               <Text style={[styles.benefitLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Family Members</Text>
-              <Text style={[styles.benefitVal, { color: '#7C3AED' }]}>4 Members</Text>
+              <Text style={[styles.benefitVal, { color: '#7C3AED' }]}>{translateUi('common:fourMembers')}</Text>
             </View>
           </View>
         </View>

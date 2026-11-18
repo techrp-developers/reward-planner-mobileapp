@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -150,6 +151,7 @@ function buildRegion(latitude: number, longitude: number, delta = 0.03): Region 
 }
 
 export default function AddAddressMapScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AddAddressMapRoute>();
   const manageOnly = route.params?.manageOnly === true;
@@ -436,7 +438,7 @@ export default function AddAddressMapScreen() {
           onPress: () => navigation.navigate('AddressDetails', { mode: 'add', manageOnly }),
         },
         {
-          text: 'Done',
+          text: translateUi('common:done'),
           onPress: () => navigation.goBack(),
         },
       ]);
@@ -483,7 +485,7 @@ export default function AddAddressMapScreen() {
       });
     } catch (error) {
       console.warn('Failed to load existing address for editing:', error);
-      Alert.alert('Error', 'Could not load address details for editing. Please try again.');
+      Alert.alert(translateUi('common:error'), 'Could not load address details for editing. Please try again.');
     }
   };
 
@@ -621,7 +623,7 @@ export default function AddAddressMapScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity activeOpacity={0.75} onPress={handleChangeAddress}>
-                  <Text style={styles.changeText}>Change</Text>
+                  <Text style={styles.changeText}>{translateUi('common:change')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -639,7 +641,7 @@ export default function AddAddressMapScreen() {
           {resolvedAddress ? (
             <View style={styles.actionRow}>
               <TouchableOpacity activeOpacity={0.85} onPress={clearResolvedAddress} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>Change</Text>
+                <Text style={styles.secondaryButtonText}>{translateUi('common:change')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

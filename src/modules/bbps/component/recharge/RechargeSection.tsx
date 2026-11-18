@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -53,6 +54,7 @@ const rechargePlansCache = new Map<
 const isFresh = (timestamp: number) => Date.now() - timestamp < TEN_MINUTES;
 
 function RechargeSection({ navigation, route }: any) {
+  const { t: translateUi } = useTranslation('common');
   const bbpsTheme = useBbpsTheme();
   const { user } = useAuth();
   const alert = useAlert();
@@ -370,13 +372,13 @@ function RechargeSection({ navigation, route }: any) {
                   onPress={() => navigation.goBack()}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.changeCircleText, { color: bbpsTheme.colors.primary }]}>Change</Text>
+                  <Text style={[styles.changeCircleText, { color: bbpsTheme.colors.primary }]}>{translateUi('common:change')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Select Circle</Text>
+                  <Text style={styles.sectionTitle}>{translateUi('common:selectCircle')}</Text>
                 </View>
 
                 <TouchableOpacity
@@ -546,7 +548,7 @@ function RechargeSection({ navigation, route }: any) {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Circle</Text>
+            <Text style={styles.modalTitle}>{translateUi('common:selectCircle')}</Text>
             <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
               <Icon name="close" size={22} color="#333" />
             </TouchableOpacity>

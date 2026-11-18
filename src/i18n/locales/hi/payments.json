@@ -1,0 +1,22 @@
+{
+  "operator": "ऑपरेटर",
+  "billSummary": "बिल का सारांश",
+  "billNumber": "बिल नंबर",
+  "billDate": "बिल की तारीख",
+  "consumerNo": "उपभोक्ता नंबर",
+  "secure": "100% सुरक्षित भुगतान",
+  "razorpay": "Razorpay के माध्यम से",
+  "processing": "भुगतान की प्रक्रिया जारी है…",
+  "mobileRecharge": "मोबाइल रिचार्ज",
+  "electricityBill": "बिजली का बिल",
+  "viewBill": "बिल देखें",
+  "fetchBill": "बिल प्राप्त करें",
+  "selectOperator": "ऑपरेटर चुनें",
+  "rechargeNow": "अभी रिचार्ज करें",
+  "receipt": "भुगतान की रसीद",
+  "payAmount": "{{amount}} का भुगतान करें",
+  "enterNumber": "मोबाइल नंबर भरें",
+  "operatorCircle": "ऑपरेटर और सर्कल",
+  "paymentStatus": "भुगतान की स्थिति",
+  "totalAmount": "कुल राशि"
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -17,6 +18,7 @@ type Route = NativeStackScreenProps<ChatStackParamList, 'GroupInfo'>['route'];
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
 
 export default function GroupInfoScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<Route>();
   const { conversation } = params;
@@ -64,7 +66,7 @@ export default function GroupInfoScreen() {
     Alert.alert('Group photo', undefined, [
       { text: 'Choose from gallery', onPress: () => { pickGroupImage(); } },
       ...(imageUrl ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => { deleteGroupImage(); } }] : []),
-      { text: 'Cancel', style: 'cancel' as const },
+      { text: translateUi('common:cancel'), style: 'cancel' as const },
     ]);
   };
 
@@ -93,7 +95,7 @@ export default function GroupInfoScreen() {
             {[item.department, item.job_role].filter(Boolean).join(' · ') || 'Group member'}
           </Text>
         </View>
-        {isAdmin ? <View style={[styles.adminBadge, { borderColor: theme.primary }]}><Text style={[styles.adminText, { color: theme.primary }]}>Group admin</Text></View> : null}
+        {isAdmin ? <View style={[styles.adminBadge, { borderColor: theme.primary }]}><Text style={[styles.adminText, { color: theme.primary }]}>{translateUi('chat:groupAdmin')}</Text></View> : null}
       </TouchableOpacity>
     );
   };
@@ -101,7 +103,7 @@ export default function GroupInfoScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 7, backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => navigation.goBack()} style={styles.back}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:back')} onPress={() => navigation.goBack()} style={styles.back}>
           <MaterialCommunityIcons name="arrow-left" size={25} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Group info</Text>

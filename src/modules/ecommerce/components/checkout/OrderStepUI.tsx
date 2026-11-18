@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, {
   useState,
   useEffect,
@@ -164,6 +165,7 @@ const pollForFinalPaymentStatus = async (orderId: number) => {
 };
 
 export default function OrderStepUI() {
+  const { t: translateUi } = useTranslation('common');
   const { isAuthenticated, logout, user } = useAuth();
   const { isDark, theme } = useAppTheme();
   const stickyCTA = useStickyBottomCTA();
@@ -764,7 +766,7 @@ export default function OrderStepUI() {
       if (!selectedAddressId) {
         isCreatingOrder.current = false;
         setPlacing(false);
-        Alert.alert('Select Address', 'Please select an address.');
+        Alert.alert(translateUi('common:selectAddress'), translateUi('common:chooseAddress'));
         return;
       }
 
@@ -1366,7 +1368,7 @@ export default function OrderStepUI() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ProductHeadColor
-          title="Cart"
+          title={translateUi('common:cart')}
           onBackPress={handleEmptyCheckoutBack}
           showSearch={false}
           isDark={isDark}
@@ -1382,7 +1384,7 @@ export default function OrderStepUI() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ProductHeadColor
-        title="Checkout"
+        title={translateUi('common:checkout')}
         onBackPress={() => navigation.goBack()}
         showSearch={false}
         isDark={isDark}
@@ -1397,9 +1399,9 @@ export default function OrderStepUI() {
         <View style={styles.scrollPadding}>
           {/* Step Counter */}
           <View style={styles.stepRow}>
-            <Step status="done" label="Address" />
+            <Step status="done" label={translateUi('common:address')} />
             <Line />
-            <Step status="current" label="Order Summary" />
+            <Step status="current" label={translateUi('common:orderSummary')} />
             <Line />
             <Step status="upcoming" label="Payment" />
           </View>
@@ -1543,7 +1545,7 @@ export default function OrderStepUI() {
             {relatedProductId ? (
               <View style={styles.relatedSection}>
                 <Text style={[styles.relatedTitle, { color: theme.text }]}>
-                  Related Products
+                  {translateUi('common:relatedProducts')}
                 </Text>
                 <ProductGrid
                   key={`related-${relatedProductId}`}

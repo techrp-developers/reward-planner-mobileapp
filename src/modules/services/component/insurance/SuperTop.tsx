@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import { View, StatusBar, TouchableOpacity, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -39,6 +40,7 @@ export type QuoteData = {
 const steps = ["Select Member", "Select Age of Members", "Basic Details"];
 
 function SuperTop() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation();
   const { success, info } = useAlert();
   const servicesTheme = useServicesTheme();
@@ -96,7 +98,7 @@ function SuperTop() {
       if (step === 1) {
         const enquiryId = formData.details?.enquiryId;
         if (!enquiryId) {
-          Alert.alert("Error", "Session expired. Please go back to Step 1.");
+          Alert.alert(translateUi('common:error'), translateUi('common:sessionStepOne'));
           return;
         }
         await saveStep(enquiryId, 2, "members", mapMembersAges(formData));
@@ -104,7 +106,7 @@ function SuperTop() {
       }
     } catch (e: any) {
       Alert.alert(
-        "Error",
+        translateUi('common:error'),
         e?.response?.data?.message || e?.message || "Failed to proceed. Please try again."
       );
     } finally {

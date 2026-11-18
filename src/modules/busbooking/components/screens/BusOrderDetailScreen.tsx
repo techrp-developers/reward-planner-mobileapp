@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   ActivityIndicator,
@@ -102,6 +103,7 @@ const getSeatCancellationLabel = (passenger: BusOrderPassenger) => {
 };
 
 export default function BusOrderDetailScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation =
     useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const route =
@@ -391,7 +393,7 @@ export default function BusOrderDetailScreen() {
             style={styles.retryButton}
             onPress={handleRefresh}
           >
-            <Text style={styles.retryButtonText}>Try again</Text>
+            <Text style={styles.retryButtonText}>{translateUi('common:tryAgainSentence')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -538,7 +540,7 @@ export default function BusOrderDetailScreen() {
 
           {policyLines.length > 0 ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Cancellation Policy</Text>
+              <Text style={styles.cardTitle}>{translateUi('busBooking:cancellationPolicy')}</Text>
               {policyLines.map((line, index) => (
                 <Text key={`${line}-${index}`} style={styles.policyText}>
                   {line}

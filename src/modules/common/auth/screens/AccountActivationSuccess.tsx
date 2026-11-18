@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -19,6 +20,7 @@ type AuthModalStackParamList = {
 type NavigationProp = NativeStackNavigationProp<AuthModalStackParamList, "Login">;
 
 function AccountActivationSuccess() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavigationProp>();
   const { isDark } = useAppTheme();
 
@@ -55,7 +57,7 @@ function AccountActivationSuccess() {
             end={{ x: 1, y: 0 }}
             style={styles.button}
           >
-            <Text style={styles.buttonText}>Return to Login Screen</Text>
+            <Text style={styles.buttonText}>{translateUi('common:returnLogin')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

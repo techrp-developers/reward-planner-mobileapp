@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -90,6 +91,7 @@ const formatOrderDate = (value: string) => {
 };
 
 export default function HelpForm({ navigation, route }: HelpFormProps) {
+  const { t: translateUi } = useTranslation('common');
   const alert = useAlert();
   const tabBarInset = useBottomTabsInset();
   const { isDark, theme } = useAppTheme();
@@ -414,7 +416,7 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
                     isDark && darkStyles.historyBtnText,
                   ]}
                 >
-                  History
+                  {translateUi('common:history')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -522,7 +524,7 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
             {/* CATEGORY */}
 
             <Text style={[styles.label, isDark && darkStyles.primaryText]}>
-              Category
+              {translateUi('common:category')}
             </Text>
 
             <TouchableOpacity
@@ -628,7 +630,7 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
                 onPress={handlePickDocument}
               >
                 <MaterialCommunityIcons name="file-document-outline" size={20} color={theme.primary} />
-                <Text style={[styles.attachmentButtonText, isDark && darkStyles.primaryText]}>Document</Text>
+                <Text style={[styles.attachmentButtonText, isDark && darkStyles.primaryText]}>{translateUi('common:document')}</Text>
               </TouchableOpacity>
             </View>
 

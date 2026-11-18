@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -17,6 +18,7 @@ import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 
 const NetworkHospitalsScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -82,13 +84,13 @@ const NetworkHospitalsScreen: React.FC = () => {
 
   const handleDirections = (mapUrl: string) => {
     Linking.openURL(mapUrl).catch(() => {
-      Alert.alert('Error', 'Unable to open maps application.');
+      Alert.alert(translateUi('common:error'), 'Unable to open maps application.');
     });
   };
 
   const handleCall = (phone: string) => {
     Linking.openURL(`tel:${phone}`).catch(() => {
-      Alert.alert('Error', 'Calling is not supported on this device.');
+      Alert.alert(translateUi('common:error'), 'Calling is not supported on this device.');
     });
   };
 
@@ -97,7 +99,7 @@ const NetworkHospitalsScreen: React.FC = () => {
       'Admission Intimation',
       `Would you like to start a cashless pre-authorization request at ${hospitalName}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: translateUi('common:cancel'), style: 'cancel' },
         { 
           text: 'Proceed', 
           onPress: () => navigation.navigate('StartClaimScreen') 
@@ -289,12 +291,12 @@ const NetworkHospitalsScreen: React.FC = () => {
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#18181B' : '#FFFFFF', borderTopColor: isDark ? '#27272A' : '#E4E4E7' }]}>
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('HealthDashboard')}>
           <MaterialCommunityIcons name="home-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Home</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:home')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('HealthClaimsScreen')}>
           <MaterialCommunityIcons name="file-document-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Claims</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:claims')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6}>
@@ -309,7 +311,7 @@ const NetworkHospitalsScreen: React.FC = () => {
 
         <TouchableOpacity style={styles.tabItem} activeOpacity={0.6} onPress={() => navigation.navigate('Profile')}>
           <MaterialCommunityIcons name="account-outline" size={24} color={isDark ? '#A1A1AA' : '#64748B'} />
-          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Profile</Text>
+          <Text style={[styles.tabLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

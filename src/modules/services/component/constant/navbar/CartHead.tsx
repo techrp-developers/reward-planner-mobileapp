@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +14,7 @@ type CartHeadProps = {
 };
 
 function CartHead({ onBackPress }: CartHeadProps) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const servicesTheme = useServicesTheme();
   const { user, isAuthenticated } = useAuth();
@@ -105,7 +107,7 @@ const handleWalletPress = () => {
           </View>
           <View style={[styles.walletDivider, { backgroundColor: servicesTheme.colors.borderSoft }]} />
           <View style={styles.walletTextCol}>
-            <Text style={[styles.walletLabel, { color: servicesTheme.colors.muted }]}>Wallet</Text>
+            <Text style={[styles.walletLabel, { color: servicesTheme.colors.muted }]}>{translateUi('common:wallet')}</Text>
             <Text style={[styles.walletAmount, { color: servicesTheme.colors.textStrong }]} numberOfLines={1}>
               {"\u20B9"}{Number(rewardPoints || 0).toLocaleString('en-IN')}
             </Text>

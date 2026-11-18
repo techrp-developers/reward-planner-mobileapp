@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
     View,
@@ -18,6 +19,7 @@ import { useAlert } from '../../../ecommerce/components/alerts/useAlert';
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
 
 const EnquireForm = () => {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<NavProp>();
     const alert = useAlert();
 
@@ -89,7 +91,7 @@ const EnquireForm = () => {
 
     return (
         <View style={styles.card}>
-            <Text style={styles.heading}>Enquire Now</Text>
+            <Text style={styles.heading}>{translateUi('common:enquireNow')}</Text>
             <Text style={styles.desc}>
                 Please fill out the form below and our team will get in touch with you shortly.
             </Text>
@@ -210,7 +212,7 @@ const EnquireForm = () => {
                     {isLoading ? (
                         <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                        <Text style={styles.submitText}>Submit</Text>
+                        <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
                     )}
                 </LinearGradient>
             </TouchableOpacity>

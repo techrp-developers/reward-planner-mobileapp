@@ -1,0 +1,12 @@
+{
+  "voteFailed": "Vote not submitted",
+  "vote": "Vote",
+  "voteError": "Unable to submit your vote",
+  "oneOption": "Select one option",
+  "multipleOptions": "Select one or more options",
+  "votes_one": "{{count}} vote",
+  "votes_other": "{{count}} votes",
+  "voted_one": "Voted · {{count}} vote",
+  "voted_other": "Voted · {{count}} votes",
+  "closesAt": "Closes {{date}}"
+}

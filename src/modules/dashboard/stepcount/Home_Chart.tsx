@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from "react";
 import {
   View,
@@ -68,6 +69,7 @@ function StepStatusBanner({ state }: BannerProps) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function Home_Chart({ goalSteps }: HomeChartProps) {
+  const { t: translateUi } = useTranslation('common');
   const { width } = useWindowDimensions();
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
@@ -151,7 +153,7 @@ export default function Home_Chart({ goalSteps }: HomeChartProps) {
                 <Text style={[styles.stepsValue, { color: titleColor }]}>
                   {totalSteps.toLocaleString("en-IN")}
                 </Text>
-                <Text style={[styles.stepsWord, { color: mutedColor }]}>steps</Text>
+                <Text style={[styles.stepsWord, { color: mutedColor }]}>{translateUi('common:stepsLower')}</Text>
               </View>
               <Text style={[styles.goalText, { color: mutedColor }]}>
                 of <Text style={styles.goalNumber}>{targetSteps.toLocaleString("en-IN")}</Text> steps goal

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import { View, StatusBar, TouchableOpacity, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -44,6 +45,7 @@ export type QuoteData = {
 const steps = ["Select Self", "Basic Details", "Additional Details"];
 
 export default function PersonalAccident() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation();
   const { success, info } = useAlert();
   const servicesTheme = useServicesTheme();
@@ -92,7 +94,7 @@ export default function PersonalAccident() {
       if (step === 1) {
         const enquiryId = formData.details?.enquiryId;
         if (!enquiryId) {
-          Alert.alert("Error", "Session expired. Please go back to Step 1.");
+          Alert.alert(translateUi('common:error'), translateUi('common:sessionStepOne'));
           return;
         }
         // Basic details will be submitted from Step3PA via saveStep(3, "basic", ...)
@@ -100,7 +102,7 @@ export default function PersonalAccident() {
       }
     } catch (e: any) {
       Alert.alert(
-        "Error",
+        translateUi('common:error'),
         e?.response?.data?.message || e?.message || "Failed to proceed. Please try again.",
       );
     } finally {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from "react";
 import {
   StyleSheet,
@@ -61,6 +62,7 @@ const mapMostViewItem = (item: any, index: number) => {
 
 
 function MostView() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
   const fetchMostViewData = useCallback(async () => {
@@ -107,7 +109,7 @@ function MostView() {
           activeOpacity={0.85}
           onPress={handleExplore}
         >
-          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+          <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:exploreMore')}</Text>
           <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
         </TouchableOpacity>
       </View>

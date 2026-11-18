@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   SafeAreaView,
@@ -62,6 +63,7 @@ const OrderSectionCard = ({
 );
 
 export default function TrackOrderScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark } = useAppTheme();
 
@@ -108,7 +110,7 @@ export default function TrackOrderScreen() {
             >
               <MaterialCommunityIcons name="arrow-left" size={20} color={colors.backIcon} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: colors.headerText }]}>All Orders</Text>
+            <Text style={[styles.headerTitle, { color: colors.headerText }]}>{translateUi('common:allOrders')}</Text>
             <View style={styles.headerSpacer} />
           </View>
 
@@ -121,17 +123,17 @@ export default function TrackOrderScreen() {
             <View style={styles.heroIcon}>
               <MaterialCommunityIcons name="clipboard-list-outline" size={28} color="#FFFFFF" />
             </View>
-            <Text style={styles.heroTitle}>One place for every order</Text>
+            <Text style={styles.heroTitle}>{translateUi('dashboard:orderHub')}</Text>
             <Text style={styles.heroSubtitle}>
-              View product purchases, service bookings, bill payments, and future order types from one place.
+              {translateUi('dashboard:orderHubIntro')}
             </Text>
           </LinearGradient>
 
-          <Text style={[styles.sectionLabel, { color: colors.muted }]}>ORDER CATEGORIES</Text>
+          <Text style={[styles.sectionLabel, { color: colors.muted }]}>{translateUi('dashboard:orderCategories')}</Text>
 
           <OrderSectionCard
-            title="Shopping Orders"
-            subtitle="Track your ecommerce product orders"
+            title={translateUi('dashboard:shoppingOrders')}
+            subtitle={translateUi('dashboard:trackProductOrders')}
             icon="shopping-outline"
             iconBg={colors.iconBlueBg}
             iconColor="#4F46E5"
@@ -144,8 +146,8 @@ export default function TrackOrderScreen() {
           />
 
           <OrderSectionCard
-            title="Service Orders"
-            subtitle="View booked services and their progress"
+            title={translateUi('dashboard:serviceOrders')}
+            subtitle={translateUi('dashboard:trackServiceOrders')}
             icon="briefcase-check-outline"
             iconBg={colors.iconGreenBg}
             iconColor="#059669"
@@ -158,8 +160,8 @@ export default function TrackOrderScreen() {
           />
 
           <OrderSectionCard
-            title="BBPS Orders"
-            subtitle="Open your recharge and bill payment history"
+            title={translateUi('dashboard:bbpsOrders')}
+            subtitle={translateUi('dashboard:bbpsHistory')}
             icon="receipt-text-check-outline"
             iconBg={colors.iconOrangeBg}
             iconColor="#EA580C"
@@ -180,15 +182,15 @@ export default function TrackOrderScreen() {
             <Text style={[styles.infoTitle, { color: colors.text }]}>What you can manage here</Text>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={[styles.infoText, { color: colors.body }]}>Product orders, service bookings, and BBPS transactions</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>{translateUi('dashboard:orderList')}</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={[styles.infoText, { color: colors.body }]}>Status, payment details, invoices, and recent updates</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>{translateUi('dashboard:orderUpdates')}</Text>
             </View>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="check-circle-outline" size={18} color="#4F46E5" />
-              <Text style={[styles.infoText, { color: colors.body }]}>A quick route to each module's dedicated order list</Text>
+              <Text style={[styles.infoText, { color: colors.body }]}>{translateUi('dashboard:orderModuleLinks')}</Text>
             </View>
           </View>
         </ScrollView>

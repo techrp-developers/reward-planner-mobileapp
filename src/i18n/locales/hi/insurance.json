@@ -1,0 +1,15 @@
+{
+  "policyDetails": "पॉलिसी की जानकारी",
+  "claimDetails": "दावे की जानकारी",
+  "claimStatus": "दावे की स्थिति",
+  "claimNow": "अभी दावा करें",
+  "selectMember": "सदस्य चुनें",
+  "sumInsured": "बीमित राशि",
+  "relationship": "रिश्ता",
+  "activePolicy": "सक्रिय पॉलिसी",
+  "policyNo": "पॉलिसी नंबर",
+  "raiseTrackClaims": "आसानी से दावे दर्ज करें और उनकी स्थिति देखें",
+  "insuredMembers": "बीमित सदस्य",
+  "submitClaim": "दावा दर्ज करें",
+  "policyDocuments": "पॉलिसी के दस्तावेज़"
+}

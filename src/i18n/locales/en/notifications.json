@@ -1,0 +1,19 @@
+{
+  "thisDevice": "This device",
+  "openSettings": "Open notification settings",
+  "registration": "Push device registration",
+  "whatYouReceive": "What you receive",
+  "opensAndroid": "Opens this alert type in Android settings",
+  "alwaysSent": "Always sent",
+  "loadFailed": "These options could not be loaded right now.",
+  "quietHours": "Quiet hours",
+  "quietHoursDescription": "Offers and reminders wait until quiet hours end. Important updates still arrive.",
+  "stayUpdated": "Stay Updated with Reward Planners!",
+  "promptDescription": "Get timely updates about your rewards, orders, bookings and important messages.",
+  "enable": "Enable Notifications",
+  "notNow": "Not Now",
+  "offersOptIn": "Offers are never turned on automatically. You can change this anytime in Notification settings.",
+  "orderBenefits": "Order, booking and payment updates",
+  "rewardBenefits": "Rewards and recognition as they happen",
+  "messageBenefits": "Messages from your colleagues"
+}

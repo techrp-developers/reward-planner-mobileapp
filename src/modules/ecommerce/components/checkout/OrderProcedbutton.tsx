@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
@@ -27,6 +28,7 @@ export default function OrderProcedbutton({
   bottomOffset,
   onLayout,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme()
   const safeTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
   const autoSticky = useStickyBottomCTA();
@@ -54,7 +56,7 @@ export default function OrderProcedbutton({
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Place Order</Text>
+              <Text style={styles.buttonText}>{translateUi('common:placeOrder')}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

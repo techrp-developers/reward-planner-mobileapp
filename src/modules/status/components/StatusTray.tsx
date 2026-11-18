@@ -1,3 +1,5 @@
+import appI18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -71,6 +73,7 @@ function StatusComposer({ visible, onClose, onCreated }: {
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const [text, setText] = useState('');
   const [backgroundColor, setBackgroundColor] = useState(STATUS_COLORS[0]);
   const [media, setMedia] = useState<StatusMediaInput | null>(null);
@@ -97,7 +100,7 @@ function StatusComposer({ visible, onClose, onCreated }: {
   const chooseMedia = useCallback(async () => {
     const result = await launchImageLibrary({ mediaType: 'mixed', selectionLimit: 1, quality: 0.8 });
     if (result.didCancel) return;
-    if (result.errorCode) return Alert.alert('Unable to select media', result.errorMessage || result.errorCode);
+    if (result.errorCode) return Alert.alert(appI18n.t('status:mediaSelectionFailed'), result.errorMessage || result.errorCode);
     const asset = result.assets?.[0];
     if (!asset?.uri || !asset.type) return;
     const selectedType: StatusType = asset.type.startsWith('video/') ? 'video' : 'image';
@@ -106,16 +109,16 @@ function StatusComposer({ visible, onClose, onCreated }: {
   }, []);
 
   const publish = useCallback(async () => {
-    if (type === 'text' && !text.trim()) return Alert.alert('Add some text', 'Write something before publishing.');
-    if (type !== 'text' && !media) return Alert.alert('Select media', 'Choose a photo or video first.');
-    if (visibility === 'all_except_companies' && !excludedCompanyIds.length) return Alert.alert('Choose companies', 'Select at least one company to exclude.');
-    if (visibility === 'custom_people' && !allowedUserIds.length) return Alert.alert('Choose people', 'Select at least one person.');
+    if (type === 'text' && !text.trim()) return Alert.alert(appI18n.t('status:addText'), appI18n.t('status:publishEmpty'));
+    if (type !== 'text' && !media) return Alert.alert(appI18n.t('status:selectMedia'), appI18n.t('status:chooseMediaFirst'));
+    if (visibility === 'all_except_companies' && !excludedCompanyIds.length) return Alert.alert(appI18n.t('status:chooseCompanies'), appI18n.t('status:excludeCompany'));
+    if (visibility === 'custom_people' && !allowedUserIds.length) return Alert.alert(appI18n.t('status:choosePeople'), appI18n.t('status:chooseOne'));
     setSubmitting(true);
     try {
       await createStatus({ type, text, backgroundColor: type === 'text' ? backgroundColor : undefined, media: media || undefined, visibility, excludedCompanyIds, allowedUserIds });
       reset(); onCreated(); onClose();
     } catch (error) {
-      Alert.alert('Could not publish status', messageFrom(error));
+      Alert.alert(appI18n.t('status:publishFailed'), messageFrom(error));
     } finally {
       setSubmitting(false);
     }
@@ -130,18 +133,18 @@ function StatusComposer({ visible, onClose, onCreated }: {
       <SafeAreaView style={[styles.composer, { backgroundColor: type === 'text' ? backgroundColor : '#0B0B0D' }]}>
         <View style={styles.composerHeader}>
           <Pressable onPress={close} hitSlop={12}><MaterialCommunityIcons name="close" color="#FFF" size={28} /></Pressable>
-          <Text style={styles.composerTitle}>New status</Text>
+          <Text style={styles.composerTitle}>{translateUi('status:newStatus')}</Text>
           <Pressable onPress={chooseMedia} hitSlop={12}><MaterialCommunityIcons name="image-multiple-outline" color="#FFF" size={26} /></Pressable>
         </View>
         <View style={styles.composerBody}>
           {media ? (
             media.type.startsWith('image/') ? <Image source={{ uri: media.uri }} style={styles.composerImage} resizeMode="contain" /> :
-              <View style={styles.videoSelected}><MaterialCommunityIcons name="video" color="#FFF" size={64} /><Text style={styles.videoSelectedText}>{media.fileName}</Text><Text style={styles.videoHint}>Videos must be 30 seconds or shorter</Text></View>
+              <View style={styles.videoSelected}><MaterialCommunityIcons name="video" color="#FFF" size={64} /><Text style={styles.videoSelectedText}>{media.fileName}</Text><Text style={styles.videoHint}>{translateUi('status:videoLimit')}</Text></View>
           ) : (
             <TextInput
               value={text}
               onChangeText={setText}
-              placeholder="Type a status"
+              placeholder={translateUi('status:writeStatus')}
               placeholderTextColor="rgba(255,255,255,.62)"
               multiline
               maxLength={700}
@@ -156,30 +159,30 @@ function StatusComposer({ visible, onClose, onCreated }: {
             {STATUS_COLORS.map(color => <Pressable key={color} onPress={() => setBackgroundColor(color)} style={[styles.colorDot, { backgroundColor: color }, backgroundColor === color && styles.colorDotSelected]} />)}
           </ScrollView>
         )}
-        {media && <TextInput value={text} onChangeText={setText} maxLength={700} placeholder="Add a caption…" placeholderTextColor="#A1A1AA" style={styles.captionInput} />}
+        {media && <TextInput value={text} onChangeText={setText} maxLength={700} placeholder={translateUi('status:caption')} placeholderTextColor="#A1A1AA" style={styles.captionInput} />}
         <Pressable onPress={() => setAudienceVisible(true)} style={styles.audienceButton}>
           <MaterialCommunityIcons name="shield-account-outline" color="#FFF" size={20} />
           <Text style={styles.audienceButtonText}>{AUDIENCES.find(item => item.value === visibility)?.label}</Text>
           <MaterialCommunityIcons name="chevron-up" color="#FFF" size={20} />
         </Pressable>
         <Pressable onPress={publish} disabled={submitting} style={styles.publishButton}>
-          {submitting ? <ActivityIndicator color="#FFF" /> : <><Text style={styles.publishText}>Publish</Text><MaterialCommunityIcons name="send" color="#FFF" size={20} /></>}
+          {submitting ? <ActivityIndicator color="#FFF" /> : <><Text style={styles.publishText}>{translateUi('status:publish')}</Text><MaterialCommunityIcons name="send" color="#FFF" size={20} /></>}
         </Pressable>
         <Modal visible={audienceVisible} transparent animationType="slide" onRequestClose={() => setAudienceVisible(false)}>
           <View style={styles.audienceBackdrop}>
             <SafeAreaView style={styles.audienceSheet}>
               <View style={styles.audienceHeader}>
-                <Text style={styles.audienceTitle}>Who can see this?</Text>
+                <Text style={styles.audienceTitle}>{translateUi('status:audience')}</Text>
                 <Pressable onPress={() => setAudienceVisible(false)}><MaterialCommunityIcons name="close" size={26} color="#18181B" /></Pressable>
               </View>
               {AUDIENCES.map(item => <Pressable key={item.value} onPress={() => setVisibility(item.value)} style={styles.audienceOption}><Text style={styles.audienceOptionText}>{item.label}</Text><MaterialCommunityIcons name={visibility === item.value ? 'radiobox-marked' : 'radiobox-blank'} size={23} color="#7C3AED" /></Pressable>)}
               {(visibility === 'all_except_companies' || visibility === 'custom_people') && <ScrollView style={styles.audienceList}>
                 {audienceQuery.isLoading && <ActivityIndicator color="#7C3AED" />}
-                {audienceQuery.isError && <Text style={styles.audienceError}>Could not load audience options</Text>}
+                {audienceQuery.isError && <Text style={styles.audienceError}>{translateUi('status:audienceFailed')}</Text>}
                 {visibility === 'all_except_companies' && audienceQuery.data?.companies.map(company => <Pressable key={company.id} onPress={() => toggleId(company.id, excludedCompanyIds, setExcludedCompanyIds)} style={styles.audienceRow}><Text style={styles.audienceRowText}>{company.name}</Text><MaterialCommunityIcons name={excludedCompanyIds.includes(company.id) ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color="#7C3AED" /></Pressable>)}
                 {visibility === 'custom_people' && audienceQuery.data?.people.map(person => <Pressable key={person.id} onPress={() => toggleId(person.id, allowedUserIds, setAllowedUserIds)} style={styles.audienceRow}><Avatar uri={person.image_url} name={person.name} size={36} /><View style={styles.audiencePerson}><Text style={styles.audienceRowText}>{person.name}</Text><Text style={styles.audienceCompanyText}>{person.company.name}</Text></View><MaterialCommunityIcons name={allowedUserIds.includes(person.id) ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color="#7C3AED" /></Pressable>)}
               </ScrollView>}
-              <Pressable onPress={() => setAudienceVisible(false)} style={styles.audienceDone}><Text style={styles.audienceDoneText}>Done</Text></Pressable>
+              <Pressable onPress={() => setAudienceVisible(false)} style={styles.audienceDone}><Text style={styles.audienceDoneText}>{translateUi('common:done')}</Text></Pressable>
             </SafeAreaView>
           </View>
         </Modal>
@@ -189,7 +192,8 @@ function StatusComposer({ visible, onClose, onCreated }: {
 }
 
 function ViewerList({ viewers }: { viewers: StatusViewer[] }) {
-  return <FlatList data={viewers} keyExtractor={item => String(item.user_id)} ListEmptyComponent={<Text style={styles.emptyViewers}>No views yet</Text>} renderItem={({ item }) => <View style={styles.viewerRow}><Avatar uri={item.image_url} name={item.name} size={42} /><View><Text style={styles.viewerName}>{item.name || 'User'}</Text><Text style={styles.viewerTime}>{new Date(item.viewed_at).toLocaleString()}</Text></View></View>} />;
+  const { t: translateUi } = useTranslation('common');
+  return <FlatList data={viewers} keyExtractor={item => String(item.user_id)} ListEmptyComponent={<Text style={styles.emptyViewers}>{translateUi('status:noViews')}</Text>} renderItem={({ item }) => <View style={styles.viewerRow}><Avatar uri={item.image_url} name={item.name} size={42} /><View><Text style={styles.viewerName}>{item.name || 'User'}</Text><Text style={styles.viewerTime}>{new Date(item.viewed_at).toLocaleString()}</Text></View></View>} />;
 }
 
 function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFinished, onChanged }: {
@@ -201,6 +205,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
   onFinished: () => void;
   onChanged: () => void;
 }) {
+  const { t: translateUi } = useTranslation('common');
   const [index, setIndex] = useState(0);
   const [viewers, setViewers] = useState<StatusViewer[] | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
@@ -345,18 +350,18 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
           : item),
       );
     }
-    catch (error) { Alert.alert('Could not load views', messageFrom(error)); }
+    catch (error) { Alert.alert(appI18n.t('status:viewsFailed'), messageFrom(error)); }
     finally { setBusy(false); }
   }, [currentUserId, status]);
 
   const remove = useCallback(() => {
     if (!status) return;
-    Alert.alert('Delete status?', 'This status will be removed immediately.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+    Alert.alert(appI18n.t('status:deleteTitle'), appI18n.t('status:deleteDescription'), [
+      { text: appI18n.t('common:cancel'), style: 'cancel' },
+      { text: appI18n.t('common:delete'), style: 'destructive', onPress: async () => {
         setBusy(true);
         try { await deleteStatus(status.id); onChanged(); onClose(); }
-        catch (error) { Alert.alert('Could not delete status', messageFrom(error)); }
+        catch (error) { Alert.alert(appI18n.t('status:deleteFailed'), messageFrom(error)); }
         finally { setBusy(false); }
       } },
     ]);
@@ -390,7 +395,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
       updateCachedInteraction(status.id, { like_count: result.likeCount });
     } catch (error) {
       if (!append) setLikesVisible(false);
-      Alert.alert('Could not load likes', messageFrom(error));
+      Alert.alert(appI18n.t('status:likesFailed'), messageFrom(error));
     } finally {
       likesLoadingRef.current = false;
       setLikesLoading(false);
@@ -426,7 +431,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
     } catch (error) {
       setLiked(previousLiked);
       setLikeCount(previousCount);
-      Alert.alert('Could not update like', messageFrom(error));
+      Alert.alert(appI18n.t('status:likeFailed'), messageFrom(error));
     } finally {
       setLiking(false);
     }
@@ -444,9 +449,9 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
       const count = commentCount + 1;
       setCommentCount(count);
       updateCachedInteraction(status.id, { comment_count: count });
-      Alert.alert('Reply sent');
+      Alert.alert(appI18n.t('status:replySent'));
     } catch (error) {
-      Alert.alert('Could not send reply', messageFrom(error));
+      Alert.alert(appI18n.t('status:replyFailed'), messageFrom(error));
     } finally {
       setCommentSubmitting(false);
     }
@@ -493,7 +498,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
             {status.type === 'video' && (!status.media_url || videoError) && (
               <View style={styles.videoOpen}>
                 <MaterialCommunityIcons name="alert-circle-outline" color="#FFF" size={54} />
-                <Text style={styles.videoOpenText}>Unable to play this video</Text>
+                <Text style={styles.videoOpenText}>{translateUi('status:playbackFailed')}</Text>
               </View>
             )}
             {status.type !== 'text' && !!status.text && <Text style={styles.viewerCaption}>{status.text}</Text>}
@@ -505,7 +510,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                 <TextInput
                   value={commentText}
                   onChangeText={setCommentText}
-                  placeholder="Reply..."
+                  placeholder={translateUi('status:replyPlaceholder')}
                   placeholderTextColor="rgba(255,255,255,.65)"
                   maxLength={1000}
                   returnKeyType="send"
@@ -552,13 +557,13 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
               </Pressable>
             </View>
           )}
-          {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>Viewed by</Text><ViewerList viewers={viewers} /></View>}
+          {viewers && <View style={styles.viewersSheet}><View style={styles.sheetHandle} /><Text style={styles.viewersTitle}>{translateUi('status:viewedBy')}</Text><ViewerList viewers={viewers} /></View>}
           {commentsVisible && (
             <View style={styles.viewersSheet}>
               <View style={styles.sheetHandle} />
               <View style={styles.commentsHeader}>
                 <Text style={styles.viewersTitle}>Comments ({commentCount})</Text>
-                <Pressable onPress={() => setCommentsVisible(false)} hitSlop={10} accessibilityLabel="Close comments">
+                <Pressable onPress={() => setCommentsVisible(false)} hitSlop={10} accessibilityLabel={translateUi('status:closeComments')}>
                   <MaterialCommunityIcons name="close" size={24} color="#18181B" />
                 </Pressable>
               </View>
@@ -569,9 +574,9 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   onEndReached={() => {
                     if (commentsQuery.hasNextPage && !commentsQuery.isFetching && !commentsQuery.isFetchNextPageError) commentsQuery.fetchNextPage();
                   }}
-                  ListEmptyComponent={!commentsQuery.isError ? <Text style={styles.emptyViewers}>No comments yet</Text> : null}
+                  ListEmptyComponent={!commentsQuery.isError ? <Text style={styles.emptyViewers}>{translateUi('status:noComments')}</Text> : null}
                   ListFooterComponent={commentsQuery.isError
-                    ? <Pressable onPress={() => commentsQuery.isFetchNextPageError ? commentsQuery.fetchNextPage() : commentsQuery.refetch()}><Text style={styles.emptyViewers}>Could not load comments. Tap to retry.</Text></Pressable>
+                    ? <Pressable onPress={() => commentsQuery.isFetchNextPageError ? commentsQuery.fetchNextPage() : commentsQuery.refetch()}><Text style={styles.emptyViewers}>{translateUi('status:commentLoadFailed')}</Text></Pressable>
                     : commentsQuery.isFetchingNextPage ? <ActivityIndicator color="#7C3AED" /> : null}
                   renderItem={({ item }) => (
                     <View style={styles.viewerRow}>
@@ -609,7 +614,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
                   ListFooterComponent={likesLoading && likes.length > 0
                     ? <ActivityIndicator style={styles.commentsFooterLoader} color="#7C3AED" />
                     : null}
-                  ListEmptyComponent={<Text style={styles.emptyViewers}>No likes yet</Text>}
+                  ListEmptyComponent={<Text style={styles.emptyViewers}>{translateUi('status:noLikes')}</Text>}
                   renderItem={({ item }) => (
                     <View style={styles.viewerRow}>
                       <Avatar uri={item.user.image_url} name={item.user.name} size={42} />
@@ -628,6 +633,7 @@ function StatusViewerModal({ group, own, currentUserId, visible, onClose, onFini
 }
 
 function StatusTray({ textColor }: { textColor?: string }) {
+  const { t: translateUi } = useTranslation('common');
   const { isAuthenticated, user } = useAuth();
   const { isDark } = useAppTheme();
   const labelColor = textColor ?? (isDark ? '#FFFFFF' : '#0F172A');
@@ -680,7 +686,7 @@ function StatusTray({ textColor }: { textColor?: string }) {
             <Avatar uri={profileQuery.data ? profileQuery.data.userImage : myGroup?.user.image_url} name={profileQuery.data?.name || user?.name} size={40} />
             <Pressable onPress={() => setComposerVisible(true)} style={styles.addBadge}><MaterialCommunityIcons name="plus" color="#FFF" size={16} /></Pressable>
           </Pressable>
-          <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>My status</Text>
+          <Text numberOfLines={1} style={[styles.storyName, { color: labelColor }]}>{translateUi('status:myStatus')}</Text>
         </View>
         {visibleFeed.map(group => (
           <Pressable key={group.user.id} style={styles.storyItem} onPress={() => { setViewingOwn(false); setActiveGroup(group); }}>

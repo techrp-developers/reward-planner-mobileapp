@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo, useState } from 'react';
 import { PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Modal from 'react-native-modal';
@@ -40,6 +41,7 @@ const DEFAULT_GAMES: DrawerGame[] = [
 type Props = { games?: DrawerGame[] };
 
 export default function GamesDrawer({ games: customGames }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const games = customGames ?? [
     { id: 'quiz', title: 'Quiz', description: 'Five questions. A new challenge. Test your knowledge with Quivio.', category: 'Trivia', icon: 'head-question-outline', color: '#72DEEF', gradient: ['#67E8F9', '#0EA5E9', '#1E3A8A'], onPlay: () => navigation.navigate('Quiz') },
@@ -64,8 +66,8 @@ export default function GamesDrawer({ games: customGames }: Props) {
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Open games"
-        accessibilityHint="Opens the games side panel"
+        accessibilityLabel={translateUi('games:open')}
+        accessibilityHint={translateUi('games:openHint')}
         onPress={() => setVisible(true)}
         style={[styles.handle, { right: insets.right, top: Math.max(insets.top + 80, height * 0.43) }]}
       >
@@ -97,10 +99,10 @@ export default function GamesDrawer({ games: customGames }: Props) {
               <MaterialCommunityIcons name="controller-classic" size={27} color="#BDF7D4" />
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.eyebrow}>YOUR PLAY SPACE</Text>
-              <Text accessibilityRole="header" style={styles.title}>Games</Text>
+              <Text style={styles.eyebrow}>{translateUi('games:playSpace')}</Text>
+              <Text accessibilityRole="header" style={styles.title}>{translateUi('games:games')}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close games" onPress={close} style={styles.close}>
+            <Pressable accessibilityRole="button" accessibilityLabel={translateUi('games:close')} onPress={close} style={styles.close}>
               <MaterialCommunityIcons name="close" size={26} color="#F5F5F5" />
             </Pressable>
           </View>
@@ -113,13 +115,13 @@ export default function GamesDrawer({ games: customGames }: Props) {
           >
             <View style={styles.intro}>
               <MaterialCommunityIcons name="creation" size={30} color="#BDF7D4" />
-              <Text style={styles.introTitle}>Take a play break</Text>
-              <Text style={styles.secondary}>Your next challenge is right here.</Text>
+              <Text style={styles.introTitle}>{translateUi('games:playBreak')}</Text>
+              <Text style={styles.secondary}>{translateUi('games:nextChallenge')}</Text>
             </View>
             <View style={styles.sectionHeader}>
-              <Text accessibilityRole="header" style={styles.sectionTitle}>All games</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>{translateUi('games:allGames')}</Text>
             </View>
-            {games.length === 0 && <Text style={styles.secondary}>New games will appear here when they are added.</Text>}
+            {games.length === 0 && <Text style={styles.secondary}>{translateUi('games:empty')}</Text>}
             {games.map((game, index) => {
               const gradient = game.gradient ?? CARD_PALETTE[index % CARD_PALETTE.length];
               const deep = gradient[2];
@@ -146,13 +148,13 @@ export default function GamesDrawer({ games: customGames }: Props) {
                         onPress={() => { setPendingGame(game); close(); }}
                         style={({ pressed }) => [styles.playButton, pressed && styles.playPressed]}
                       >
-                        <Text style={[styles.playText, { color: deep }]}>Play now</Text>
+                        <Text style={[styles.playText, { color: deep }]}>{translateUi('games:play')}</Text>
                         <MaterialCommunityIcons name="arrow-right" size={20} color={deep} />
                       </Pressable>
                     ) : (
                       <View style={styles.soonBadge}>
                         <MaterialCommunityIcons name="clock-outline" size={16} color="#FFFFFF" />
-                        <Text style={styles.soonText}>Coming soon</Text>
+                        <Text style={styles.soonText}>{translateUi('games:soon')}</Text>
                       </View>
                     )}
                   </LinearGradient>

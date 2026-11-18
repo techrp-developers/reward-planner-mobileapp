@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, memo } from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
@@ -25,15 +26,16 @@ const LogoutConfirmationModalComponent = ({
   onCancel,
   isLoading = false,
   isDark = false,
-  title = "Confirm Logout",
-  description = "Are you sure you want to logout?",
-  subText = "You will need to login again to access your account.",
+  title,
+  description,
+  subText,
   icon = "logout",
-  confirmText = "Yes, Logout",
-  loadingText = "Logging out...",
+  confirmText,
+  loadingText,
   danger = false,
   showCancel = true,
 }: LogoutConfirmationModalProps) => {
+  const { t: translateUi } = useTranslation(['profile', 'common']);
   const handleConfirm = useCallback(() => {
     onConfirm();
   }, [onConfirm]);
@@ -76,13 +78,13 @@ const LogoutConfirmationModalComponent = ({
 
           {/* Text Content */}
           <Text style={[styles.title, { color: danger ? "#EF4444" : isDark ? "#FFFFFF" : "#852BAF" }]}>
-            {title}
+            {title ?? translateUi('profile:logoutTitle')}
           </Text>
           <Text style={[styles.description, { color: isDark ? "#D4D4D8" : "#666666" }]}>
-            {description}
+            {description ?? translateUi('profile:logoutDescription')}
           </Text>
           <Text style={[styles.subText, { color: isDark ? "#A1A1AA" : "#999999" }]}>
-            {subText}
+            {subText ?? translateUi('profile:logoutHelp')}
           </Text>
 
           {/* Button Row */}
@@ -104,7 +106,7 @@ const LogoutConfirmationModalComponent = ({
                     },
                   ]}
                 >
-                  <Text style={[styles.cancelBtnText, { color: isDark ? "#E5E7EB" : "#666666" }]}>Cancel</Text>
+                  <Text style={[styles.cancelBtnText, { color: isDark ? "#E5E7EB" : "#666666" }]}>{translateUi('common:cancel')}</Text>
                 </View>
               </TouchableOpacity>
             ) : null}
@@ -123,7 +125,9 @@ const LogoutConfirmationModalComponent = ({
                 style={styles.gradientBtn}
               >
                 <Text style={styles.confirmBtnText}>
-                  {isLoading ? loadingText : confirmText}
+                  {isLoading
+                    ? loadingText ?? translateUi('profile:loggingOut')
+                    : confirmText ?? translateUi('profile:logoutConfirm')}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>

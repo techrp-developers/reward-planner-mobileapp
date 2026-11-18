@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -167,6 +168,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
   isEmpty,
   onClose,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { height: windowHeight } = useWindowDimensions();
@@ -300,7 +302,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
         <Animated.View style={animStyle}>
           <View style={styles.centered}>
             <MaterialCommunityIcons name="magnify" size={24} color={tk.magnifyIcon} />
-            <Text style={[styles.hint, tk.minCharHint]}>Type at least 2 characters</Text>
+            <Text style={[styles.hint, tk.minCharHint]}>{translateUi('common:atLeastTwo')}</Text>
           </View>
         </Animated.View>
       </View>
@@ -317,7 +319,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
             <Text style={[styles.emptyTitle, tk.emptyTitle]}>
               No results for "{query.trim()}"
             </Text>
-            <Text style={[styles.hint, tk.emptyHint]}>Try a different keyword</Text>
+            <Text style={[styles.hint, tk.emptyHint]}>{translateUi('common:differentKeyword')}</Text>
           </View>
         </Animated.View>
       </View>

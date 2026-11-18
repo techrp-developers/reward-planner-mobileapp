@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -166,6 +167,7 @@ const toTitleCase = (value?: string) => {
 };
 
 export default function OrderConfirmedScreen() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const route = useRoute<OrderConfirmedRoute>();
     const { isDark, theme } = useAppTheme();
@@ -451,7 +453,7 @@ export default function OrderConfirmedScreen() {
         return (
             <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
-                    title="Order Confirmed"
+                    title={translateUi('common:orderConfirmed')}
                     onBackPress={() => navigation.goBack()}
                     isDark={isDark}
                 />
@@ -467,7 +469,7 @@ export default function OrderConfirmedScreen() {
         return (
             <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
-                    title="Order Confirmed"
+                    title={translateUi('common:orderConfirmed')}
                     onBackPress={() => navigation.goBack()}
                     isDark={isDark}
                 />
@@ -481,7 +483,7 @@ export default function OrderConfirmedScreen() {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
             <OrderHeading
-                title="Order Confirmed"
+                title={translateUi('common:orderConfirmed')}
                 onBackPress={() => navigation.goBack()}
                 isDark={isDark}
             />

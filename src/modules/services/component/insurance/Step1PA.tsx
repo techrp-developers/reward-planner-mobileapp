@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   Image,
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export default function Step1PA({ data, setData, onNext }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const selectedGender = data.gender || "Male";
   const selfIcon = selectedGender === "Male" ? Husband : Wife;
@@ -125,7 +127,7 @@ export default function Step1PA({ data, setData, onNext }: Props) {
           borderTopColor: servicesTheme.colors.divider,
         },
       ]}>
-        <GradientButton title="Continue" onPress={handleContinue} />
+        <GradientButton title={translateUi('common:continue')} onPress={handleContinue} />
       </View>
       </LinearGradient>
     </SafeAreaView>

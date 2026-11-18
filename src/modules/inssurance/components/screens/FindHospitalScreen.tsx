@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -15,6 +16,7 @@ import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 
 const FindHospitalScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -61,7 +63,7 @@ const FindHospitalScreen: React.FC = () => {
           >
             <MaterialCommunityIcons name="arrow-left" size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Cashless Claim</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:cashlessClaim')}</Text>
         </View>
 
         <TouchableOpacity style={[styles.backBtn, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]} activeOpacity={0.7}>
@@ -75,7 +77,7 @@ const FindHospitalScreen: React.FC = () => {
           <View style={[styles.stepCircleDone, { backgroundColor: '#10B981' }]}>
             <MaterialCommunityIcons name="check" size={10} color="#FFFFFF" />
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Member</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:member')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: '#10B981' }]} />
@@ -84,7 +86,7 @@ const FindHospitalScreen: React.FC = () => {
           <View style={[styles.stepCircleActive, { borderColor: '#005b7f', backgroundColor: '#005b7f' }]}>
             <Text style={styles.stepCircleActiveText}>2</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: '#005b7f', fontWeight: '700' }]}>Hospital</Text>
+          <Text style={[styles.stepLabel, { color: '#005b7f', fontWeight: '700' }]}>{translateUi('common:hospital')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: isDark ? '#27272A' : '#E2E8F0' }]} />
@@ -93,7 +95,7 @@ const FindHospitalScreen: React.FC = () => {
           <View style={[styles.stepCirclePending, { borderColor: isDark ? '#52525B' : '#CBD5E1' }]}>
             <Text style={[styles.stepCirclePendingText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>3</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Documents</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:documents')}</Text>
         </View>
 
         <View style={[styles.stepLine, { backgroundColor: isDark ? '#27272A' : '#E2E8F0' }]} />
@@ -102,7 +104,7 @@ const FindHospitalScreen: React.FC = () => {
           <View style={[styles.stepCirclePending, { borderColor: isDark ? '#52525B' : '#CBD5E1' }]}>
             <Text style={[styles.stepCirclePendingText, { color: isDark ? '#A1A1AA' : '#64748B' }]}>4</Text>
           </View>
-          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>Review</Text>
+          <Text style={[styles.stepLabel, { color: isDark ? '#A1A1AA' : '#64748B' }]}>{translateUi('common:review')}</Text>
         </View>
       </View>
 
@@ -244,23 +246,23 @@ const FindHospitalScreen: React.FC = () => {
 
         {/* Required Documents Bar */}
         <View style={[styles.reqDocsBlock, { backgroundColor: isDark ? '#1E1E24' : '#e5f6fd' }]}>
-          <Text style={[styles.reqDocsTitle, { color: '#005b7f' }]}>Required Documents</Text>
+          <Text style={[styles.reqDocsTitle, { color: '#005b7f' }]}>{translateUi('common:requiredDocuments')}</Text>
           <View style={styles.reqDocsRow}>
             <View style={styles.reqDocItem}>
               <MaterialCommunityIcons name="card-bulleted" size={18} color="#005b7f" />
-              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>Health E-Card</Text>
+              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:healthECard')}</Text>
             </View>
             <View style={styles.reqDocItem}>
               <MaterialCommunityIcons name="account-box" size={18} color="#10B981" />
-              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>ID Proof</Text>
+              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:idProof')}</Text>
             </View>
             <View style={styles.reqDocItem}>
               <MaterialCommunityIcons name="file-document-outline" size={18} color="#EA580C" />
-              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>Prescription</Text>
+              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:prescription')}</Text>
             </View>
             <View style={styles.reqDocItem}>
               <MaterialCommunityIcons name="hospital-marker" size={18} color="#7C3AED" />
-              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>Admission Advice</Text>
+              <Text style={[styles.reqDocText, { color: isDark ? '#A1A1AA' : '#475569' }]}>{translateUi('common:admissionAdvice')}</Text>
             </View>
           </View>
         </View>
@@ -272,7 +274,7 @@ const FindHospitalScreen: React.FC = () => {
           activeOpacity={0.85}
           onPress={() => navigation.navigate('CashlessReviewScreen')}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Text style={styles.continueBtnText}>{translateUi('common:continue')}</Text>
         </TouchableOpacity>
 
       </ScrollView>

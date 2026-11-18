@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -103,6 +104,7 @@ const ArticleCard: React.FC<{
 // ─── Screen ───────────────────────────────────────────────────────
 
 const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const { categoryId, categoryTitle } = route.params;
   const sectionId = parseInt(categoryId, 10);
@@ -193,7 +195,7 @@ const FAQListingScreen: React.FC<Props> = ({ navigation, route }) => {
         </TouchableOpacity>
 
         <View style={styles.headerTextBlock}>
-          <Text style={styles.headerCategory}>Commonly Asked Questions</Text>
+          <Text style={styles.headerCategory}>{translateUi('common:faq')}</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>{categoryTitle}</Text>
         </View>
 

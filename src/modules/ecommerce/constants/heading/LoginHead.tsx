@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -19,6 +20,7 @@ type Props = {
 };
 
 function LoginHead({ showSearch, search, onChangeSearch, onFocusSearch }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { width } = useWindowDimensions();
   const { isDark, theme } = useAppTheme();
   const HEADER_HEIGHT = Math.round(width * 0.4);
@@ -45,7 +47,7 @@ function LoginHead({ showSearch, search, onChangeSearch, onFocusSearch }: Props)
         >
           <MaterialCommunityIcons name="magnify" size={20} color={isDark ? "#FFFFFF" : "#111827"} />
           <TextInput
-            placeholder="Search products"
+            placeholder={translateUi('common:searchProducts')}
             placeholderTextColor={theme.secondaryText}
             style={[styles.searchInput, { color: theme.text }]}
             value={search}

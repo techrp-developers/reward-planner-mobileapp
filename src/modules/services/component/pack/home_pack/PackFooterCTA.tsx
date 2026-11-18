@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -33,6 +34,7 @@ const PackFooterCTA: React.FC<Props> = ({
   onAddToCart,
   isAddingToCart = false,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   const showOriginalPrice = originalPrice > totalPrice;
 
@@ -56,7 +58,7 @@ const PackFooterCTA: React.FC<Props> = ({
 
         <TouchableOpacity style={[styles.outlineBorder, { borderColor: servicesTheme.colors.primary }]} onPress={onEnquirePress}>
           <View style={[styles.outlineInner, { backgroundColor: servicesTheme.colors.surface }]}>
-            <Text style={[styles.outlineText, { color: servicesTheme.colors.primary }]}>Enquire Now</Text>
+            <Text style={[styles.outlineText, { color: servicesTheme.colors.primary }]}>{translateUi('common:enquireNow')}</Text>
           </View>
         </TouchableOpacity>
 

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import CartHead from '../constant/navbar/CartHead';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Switch } from "react-native";
@@ -17,6 +18,7 @@ type RootNav = NativeStackNavigationProp<RootStackParamList>;
 const SERVICES_PROFILE_TOP_OFFSET = 110;
 
 function Profile() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const rootNavigation = navigation.getParent()?.getParent()?.getParent() as RootNav | undefined;
     const { isAuthenticated, user, logout } = useAuth();
@@ -59,12 +61,12 @@ function Profile() {
 
     const handleDeleteAccount = async () => {
         Alert.alert(
-            'Delete Account',
+            translateUi('common:deleteAccount'),
             'Are you sure you want to permanently delete your account? This cannot be undone.',
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: translateUi('common:cancel'), style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: translateUi('common:delete'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -77,11 +79,11 @@ function Profile() {
                                     routes: [{ name: 'Auth' }],
                                 });
                             } else {
-                                Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+                                Alert.alert(translateUi('common:deleteFailed'), translateUi('common:deleteAccountFailed'));
                             }
                         } catch (error) {
                             console.error('Delete account failed', error);
-                            Alert.alert('Delete failed', 'Could not delete the account. Please try again.');
+                            Alert.alert(translateUi('common:deleteFailed'), translateUi('common:deleteAccountFailed'));
                         } finally {
                             setLogoutLoading(false);
                         }
@@ -177,8 +179,8 @@ function Profile() {
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.scrollContent}
                         >
-                            <OutlineButton title="My Orders" onPress={handleOpenOrders} />
-                            <OutlineButton title="Wallet" onPress={() => navigation.navigate("WalletHistory")} />
+                            <OutlineButton title={translateUi('common:myOrders')} onPress={handleOpenOrders} />
+                            <OutlineButton title={translateUi('common:wallet')} onPress={() => navigation.navigate("WalletHistory")} />
                             {/* <OutlineButton title="Rewards" onPress={() => navigation.navigate("WalletHistory")} */}
                             
                         </ScrollView>
@@ -246,12 +248,12 @@ function Profile() {
                     {/* <MenuItem title="Languages" />
                 <View style={styles.menuDivider} /> */}
 
-                    <MenuItem title="Privacy Policy" onPress={() => navigation.navigate('PrivacyPolicy')} isDark={isDark} />
+                    <MenuItem title={translateUi('common:privacyPolicy')} onPress={() => navigation.navigate('PrivacyPolicy')} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
 
-                    <MenuItem title="Terms & Conditions" onPress={() => navigation.navigate('TermsAndConditions')} isDark={isDark} />
+                    <MenuItem title={translateUi('common:terms')} onPress={() => navigation.navigate('TermsAndConditions')} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
-                    <MenuItem title="Delete Account" onPress={handleDeleteAccount} isDark={isDark} />
+                    <MenuItem title={translateUi('common:deleteAccount')} onPress={handleDeleteAccount} isDark={isDark} />
                     <View style={[styles.menuDivider, isDark && styles.dividerDark]} />
 
                     <MenuItem title="Logout" onPress={handleLogoutPress} isDark={isDark} />

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   View,
@@ -41,6 +42,7 @@ const membersList = [
 ];
 
 export default function Step1({ data, setData, onNext }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const servicesTheme = useServicesTheme();
   // Get appropriate icon based on member type and selected gender
   const getIconForMember = (memberKey: string): any => {
@@ -194,7 +196,7 @@ export default function Step1({ data, setData, onNext }: Props) {
 
       <View style={[styles.footer, { backgroundColor: servicesTheme.isDark ? "rgba(17,17,19,0.96)" : "rgba(255,255,255,0.95)", borderTopColor: servicesTheme.colors.divider }]}>
         <GradientButton
-          title="Continue"
+          title={translateUi('common:continue')}
           onPress={onNext}
           disabled={isNextDisabled}
         />

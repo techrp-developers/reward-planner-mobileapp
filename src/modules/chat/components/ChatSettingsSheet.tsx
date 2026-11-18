@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function ChatSettingsSheet({ visible, value, saving, onClose, onChange }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -28,8 +30,8 @@ export default function ChatSettingsSheet({ visible, value, saving, onClose, onC
               <MaterialCommunityIcons name="pencil-outline" size={23} color={theme.primary} />
             </View>
             <View style={styles.headingText}>
-              <Text style={[styles.title, { color: theme.text }]}>Chat settings</Text>
-              <Text style={[styles.subtitle, { color: theme.secondaryText }]}>Changes are visible to everyone in this chat</Text>
+              <Text style={[styles.title, { color: theme.text }]}>{translateUi('chat:settings')}</Text>
+              <Text style={[styles.subtitle, { color: theme.secondaryText }]}>{translateUi('chat:settingsVisible')}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={[styles.close, { backgroundColor: theme.background }]}>
               <MaterialCommunityIcons name="close" size={21} color={theme.secondaryText} />
@@ -37,9 +39,9 @@ export default function ChatSettingsSheet({ visible, value, saving, onClose, onC
           </View>
           <View style={styles.sectionTitleRow}>
             <MaterialCommunityIcons name="palette-outline" size={20} color={theme.primary} />
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Theme</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{translateUi('chat:theme')}</Text>
           </View>
-          <Text style={[styles.sectionHint, { color: theme.secondaryText }]}>Choose the colors for this conversation</Text>
+          <Text style={[styles.sectionHint, { color: theme.secondaryText }]}>{translateUi('chat:chooseColors')}</Text>
           <View style={styles.themeGrid}>
             {CHAT_THEMES.map(option => {
               const selected = option.key === value;
@@ -55,7 +57,7 @@ export default function ChatSettingsSheet({ visible, value, saving, onClose, onC
               );
             })}
           </View>
-          {saving ? <View style={styles.saving}><ActivityIndicator size="small" color={theme.primary} /><Text style={[styles.savingText, { color: theme.secondaryText }]}>Updating for everyone…</Text></View> : null}
+          {saving ? <View style={styles.saving}><ActivityIndicator size="small" color={theme.primary} /><Text style={[styles.savingText, { color: theme.secondaryText }]}>{translateUi('chat:updating')}</Text></View> : null}
         </View>
       </View>
     </Modal>

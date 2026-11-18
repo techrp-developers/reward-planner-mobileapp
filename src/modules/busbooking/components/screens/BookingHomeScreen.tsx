@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../../i18n';
+import { getAppLocale } from '../../../../i18n/format';
 import React from "react";
 
 import {
@@ -63,9 +66,7 @@ type CalendarMonth = {
   chips: DateChip[];
 };
 
-const CALENDAR_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const buildCalendarMonths = (): CalendarMonth[] => {
+const buildCalendarMonths = (locale: string): CalendarMonth[] => {
   const now = new Date();
   const baseYear = now.getFullYear();
   const baseMonth = now.getMonth();
@@ -75,7 +76,7 @@ const buildCalendarMonths = (): CalendarMonth[] => {
     const currentMonthDate = new Date(baseYear, baseMonth + offset, 1);
     const year = currentMonthDate.getFullYear();
     const month = currentMonthDate.getMonth();
-    const monthTitle = currentMonthDate.toLocaleString("en-US", {
+    const monthTitle = currentMonthDate.toLocaleString(locale, {
       month: "long",
       year: "numeric",
     });
@@ -98,10 +99,10 @@ const buildCalendarMonths = (): CalendarMonth[] => {
 
       return {
         id: dateId,
-        day: currentDate.toLocaleString("en-US", { weekday: "short" }),
+        day: currentDate.toLocaleString(locale, { weekday: "short" }),
         date: String(dayNumber),
         active: dateId === todayId,
-        fullLabel: currentDate.toLocaleDateString("en-US", {
+        fullLabel: currentDate.toLocaleDateString(locale, {
           weekday: "long",
           day: "numeric",
           month: "long",
@@ -123,7 +124,7 @@ const buildCalendarMonths = (): CalendarMonth[] => {
 const formatRecentSearchTime = (updatedAt: string) => {
   const timestamp = new Date(updatedAt).getTime();
   if (Number.isNaN(timestamp)) {
-    return "Recently searched";
+    return i18n.t('busBooking:recentlySearched');
   }
 
   const diffMs = Date.now() - timestamp;
@@ -133,16 +134,16 @@ const formatRecentSearchTime = (updatedAt: string) => {
 
   if (diffMs < hour) {
     const minutes = Math.max(1, Math.floor(diffMs / minute));
-    return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    return i18n.t('busBooking:minutesAgo', { count: minutes });
   }
 
   if (diffMs < day) {
     const hours = Math.max(1, Math.floor(diffMs / hour));
-    return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    return i18n.t('busBooking:hoursAgo', { count: hours });
   }
 
   const days = Math.max(1, Math.floor(diffMs / day));
-  return `${days} day${days > 1 ? "s" : ""} ago`;
+  return i18n.t('busBooking:daysAgo', { count: days });
 };
 
 const formatJourneyDateLabel = (journeyDate: string) => {
@@ -152,7 +153,7 @@ const formatJourneyDateLabel = (journeyDate: string) => {
     return journeyDate;
   }
 
-  return parsed.toLocaleDateString("en-US", {
+  return parsed.toLocaleDateString(getAppLocale(), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -160,12 +161,20 @@ const formatJourneyDateLabel = (journeyDate: string) => {
 };
 
 export default function BookingHomeScreen() {
+  const { t: translateUi } = useTranslation('common');
+  const locale = getAppLocale();
+  const weekdays = React.useMemo(
+    () => Array.from({ length: 7 }, (_, index) =>
+      new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: 'short' }),
+    ),
+    [locale],
+  );
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const { popup, showPopup, hidePopup } = useBusBookingPopup();
   const calendarMonths = React.useMemo(
-    () => buildCalendarMonths(),
-    []
+    () => buildCalendarMonths(locale),
+    [locale]
   );
   const dateChips = React.useMemo(
     () => calendarMonths.flatMap((month) => month.chips),
@@ -322,12 +331,12 @@ const [popularRoutes, setPopularRoutes] =
     }
 
     const selectedDate = new Date(selectedChip.id);
-    return selectedDate.toLocaleDateString("en-US", {
+    return selectedDate.toLocaleDateString(locale, {
       weekday: "short",
       day: "2-digit",
       month: "short",
     });
-  }, [selectedChip]);
+  }, [selectedChip, locale]);
 
   const applyPopularRoute = (item: BusPopularRoute) => {
     setFromCity({
@@ -830,7 +839,7 @@ const handleSearchBuses = async () => {
   <View style={styles.routeTextWrap}>
 
     <Text style={styles.routeLabel}>
-      From
+      {translateUi('common:from')}
     </Text>
 
     <Text
@@ -904,7 +913,7 @@ const handleSearchBuses = async () => {
   <View style={styles.routeTextWrap}>
 
     <Text style={styles.routeLabel}>
-      To
+      {translateUi('busBooking:to')}
     </Text>
 
     <Text
@@ -945,9 +954,9 @@ const handleSearchBuses = async () => {
               color="#444444"
             />
             <View style={styles.dateJourneyTextWrap}>
-              <Text style={styles.dateJourneyLabel}>Date of Journey</Text>
+              <Text style={styles.dateJourneyLabel}>{translateUi('busBooking:journeyDate')}</Text>
               <Text style={styles.dateJourneyValue}>{journeyDateText}</Text>
-              <Text style={styles.dateJourneyHint}>Tap to choose travel date</Text>
+              <Text style={styles.dateJourneyHint}>{translateUi('busBooking:chooseDate')}</Text>
             </View>
           </View>
 
@@ -979,7 +988,7 @@ const handleSearchBuses = async () => {
             color="#CE1538"
           />
           <View style={styles.womenBookingText}>
-            <Text style={styles.womenBookingTitle}>Booking for Women</Text>
+            <Text style={styles.womenBookingTitle}>{translateUi('busBooking:women')}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -1054,7 +1063,7 @@ const handleSearchBuses = async () => {
           activeOpacity={0.85}
           onPress={() => navigation.navigate("BusOrdersScreen")}
         >
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={styles.viewAllText}>{translateUi('common:viewAll')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1078,7 +1087,7 @@ const handleSearchBuses = async () => {
               <Text style={styles.departureTime}>
                 {formatBusTime(nextJourney.departureTime)}
               </Text>
-              <Text style={styles.departureLabel}>DEPARTURE</Text>
+              <Text style={styles.departureLabel}>{translateUi('busBooking:departureUpper')}</Text>
             </View>
           </View>
 
@@ -1101,7 +1110,7 @@ const handleSearchBuses = async () => {
                   : `Ref: ${nextJourney.orderRef}`}
               </Text>
             </View>
-            <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
+            <Text style={styles.viewDetailsText}>{translateUi('common:viewDetailsUpper')}</Text>
           </View>
         </TouchableOpacity>
       ) : (
@@ -1118,7 +1127,7 @@ const handleSearchBuses = async () => {
             />
           </View>
           <View style={styles.historyTextWrap}>
-            <Text style={styles.historyRoute}>View your bus bookings</Text>
+            <Text style={styles.historyRoute}>{translateUi('busBooking:yourBookings')}</Text>
             <Text style={styles.historyMeta}>
               {loadingBookings
                 ? "Checking for upcoming trips..."
@@ -1130,7 +1139,7 @@ const handleSearchBuses = async () => {
       )}
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Searches</Text>
+        <Text style={styles.sectionTitle}>{translateUi('busBooking:recentSearches')}</Text>
       </View>
 
       <View style={styles.historyList}>
@@ -1147,7 +1156,7 @@ const handleSearchBuses = async () => {
               </View>
               <View style={styles.historyTextWrap}>
                 <Text style={styles.historyRoute}>
-                  {item.fromCityName} to {item.toCityName}
+                  {translateUi('busBooking:route', { from: item.fromCityName, to: item.toCityName })}
                 </Text>
                 <Text style={styles.historyMeta}>
                   {formatRecentSearchTime(item.updatedAt)} • {formatJourneyDateLabel(item.journeyDate)}
@@ -1159,7 +1168,7 @@ const handleSearchBuses = async () => {
           <View style={styles.historyEmptyCard}>
             <MaterialCommunityIcons name="clock-outline" size={18} color="#C8102E" />
             <Text style={styles.historyEmptyText}>
-              Your recent bus searches will appear here after you search a route.
+              {translateUi('busBooking:recentSearchesEmpty')}
             </Text>
           </View>
         )}
@@ -1168,7 +1177,7 @@ const handleSearchBuses = async () => {
       {popularRoutes.length > 0 ? (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Routes</Text>
+            <Text style={styles.sectionTitle}>{translateUi('busBooking:popularRoutes')}</Text>
           </View>
 
           <ScrollView
@@ -1259,7 +1268,7 @@ const handleSearchBuses = async () => {
           onChangeText={
             handleCitySearch
           }
-          placeholder="Search city"
+          placeholder={translateUi('busBooking:searchCity')}
           placeholderTextColor="#9CA3AF"
           style={styles.citySearchInput}
           autoFocus
@@ -1276,8 +1285,7 @@ const handleSearchBuses = async () => {
         citySearchText.length < 2 ? (
 
           <Text style={styles.cityHelpText}>
-            Enter at least 2 characters
-            to search a city.
+            {translateUi('busBooking:searchCityHint')}
           </Text>
 
         ) : null
@@ -1343,7 +1351,7 @@ const handleSearchBuses = async () => {
                   styles.cityEmptyText
                 }
               >
-                No cities found.
+                {translateUi('busBooking:noCities')}
               </Text>
             )
             : null
@@ -1371,7 +1379,7 @@ const handleSearchBuses = async () => {
       <View style={styles.modalHeader}>
 
         <Text style={styles.modalTitle}>
-          Select Date
+          {translateUi('common:selectDate')}
         </Text>
 
         <TouchableOpacity
@@ -1401,12 +1409,12 @@ const handleSearchBuses = async () => {
             }
           }}
         >
-          <Text style={styles.calendarTodayButtonText}>Today</Text>
+          <Text style={styles.calendarTodayButtonText}>{translateUi('common:today')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.calendarWeekRow}>
-        {CALENDAR_WEEKDAYS.map((weekday) => (
+        {weekdays.map((weekday) => (
           <View key={weekday} style={styles.calendarWeekCell}>
             <Text style={styles.calendarWeekText}>{weekday}</Text>
           </View>

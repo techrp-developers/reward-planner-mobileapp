@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -25,6 +26,7 @@ interface OrderReceiptProps {
 }
 
 export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps) {
+  const { t: translateUi } = useTranslation('common');
   const [receipt, setReceipt] = useState<any>(receiptData ?? null);
   const [loading, setLoading] = useState(!receiptData);
   const { isDark, theme } = useAppTheme();
@@ -148,15 +150,15 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
               </View>
 
               <View style={styles.billContent}>
-                <Text style={[styles.billTitle, { color: theme.text }]}>Bill Details</Text>
+                <Text style={[styles.billTitle, { color: theme.text }]}>{translateUi('common:billDetails')}</Text>
 
-                <Row label="Item Total" value={`₹${Number(bill.item_total || 0)}`} />
-                <Row label="Delivery Fee" value={`₹${Number(bill.delivery_fee || 0)}`} />
+                <Row label={translateUi('common:itemTotal')} value={`₹${Number(bill.item_total || 0)}`} />
+                <Row label={translateUi('common:deliveryFee')} value={`₹${Number(bill.delivery_fee || 0)}`} />
                 {Number(bill.bag_discount || 0) > 0 && (
-                  <Row label="Bag Discount" value={`-₹${Number(bill.bag_discount)}`} color="#22C55E" />
+                  <Row label={translateUi('common:bagDiscount')} value={`-₹${Number(bill.bag_discount)}`} color="#22C55E" />
                 )}
-                {Number(bill.offer_savings) > 0 && <Row label="Offer savings (included)" value={`₹${Number(bill.offer_savings)}`} color="#22C55E" />}
-                <Row label="Reward Discount" value={`-₹${Number(bill.reward_discount || 0)}`} color="#22C55E" />
+                {Number(bill.offer_savings) > 0 && <Row label={translateUi('common:includedSavings')} value={`₹${Number(bill.offer_savings)}`} color="#22C55E" />}
+                <Row label={translateUi('common:rewardDiscount')} value={`-₹${Number(bill.reward_discount || 0)}`} color="#22C55E" />
                 {rewardsUsed > 0 && (
                   <Row label="Rewards Used" value={`${rewardsUsed} coins`} color="#7A63FF" />
                 )}
@@ -164,7 +166,7 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
                 <View style={styles.totalRow}>
-                  <Text style={[styles.totalLabel, { color: theme.text }]}>Order Total</Text>
+                  <Text style={[styles.totalLabel, { color: theme.text }]}>{translateUi('common:orderTotal')}</Text>
                   <Text style={[styles.totalValue, { color: theme.text }]}>₹{Number(bill.order_total || 0)}</Text>
                 </View>
               </View>

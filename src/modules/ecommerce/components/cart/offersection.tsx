@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -23,6 +24,7 @@ const OFFERS = [
 ];
 
 export default function OffersSection() {
+  const { t: translateUi } = useTranslation('common');
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -41,7 +43,7 @@ export default function OffersSection() {
               <View style={styles.offerTop}>
                 <MaterialCommunityIcons name="tag-outline" size={18} color="#A654CD" />
                 <Text style={styles.offerCode}>{offer.code}</Text>
-                <Text style={styles.applyText}>APPLY</Text>
+                <Text style={styles.applyText}>{translateUi('common:applyUpper')}</Text>
               </View>
 
               <View style={styles.dashedLine} />

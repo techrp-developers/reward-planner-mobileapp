@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -84,6 +85,7 @@ const BillItem = ({
 );
 
 const BillsCard = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const bbpsTheme = useBbpsTheme();
 
@@ -105,7 +107,7 @@ const BillsCard = () => {
           <MaskedView
             maskElement={
               <Text style={[styles.viewMoreText, { backgroundColor: 'transparent' }]}>
-                View More
+                {translateUi('common:viewMore')}
               </Text>
             }>
             <LinearGradient
@@ -114,7 +116,7 @@ const BillsCard = () => {
               end={{ x: 0, y: 0 }}
               style={styles.gradientBox}
             >
-              <Text style={[styles.viewMoreText, { opacity: 0 }]}>View More</Text>
+              <Text style={[styles.viewMoreText, { opacity: 0 }]}>{translateUi('common:viewMore')}</Text>
             </LinearGradient>
           </MaskedView>
         </TouchableOpacity>

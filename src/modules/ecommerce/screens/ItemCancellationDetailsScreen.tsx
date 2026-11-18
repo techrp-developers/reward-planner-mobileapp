@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,6 +47,7 @@ const formatDisplayDate = (value?: string) => {
 };
 
 export default function ItemCancellationDetailsScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProps>();
   const { isDark, theme } = useAppTheme();
@@ -83,7 +85,7 @@ export default function ItemCancellationDetailsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-        <OrderHeading title="Cancellation Status" onBackPress={() => navigation.goBack()} isDark={isDark} />
+        <OrderHeading title={translateUi('common:cancellationStatus')} onBackPress={() => navigation.goBack()} isDark={isDark} />
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.stateText, { color: theme.secondaryText }]}>Loading cancellation details...</Text>
@@ -95,7 +97,7 @@ export default function ItemCancellationDetailsScreen() {
   if (error || !data) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-        <OrderHeading title="Cancellation Status" onBackPress={() => navigation.goBack()} isDark={isDark} />
+        <OrderHeading title={translateUi('common:cancellationStatus')} onBackPress={() => navigation.goBack()} isDark={isDark} />
         <View style={styles.centeredState}>
           <Text style={styles.errorText}>{error || "Unable to load cancellation details."}</Text>
         </View>
@@ -116,7 +118,7 @@ export default function ItemCancellationDetailsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-      <OrderHeading title="Cancellation Status" onBackPress={() => navigation.goBack()} isDark={isDark} />
+      <OrderHeading title={translateUi('common:cancellationStatus')} onBackPress={() => navigation.goBack()} isDark={isDark} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {data.item?.product_name ? (

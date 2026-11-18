@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -47,6 +48,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
   onSubmit,
   isSubmitting = false,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const [selectState, setSelectState] = useState<SelectState>({ open: false, field: null });
   const servicesTheme = useServicesTheme();
   const formSurface = servicesTheme.isDark ? '#000000' : '#FFFFFF';
@@ -147,7 +149,7 @@ const DynamicEnquiryForm: React.FC<Props> = ({
           {isSubmitting ? (
             <ActivityIndicator color="#FFF" size="small" />
           ) : (
-            <Text style={styles.submitText}>Submit</Text>
+            <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
           )}
         </LinearGradient>
       </TouchableOpacity>

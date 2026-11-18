@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   View,
@@ -14,6 +15,7 @@ import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 
 const StartClaimScreen: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { isDark } = useAppTheme();
 
@@ -45,7 +47,7 @@ const StartClaimScreen: React.FC = () => {
 
         <TouchableOpacity style={styles.helpBtn} activeOpacity={0.7}>
           <MaterialCommunityIcons name="help-circle-outline" size={14} color="#005b7f" style={{ marginRight: 3 }} />
-          <Text style={styles.helpText}>Help</Text>
+          <Text style={styles.helpText}>{translateUi('common:help')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -53,7 +55,7 @@ const StartClaimScreen: React.FC = () => {
         
         {/* Select Member section */}
         <View style={styles.sectionBlock}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Select Member</Text>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('insurance:selectMember')}</Text>
           <Text style={[styles.sectionSub, { color: isDark ? '#A1A1AA' : '#64748B' }]}>
             Choose the member for whom you want to raise a claim
           </Text>
@@ -110,7 +112,7 @@ const StartClaimScreen: React.FC = () => {
               <View style={[styles.typeIconBox, { backgroundColor: '#ECFDF5' }]}>
                 <MaterialCommunityIcons name="plus" size={20} color="#10B981" />
               </View>
-              <Text style={[styles.typeTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Cashless Claim</Text>
+              <Text style={[styles.typeTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:cashlessClaim')}</Text>
               <Text style={[styles.typeDesc, { color: isDark ? '#A1A1AA' : '#64748B' }]}>
                 Get treated at a network hospital without paying eligible amount from your pocket.
               </Text>
@@ -144,7 +146,7 @@ const StartClaimScreen: React.FC = () => {
               <View style={[styles.typeIconBox, { backgroundColor: '#F5F3FF' }]}>
                 <MaterialCommunityIcons name="currency-inr" size={20} color="#7C3AED" />
               </View>
-              <Text style={[styles.typeTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>Reimbursement Claim</Text>
+              <Text style={[styles.typeTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{translateUi('common:reimbursementClaim')}</Text>
               <Text style={[styles.typeDesc, { color: isDark ? '#A1A1AA' : '#64748B' }]}>
                 Pay first from your pocket and upload bills & documents to get reimbursed as per policy.
               </Text>
@@ -179,13 +181,13 @@ const StartClaimScreen: React.FC = () => {
         <View style={[styles.comparisonBox, { backgroundColor: isDark ? '#1E1E24' : '#F1F5F9' }]}>
           <MaterialCommunityIcons name="information" size={20} color="#007ca5" />
           <View style={styles.comparisonCol}>
-            <Text style={[styles.comparisonLabel, { color: '#007ca5' }]}>Cashless Claim</Text>
+            <Text style={[styles.comparisonLabel, { color: '#007ca5' }]}>{translateUi('common:cashlessClaim')}</Text>
             <Text style={[styles.comparisonText, { color: isDark ? '#A1A1AA' : '#475569' }]}>
               Treatment at network hospital without paying eligible amount from your pocket.
             </Text>
           </View>
           <View style={styles.comparisonCol}>
-            <Text style={[styles.comparisonLabel, { color: '#7C3AED' }]}>Reimbursement Claim</Text>
+            <Text style={[styles.comparisonLabel, { color: '#7C3AED' }]}>{translateUi('common:reimbursementClaim')}</Text>
             <Text style={[styles.comparisonText, { color: isDark ? '#A1A1AA' : '#475569' }]}>
               You pay first and later upload bills & documents for reimbursement.
             </Text>
@@ -204,7 +206,7 @@ const StartClaimScreen: React.FC = () => {
             </View>
             <View style={[styles.reqCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>
               <MaterialCommunityIcons name="badge-account-outline" size={26} color="#10B981" />
-              <Text style={[styles.reqTitle, { color: isDark ? '#E4E4E7' : '#1E293B' }]}>ID Proof</Text>
+              <Text style={[styles.reqTitle, { color: isDark ? '#E4E4E7' : '#1E293B' }]}>{translateUi('common:idProof')}</Text>
               <Text style={[styles.reqSub, { color: isDark ? '#71717A' : '#94A3B8' }]}>PAN / Aadhaar</Text>
             </View>
             <View style={[styles.reqCard, { backgroundColor: isDark ? '#1E1E24' : '#FFFFFF' }]}>

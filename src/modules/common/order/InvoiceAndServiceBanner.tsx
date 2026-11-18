@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from "react-native";
 import Share from "react-native-share";
@@ -10,6 +11,7 @@ type InvoiceAndServiceBannerProps = {
 };
 
 export default function InvoiceAndServiceBanner({ orderId }: InvoiceAndServiceBannerProps) {
+  const { t: translateUi } = useTranslation('common');
   const [isDownloading, setIsDownloading] = useState(false);
   const { theme } = useAppTheme();
 
@@ -23,7 +25,7 @@ export default function InvoiceAndServiceBanner({ orderId }: InvoiceAndServiceBa
           "message" in response && response.message
             ? response.message
             : "Could not fetch invoice PDF";
-        Alert.alert("Download Failed", errorMessage);
+        Alert.alert(translateUi('common:downloadFailed'), errorMessage);
         return;
       }
 
@@ -41,7 +43,7 @@ export default function InvoiceAndServiceBanner({ orderId }: InvoiceAndServiceBa
         error instanceof Error && error.message
           ? error.message
           : "Could not download invoice PDF";
-      Alert.alert("Download Failed", message);
+      Alert.alert(translateUi('common:downloadFailed'), message);
     } finally {
       setIsDownloading(false);
     }
@@ -52,7 +54,7 @@ export default function InvoiceAndServiceBanner({ orderId }: InvoiceAndServiceBa
       {/* Invoice row */}
       <View style={[styles.invoiceRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <Text style={[styles.invoiceText, { color: theme.text }]}>
-          Save a copy of your order
+          {translateUi('common:saveOrderCopy')}
         </Text>
 
         <TouchableOpacity
@@ -65,7 +67,7 @@ export default function InvoiceAndServiceBanner({ orderId }: InvoiceAndServiceBa
           {isDownloading ? (
             <ActivityIndicator size="small" color={theme.primary} />
           ) : (
-            <Text style={[styles.downloadText, { color: theme.primary }]}>Download Invoice</Text>
+            <Text style={[styles.downloadText, { color: theme.primary }]}>{translateUi('common:downloadInvoice')}</Text>
           )}
         </TouchableOpacity>
       </View>

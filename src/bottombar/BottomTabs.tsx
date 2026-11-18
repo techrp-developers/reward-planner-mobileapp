@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +13,7 @@ import SearchIcon from "../assets/menu/Search.svg";
 import HistoryIcon from "../assets/menu/History.svg";
 import { useAppTheme } from "../theme/ThemeContext";
 import RewardIcon from "../assets/menu/logo.png";
+import type { resources } from '../i18n/resources';
 
 const FLOATING_BOTTOM_GAP = 10;
 const FLOATING_BAR_HEIGHT = 64;
@@ -38,7 +40,7 @@ type Props = {
 
 type TabConfig = {
   key: TabKey;
-  label: string;
+  label: keyof (typeof resources)['en']['common'];
   Icon: React.ComponentType<{ width: number; height: number; color?: string }>;
 };
 
@@ -62,27 +64,27 @@ const NOOP = () => {};
 // (MainLayout / Dashbord) decides where each generic tab key actually
 // navigates based on activeMode, so BottomTabs itself stays mode-agnostic.
 const TABS: TabConfig[] = [
-  { key: "Home", label: "Home", Icon: HomeIcon },
-  { key: "Search", label: "Search", Icon: SearchIcon },
-  { key: "Cart", label: "Cart", Icon: CartIcon },
-  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+  { key: "Home", label: "home", Icon: HomeIcon },
+  { key: "Search", label: "search", Icon: SearchIcon },
+  { key: "Cart", label: "cart", Icon: CartIcon },
+  { key: "Profile", label: "profile", Icon: ProfileIcon },
 ];
 
 const PAYMENT_TABS: TabConfig[] = [
-  { key: "Home", label: "Home", Icon: HomeIcon },
-  { key: "Search", label: "Search", Icon: SearchIcon },
-  { key: "History", label: "History", Icon: HistoryIcon },
-  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+  { key: "Home", label: "home", Icon: HomeIcon },
+  { key: "Search", label: "search", Icon: SearchIcon },
+  { key: "History", label: "history", Icon: HistoryIcon },
+  { key: "Profile", label: "profile", Icon: ProfileIcon },
 ];
 
 // On the Dashboard, the Cart slot is replaced with Explore — cart access
 // already lives elsewhere on that screen, and Explore gives quick access
 // to the to-do list from the bottom bar.
 const DASHBOARD_TABS: TabConfig[] = [
-  { key: "Home", label: "Home", Icon: HomeIcon },
-  { key: "Search", label: "Search", Icon: SearchIcon },
-  { key: "Notes", label: "Notes", Icon: ExploreIcon },
-  { key: "Profile", label: "Profile", Icon: ProfileIcon },
+  { key: "Home", label: "home", Icon: HomeIcon },
+  { key: "Search", label: "search", Icon: SearchIcon },
+  { key: "Notes", label: "notes", Icon: ExploreIcon },
+  { key: "Profile", label: "profile", Icon: ProfileIcon },
 ];
 
 const INACTIVE_COLOR = "#9CA3AF";
@@ -159,6 +161,8 @@ const TabItem = React.memo(({
       onPress={onPress}
       style={styles.item}
       hitSlop={HIT_SLOP}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
     >
       <View>
         <Animated.View style={{ transform: [{ scale: iconScale }] }}>
@@ -238,6 +242,7 @@ function BottomTabs({
   onCenterPress,
   layoutMode = "overlay",
 }: Props) {
+  const { t: translateUi } = useTranslation(['common', 'chat']);
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { isDark, theme } = useAppTheme();
@@ -313,17 +318,17 @@ function BottomTabs({
     return (
       <View pointerEvents="box-none" style={[styles.dashboardWrap, { paddingBottom: bottomInset + 8 }]}>
         <View style={[styles.referenceBar, { backgroundColor: dashboardPillBackground, borderColor: dashboardPillBorder }]}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Todo List" onPress={() => handleDashboardPress("Notes")} style={styles.referenceSide}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:todoList')} onPress={() => handleDashboardPress("Notes")} style={styles.referenceSide}>
             <MaterialCommunityIcons name="note-text-outline" size={26} color={activeTab === "Notes" ? dashboardActiveColor : dashboardInactiveColor} />
-            <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>Todo List</Text>
+            <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>{translateUi('common:todoList')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dashboard" onPress={() => handleDashboardPress("Home")} style={[styles.referenceLogoRing, { backgroundColor: dashboardIndicatorBackground }]}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={translateUi('common:dashboard')} onPress={() => handleDashboardPress("Home")} style={[styles.referenceLogoRing, { backgroundColor: dashboardIndicatorBackground }]}>
             <Image source={RewardIcon} resizeMode="contain" style={styles.referenceLogo} />
           </TouchableOpacity>
          
 <TouchableOpacity
   accessibilityRole="button"
-  accessibilityLabel={chatUnreadCount > 0 ? `Chat, ${chatUnreadCount} unread` : "Chat"}
+  accessibilityLabel={chatUnreadCount > 0 ? translateUi('chat:unread', { count: chatUnreadCount }) : translateUi('common:chat')}
   onPress={() => handleDashboardPress("Chat")}
   style={styles.referenceSide}
 >
@@ -344,7 +349,7 @@ function BottomTabs({
     )}
   </View>
   <Text style={[styles.referenceLabel, { color: dashboardInactiveColor }]}>
-    Chat
+    {translateUi('common:chat')}
   </Text>
 </TouchableOpacity>
 
@@ -379,7 +384,7 @@ function BottomTabs({
         {tabs.slice(0, 2).map((tab) => (
           <TabItem
             key={tab.key}
-            label={tab.label}
+            label={translateUi(`common:${tab.label}`)}
             active={activeTab === tab.key}
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
@@ -396,7 +401,7 @@ function BottomTabs({
         {tabs.slice(2).map((tab) => (
           <TabItem
             key={tab.key}
-            label={tab.label}
+            label={translateUi(`common:${tab.label}`)}
             active={activeTab === tab.key}
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
@@ -425,7 +430,7 @@ export default React.memo(BottomTabs);
 const styles = StyleSheet.create({
   referenceBar: { width: "88%", height: 64, borderRadius: 34, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-around", shadowColor: "#111827", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 10 },
   referenceSide: { flex: 1, height: 60, alignItems: "center", justifyContent: "center" },
-  referenceLabel: { fontSize: 11, fontWeight: "600", marginTop: 3 },
+  referenceLabel: { fontSize: 11, fontWeight: "600", marginTop: 3, textAlign: 'center' },
   referenceLogoRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 4, borderColor: "#A1A1AA", marginTop: -24, alignItems: "center", justifyContent: "center", shadowColor: "#52525B", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
   referenceLogo: { width: 38, height: 38 },
   dashboardWrap: {
@@ -468,13 +473,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
-    height: 56,
+    minHeight: 56,
   },
   label: {
     marginTop: 3,
     fontSize: 10.5,
     color: INACTIVE_COLOR,
     fontWeight: "600",
+    textAlign: "center",
   },
   labelActive: {
     fontWeight: "700",

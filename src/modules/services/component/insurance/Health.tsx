@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
   View,
@@ -49,6 +50,7 @@ export type QuoteData = {
 const steps = ["Select Member", "Select Age of Members", "Basic Details"];
 
 export default function Health() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { success, info } = useAlert();
   const servicesTheme = useServicesTheme();
@@ -114,7 +116,7 @@ export default function Health() {
       if (step === 1) {
         const enquiryId = formData.details?.enquiryId;
         if (!enquiryId) {
-          Alert.alert("Error", "Session expired. Please go back to Step 1.");
+          Alert.alert(translateUi('common:error'), translateUi('common:sessionStepOne'));
           return;
         }
         await saveStep(enquiryId, 2, "members", mapMembersAges(formData));
@@ -123,7 +125,7 @@ export default function Health() {
       }
     } catch (e: any) {
       Alert.alert(
-        "Error",
+        translateUi('common:error'),
         e?.response?.data?.message || e?.message || "Failed to proceed. Please try again."
       );
     } finally {
@@ -182,7 +184,7 @@ export default function Health() {
           <MaterialIcons name="arrow-back" size={24} color={servicesTheme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>Health Insurance</Text>
+          <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:healthInsurance')}</Text>
           <Text style={[styles.headerSubtitle, { color: servicesTheme.colors.muted }]}>
             Simple health cover for you and your family
           </Text>

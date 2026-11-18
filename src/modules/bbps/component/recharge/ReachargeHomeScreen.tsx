@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -29,6 +30,7 @@ const RECENT_RECHARGES: any[] = [];
 const CONTACTS: any[] = [];
 
 function ReachargeHomeScreen({ navigation, route }: any) {
+  const { t: translateUi } = useTranslation('common');
   const { user } = useAuth();
   const alert = useAlert();
   const bbpsTheme = useBbpsTheme();
@@ -142,7 +144,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
         <View style={styles.modalContainer}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Circle</Text>
+            <Text style={styles.modalTitle}>{translateUi('common:selectCircle')}</Text>
             <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
               <Icon name="close" size={22} color="#333" />
             </TouchableOpacity>
@@ -216,7 +218,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
             <View style={[styles.content, { backgroundColor: bbpsTheme.colors.surface, shadowColor: bbpsTheme.colors.shadow }]}>
               {/* Mobile Number */}
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Enter Mobile Number</Text>
+                <Text style={styles.label}>{translateUi('payments:enterNumber')}</Text>
                 <View style={styles.operatorRow}>
                   <Image source={jio} style={styles.operatorIcon} />
                   <Image source={airtel} style={styles.operatorIcon} />
@@ -240,7 +242,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
 
               {/* Circle / Location Selector */}
               <Text style={[styles.label, { marginTop: 18, marginBottom: 12 }]}>
-                Select Circle
+                {translateUi('common:selectCircle')}
               </Text>
               <TouchableOpacity
                 style={[
@@ -348,7 +350,7 @@ function ReachargeHomeScreen({ navigation, route }: any) {
 
             <View style={styles.buttonCenter}>
               <View style={styles.viewAllButton}>
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={styles.viewAllText}>{translateUi('common:viewAll')}</Text>
               </View>
             </View>
         </View>

@@ -1,0 +1,15 @@
+{
+  "policyDetails": "पॉलिसीचा तपशील",
+  "claimDetails": "दाव्याचा तपशील",
+  "claimStatus": "दाव्याची स्थिती",
+  "claimNow": "आता दावा करा",
+  "selectMember": "सदस्य निवडा",
+  "sumInsured": "विमा रक्कम",
+  "relationship": "नाते",
+  "activePolicy": "सक्रिय पॉलिसी",
+  "policyNo": "पॉलिसी क्रमांक",
+  "raiseTrackClaims": "सहजपणे दावे करा आणि त्यांची स्थिती पाहा",
+  "insuredMembers": "विमा असलेले सदस्य",
+  "submitClaim": "दावा दाखल करा",
+  "policyDocuments": "पॉलिसीची कागदपत्रे"
+}

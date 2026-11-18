@@ -1,3 +1,5 @@
+import appI18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +15,7 @@ import { chatError } from '../utils';
 type Navigation = NativeStackNavigationProp<ChatStackParamList>;
 
 export default function NewChatScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Navigation>();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -28,7 +31,7 @@ export default function NewChatScreen() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try { setUsers(await fetchChatUsers(query.trim())); }
-      catch (error) { Alert.alert('Contacts unavailable', chatError(error, 'Unable to load coworkers.')); }
+      catch (error) { Alert.alert(appI18n.t('chat:noContacts'), chatError(error, 'Unable to load coworkers.')); }
       finally { setLoading(false); }
     }, query ? 300 : 0);
     return () => clearTimeout(timer);
@@ -47,7 +50,7 @@ export default function NewChatScreen() {
       const conversation = conversations.find(item => Number(item.conversation_id) === Number(id));
       if (!conversation) throw new Error('Conversation was created but could not be loaded.');
       navigation.replace('ChatConversation', { conversation });
-    } catch (error) { Alert.alert('Chat not started', chatError(error, 'Please try again.')); }
+    } catch (error) { Alert.alert(translateUi('chat:startFailed'), chatError(error, 'Please try again.')); }
     finally { setCreating(null); }
   };
 
@@ -60,16 +63,16 @@ export default function NewChatScreen() {
       const conversation = conversations.find(item => Number(item.conversation_id) === Number(id));
       if (!conversation) throw new Error('Group was created but could not be loaded.');
       navigation.replace('ChatConversation', { conversation });
-    } catch (error) { Alert.alert('Group not created', chatError(error, 'Please try again.')); }
+    } catch (error) { Alert.alert(translateUi('chat:groupFailed'), chatError(error, 'Please try again.')); }
     finally { setCreating(null); }
   };
 
   return <View style={[styles.screen, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-    <View style={styles.header}><TouchableOpacity onPress={() => groupMode ? (setGroupMode(false), setSelected([])) : navigation.goBack()} style={styles.iconButton}><MaterialCommunityIcons name="arrow-left" size={25} color={theme.text} /></TouchableOpacity><View style={styles.headerBody}><Text style={[styles.title, { color: theme.text }]}>{groupMode ? 'New group' : 'New chat'}</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>{groupMode ? `${selected.length} selected` : `${users.length} coworkers`}</Text></View>{groupMode ? <TouchableOpacity onPress={createGroup} disabled={selected.length < 2 || !groupName.trim() || creating !== null} style={[styles.createButton, { backgroundColor: selected.length >= 2 && groupName.trim() ? theme.primary : theme.border }]}><Text style={styles.createText}>Create</Text></TouchableOpacity> : null}</View>
-    {!groupMode ? <TouchableOpacity style={[styles.groupRow, { borderColor: theme.border }]} onPress={() => setGroupMode(true)}><View style={[styles.groupIcon, { backgroundColor: theme.primary }]}><MaterialCommunityIcons name="account-group-outline" size={23} color="#FFF" /></View><Text style={[styles.groupText, { color: theme.text }]}>New group</Text></TouchableOpacity> : <TextInput value={groupName} onChangeText={setGroupName} placeholder="Group name" placeholderTextColor={theme.secondaryText} maxLength={120} style={[styles.groupName, { color: theme.text, backgroundColor: theme.card, borderColor: theme.border }]} />}
-    <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}><MaterialCommunityIcons name="magnify" size={22} color={theme.secondaryText} /><TextInput value={query} onChangeText={setQuery} placeholder="Search coworkers" placeholderTextColor={theme.secondaryText} style={[styles.input, { color: theme.text }]} autoFocus /></View>
+    <View style={styles.header}><TouchableOpacity onPress={() => groupMode ? (setGroupMode(false), setSelected([])) : navigation.goBack()} style={styles.iconButton}><MaterialCommunityIcons name="arrow-left" size={25} color={theme.text} /></TouchableOpacity><View style={styles.headerBody}><Text style={[styles.title, { color: theme.text }]}>{groupMode ? 'New group' : 'New chat'}</Text><Text style={[styles.subtitle, { color: theme.secondaryText }]}>{groupMode ? `${selected.length} selected` : `${users.length} coworkers`}</Text></View>{groupMode ? <TouchableOpacity onPress={createGroup} disabled={selected.length < 2 || !groupName.trim() || creating !== null} style={[styles.createButton, { backgroundColor: selected.length >= 2 && groupName.trim() ? theme.primary : theme.border }]}><Text style={styles.createText}>{translateUi('common:create')}</Text></TouchableOpacity> : null}</View>
+    {!groupMode ? <TouchableOpacity style={[styles.groupRow, { borderColor: theme.border }]} onPress={() => setGroupMode(true)}><View style={[styles.groupIcon, { backgroundColor: theme.primary }]}><MaterialCommunityIcons name="account-group-outline" size={23} color="#FFF" /></View><Text style={[styles.groupText, { color: theme.text }]}>{translateUi('chat:newGroupSentence')}</Text></TouchableOpacity> : <TextInput value={groupName} onChangeText={setGroupName} placeholder={translateUi('chat:groupName')} placeholderTextColor={theme.secondaryText} maxLength={120} style={[styles.groupName, { color: theme.text, backgroundColor: theme.card, borderColor: theme.border }]} />}
+    <View style={[styles.search, { backgroundColor: theme.card, borderColor: theme.border }]}><MaterialCommunityIcons name="magnify" size={22} color={theme.secondaryText} /><TextInput value={query} onChangeText={setQuery} placeholder={translateUi('chat:searchCoworkers')} placeholderTextColor={theme.secondaryText} style={[styles.input, { color: theme.text }]} autoFocus /></View>
     {loading ? <ActivityIndicator style={styles.loader} color={theme.primary} /> : null}
-    <FlatList data={users} keyExtractor={item => String(item.user_id)} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list} renderItem={({ item }) => <TouchableOpacity style={[styles.person, { borderBottomColor: theme.border }]} onPress={() => openChat(item)} disabled={creating !== null}><ChatAvatar name={item.name} uri={item.user_image} size={48} /><View style={styles.personBody}><Text style={[styles.personName, { color: theme.text }]}>{item.name}</Text><Text style={[styles.personMeta, { color: theme.secondaryText }]} numberOfLines={1}>{[item.department, item.role].filter(Boolean).join(' • ') || 'Coworker'}</Text></View>{creating === item.user_id ? <ActivityIndicator color={theme.primary} /> : groupMode ? <MaterialCommunityIcons name={selected.includes(item.user_id) ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'} size={25} color={selected.includes(item.user_id) ? theme.primary : theme.secondaryText} /> : null}</TouchableOpacity>} ListEmptyComponent={!loading ? <Text style={[styles.empty, { color: theme.secondaryText }]}>No coworkers found</Text> : null} />
+    <FlatList data={users} keyExtractor={item => String(item.user_id)} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list} renderItem={({ item }) => <TouchableOpacity style={[styles.person, { borderBottomColor: theme.border }]} onPress={() => openChat(item)} disabled={creating !== null}><ChatAvatar name={item.name} uri={item.user_image} size={48} /><View style={styles.personBody}><Text style={[styles.personName, { color: theme.text }]}>{item.name}</Text><Text style={[styles.personMeta, { color: theme.secondaryText }]} numberOfLines={1}>{[item.department, item.role].filter(Boolean).join(' • ') || 'Coworker'}</Text></View>{creating === item.user_id ? <ActivityIndicator color={theme.primary} /> : groupMode ? <MaterialCommunityIcons name={selected.includes(item.user_id) ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'} size={25} color={selected.includes(item.user_id) ? theme.primary : theme.secondaryText} /> : null}</TouchableOpacity>} ListEmptyComponent={!loading ? <Text style={[styles.empty, { color: theme.secondaryText }]}>{translateUi('chat:noCoworkers')}</Text> : null} />
   </View>;
 }
 

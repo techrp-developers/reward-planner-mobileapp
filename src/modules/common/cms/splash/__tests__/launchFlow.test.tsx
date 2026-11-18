@@ -4,6 +4,8 @@ import { Animated, Image, Modal, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from '../../../../../navigation/RootNavigator';
+import { LanguageProvider } from '../../../../../i18n/LanguageContext';
+import { writeLanguagePreference } from '../../../../../i18n/languageStorage';
 import { navigationRef } from '../../../../../navigation/navigationRef';
 import api from '../../../auth/api/axios';
 import { checkAppVersion } from '../../../versionupdate/checkAppVersion';
@@ -53,6 +55,15 @@ jest.mock('../../../notifications/pushPermission', () => ({ shouldOfferPermissio
 jest.mock('../../../notifications/NotificationPermissionPrompt', () => ({ NotificationPermissionPrompt: () => null }));
 jest.mock('../../../../step_counter/context/StepTrackerContext', () => ({ StepTrackerProvider: ({ children }: any) => children }));
 jest.mock('../../../../../navigation/MainLayout', () => mockScreen('HOME'));
+jest.mock('../../../../../i18n/LanguageScreens', () => ({
+  FirstLanguageScreen: () => {
+    const { Text: Label } = require('react-native');
+    const { useLanguagePreference } = require('../../../../../i18n/LanguageContext');
+    const { saveLanguage } = useLanguagePreference();
+    return <Label testID="continue-language" onPress={() => saveLanguage('hi')}>PREFERRED_LANGUAGE</Label>;
+  },
+  AppLanguageScreen: () => null,
+}));
 jest.mock('../../../auth/screens/TermsGateScreen', () => mockScreen('TERMS_GATE'));
 jest.mock('../../../auth/screens/LoginScreen', () => mockScreen('LOGIN'));
 jest.mock('../../../auth/screens/OTPScreen', () => mockScreen('OTP'));
@@ -138,7 +149,9 @@ const mount = async () => {
   await act(async () => {
     renderer = TestRenderer.create(
       <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
+        <LanguageProvider>
+          <RootNavigator />
+        </LanguageProvider>
       </NavigationContainer>,
     );
   });
@@ -166,6 +179,7 @@ beforeEach(async () => {
   __resetSplashApiForTests();
   __resetFrequencyForTests();
   await AsyncStorage.clear();
+  await writeLanguagePreference(signedIn.user.user_id, 'en');
   (checkAppVersion as jest.Mock).mockReturnValue(new Promise(() => undefined));
   jest.spyOn(Image, 'queryCache').mockResolvedValue({});
   jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
@@ -187,6 +201,21 @@ afterEach(async () => {
 });
 
 describe('launch presentation in RootNavigator', () => {
+  it('opens the first-login language gate and waits for a choice before the dashboard', async () => {
+    setAuth({ ...restoring, isInitializing: false });
+    await mount();
+    expect(has('LOGIN')).toBe(true);
+    await act(async () => setAuth({ ...signedIn, user: { user_id: 8 } }));
+    await advance(0);
+    expect(has('PREFERRED_LANGUAGE')).toBe(true);
+    expect(mockDashboardRenders).toBe(0);
+    const button = renderer.root.findAllByType(Text).find(node => node.props.testID === 'continue-language');
+    await act(async () => button?.props.onPress());
+    await advance(0);
+    expect(has('DASHBOARD')).toBe(true);
+    expect(has('PREFERRED_LANGUAGE')).toBe(false);
+  });
+
   it('replaces the logo splash with a scheduled campaign, then opens the app with no dashboard flash', async () => {
     apiGet.mockResolvedValue(response());
     await coldLaunchSignedIn();

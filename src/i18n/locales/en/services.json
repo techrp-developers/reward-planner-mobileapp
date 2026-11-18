@@ -1,0 +1,12 @@
+{
+  "incomplete": "Service information is incomplete.",
+  "bundleMissing": "Bundle data missing",
+  "emptyCart": "Your service cart is empty. Browse services to get started.",
+  "serviceDetails": "Service Details",
+  "recommended": "Recommended Services",
+  "scheduleAppointment": "Schedule Appointment",
+  "appointmentDetails": "Appointment Details",
+  "serviceBooking": "Service Booking",
+  "serviceHistory": "Service History",
+  "serviceCategory": "Service Category"
+}

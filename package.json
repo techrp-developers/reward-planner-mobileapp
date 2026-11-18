@@ -8,6 +8,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
+    "i18n:check": "node scripts/check-translations.cjs",
+    "i18n:audit": "node scripts/audit-localization.cjs",
     "postinstall": "patch-package"
   },
   "dependencies": {
@@ -29,7 +31,9 @@
     "@tanstack/react-query": "^5.97.0",
     "axios": "^1.13.2",
     "firebase": "^12.11.0",
+    "i18next": "^26.7.2",
     "react": "19.1.1",
+    "react-i18next": "^17.1.13",
     "react-native": "0.82.1",
     "react-native-biometrics": "^3.0.1",
     "react-native-device-info": "^15.0.2",
@@ -40,6 +44,7 @@
     "react-native-image-picker": "^8.2.1",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-linear-gradient": "^2.8.3",
+    "react-native-localize": "^3.7.2",
     "react-native-maps": "^1.14.0",
     "react-native-modal": "^14.0.0-rc.1",
     "react-native-permissions": "^5.5.1",

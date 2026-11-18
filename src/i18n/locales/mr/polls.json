@@ -1,0 +1,12 @@
+{
+  "voteFailed": "मत नोंदवता आले नाही",
+  "vote": "मत द्या",
+  "voteError": "तुमचे मत नोंदवता आले नाही",
+  "oneOption": "एक पर्याय निवडा",
+  "multipleOptions": "एक किंवा अधिक पर्याय निवडा",
+  "votes_one": "{{count}} मत",
+  "votes_other": "{{count}} मते",
+  "voted_one": "मत दिले · {{count}} मत",
+  "voted_other": "मत दिले · {{count}} मते",
+  "closesAt": "{{date}} रोजी बंद होईल"
+}

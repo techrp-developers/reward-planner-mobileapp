@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -53,6 +54,7 @@ type Props = {
 };
 
 export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const [dropdownVisibleFor, setDropdownVisibleFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
@@ -65,10 +67,10 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
       try {
         if (!isAuthenticated()) {
           Alert.alert(
-            "Login Required",
-            "Please log in to get insurance quotes",
+            translateUi('common:loginRequired'),
+            translateUi('common:loginForQuotes'),
             [
-              { text: "OK", onPress: () => onBack() }
+              { text: translateUi('common:ok'), onPress: () => onBack() }
             ]
           );
           setChecking(false);
@@ -196,12 +198,12 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
   // Logic: API Submission - CRM Flow
   const handleSubmit = async () => {
     if (!isFormValid) {
-      Alert.alert("Validation", "Please fill all required fields");
+      Alert.alert(translateUi('common:validation'), translateUi('common:requiredFields'));
       return;
     }
 
     if (!isAuthenticated()) {
-      Alert.alert("Authentication Required", "Please log in to continue");
+      Alert.alert(translateUi('common:authRequired'), translateUi('common:loginToContinue'));
       return;
     }
 
@@ -213,7 +215,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
 
       const enquiryId = data.details.enquiryId;
       if (!enquiryId) {
-        Alert.alert("Error", "Session expired. Please go back to Step 1 and restart.");
+        Alert.alert(translateUi('common:error'), translateUi('common:sessionRestart'));
         return;
       }
 
@@ -291,9 +293,9 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
           enquiry_data: enquiryData,
         });
 
-        Alert.alert("Success", `Found ${successfulPlans.filter((p) => p.success).length} quotes for your family!`);
+        Alert.alert(translateUi('common:success'), `Found ${successfulPlans.filter((p) => p.success).length} quotes for your family!`);
       } else {
-        Alert.alert("Error", "No quotes could be fetched. Please try again.");
+        Alert.alert(translateUi('common:error'), translateUi('common:noQuotes'));
       }
 
       if (onShowResults && enquiryId) {
@@ -307,7 +309,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
     } catch (error: any) {
       console.error("❌ Submission error:", error);
       Alert.alert(
-        "Error", 
+        translateUi('common:error'),
         error?.message || "Unable to process your request. Please try again."
       );
     } finally {
@@ -326,7 +328,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
         >
         <View style={styles.centerContainer}>
           <MaterialIcons name="lock-outline" size={50} color="#8665FF" />
-          <Text style={styles.loadingText}>Verifying authentication...</Text>
+          <Text style={styles.loadingText}>{translateUi('common:verifyingAuth')}</Text>
         </View>
         </LinearGradient>
       </SafeAreaView>
@@ -344,15 +346,15 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Personal Details</Text>
-            <Text style={styles.headerSubtitle}>This information helps us personalize your insurance quotes.</Text>
+            <Text style={styles.headerTitle}>{translateUi('common:personalDetails')}</Text>
+            <Text style={styles.headerSubtitle}>{translateUi('common:personalizeQuotes')}</Text>
           </View>
 
           <View style={styles.formContainer}>
             {/* Name Row */}
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>First Name</Text>
+                <Text style={styles.label}>{translateUi('common:firstName')}</Text>
                 <View style={styles.inputBox}>
                   <TextInput
                     style={styles.textInput}
@@ -378,7 +380,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
 
             {/* Mobile Number */}
             <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>Mobile Number</Text>
+              <Text style={styles.label}>{translateUi('common:mobileNumber')}</Text>
               <View style={styles.inputBox}>
                 <TextInput
                   style={[styles.textInput, styles.mobileInput]}
@@ -394,7 +396,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
 
             {/* Pincode */}
             <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>Pincode</Text>
+              <Text style={styles.label}>{translateUi('common:pincode')}</Text>
               <View style={styles.inputBox}>
                 <TextInput
                   style={styles.textInput}
@@ -409,7 +411,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
 
             {/* City - with both input and dropdown */}
             <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>City</Text>
+              <Text style={styles.label}>{translateUi('common:city')}</Text>
               <View style={styles.inputBox}>
                 <TextInput
                   style={styles.textInput}
@@ -444,7 +446,7 @@ export default function Step3SuperTopUp({ data, setData, onBack, onShowResults }
                 {data.details.agreeToTerms && <MaterialIcons name="check" size={14} color="#FFF" />}
               </View>
               <Text style={styles.termsLabel}>
-                I agree to the <Text style={styles.boldLink}>Terms & Conditions</Text>
+                I agree to the <Text style={styles.boldLink}>{translateUi('common:terms')}</Text>
               </Text>
             </TouchableOpacity>
 

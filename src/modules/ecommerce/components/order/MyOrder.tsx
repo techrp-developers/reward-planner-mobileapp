@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from "react";
 import {
     View,
@@ -53,6 +54,7 @@ const toTitleCase = (value?: string) => {
 };
 
 export default function MyOrder() {
+  const { t: translateUi } = useTranslation('common');
     const navigation = useNavigation<Nav>();
     const { isAuthenticated } = useAuth();
     const { isDark, theme } = useAppTheme();
@@ -117,7 +119,7 @@ export default function MyOrder() {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
             <OrderHeading
-                title="My Orders"
+                title={translateUi('common:myOrders')}
                 onBackPress={() => navigation.goBack()}
                 isDark={isDark}
             />
@@ -136,7 +138,7 @@ export default function MyOrder() {
                     <View style={[styles.searchBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
                         <MaterialCommunityIcons name="magnify" size={20} color={theme.secondaryText} />
                         <TextInput
-                            placeholder="Search your orders here"
+                            placeholder={translateUi('common:searchOrders')}
                             placeholderTextColor={theme.secondaryText}
                             style={[styles.searchInput, { color: theme.text }]}
                             value={searchQuery}
@@ -149,7 +151,7 @@ export default function MyOrder() {
                         onPress={() => setIsFilterVisible(true)}
                     >
                         <MaterialCommunityIcons name="tune-variant" size={20} color={theme.text} />
-                        <Text style={[styles.filterText, { color: theme.text }]}>Filters</Text>
+                        <Text style={[styles.filterText, { color: theme.text }]}>{translateUi('common:filters')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -176,7 +178,7 @@ export default function MyOrder() {
                     <ActivityIndicator size="large" color="#0D862E" style={styles.loadingIndicator} />
                 ) : orders.length === 0 ? (
                     <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
-                        No orders found
+                        {translateUi('common:noOrders')}
                     </Text>
                 ) : (
                     orders.map((order) => (

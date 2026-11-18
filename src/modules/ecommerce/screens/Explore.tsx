@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -12,6 +13,7 @@ import Community from "../../../assets/sampleImages/Community.svg";
 import OrderHeading from "../constants/heading/OrderHeading";
 
 export default function Explore() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
 
@@ -79,7 +81,7 @@ export default function Explore() {
   return (
     <View style={styles.container}>
       <OrderHeading
-        title="Explore"
+        title={translateUi('common:findMore')}
         onBackPress={() => navigation.goBack()}
       />
 

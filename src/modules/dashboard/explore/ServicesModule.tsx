@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -127,6 +128,7 @@ const ServiceCard = React.memo(
 ServiceCard.displayName = 'ServiceCard';
 
 function ServicesModule({ onModulePress }: ServicesModuleProps) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -209,7 +211,7 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
     <View style={[styles.wrapper, t.wrapper]}>
       <View style={styles.header}>
         <Text style={[styles.headerTitle, t.headerTitle]}>
-          Explore Services
+          {translateUi('common:exploreServices')}
         </Text>
         <TouchableOpacity
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -35,6 +36,7 @@ function getAccent(sectionId: number) {
 }
 
 function MFSectionArticles() {
+  const { t: translateUi } = useTranslation('common');
     const route = useRoute<SectionArticlesRoute>();
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     const servicesTheme = useServicesTheme();
@@ -68,7 +70,7 @@ function MFSectionArticles() {
                 <Text style={[styles.cardTitle, { color: servicesTheme.colors.textStrong }]} numberOfLines={3}>{item.title}</Text>
                 <Text style={[styles.cardExcerpt, { color: servicesTheme.colors.muted }]} numberOfLines={2}>{item.short_description}</Text>
                 <View style={[styles.readMoreRow]}>
-                    <Text style={[styles.readMore, { color: accent }]}>Read More</Text>
+                    <Text style={[styles.readMore, { color: accent }]}>{translateUi('common:readMore')}</Text>
                     <Text style={[styles.readMoreArrow, { color: accent }]}> ›</Text>
                 </View>
             </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from "react";
 import {
     View,
@@ -28,6 +29,7 @@ const COUPONS = [
 ];
 
 function CouponsPage({ navigation }) {
+  const { t: translateUi } = useTranslation('common');
     const [couponCode, setCouponCode] = useState("");
 
     const isDisabled = couponCode.trim().length === 0;
@@ -53,7 +55,7 @@ function CouponsPage({ navigation }) {
                     style={[styles.applyBtn, isDisabled && styles.disabledBtn]}
                     disabled={isDisabled}
                 >
-                    <Text style={styles.applyText}>APPLY</Text>
+                    <Text style={styles.applyText}>{translateUi('common:applyUpper')}</Text>
                 </TouchableOpacity>
             </View>
 

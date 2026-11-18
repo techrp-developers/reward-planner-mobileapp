@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NavigatorScreenParams } from "@react-navigation/native";
 
 import { useAuth } from "../modules/common/auth/context/AuthContext";
 import { checkAppVersion } from "../modules/common/versionupdate/checkAppVersion";
@@ -20,6 +21,8 @@ import BiometricLockScreen from "../modules/common/auth/screens/BiometricLockScr
 import OTPScreen from "../modules/common/auth/screens/OTPScreen";
 import type { AuthStackParamList } from "../modules/common/auth/navigation/types";
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
+import { useLanguagePreference } from "../i18n/LanguageContext";
+import { AppLanguageScreen, FirstLanguageScreen } from "../i18n/LanguageScreens";
 export type { AuthStackParamList };
 
 export type AppStackParamList = {
@@ -36,6 +39,7 @@ export type AppStackParamList = {
   AddAddressMap: { fromCart?: boolean; manageOnly?: boolean } | undefined;
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   Profile: { context?: 'dashboard' } | undefined;
+  AppLanguage: undefined;
   InssuranceStack: undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
@@ -62,8 +66,9 @@ export type AppStackParamList = {
 export type RootStackParamList = {
   Splash: undefined;
   Auth: undefined;
-  App: undefined;
+  App: NavigatorScreenParams<AppStackParamList> | undefined;
   TermsGate: undefined;
+  PreferredLanguage: undefined;
   BiometricGate: undefined;
 
 };
@@ -105,6 +110,7 @@ function AppNavigator() {
     >
 
       <AppStack.Screen name="Dashboard" component={Dashbord} />
+      <AppStack.Screen name="AppLanguage" component={AppLanguageScreen} />
       <AppStack.Screen
         name="Quiz"
         getComponent={() => require("../modules/games/screens/QuizScreen").default}
@@ -345,6 +351,7 @@ const MODAL_HIDDEN: VersionModalState = {
 
 export default function RootNavigator() {
   const { user, accessToken, isAuthenticated, isInitializing, termsAccepted, firstLoginReward, markFirstLoginRewardShown } = useAuth();
+  const { preferenceReady, needsLanguageChoice } = useLanguagePreference();
   const [versionModal, setVersionModal] = useState<VersionModalState>(MODAL_HIDDEN);
   const [biometricCleared, setBiometricCleared] = useState(false);
 
@@ -378,7 +385,8 @@ export default function RootNavigator() {
   const isCheckingTerms = isAuthenticated && termsAccepted === null;
   // const isCheckingTerms =
   //   !BYPASS_LOGIN_SCREEN && isAuthenticated && termsAccepted === null;
-  const showSplash = isInitializing || isCheckingTerms;
+  const showSplash = isInitializing || isCheckingTerms || !preferenceReady;
+  const canEnterApp = isAuthenticated && termsAccepted === true && !needsLanguageChoice;
   // const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
 
   // CMS launch promotion: when the user is about to enter the app, the Splash
@@ -387,7 +395,9 @@ export default function RootNavigator() {
   const launch = useLaunchPresentation({
     isInitializing,
     hasSession: Boolean(accessToken),
-    destination: showSplash ? "pending" : isAuthenticated && termsAccepted ? "app" : "other",
+    destination: showSplash || (isAuthenticated && termsAccepted && needsLanguageChoice)
+      ? "pending"
+      : canEnterApp ? "app" : "other",
     userId: user?.user_id ?? null,
     interrupted: versionModal.visible,
   });
@@ -397,12 +407,12 @@ export default function RootNavigator() {
   // reached the authenticated app (past Splash/TermsGate/biometric lock),
   // so it doesn't stack on top of those gates.
   const showRewardModal =
-    !showLaunch && biometricCleared && isAuthenticated && termsAccepted === true && firstLoginReward !== null;
+    !showLaunch && biometricCleared && canEnterApp && firstLoginReward !== null;
 
   // Explain notifications only once the user is inside the app, never over
   // Splash/Terms/biometric gates, the first-login reward or an update notice.
   const canPromptForNotifications =
-    !showLaunch && biometricCleared && isAuthenticated && termsAccepted === true &&
+    !showLaunch && biometricCleared && canEnterApp &&
     firstLoginReward === null && !versionModal.visible;
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   useEffect(() => {
@@ -428,7 +438,13 @@ export default function RootNavigator() {
       {/* {showMainApp ? (
         BYPASS_LOGIN_SCREEN || termsAccepted ? ( */}
          {isAuthenticated ? (
-        termsAccepted ? (
+        termsAccepted ? needsLanguageChoice ? (
+          <RootStack.Screen
+            name="PreferredLanguage"
+            component={FirstLanguageScreen}
+            options={{ gestureEnabled: false }}
+          />
+        ) : (
           // ── Normal app — terms already accepted ─────────────────
           <RootStack.Screen
             name="App"

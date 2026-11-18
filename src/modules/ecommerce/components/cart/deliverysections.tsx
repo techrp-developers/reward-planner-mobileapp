@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -34,6 +35,7 @@ type DeliverySectionProps = {
 };
 
 export default function DeliverySection(props: DeliverySectionProps) {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isAuthenticated, user } = useAuth();
   const { isDark, theme } = useAppTheme();
@@ -87,7 +89,7 @@ export default function DeliverySection(props: DeliverySectionProps) {
         </View>
 
         <View style={styles.mid}>
-          <Text style={[styles.label, { color: theme.secondaryText }]}>Deliver to</Text>
+          <Text style={[styles.label, { color: theme.secondaryText }]}>{translateUi('common:deliverTo')}</Text>
           <Text style={[styles.bold, { color: theme.text }]} numberOfLines={1}>{displayName}</Text>
           <Text style={[styles.sub, { color: theme.secondaryText }]} numberOfLines={1}>{displayAddress}</Text>
         </View>

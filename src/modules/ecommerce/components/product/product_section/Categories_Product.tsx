@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -92,6 +93,7 @@ const resolveInitialSelection = (
 };
 
 export default function Categories_Product() {
+  const { t: translateUi } = useTranslation('common');
   const route = useRoute<CategoryRouteProp>();
   const { categoryId, title, subcategoryId } = route.params;
   const { width } = useWindowDimensions();
@@ -375,7 +377,7 @@ export default function Categories_Product() {
                       ]}
                       numberOfLines={1}
                     >
-                      All
+                      {translateUi('common:all')}
                     </Text>
                   </TouchableOpacity>
 

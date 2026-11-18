@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
@@ -62,6 +63,7 @@ const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
 };
 
 function ExploreModule() {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const navigation = useNavigation<any>();
@@ -133,7 +135,7 @@ function ExploreModule() {
           <Text style={[styles.backArrow, t.backArrow]}>{'‹'}</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, t.headerTitle]}>
-          Explore Services
+          {translateUi('common:exploreServices')}
         </Text>
         <View style={styles.backBtn} />
       </View>
@@ -209,7 +211,7 @@ function ExploreModule() {
                     {item.title}
                   </Text>
                   <Text style={styles.hiddenDisabledCardSubtitle}>
-                    Coming Soon
+                    {translateUi('common:comingSoon')}
                   </Text>
                 </View>
               </TouchableOpacity>

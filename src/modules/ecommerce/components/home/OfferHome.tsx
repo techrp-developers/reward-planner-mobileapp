@@ -1,4 +1,5 @@
 
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
@@ -108,6 +109,7 @@ const FlashOfferProductCard = React.memo(({
   item: any;
   shouldLoadImage: boolean;
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
   const [wishLoading, setWishLoading] = useState(false);
@@ -271,12 +273,12 @@ const FlashOfferProductCard = React.memo(({
     const parsedVariantId = Number(resolvedVariantId ?? variantId);
 
     if (!parsedProductId || isNaN(parsedProductId)) {
-      Alert.alert("Wishlist", "Invalid product");
+      Alert.alert(translateUi('common:wishlist'), translateUi('common:invalidProduct'));
       return;
     }
 
     if (!parsedVariantId || isNaN(parsedVariantId)) {
-      Alert.alert("Wishlist", "Product variant is missing");
+      Alert.alert(translateUi('common:wishlist'), translateUi('common:missingVariant'));
       return;
     }
 
@@ -286,7 +288,7 @@ const FlashOfferProductCard = React.memo(({
       setWishlisted(result.wishlisted);
     } catch (error: any) {
       Alert.alert(
-        "Wishlist",
+        translateUi('common:wishlist'),
         error?.response?.data?.message ||
           error?.response?.data?.error ||
           error?.message ||

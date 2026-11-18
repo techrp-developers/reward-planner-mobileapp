@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -93,6 +94,7 @@ const StatColumn: React.FC<{ label: string; value: string }> = ({ label, value }
 };
 
 const RewardsOverview: React.FC = () => {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const navigation = useNavigation();
   const {
@@ -170,7 +172,7 @@ const RewardsOverview: React.FC = () => {
         </View>
 
         <View style={styles.balanceRow}>
-          <StatColumn label="Available" value={formatPts(state.balance)} />
+          <StatColumn label={translateUi('common:available')} value={formatPts(state.balance)} />
 
           <LinearGradient
             colors={[PURPLE, PURPLE_DARK]}

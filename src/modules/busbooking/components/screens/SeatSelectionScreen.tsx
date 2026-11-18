@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from "react";
 import { getVerifiedAvailableSeats, formatAvailableSeats, isSeatAvailable as toBoolean } from "../../utils/busSeatAvailability";
 import {
@@ -550,6 +551,7 @@ const buildSeatRows = (
 };
 
 export default function SeatSelectionScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NativeStackNavigationProp<BusBookingStackParamList>>();
   const route = useRoute<RouteProp<BusBookingStackParamList, "SeatSelectionScreen">>();
  const [
@@ -1406,7 +1408,7 @@ switch (seat.status) {
             </View>
 
             <View style={styles.seatGuideItemRow}>
-              <Text style={styles.seatGuideLabel}>Available</Text>
+              <Text style={styles.seatGuideLabel}>{translateUi('common:available')}</Text>
               {isSeaterLayout ? (
                 <Seatavailable width={22} height={28} />
               ) : (
@@ -1509,7 +1511,7 @@ switch (seat.status) {
             end={{ x: 1, y: 0 }}
             style={styles.continueButton}
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>{translateUi('common:continue')}</Text>
             <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>

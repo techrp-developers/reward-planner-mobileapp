@@ -1,0 +1,12 @@
+{
+  "incomplete": "सेवेची माहिती अपूर्ण आहे.",
+  "bundleMissing": "सेवा पॅकेजची माहिती उपलब्ध नाही",
+  "emptyCart": "तुमचे सेवा कार्ट रिकामे आहे. सुरू करण्यासाठी सेवा पाहा.",
+  "serviceDetails": "सेवेचा तपशील",
+  "recommended": "सुचवलेल्या सेवा",
+  "scheduleAppointment": "भेटीची वेळ ठरवा",
+  "appointmentDetails": "भेटीचा तपशील",
+  "serviceBooking": "सेवा बुकिंग",
+  "serviceHistory": "सेवेचा इतिहास",
+  "serviceCategory": "सेवेची श्रेणी"
+}

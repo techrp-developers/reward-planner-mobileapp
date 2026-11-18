@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import type { TranslationKey } from '../../../i18n/resources';
 import React, { useState } from "react";
 import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
@@ -12,10 +14,10 @@ import {
 
 const BRAND_GRADIENT = ["#FC8BAD", "#A654CD"];
 
-const BENEFITS: Array<{ icon: string; text: string }> = [
-  { icon: "package-variant-closed", text: "Order, booking and payment updates" },
-  { icon: "gift-outline", text: "Rewards and recognition as they happen" },
-  { icon: "message-text-outline", text: "Messages from your colleagues" },
+const BENEFITS: Array<{ icon: string; text: TranslationKey<'notifications'> }> = [
+  { icon: "package-variant-closed", text: "orderBenefits" },
+  { icon: "gift-outline", text: "rewardBenefits" },
+  { icon: "message-text-outline", text: "messageBenefits" },
 ];
 
 type Props = {
@@ -27,6 +29,7 @@ type Props = {
 // It never imitates the system dialog: "Enable Notifications" hands over to
 // Android, and offers stay off until the user opts in from Notification settings.
 export function NotificationPermissionPrompt({ visible, onDone }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const [busy, setBusy] = useState(false);
 
@@ -62,17 +65,17 @@ export function NotificationPermissionPrompt({ visible, onDone }: Props) {
           </LinearGradient>
 
           <Text style={[styles.title, { color: theme.text }]} accessibilityRole="header">
-            Stay Updated with Reward Planners!
+            {translateUi('notifications:stayUpdated')}
           </Text>
           <Text style={[styles.description, { color: theme.secondaryText }]}>
-            Get timely updates about your rewards, orders, bookings and important messages.
+            {translateUi('notifications:promptDescription')}
           </Text>
 
           <View style={styles.benefits}>
             {BENEFITS.map(benefit => (
               <View key={benefit.text} style={styles.benefitRow}>
                 <MaterialCommunityIcons name={benefit.icon} size={18} color="#A654CD" />
-                <Text style={[styles.benefitText, { color: theme.text }]}>{benefit.text}</Text>
+                <Text style={[styles.benefitText, { color: theme.text }]}>{translateUi(`notifications:${benefit.text}`)}</Text>
               </View>
             ))}
           </View>
@@ -85,16 +88,16 @@ export function NotificationPermissionPrompt({ visible, onDone }: Props) {
             style={styles.primaryWrap}
           >
             <LinearGradient colors={BRAND_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primary}>
-              <Text style={styles.primaryText}>Enable Notifications</Text>
+              <Text style={styles.primaryText}>{translateUi('notifications:enable')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={notNow} style={styles.secondary}>
-            <Text style={[styles.secondaryText, { color: theme.secondaryText }]}>Not Now</Text>
+            <Text style={[styles.secondaryText, { color: theme.secondaryText }]}>{translateUi('notifications:notNow')}</Text>
           </TouchableOpacity>
 
           <Text style={[styles.footnote, { color: theme.secondaryText }]}>
-            Offers are never turned on automatically. You can change this anytime in Notification settings.
+            {translateUi('notifications:offersOptIn')}
           </Text>
         </View>
       </View>

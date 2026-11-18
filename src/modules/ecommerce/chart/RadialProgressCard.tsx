@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -38,6 +39,7 @@ export default function RadialProgressCard({
   errorMessage = "",
   onRetry,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const clampedPercent = Math.max(0, Math.min(Number(percentage) || 0, 100));
   const strokeDashoffset = useMemo(
     () => CIRCUMFERENCE - (clampedPercent / 100) * CIRCUMFERENCE,
@@ -87,7 +89,7 @@ export default function RadialProgressCard({
       {errorMessage ? (
         <TouchableOpacity activeOpacity={0.8} onPress={onRetry}>
           <Text style={styles.errorText} numberOfLines={1}>
-            Retry
+            {translateUi('common:retry')}
           </Text>
         </TouchableOpacity>
       ) : (

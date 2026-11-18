@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -51,6 +52,7 @@ const getProductList = (payload: any) => {
 };
 
 export default function FeaturesProduct() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { isDark, theme } = useAppTheme();
 
@@ -98,7 +100,7 @@ export default function FeaturesProduct() {
       <View style={styles.contentWrap}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.heading, { color: isDark ? "#FFFFFF" : "#111827" }]}>Featured This Week</Text>
+            <Text style={[styles.heading, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:featuredWeek')}</Text>
           </View>
           <TouchableOpacity
             style={[
@@ -108,7 +110,7 @@ export default function FeaturesProduct() {
             activeOpacity={0.85}
             onPress={handleExplore}
           >
-            <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>Explore More</Text>
+            <Text style={[styles.exploreText, { color: isDark ? "#FFFFFF" : "#111827" }]}>{translateUi('common:exploreMore')}</Text>
             <MaterialIcons name="arrow-forward-ios" size={14} color={isDark ? "#FFFFFF" : "#111827"} />
           </TouchableOpacity>
         </View>

@@ -1,0 +1,15 @@
+{
+  "policyDetails": "Policy Details",
+  "claimDetails": "Claim Details",
+  "claimStatus": "Claim Status",
+  "claimNow": "Claim Now",
+  "selectMember": "Select Member",
+  "sumInsured": "Sum Insured",
+  "relationship": "Relationship",
+  "activePolicy": "Active Policy",
+  "policyNo": "Policy No.",
+  "raiseTrackClaims": "Raise & track claims easily",
+  "insuredMembers": "Insured Members",
+  "submitClaim": "Submit Claim",
+  "policyDocuments": "Policy Documents"
+}

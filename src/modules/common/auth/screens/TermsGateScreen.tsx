@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next';
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -69,6 +70,7 @@ const TermCard = memo(({ title, content, iconText, isDark }: TermCardProps) => (
 // ─────────────────────────────────────────────────────────────
 
 function TermsGateScreenComponent() {
+  const { t } = useTranslation(['auth', 'common']);
   const { setTermsAccepted } = useAuth();
   const alert = useAlert();
   const { isDark } = useAppTheme();
@@ -126,13 +128,13 @@ function TermsGateScreenComponent() {
     } catch {
       if (mountedRef.current) {
         alert.error(
-          "Update Failed",
-          "Could not save your preference. Please try again.",
+          t('auth:termsSaveTitle'),
+          t('auth:termsSaveError'),
         );
         setSaving(false);
       }
     }
-  }, [checked, saving, setTermsAccepted, alert]);
+  }, [checked, saving, setTermsAccepted, alert, t]);
 
   const handleToggleChecked = useCallback(() => {
     setChecked(v => !v);
@@ -158,12 +160,11 @@ function TermsGateScreenComponent() {
           {/* ── HEADER ──────────────────────────────────────────────── */}
           <View style={styles.header}>
             <View style={[styles.stepBadge, { backgroundColor: isDark ? "rgba(244,114,182,0.12)" : "rgba(133,43,175,0.10)" }]}>
-              <Text style={[styles.stepBadgeText, { color: isDark ? "#F472B6" : T.primary }]}>BEFORE YOU START</Text>
+              <Text style={[styles.stepBadgeText, { color: isDark ? "#F472B6" : T.primary }]}>{t('auth:beforeStart')}</Text>
             </View>
-            <Text style={[styles.mainTitle, { color: isDark ? "#FFFFFF" : T.primary }]}>Terms &</Text>
-            <Text style={[styles.mainTitleBold, { color: isDark ? "#FFFFFF" : T.primary }]}>Conditions</Text>
+            <Text style={[styles.mainTitleBold, { color: isDark ? "#FFFFFF" : T.primary }]}>{t('common:terms')}</Text>
             <Text style={[styles.subtitle, { color: isDark ? "#A1A1AA" : T.textMuted }]}>
-              Please read and accept our terms to continue using the app.
+              {t('auth:readTerms')}
             </Text>
           </View>
 
@@ -171,7 +172,7 @@ function TermsGateScreenComponent() {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={isDark ? "#F472B6" : T.primary} />
-              <Text style={[styles.loadingText, { color: isDark ? "#A1A1AA" : T.textMuted }]}>Loading terms...</Text>
+              <Text style={[styles.loadingText, { color: isDark ? "#A1A1AA" : T.textMuted }]}>{t('auth:loadingTerms')}</Text>
             </View>
           ) : (
             <ScrollView
@@ -213,17 +214,20 @@ function TermsGateScreenComponent() {
                     {checked && <Text style={styles.checkIcon}>✓</Text>}
                   </View>
                   <Text style={[styles.checkboxText, { color: isDark ? "#D4D4D8" : "#444" }]}>
-                    I have read and agree to the{" "}
-                    <Text style={[styles.checkboxBold, { color: isDark ? "#F472B6" : T.primary }]}>Terms & Conditions</Text>
-                    {" "}and{" "}
-                    <Text style={[styles.checkboxBold, { color: isDark ? "#F472B6" : T.primary }]}>Privacy Policy</Text>
+                    <Trans
+                      t={t}
+                      i18nKey="auth:termsAgreement"
+                      components={{
+                        terms: <Text style={[styles.checkboxBold, { color: isDark ? "#F472B6" : T.primary }]} />,
+                        privacy: <Text style={[styles.checkboxBold, { color: isDark ? "#F472B6" : T.primary }]} />,
+                      }}
+                    />
                   </Text>
                 </TouchableOpacity>
 
                 {/* Helper text */}
                 <Text style={[styles.helperText, { color: isDark ? "#A1A1AA" : "#888" }]}>
-                  By continuing, you confirm that you understand and accept
-                  our policies and terms of use.
+                  {t('auth:termsConfirmation')}
                 </Text>
 
                 {/* CTA */}
@@ -250,7 +254,7 @@ function TermsGateScreenComponent() {
                         styles.acceptButtonText,
                         (!checked) && styles.acceptButtonTextDisabled,
                       ]}>
-                        I Understand & Agree
+                        {t('auth:termsAccept')}
                       </Text>
                     )}
                   </LinearGradient>

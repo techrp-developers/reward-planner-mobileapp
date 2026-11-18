@@ -7,7 +7,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { AppState, type AppStateStatus, Linking } from 'react-native';
+import { AppState, type AppStateStatus, Linking, NativeModules, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,12 +17,17 @@ import {
   initialize,
   openHealthConnectDataManagement,
   readRecords,
+  requestPermission,
   SdkAvailabilityStatus,
 } from 'react-native-health-connect';
+import type { Permission } from 'react-native-health-connect';
 
 import { syncStepsToServer, type GoalSyncData } from '../api/Stepsapi';
 import { fetchProfileStepStatus } from '../api/ProfileAPI';
 import { fitnessQueryKeys } from '../api/fitnessQueryKeys';
+import { useAuth } from '../../common/auth/context/AuthContext';
+import { stepSyncStorageKey } from '../utils/stepData';
+import i18n from "../../../i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,14 +64,27 @@ export type StepTrackerContextValue = {
 const MIN_STEP_DIFF   = 100;
 const COOLDOWN_MS     = 15 * 60 * 1000; // 15 minutes
 
-const STORAGE_LAST_SYNC = '@step_tracker/last_synced_steps';
-const STORAGE_SETUP     = 'fitness_setup_completed';
+// Health permission is device- and platform-specific. Never let an Android
+// Health Connect completion (or backend account flag) bypass Apple Health
+// onboarding on a new iPhone.
+const STORAGE_SETUP = Platform.select({
+  ios: 'fitness_setup_completed_ios_healthkit',
+  default: 'fitness_setup_completed',
+}) as string;
 
 const HC_PACKAGE = 'com.google.android.healthconnect.controller';
+const IOS_STEPS_PERMISSION = { accessType: 'read', recordType: 'Steps' };
+const HealthKitManager = NativeModules.HealthKitManager as {
+  isAvailable(): Promise<boolean>;
+  requestAuthorization(): Promise<boolean>;
+  hasHandledAuthorization(): Promise<boolean>;
+  getStepCount(startDate: number, endDate: number): Promise<number>;
+  openHealthApp(): Promise<boolean>;
+} | undefined;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hasStepsPerm(permissions: any[]): boolean {
+export function hasStepsPerm(permissions: any[]): boolean {
   return permissions.some(p => {
     // Some library versions return raw Android permission strings
     if (typeof p === 'string') {
@@ -121,6 +139,18 @@ const StepTrackerContext = createContext<StepTrackerContextValue | null>(null);
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function StepTrackerProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const accountId = user?.userId ?? user?.user_id ?? null;
+  return <StepTrackerSession key={accountId ?? "pending"} accountId={accountId}>{children}</StepTrackerSession>;
+}
+
+function StepTrackerSession({ children, accountId }: { children: ReactNode; accountId: number | null }) {
+  const storageLastSync = stepSyncStorageKey(accountId ?? "pending");
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const queryClient = useQueryClient();
 
   // ── Refs: never cause re-renders, always current ──────────────────────────
@@ -147,7 +177,8 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   // ── Restore persisted state on mount ─────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.multiGet([STORAGE_LAST_SYNC, STORAGE_SETUP]).then(async pairs => {
+    AsyncStorage.multiGet([storageLastSync, STORAGE_SETUP]).then(async pairs => {
+      if (!active.current) return;
       const [lastSyncPair, setupPair] = pairs;
       const today = localDateString(new Date());
       const rawLastSync = lastSyncPair[1];
@@ -169,7 +200,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
       if (setupPair[1] === 'true') {
         setIsSetupComplete(true);
-      } else {
+      } else if (Platform.OS !== 'ios') {
         // AsyncStorage is wiped on reinstall — check the backend so users who
         // already completed setup on a previous install skip onboarding entirely.
         try {
@@ -184,13 +215,21 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         }
       }
     }).catch(() => {});
-  }, []);
+  }, [storageLastSync]);
 
   // ── Sync gate — only reads refs, safe to call anywhere ───────────────────
   const shouldSync = (count: number): boolean => {
     const today = localDateString(new Date());
     if (count <= 0) return false;
     if (isSyncing.current) return false;
+
+    if (Platform.OS === 'ios') {
+      // The dashboard can read steps immediately from HealthKit, but the
+      // server also needs the first few steps for summaries and rewards.
+      if (lastSyncedDate.current !== today || lastSyncedSteps.current < 0) return true;
+      if (count <= lastSyncedSteps.current) return false;
+      return Date.now() - lastSyncTime.current >= 60_000;
+    }
 
     if (lastSyncedDate.current !== today) {
       // New day — skip cooldown (fresh start) but still require MIN_STEP_DIFF
@@ -209,18 +248,19 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   // ── Internal sync (accepts explicit count to avoid stale closure issues) ──
   const doSync = useCallback(async (count: number): Promise<void> => {
-    if (!shouldSync(count)) return;
+    if (accountId == null || !active.current || !shouldSync(count)) return;
 
     isSyncing.current = true;
     try {
       const payload = buildPayload(count);
       const res = await syncStepsToServer(payload);
-      if (!res.success) throw new Error(res.message || 'Sync failed');
+      if (!active.current) return;
+      if (!res.success) throw new Error(res.message || i18n.t("stepCounter:r2.syncFailed"));
 
       lastSyncedDate.current  = payload.date;
       lastSyncedSteps.current = count;
       lastSyncTime.current    = Date.now();
-      await AsyncStorage.setItem(STORAGE_LAST_SYNC, JSON.stringify({ date: payload.date, steps: count }));
+      await AsyncStorage.setItem(storageLastSync, JSON.stringify({ date: payload.date, steps: count }));
 
       // Show the celebration for either a completed daily goal OR a newly
       // unlocked lifetime achievement — these are now independent (the
@@ -238,15 +278,29 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
     } finally {
       isSyncing.current = false;
     }
-  }, [queryClient]); // queryClient is stable from useQueryClient()
+  }, [accountId, queryClient, storageLastSync]);
 
   // ── Read Health Connect + conditionally sync ──────────────────────────────
   const readAndSync = useCallback(async (): Promise<number> => {
+    if (!active.current) return 0;
     setLoading(true);
     setStepDataState('loading');
     try {
       const now   = new Date();
       const start = new Date(); start.setHours(0, 0, 0, 0);
+
+      if (Platform.OS === 'ios') {
+        if (!HealthKitManager) throw new Error('Apple Health integration is unavailable');
+        const total = Number(await HealthKitManager.getStepCount(start.getTime(), now.getTime())) || 0;
+        console.log(`[Steps] Apple Health returned ${total} steps today`);
+        setSteps(total);
+        const nextState: StepDataState = total > 0 ? 'ok' : 'no_steps_today';
+        stepDataStateRef.current = nextState;
+        setStepDataState(nextState);
+        setHealthConnectError(null);
+        if (total > 0) await doSync(total);
+        return total;
+      }
 
       const timeRangeFilter = {
         operator:  'between' as const,
@@ -317,6 +371,31 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   // ── Initialize HC + verify permissions ───────────────────────────────────
   const initAndCheck = useCallback(async (): Promise<any[]> => {
     try {
+      if (Platform.OS === 'ios') {
+        const available = Boolean(HealthKitManager && await HealthKitManager.isAvailable());
+        setHealthConnectStatus(available ? String(SdkAvailabilityStatus.SDK_AVAILABLE) : '0');
+        if (!available) {
+          setHealthConnectError('Apple Health is not available on this device');
+          setStepDataState('no_permission');
+          setLoading(false);
+          return [];
+        }
+
+        const setupComplete = await AsyncStorage.getItem(STORAGE_SETUP).catch(() => null);
+        const authorizationHandled = await HealthKitManager!.hasHandledAuthorization().catch(() => false);
+        if (setupComplete === 'true' || authorizationHandled) {
+          const granted = [IOS_STEPS_PERMISSION];
+          setGrantedPermissions(granted);
+          setHealthConnectError(null);
+          return granted;
+        }
+        setGrantedPermissions([]);
+        setHealthConnectError('Apple Health Steps permission not granted');
+        setStepDataState('no_permission');
+        setLoading(false);
+        return [];
+      }
+
       if (!initialized.current) {
         console.log('[Steps] Initializing Health Connect SDK (once)');
         // Try Android 14+ built-in HC package first, fall back to standalone app package
@@ -356,8 +435,8 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
           }
         }
         const msg = sdkStatus === SdkAvailabilityStatus.SDK_UNAVAILABLE
-          ? 'Health Connect not installed'
-          : 'Health Connect needs setup';
+          ? i18n.t("stepCounter:r2.healthConnectNotInstalled")
+          : i18n.t("stepCounter:r2.healthConnectNeedsSetup");
         setHealthConnectError(msg);
         setStepDataState('no_permission');
         setLoading(false);
@@ -393,7 +472,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
       ) {
         initialized.current = false;
         setHealthConnectStatus('0');
-        setHealthConnectError('Health Connect not installed');
+        setHealthConnectError(i18n.t("stepCounter:r2.healthConnectNotInstalled"));
         setStepDataState('no_permission');
       } else {
         setHealthConnectError(err?.message || String(err));
@@ -406,8 +485,9 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   const refreshSteps = useCallback(async () => {
+    if (!active.current) return;
     const granted = await initAndCheck();
-    if (hasStepsPerm(granted)) await readAndSync();
+    if (active.current && hasStepsPerm(granted)) await readAndSync();
   }, [initAndCheck, readAndSync]);
 
   // Public syncSteps() reads from stepsRef so it's never stale in callbacks
@@ -417,12 +497,33 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   const requestStepsPermission = useCallback(async (): Promise<boolean> => {
     try {
-      // Re-check the permission granted through Health Connect before completing
-      // onboarding. Do not call requestPermission() here: this screen only enables
-      // Continue after access is granted, and some controller versions crash the
-      // process with ActivityNotFoundException when that dialog is reopened.
-      const granted = await initAndCheck();
+      if (Platform.OS === 'ios') {
+        if (!HealthKitManager || !(await HealthKitManager.isAvailable())) {
+          setHealthConnectError('Apple Health is not available on this device');
+          return false;
+        }
+        const authorized = await HealthKitManager.requestAuthorization();
+        if (!authorized) {
+          setHealthConnectError('Please allow Steps access in Apple Health');
+          return false;
+        }
+        setGrantedPermissions([IOS_STEPS_PERMISSION]);
+        await readAndSync();
+        await AsyncStorage.setItem(STORAGE_SETUP, 'true');
+        setIsSetupComplete(true);
+        setHealthConnectError(null);
+        return true;
+      }
 
+      // Ensure SDK is initialized before calling requestPermission.
+      // On first launch the mount-effect's initAndCheck() may not have completed yet.
+      await initAndCheck();
+
+      const perms: Permission[] = [{ accessType: 'read', recordType: 'Steps' }];
+      await requestPermission(perms);
+      await new Promise<void>(r => setTimeout(r, 1000));
+
+      const granted = await getGrantedPermissions();
       setGrantedPermissions(granted);
 
       if (!hasStepsPerm(granted)) {
@@ -460,6 +561,19 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
 
   const openHealthConnect = useCallback(async () => {
     try {
+      if (Platform.OS === 'ios') {
+        if (!HealthKitManager) return;
+        const authorized = await HealthKitManager.requestAuthorization();
+        if (authorized) {
+          setGrantedPermissions([IOS_STEPS_PERMISSION]);
+          setHealthConnectError(null);
+          await readAndSync();
+        } else {
+          setHealthConnectError('Apple Health authorization was not completed');
+        }
+        return;
+      }
+
       // Mirror the same two-package fallback used in initAndCheck so Android 9-13
       // users (standalone HC app) are sent to the data management screen, not the Play Store.
       let status: number = SdkAvailabilityStatus.SDK_UNAVAILABLE;
@@ -484,7 +598,7 @@ export function StepTrackerProvider({ children }: { children: ReactNode }) {
         await Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata');
       }
     }
-  }, []);
+  }, [readAndSync]);
 
   const dismissCelebration = useCallback(() => setCelebrationData(null), []);
 

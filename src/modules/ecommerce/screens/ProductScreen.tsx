@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -105,6 +106,7 @@ const fetchCollectionPage = async (
 };
 
 function ProductScreen() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const route = useRoute<ProductScreenRoute>();
   const { width } = useWindowDimensions();
@@ -198,7 +200,7 @@ function ProductScreen() {
             returnKeyType="search" onSubmitEditing={() => setSearch(searchText.trim())} />
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel search"
             onPress={() => { setSearchText(''); setSearch(''); setShowSearch(false); }}>
-            <Text style={{ color: theme.text }}>Cancel</Text>
+            <Text style={{ color: theme.text }}>{translateUi('common:cancel')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}

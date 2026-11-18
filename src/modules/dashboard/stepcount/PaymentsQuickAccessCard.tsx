@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
@@ -40,6 +41,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
   onOpenHistory,
   onMakePayment,
 }) => {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme();
   const mountAnim = useRef(new Animated.Value(0)).current;
   const actionIconColor = isDark ? "#FFFFFF" : "#111827";
@@ -123,7 +125,7 @@ const PaymentsQuickAccessCard: React.FC<PaymentsQuickAccessCardProps> = ({
           </LinearGradient>
           <View style={styles.headerText}>
             <Text style={[styles.title, t.title]} numberOfLines={1}>
-              Payments
+              {translateUi('common:payments')}
             </Text>
             <Text style={[styles.subtitle, t.subtitle]} numberOfLines={1}>
               Quick Access

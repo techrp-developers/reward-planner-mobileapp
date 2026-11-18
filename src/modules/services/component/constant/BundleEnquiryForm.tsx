@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
@@ -57,6 +58,7 @@ const DEFAULT_SAFETY_TEXT =
 const hasAnyValue = (value: string | undefined) => Boolean(value && value.trim());
 
 function BundleEnquiryForm() {
+  const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
   const alert = useAlert();
@@ -435,7 +437,7 @@ function BundleEnquiryForm() {
               <MaterialIcons name="chat-bubble-outline" size={18} color={servicesTheme.colors.primary} />
             </View>
             <View style={styles.headerTextCol}>
-              <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>Enquire Now</Text>
+              <Text style={[styles.heading, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:enquireNow')}</Text>
               <Text style={[styles.desc, { color: servicesTheme.colors.muted }]}>
                 Fill out the form below and our team will get in touch with you shortly.
               </Text>
@@ -470,7 +472,7 @@ function BundleEnquiryForm() {
             >
               {isSubmitting
                 ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.submitText}>Submit</Text>
+                : <Text style={styles.submitText}>{translateUi('common:submit')}</Text>
               }
             </LinearGradient>
           </TouchableOpacity>

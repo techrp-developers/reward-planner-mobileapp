@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
@@ -54,6 +55,7 @@ export default function BBPSOrderFilterSheet({
   onApply,
   bbpsTheme: providedTheme,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const insets = useSafeAreaInsets();
   const fallbackTheme = useBbpsTheme();
   const bbpsTheme = providedTheme || fallbackTheme;
@@ -150,7 +152,7 @@ export default function BBPSOrderFilterSheet({
               end={{ x: 1, y: 0 }}
               style={styles.applyButton}
             >
-              <Text style={styles.applyText}>Apply</Text>
+              <Text style={styles.applyText}>{translateUi('common:apply')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

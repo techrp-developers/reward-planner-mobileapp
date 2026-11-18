@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -136,6 +137,7 @@ const SectionRow: React.FC<{
     onArticlePress: (articleId: number, sectionId: number) => void;
     onViewAll: (sectionId: number, sectionTitle: string) => void;
 }> = ({ section, accent, accentLight, onArticlePress, onViewAll }) => {
+  const { t: translateUi } = useTranslation('common');
     const servicesTheme = useServicesTheme();
 
     return (
@@ -166,7 +168,7 @@ const SectionRow: React.FC<{
             onPress={() => onViewAll(section.id, section.title)}
             activeOpacity={0.8}
         >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{translateUi('common:viewAll')}</Text>
         </TouchableOpacity>
     </View>
     );

@@ -1,7 +1,8 @@
+import { goBackInFitness } from "../../utils/fitnessNavigation";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
+  StatusBar,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,7 +10,8 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
+import LinearGradient from "./FitnessGradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -28,14 +30,13 @@ import {
 } from "../../utils/theme";
 
 import TrophyIcon from "../../assets/StepCount/trophy.svg";
-import StepIcon from "../../assets/StepCount/step_icon.svg";
-import FireIcon from "../../assets/StepCount/lightning.svg";
-import LocationIcon from "../../assets/StepCount/location.svg";
-import ClockIcon from "../../assets/StepCount/clock_icon.svg";
+import { useTranslation } from "react-i18next";
+import i18n from "../../../../i18n";
+
+import { useStepStyles } from "../../utils/useStepTheme";
 
 
 type ProgressNav = NativeStackNavigationProp<FitnessStackParamList, "PlanProcess">;
-type SvgIcon = React.FC<{ width?: number; height?: number; style?: object }>;
 
 type CalendarCell = {
   key: string;
@@ -44,20 +45,11 @@ type CalendarCell = {
   status?: CalendarDayStatus;
   isToday?: boolean;
   isSelected?: boolean;
+  isFuture?: boolean;
 };
 
-const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-const monthTitleFormatter = new Intl.DateTimeFormat("en-US", { month: "long" });
-const fullMonthFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  year: "numeric",
-});
-const selectedDateFormatter = new Intl.DateTimeFormat("en-US", {
-  day: "numeric",
-  month: "long",
-});
 
-const VD = {
+const VD_DARK = {
   bg: ["#070A16", "#111735", "#201A3F"],
   ink: "#F6F7FF",
   muted: "#A8AEC8",
@@ -74,23 +66,42 @@ const VD = {
   shadow: "#02030A",
 };
 
+type Palette = typeof VD_DARK;
+
+const VD_LIGHT: Palette = {
+  bg: ["#F5F9FF", "#EEF4FF", "#F3EEFF"],
+  ink: "#10152D",
+  muted: "#777FA5",
+  softText: "#8A92B2",
+  accent: "#426BFF",
+  accentDark: "#5B3FD9",
+  accentFaint: "rgba(66,107,255,0.10)",
+  cardBg: "#FFFFFF",
+  cardSoft: "#F3F6FD",
+  cardBorder: "#E9EEFA",
+  success: "#16A34A",
+  warning: "#C27C00",
+  danger: "#E5484D",
+  shadow: "#4664A5",
+};
+
 const pad2 =(value: number) => String(value).padStart(2, "0");
 const toMonthKey = (date: Date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 const toIsoDate = (year: number, monthIndex: number, day: number) =>
   `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`;
 
 const formatNumber = (value: number) =>
-  Number.isFinite(value) ? value.toLocaleString("en-IN") : "0";
+  Number.isFinite(value) ? value.toLocaleString(i18n.language) : "0";
 
 const safeNumber = (value?: number | null) =>
   Number.isFinite(Number(value)) ? Number(value) : 0;
 
-const buildMonthOptions = (baseDate: Date) => {
+const buildMonthOptions = (baseDate: Date, language: string) => {
   return Array.from({ length: 6 }, (_, index) => {
     const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - 2 + index, 1);
     return {
       key: toMonthKey(date),
-      label: monthTitleFormatter.format(date),
+      label: new Intl.DateTimeFormat(language, { month: "long" }).format(date),
       date,
     };
   });
@@ -121,7 +132,8 @@ const buildCalendarCells = (
       key: isoDate,
       dayNumber,
       isoDate,
-      status: calendarData[isoDate]?.status,
+      status: isoDate > todayIso ? undefined : calendarData[isoDate]?.status,
+      isFuture: isoDate > todayIso,
       isToday: isoDate === todayIso,
       isSelected: isoDate === selectedIsoDate,
     };
@@ -136,6 +148,11 @@ const buildCalendarCells = (
 };
 
 const ProgressScreen: React.FC = () => {
+  const { palette: VD, styles, isDark } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { t: tx, i18n: locale } = useTranslation();
+  const language = locale.language;
+  const fullMonthFormatter = useMemo(() => new Intl.DateTimeFormat(language, { month: "long", year: "numeric" }), [language]);
+  const selectedDateFormatter = useMemo(() => new Intl.DateTimeFormat(language, { month: "long", day: "numeric" }), [language]);
   const navigation = useNavigation<ProgressNav>();
   const { width } = useWindowDimensions();
   const today = useMemo(() => new Date(), []);
@@ -145,7 +162,7 @@ const ProgressScreen: React.FC = () => {
     toIsoDate(today.getFullYear(), today.getMonth(), today.getDate())
   );
 
-  const monthOptions = useMemo(() => buildMonthOptions(today), [today]);
+  const monthOptions = useMemo(() => buildMonthOptions(today, language), [today, language]);
   const calendarQuery = useCalendarProgressQuery(selectedMonth);
   const calendarData = useMemo(
     () => calendarQuery.data?.data?.calendar || {},
@@ -155,7 +172,7 @@ const ProgressScreen: React.FC = () => {
   const loadingCalendar = calendarQuery.isLoading;
   const errorMessage =
     calendarQuery.data?.message ||
-    (calendarQuery.error ? "Failed to fetch calendar" : "");
+    (calendarQuery.error ? i18n.t("stepCounter:r2.failedToFetchCalendar") : "");
 
   const calendarCells = useMemo(
     () => buildCalendarCells(selectedMonth, calendarData, selectedDate),
@@ -177,10 +194,11 @@ const ProgressScreen: React.FC = () => {
   const selectedDateLabel = useMemo(() => {
     if (!selectedDate) return fullMonthFormatter.format(new Date(`${selectedMonth}-01T00:00:00`));
     return selectedDateFormatter.format(new Date(`${selectedDate}T00:00:00`));
-  }, [selectedDate, selectedMonth]);
+  }, [selectedDate, selectedMonth, fullMonthFormatter, selectedDateFormatter]);
 
   const highestStepDay = useMemo(() => {
-    const entries = Object.entries(calendarData);
+    const todayKey = toIsoDate(today.getFullYear(), today.getMonth(), today.getDate());
+    const entries = Object.entries(calendarData).filter(([date, data]) => date <= todayKey && safeNumber(data.steps) > 0);
     if (entries.length === 0) return null;
 
     return entries.reduce(
@@ -188,20 +206,30 @@ const ProgressScreen: React.FC = () => {
         safeNumber(data.steps) > safeNumber(best.data.steps) ? { date, data } : best,
       { date: entries[0][0], data: entries[0][1] }
     );
-  }, [calendarData]);
+  }, [calendarData, today]);
 
   const handleMonthPress = useCallback((monthKey: string) => {
     setSelectedMonth(monthKey);
-    setSelectedDate(null);
-  }, []);
+    setSelectedDate(monthKey === toMonthKey(today)
+      ? toIsoDate(today.getFullYear(), today.getMonth(), today.getDate())
+      : `${monthKey}-01`);
+  }, [today]);
 
   const handleRetry = useCallback(() => {
     calendarQuery.refetch();
   }, [calendarQuery]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={VD.bg[0]} />
       <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={tx("common:actions.back")} style={styles.iconButton} onPress={() => goBackInFitness(navigation)} activeOpacity={0.82}>
+            <MaterialCommunityIcons name="chevron-left" size={25} color={VD.accentDark} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{tx("stepCounter:progressScreen.yourProgress")}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -210,14 +238,6 @@ const ProgressScreen: React.FC = () => {
           ]}
         >
           <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()} activeOpacity={0.82}>
-                <MaterialCommunityIcons name="chevron-left" size={25} color={VD.accentDark} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Your Progress</Text>
-              <View style={styles.headerSpacer} />
-            </View>
-
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -229,6 +249,8 @@ const ProgressScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={item.key}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
                     style={[styles.monthTab, active && styles.monthTabActive]}
                     activeOpacity={0.84}
                     onPress={() => handleMonthPress(item.key)}
@@ -242,21 +264,21 @@ const ProgressScreen: React.FC = () => {
             </ScrollView>
 
             <Text style={styles.subText}>
-              <Text style={styles.subTextStrong}>{selectedDateLabel}:</Text>{" "}
-              {monthStats.completed} days Completed • {monthStats.missed} days Missed
+              <Text style={styles.subTextStrong}>{fullMonthFormatter.format(new Date(`${selectedMonth}-01T00:00:00`))}</Text>{"\n"}
+              {tx("stepCounter:ui.monthSummary", monthStats)}
             </Text>
 
             <View style={styles.card}>
               {loadingCalendar ? (
                 <View style={styles.stateBox}>
                   <ActivityIndicator color={VD.accent} />
-                  <Text style={styles.stateText}>Loading calendar...</Text>
+                  <Text style={styles.stateText}>{tx("stepCounter:progressScreen.loadingCalendar")}</Text>
                 </View>
               ) : errorMessage ? (
                 <View style={styles.stateBox}>
                   <Text style={styles.stateText}>{errorMessage}</Text>
                   <TouchableOpacity style={styles.retryButton} activeOpacity={0.86} onPress={handleRetry}>
-                    <Text style={styles.retryText}>Retry</Text>
+                    <Text style={styles.retryText}>{tx("stepCounter:progressScreen.retry")}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -266,27 +288,28 @@ const ProgressScreen: React.FC = () => {
                 />
               )}
 
+              <Text style={styles.detailTitle}>{selectedDateLabel}</Text>
               <View style={styles.statsRow}>
                 <Stat
                   value={formatNumber(safeNumber(selectedDayData?.steps))}
-                  label="Steps"
-                  Icon={StepIcon}
+                  label={tx("stepCounter:progressScreen.steps")}
+                  icon="shoe-print"
                 />
                 <Stat
                   value={formatNumber(safeNumber(selectedDayData?.calories))}
-                  label="Kcal"
-                  Icon={FireIcon}
+                  label={tx("stepCounter:progressScreen.kcal")}
+                  icon="fire"
                   color={VD.warning}
                 />
                 <Stat
                   value={safeNumber(selectedDayData?.distance_km).toFixed(1)}
-                  label="Km"
-                  Icon={LocationIcon}
+                  label={tx("stepCounter:progressScreen.km")}
+                  icon="map-marker-outline"
                 />
                 <Stat
                   value={formatNumber(safeNumber(selectedDayData?.active_minutes))}
-                  label="Move Min"
-                  Icon={ClockIcon}
+                  label={tx("stepCounter:progressScreen.moveMin")}
+                  icon="clock-outline"
                 />
               </View>
             </View>
@@ -298,12 +321,12 @@ const ProgressScreen: React.FC = () => {
                 </View>
                 <View style={styles.highestCopy}>
                   <Text style={styles.highestTitle}>
-                    Your <Text style={styles.highestAccent}>Highest</Text>{"\n"}Step Day
+                    {tx("stepCounter:ui.highestDay")}
                   </Text>
                 </View>
                 <View style={styles.highestRight}>
                   <Text style={styles.highestValue}>
-                    {formatNumber(safeNumber(highestStepDay.data.steps))} Steps
+                    {tx("stepCounter:ui.stepsValue", { count: safeNumber(highestStepDay.data.steps) })}
                   </Text>
                   <Text style={styles.highestDate}>
                     {selectedDateFormatter.format(new Date(`${highestStepDay.date}T00:00:00`))}
@@ -325,10 +348,16 @@ type CalendarGridProps = {
   onSelectDate: (date: string) => void;
 };
 
-const CalendarGrid = React.memo(({ cells, onSelectDate }: CalendarGridProps) => (
+const CalendarGrid = React.memo(({ cells, onSelectDate }: CalendarGridProps) => {
+  const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  const { i18n: locale } = useTranslation();
+  const weekDays = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale.language, { weekday: "short" }).format(new Date(2024, 0, 1 + index)),
+  );
+  return (
   <View>
     <View style={styles.weekRow}>
-      {WEEK_DAYS.map((day) => (
+      {weekDays.map((day) => (
         <Text key={day} style={styles.weekText}>{day}</Text>
       ))}
     </View>
@@ -338,7 +367,8 @@ const CalendarGrid = React.memo(({ cells, onSelectDate }: CalendarGridProps) => 
       ))}
     </View>
   </View>
-));
+  );
+});
 
 type DayItemProps = {
   cell: CalendarCell;
@@ -346,6 +376,7 @@ type DayItemProps = {
 };
 
 const DayItem = React.memo(({ cell, onSelectDate }: DayItemProps) => {
+  const { palette: VD, styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   if (!cell.dayNumber || !cell.isoDate) {
     return <View style={styles.dayOuter} />;
   }
@@ -358,6 +389,10 @@ const DayItem = React.memo(({ cell, onSelectDate }: DayItemProps) => {
     <TouchableOpacity
       activeOpacity={0.84}
       style={styles.dayOuter}
+      accessibilityRole="button"
+      accessibilityLabel={`${cell.isoDate}${cell.status ? `, ${cell.status}` : ""}`}
+      accessibilityState={{ selected: cell.isSelected, disabled: cell.isFuture }}
+      disabled={cell.isFuture}
       onPress={() => onSelectDate(cell.isoDate!)}
     >
       <View
@@ -366,17 +401,18 @@ const DayItem = React.memo(({ cell, onSelectDate }: DayItemProps) => {
           completed && styles.completedDay,
           missed && styles.missedDay,
           partial && styles.partialDay,
+          cell.isFuture && styles.futureDay,
           cell.isToday && styles.todayDay,
           cell.isSelected && styles.selectedDay,
         ]}
       >
         {completed ? (
-          <MaterialCommunityIcons name="check" size={16} color={VD.ink} />
+          <MaterialCommunityIcons name="check" size={16} color={cell.isSelected ? VD.accentDark : "#FFFFFF"} />
         ) : (
           <Text
             style={[
               styles.dayText,
-              completed && styles.completedText,
+              cell.isFuture && styles.futureText,
               partial && styles.partialText,
               cell.isSelected && styles.selectedText,
             ]}
@@ -392,21 +428,26 @@ const DayItem = React.memo(({ cell, onSelectDate }: DayItemProps) => {
 type StatProps = {
   value: string;
   label: string;
-  Icon: SvgIcon;
+  icon: string;
   color?: string;
 };
 
-const Stat = React.memo(({ value, label, Icon, color = VD.accentDark }: StatProps) => (
+const Stat = React.memo(({ value, label, icon, color }: StatProps) => {
+  const { palette: VD, styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
+  return (
   <View style={styles.statItem}>
-    <Icon width={24} height={24} />
+    <View style={styles.statIcon}>
+      <MaterialCommunityIcons name={icon} size={22} color={color ?? VD.accent} />
+    </View>
     <View style={styles.statTextRow}>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={[styles.statValue, { color: color ?? VD.accentDark }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   </View>
-));
+  );
+});
 
-const styles = StyleSheet.create({
+const createStyles = (VD: Palette) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: VD.bg[0],
@@ -416,7 +457,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     alignItems: "center",
-    paddingTop: SPACING.xl + SPACING.md,
+    paddingTop: 8,
     paddingBottom: SPACING.xxl,
   },
   content: {
@@ -427,12 +468,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: SPACING.md,
+    marginBottom: 12,
+    paddingHorizontal: RESPONSIVE.horizontalPadding,
+    paddingVertical: 12,
   },
   iconButton: {
     width: 42,
     height: 42,
-    borderRadius: BORDER_RADIUS.medium,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: VD.cardSoft,
@@ -440,7 +483,8 @@ const styles = StyleSheet.create({
     borderColor: VD.cardBorder,
   },
   headerTitle: {
-    ...TYPOGRAPHY.bodyMedium,
+    fontSize: 20, lineHeight: 28, fontWeight: "800",
+    flex: 1, minWidth: 0, paddingHorizontal: 12, paddingVertical: 2,
     color: VD.ink,
     textAlign: "center",
   },
@@ -452,17 +496,17 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
   },
   monthTab: {
-    minHeight: 40,
+    minHeight: 44,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     backgroundColor: VD.cardBg,
-    borderRadius: BORDER_RADIUS.medium,
+    borderRadius: 22,
     marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: VD.cardBorder,
   },
   monthTabActive: {
-    backgroundColor: VD.accentFaint,
+    backgroundColor: VD.accent,
     borderColor: VD.accent,
   },
   monthText: {
@@ -470,7 +514,7 @@ const styles = StyleSheet.create({
     color: VD.muted,
   },
   monthTextActive: {
-    color: VD.accentDark,
+    color: "#FFFFFF",
   },
   subText: {
     ...TYPOGRAPHY.caption,
@@ -485,13 +529,13 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     backgroundColor: VD.cardBg,
-    borderRadius: BORDER_RADIUS.large,
-    padding: SPACING.md,
+    borderRadius: 24,
+    padding: 16,
     marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: VD.cardBorder,
     shadowColor: VD.shadow,
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.06,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
@@ -512,12 +556,13 @@ const styles = StyleSheet.create({
   },
   dayOuter: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
+    minHeight: 44,
+    aspectRatio: 0.95,
     padding: 3,
   },
   dayBox: {
     flex: 1,
-    borderRadius: BORDER_RADIUS.medium,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: VD.cardSoft,
@@ -529,8 +574,8 @@ const styles = StyleSheet.create({
     borderColor: VD.accent,
   },
   missedDay: {
-    backgroundColor: "rgba(243,140,154,0.12)",
-    borderColor: "rgba(243,140,154,0.28)",
+    backgroundColor: VD.cardSoft,
+    borderColor: VD.cardBorder,
   },
   partialDay: {
     backgroundColor: "rgba(248,184,78,0.14)",
@@ -549,30 +594,32 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: VD.ink,
   },
-  completedText: {
-    color: VD.ink,
-  },
+  futureDay: { backgroundColor: "transparent", borderColor: "transparent" },
+  futureText: { color: VD.softText, opacity: 0.55 },
   partialText: {
     color: VD.warning,
   },
   selectedText: {
     color: VD.accentDark,
   },
+  detailTitle: { fontSize: 15, lineHeight: 22, fontWeight: "700", color: VD.ink, paddingTop: 20, paddingBottom: 12 },
   statsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: SPACING.lg,
+    flexWrap: "wrap",
+    gap: 8,
   },
+  statIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: VD.accentFaint, alignItems: "center", justifyContent: "center" },
   statItem: {
-    flex: 1,
-    alignItems: "center",
+    flexGrow: 1, flexBasis: "45%", minWidth: 0,
+    backgroundColor: VD.cardSoft, borderRadius: 16, padding: 12,
+    alignItems: "flex-start",
   },
   statTextRow: {
-    alignItems: "center",
+    alignSelf: "stretch",
     marginTop: SPACING.xs,
   },
   statValue: {
-    ...TYPOGRAPHY.bodyMedium,
+    fontSize: 22, lineHeight: 30, fontWeight: "800", paddingVertical: 2,
   },
   statLabel: {
     ...TYPOGRAPHY.caption,
@@ -582,13 +629,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: VD.cardBg,
-    borderRadius: BORDER_RADIUS.large,
-    padding: SPACING.md,
+    borderRadius: 24,
+    padding: 16,
     marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: VD.cardBorder,
     shadowColor: VD.shadow,
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
@@ -603,7 +650,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   highestCopy: {
-    flex: 1,
+    flex: 1, minWidth: 0,
   },
   highestTitle: {
     ...TYPOGRAPHY.caption,
@@ -614,7 +661,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   highestRight: {
-    alignItems: "flex-end",
+    flex: 1, minWidth: 0, alignItems: "flex-end",
   },
   highestValue: {
     ...TYPOGRAPHY.bodyMedium,

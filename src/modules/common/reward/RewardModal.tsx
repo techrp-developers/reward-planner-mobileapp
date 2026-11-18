@@ -1,8 +1,10 @@
+import { Trans, useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef } from "react";
 import { Animated, Easing, Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Reward from "../../../assets/product/rewards.svg";
+import { getAppLocale } from '../../../i18n/format';
 
 type RewardModalProps = {
   visible: boolean;
@@ -14,6 +16,7 @@ const BRAND_GRADIENT: string[] = ["#FC8BAD", "#A654CD"];
 const DARK_GRADIENT: string[] = ["#251126", "#A654CD", "#FC8BAD"];
 
 export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
+  const { t: translateUi } = useTranslation(['language', 'common']);
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.85)).current;
   const badgeScale = useRef(new Animated.Value(0)).current;
@@ -74,6 +77,7 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
 
   if (!visible) return null;
 
+  const amount = points.toLocaleString(getAppLocale());
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
@@ -134,10 +138,10 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
           {/* Header */}
           <View style={styles.premiumPill}>
             <MaterialCommunityIcons name="crown-outline" size={15} color="#A654CD" />
-            <Text style={styles.premiumPillText}>Welcome Bonus</Text>
+            <Text style={styles.premiumPillText}>{translateUi('language:welcomeBonus')}</Text>
           </View>
-          <Text style={styles.title}>Welcome to Reward Planners</Text>
-          <Text style={styles.subtitle}>Your account is now active</Text>
+          <Text style={styles.title}>{translateUi('language:welcome')}</Text>
+          <Text style={styles.subtitle}>{translateUi('language:accountActive')}</Text>
 
           {/* Reward Card */}
           <LinearGradient
@@ -148,40 +152,39 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
           >
             <View style={styles.rewardBonusRow}>
               <MaterialCommunityIcons name="star-four-points" size={13} color="#FFE9F4" />
-              <Text style={styles.rewardBonusLabel}>First Login Bonus</Text>
+              <Text style={styles.rewardBonusLabel}>{translateUi('language:firstLoginBonus')}</Text>
               <MaterialCommunityIcons name="star-four-points" size={13} color="#FFE9F4" />
             </View>
 
-            <Text style={styles.rewardAmount}>{points.toLocaleString()}</Text>
-            <Text style={styles.rewardCoinsLabel}>RP Points</Text>
+            <Text style={styles.rewardAmount}>{amount}</Text>
+            <Text style={styles.rewardCoinsLabel}>{translateUi('common:rpPoints')}</Text>
 
             <View style={styles.rewardSuccessPill}>
               <MaterialCommunityIcons name="check-circle" size={14} color="#FFFFFF" />
-              <Text style={styles.rewardSuccessText}>Successfully Credited</Text>
+              <Text style={styles.rewardSuccessText}>{translateUi('language:rewardCredited')}</Text>
             </View>
 
             <View style={styles.rewardMetaRow}>
               <View style={styles.rewardMetaItem}>
                 <MaterialCommunityIcons name="wallet-giftcard" size={16} color="#FFFFFF" />
-                <Text style={styles.rewardMetaText}>Reward wallet</Text>
+                <Text style={styles.rewardMetaText}>{translateUi('language:rewardWallet')}</Text>
               </View>
               <View style={styles.rewardMetaDivider} />
               <View style={styles.rewardMetaItem}>
                 <MaterialCommunityIcons name="lightning-bolt" size={16} color="#FFFFFF" />
-                <Text style={styles.rewardMetaText}>Ready to use</Text>
+                <Text style={styles.rewardMetaText}>{translateUi('language:rewardReady')}</Text>
               </View>
             </View>
           </LinearGradient>
 
           {/* Content */}
           <Text style={styles.description}>
-            Congratulations!{"\n\n"}
-            As a welcome gift, we have credited{" "}
-            <Text style={styles.descriptionHighlight}>
-              {points.toLocaleString()} RP Points
-            </Text>{" "}
-            to your account.{"\n\n"}
-            Start earning, shopping, and redeeming exciting rewards with Reward Planners.
+            <Trans
+              t={translateUi}
+              i18nKey="language:rewardDetails"
+              values={{ amount }}
+              components={{ points: <Text style={styles.descriptionHighlight} /> }}
+            />
           </Text>
 
           {/* CTA */}
@@ -196,7 +199,7 @@ export const RewardModal = ({ visible, points, onClose }: RewardModalProps) => {
               end={{ x: 1, y: 0 }}
               style={styles.gradientBtn}
             >
-              <Text style={styles.btnText}>Start Exploring</Text>
+              <Text style={styles.btnText}>{translateUi('language:startExploring')}</Text>
               <MaterialCommunityIcons name="arrow-right" size={19} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>

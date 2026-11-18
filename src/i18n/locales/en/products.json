@@ -1,0 +1,13 @@
+{
+  "emptyCart": "Your cart is empty",
+  "emptyWishlist": "Your wishlist is empty",
+  "deliveryAddress": "Delivery Address",
+  "savedForLater": "Saved for Later",
+  "productDetails": "Product Details",
+  "deliveryInstructions": "Delivery Instructions",
+  "paymentMethod": "Payment Method",
+  "removeWishlist": "Remove from Wishlist",
+  "goToCart": "Go to Cart",
+  "priceDetails": "Price Details",
+  "selectVariant": "Select Variant"
+}

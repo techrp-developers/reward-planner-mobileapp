@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/formatMoney';
 import React, { useEffect, useMemo } from 'react'
 import { View, Text, StyleSheet, Switch } from 'react-native'
@@ -46,6 +47,7 @@ export default function BillDetailsCard({
   showRedeemableCoins = false,
   onPayableChange,
 }: Props) {
+  const { t: translateUi } = useTranslation('common');
   const { isDark, theme } = useAppTheme()
   const safeCartTotal = useMemo(() => Math.max(0, Number(cartTotal ?? subtotal ?? 0)), [cartTotal, subtotal])
   const safeFinalPayable = useMemo(() => Math.max(0, Number(finalPayable ?? finalTotal ?? 0)), [finalPayable, finalTotal])
@@ -69,7 +71,7 @@ export default function BillDetailsCard({
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <Text style={[styles.title, { color: theme.text }]}>Bill Details</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{translateUi('common:billDetails')}</Text>
 
       <View style={styles.rewardToggleRow}>
         <View>
@@ -98,16 +100,16 @@ export default function BillDetailsCard({
 
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-      <MemoRow label="Item Total" value={formatAmount(safeCartTotal)} />
+      <MemoRow label={translateUi('common:itemTotal')} value={formatAmount(safeCartTotal)} />
       <MemoRow
-        label="Bag Discount"
+        label={translateUi('common:bagDiscount')}
         value={formatAmount(safeBagDiscount)}
         valueStyle={safeBagDiscount > 0 ? styles.negative : undefined}
       />
 
       {rewardDiscount > 0 && (
         <MemoRow
-          label="Reward Discount"
+          label={translateUi('common:rewardDiscount')}
           value={`-${formatAmount(rewardDiscount)}`}
           valueStyle={styles.negative}
         />
@@ -124,7 +126,7 @@ export default function BillDetailsCard({
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
       <View style={styles.totalRow}>
-        <Text style={[styles.totalLabel, { color: theme.text }]}>Order Total</Text>
+        <Text style={[styles.totalLabel, { color: theme.text }]}>{translateUi('common:orderTotal')}</Text>
         <Text style={[styles.totalValue, { color: theme.text }]}>{formatAmount(payableAmount)}</Text>
       </View>
 
