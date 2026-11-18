@@ -375,6 +375,7 @@
     "syncFailed": "Sync failed",
     "healthConnectNotInstalled": "Health Connect not installed",
     "healthConnectNeedsSetup": "Health Connect needs setup",
+    "healthConnectUnsupported": "Health Connect is unavailable on this device. Check for an Android system update, then try again.",
     "setUpPlan": "Let's set up your plan",
     "planUnavailable": "Plan unavailable",
     "addBodyDetails": "Add your body details so we can build your personalized step plan.",

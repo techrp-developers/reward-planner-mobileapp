@@ -6,6 +6,7 @@ import {
   Animated,
   BackHandler,
   FlatList,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -196,7 +197,7 @@ const ErrorState = React.memo(({ message, onRetry }: { message: string; onRetry:
     <Text style={ss.stateTitle}>{i18n.t("stepCounter:r2.planUnavailable")}</Text>
     <Text style={ss.stateText}>{message}</Text>
     <TouchableOpacity activeOpacity={0.9} onPress={onRetry} style={ss.retryBtn}>
-      <Text style={ss.retryText}>{i18n.t("common:actions.retry")}</Text>
+      <Text style={ss.retryText}>{i18n.t("common:retry")}</Text>
     </TouchableOpacity>
   </View>
   );
@@ -242,7 +243,7 @@ const BmiMeter = React.memo(({ value }: { value: number }) => {
       </View>
       <View style={ss.bmiLabelRow}>
         {BMI_SEGMENTS.map(seg => (
-          <Text key={seg.label} style={[ss.bmiLbl, { flex: seg.max - seg.min }]} numberOfLines={1}>
+          <Text key={seg.label} style={[ss.bmiLbl, { flex: seg.max - seg.min }]} numberOfLines={Platform.OS === "ios" ? 1 : undefined}>
             {translateSourceText("stepCounter", seg.label)}
           </Text>
         ))}
@@ -340,6 +341,7 @@ const BMIScreen: React.FC = () => {
   // Back leaves the measurement form first when a plan exists to return to.
   useFocusEffect(useCallback(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (Platform.OS === "android" && submittingRef.current) return true;
       if (editing && measured) { setEditing(false); return true; }
       return false;
     });
@@ -430,8 +432,9 @@ const BMIScreen: React.FC = () => {
   const startTracking = useCallback(() => {
     // Setup is finished: Dashboard becomes the root so Back cannot reopen it.
     if (manage) navigation.navigate("Dashboard");
+    else if (Platform.OS === "android") void continueSetup();
     else navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
-  }, [manage, navigation]);
+  }, [continueSetup, manage, navigation]);
 
   const openPicker = useCallback((field: "height" | "weight") => {
     setPickerField(field);
@@ -473,6 +476,12 @@ const BMIScreen: React.FC = () => {
   const showArt = view !== "measure";
   // Art is decorative and capped so it never sets a tall, empty hero.
   const art = showArt && heroKind ? goalHeroSize(heroKind, width, Math.min(200, Math.max(150, height * 0.22))) : null;
+  const stackArt = Platform.OS === "android" && (width < 360 || fontScale > 1.15);
+  const copyWidth = !showArt || stackArt
+    ? undefined
+    : Platform.OS === "android"
+      ? width - pad - (art?.width ?? 0)
+      : width - pad - (art?.width ?? width * 0.45) * 0.62;
   const showBack = !manage || (view === "measure" && measured);
   const onBack = view === "measure" && measured ? closeMeasurements : () => goBackInFitness(navigation, manage ? "Dashboard" : "StepForm");
 
@@ -495,7 +504,7 @@ const BMIScreen: React.FC = () => {
             hs.hero,
             { paddingTop: insets.top + 8, paddingHorizontal: pad },
             // Tall enough for the art below the status bar; text adds to it.
-            showArt && { minHeight: insets.top + 8 + (art?.height ?? 150) + HERO_OVERLAP },
+            showArt && !stackArt && { minHeight: insets.top + 8 + (art?.height ?? 150) + HERO_OVERLAP },
             isDark && hs.heroDark,
           ]}
         >
@@ -504,15 +513,16 @@ const BMIScreen: React.FC = () => {
               <Path d={`M0 46 C ${width * 0.3} 6, ${width * 0.62} 70, ${width} 20 L ${width} 70 L 0 70 Z`} fill={H.wave} />
             </Svg>
           </View>
-          {heroKind && art && <GoalHeroArt kind={heroKind} width={art.width} />}
+          {heroKind && art && !stackArt && <GoalHeroArt kind={heroKind} width={art.width} />}
 
           {showBack ? (
             <TouchableOpacity
               style={hs.backBtn}
               onPress={onBack}
+              disabled={Platform.OS === "android" && submitting}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={tx("common:actions.back")}
+              accessibilityLabel={tx("common:back")}
             >
               <MaterialCommunityIcons name="chevron-left" size={26} color={H.ink} />
             </TouchableOpacity>
@@ -520,7 +530,7 @@ const BMIScreen: React.FC = () => {
             <View style={hs.backSpacer} />
           )}
 
-          <View style={[hs.copy, showArt && { width: width - pad - (art?.width ?? width * 0.45) * 0.62 }]}>
+          <View style={[hs.copy, copyWidth !== undefined && { width: copyWidth }]}>
             {!!hero.eyebrow && <Text style={[hs.eyebrow, !showArt && hs.textCenter]} maxFontSizeMultiplier={1.3}>{hero.eyebrow}</Text>}
             {/* The celebration icon sits beside the title, not inside it: an
                 icon glyph inside the heading mixes font metrics on iOS. */}
@@ -547,10 +557,15 @@ const BMIScreen: React.FC = () => {
               </View>
             )}
           </View>
+          {stackArt && art && heroKind && (
+            <View style={{ height: art.height }}>
+              <GoalHeroArt kind={heroKind} width={art.width} />
+            </View>
+          )}
         </LinearGradient>
 
         {/* ── Content ──────────────────────────────────────────── */}
-        <View style={[ss.body, !showArt && ss.bodyFlat, { paddingHorizontal: pad }]}>
+        <View style={[Platform.OS === "ios" && (showArt ? ss.body : ss.bodyFlat), { paddingHorizontal: pad }]}>
           {view === "loading" ? (
             <View style={ss.card}><LoadingState /></View>
           ) : view === "error" ? (
@@ -721,7 +736,7 @@ const BMIScreen: React.FC = () => {
                     <Text style={ss.doneTitle} maxFontSizeMultiplier={1.3}>{tx("stepCounter:bMIScreen.goalSetSuccess")}</Text>
                     <Text style={ss.doneSub} maxFontSizeMultiplier={1.3}>{tx("stepCounter:bMIScreen.goalSetSuccessSub")}</Text>
                   </View>
-                  <TouchableOpacity activeOpacity={0.9} onPress={startTracking} accessibilityRole="button">
+                  <TouchableOpacity activeOpacity={0.9} onPress={startTracking} disabled={continuing} accessibilityRole="button">
                     <LinearGradient colors={["#426BFF", "#5B2EFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ss.trackBtn}>
                       <Text style={ss.trackText} maxFontSizeMultiplier={1.2}>{tx("stepCounter:bMIScreen.startTracking")}</Text>
                       <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" />

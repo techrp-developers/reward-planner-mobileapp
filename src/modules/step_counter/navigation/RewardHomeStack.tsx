@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import FitnessTabBar, {
 } from '../component/fitness/FitnessTabBar';
 import {
   entryRouteFor,
+  resumeRouteFor,
   routeForStage,
   stageOf,
   useFitnessAccountScope,
@@ -23,6 +24,9 @@ import { useStepPalette } from '../utils/useStepTheme';
 import { screenInsets } from '../utils/layout';
 import { fitnessTabAction } from '../utils/fitnessNavigation';
 import { fitnessTabBarHeight } from '../../../bottombar/BottomTabs';
+import { useAuth } from '../../common/auth/context/AuthContext';
+import type { AppStackParamList } from '../../../navigation/RootNavigator';
+import { clearPendingFitnessSetup, logFitnessAndroid } from '../utils/pendingFitnessSetup';
 
 export type FitnessStackParamList = {
   StepWelcome: undefined;
@@ -38,7 +42,7 @@ export type FitnessStackParamList = {
   MyPlan: undefined;
   AfterGoal: undefined;
   AchievementCard: undefined;
-  StepsTrackerScreen: undefined;
+  StepsTrackerScreen: { resumePermission?: boolean } | undefined;
   GoalCelebrationScreen: { response: GoalSyncData };
   TodayGoalCompletedScreen: {
     planOverview: PlanOverview;
@@ -52,7 +56,7 @@ const Stack = createNativeStackNavigator<FitnessStackParamList>();
 
 // Screens that need setup complete. Reaching one early (deep link, revoked
 // Health access) resumes setup at the first incomplete stage instead.
-const SETUP_REQUIRED = new Set<string>(['Dashboard', 'AfterGoal', 'AchievementCard', 'CoinHistory', 'PlanProcess']);
+const SETUP_REQUIRED = new Set<string>(['Dashboard', 'AfterGoal', 'AchievementCard', 'CoinHistory', 'PlanProcess', 'MyPlan']);
 
 const GATE = {
   light: { bg: '#F5F9FF', text: '#4A5275', accent: '#426BFF', button: 'rgba(66,107,255,0.10)', tabRegion: '#F1EDFF' },
@@ -86,13 +90,31 @@ function SetupGate({ error, onRetry }: { error: Error | null; onRetry: () => voi
 
 export default function RewardHomeStack() {
   useFitnessAccountScope();
-  const setup = useFitnessSetup();
+  const route = useRoute<RouteProp<AppStackParamList, 'RewardStack'>>();
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  const userId = user?.user_id;
+  const restoring = Platform.OS === 'android' && route.params?.resumeSetup === true;
+  const setup = useFitnessSetup(restoring);
   // Decided once: where this visit to RP Move opens.
   const [entry, setEntry] = useState<ReturnType<typeof entryRouteFor> | null>(null);
 
   useEffect(() => {
-    if (!entry && setup.resolved) setEntry(entryRouteFor(setup.stage, setup.plan));
-  }, [entry, setup.plan, setup.resolved, setup.stage]);
+    if (entry || !setup.resolved) return;
+    const initial = restoring ? resumeRouteFor(setup.stage) : entryRouteFor(setup.stage, setup.plan);
+    if (restoring) {
+      logFitnessAndroid('RESOLVE_RESTORED_STAGE');
+      if (initial.name === 'StepForm') logFitnessAndroid('NAVIGATE_STEP_FORM');
+    }
+    setEntry(initial);
+  }, [entry, restoring, setup.plan, setup.resolved, setup.stage]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || userId === undefined) return;
+    return navigation.addListener('beforeRemove', () => {
+      clearPendingFitnessSetup(userId).catch(() => logFitnessAndroid('PENDING_SETUP_CLEAR_FAILED'));
+    });
+  }, [navigation, userId]);
 
   if (!entry) return <SetupGate error={setup.error} onRetry={() => { setup.retry(); }} />;
   return <FitnessLayout entry={entry} setup={setup} />;
@@ -106,12 +128,20 @@ function FitnessLayout({
   setup: ReturnType<typeof useFitnessSetup>;
 }) {
   const appNavigation = useNavigation<any>();
+  const { user } = useAuth();
+  const userId = user?.user_id;
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const { palette: C } = useStepPalette(GATE.light, GATE.dark);
   const stackNav = useRef<any>(null);
   const [focused, setFocused] = useState<string>(entry.name);
   const [hiders, setHiders] = useState<Set<object>>(() => new Set());
+
+  useEffect(() => {
+    if (Platform.OS === 'android' && focused === 'Dashboard' && setup.settled && setup.stage === 'ready' && userId !== undefined) {
+      clearPendingFitnessSetup(userId).catch(() => logFitnessAndroid('PENDING_SETUP_CLEAR_FAILED'));
+    }
+  }, [focused, setup.settled, setup.stage, userId]);
 
   const screenListeners = useCallback(
     ({ navigation, route }: { navigation: any; route: { name: string } }) => {
@@ -149,7 +179,9 @@ function FitnessLayout({
   // false on cold start until storage is read.
   const healthWasReady = useRef(false);
   if (setup.healthFlag) healthWasReady.current = true;
-  const guardStage = stageOf(setup.plan, setup.healthFlag || !healthWasReady.current);
+  const guardStage = stageOf(setup.plan, Platform.OS === 'android'
+    ? setup.healthReady
+    : setup.healthFlag || !healthWasReady.current);
 
   useEffect(() => {
     if (!setup.settled || guardStage === 'ready' || !SETUP_REQUIRED.has(focused)) return;
@@ -253,6 +285,7 @@ function FitnessLayout({
               <Stack.Screen
                 name="StepsTrackerScreen"
                 getComponent={() => require('../component/StepCode/StepsTrackerScreen').default}
+                initialParams={entry.name === 'StepsTrackerScreen' ? entry.params : undefined}
               />
 
               <Stack.Screen

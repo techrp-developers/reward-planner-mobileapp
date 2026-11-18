@@ -18,6 +18,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 
+
 import type { DailyData } from "../../navigation/type";
 import { fetchUserInfo } from "../../../common/auth/api/AuthAPI";
 import {
@@ -41,6 +42,7 @@ import { useTranslation } from "react-i18next";
 import { dashboardStepCount } from "../../utils/stepData";
 import i18n from "../../../../i18n";
 
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 // The hero is a daylight illustration panel, so it keeps its sky colours in
 // both modes; everything below it follows the app light/dark setting.
@@ -55,6 +57,7 @@ const H = {
   sky: ["#CFE5FF", "#E4F1FF", "#F5F9FF"],
   shadow: "#4664A5",
 };
+
 
 const C_LIGHT = {
   bg: "#F5F9FF",
@@ -79,7 +82,9 @@ const C_LIGHT = {
   onAccent: "#FFFFFF",
 };
 
+
 type Palette = typeof C_LIGHT;
+
 
 const C_DARK: Palette = {
   bg: "#0B1020",
@@ -104,6 +109,7 @@ const C_DARK: Palette = {
   onAccent: "#FFFFFF",
 };
 
+
 const shadow = (color: string) => ({
   shadowColor: color,
   shadowOpacity: 0.08,
@@ -112,7 +118,9 @@ const shadow = (color: string) => ({
   elevation: 3,
 } as const);
 
+
 const useDashStyles = () => useStepStyles(C_LIGHT, C_DARK, createStyles);
+
 
 // Static artwork. "default" (other / unknown gender) uses the male runner,
 // matching the welcome banner; there is no neutral illustration yet.
@@ -122,14 +130,17 @@ const HERO_ART: Record<UserGender, { source: number; aspect: number }> = {
   default: { source: require("../../assets/StepCount/dashboard_runner_male.png"), aspect: 369 / 508 },
 };
 
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const localDateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 
 const parseLocalDate = (key: string) => {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 };
+
 
 // Same estimates the app sends in the sync payload (StepTrackerContext
 // buildPayload), so they match what the server stores after the next sync.
@@ -139,6 +150,7 @@ const estimateFromSteps = (steps: number) => ({
   active_minutes: steps > 0 ? Math.max(1, Math.floor(steps / 1000)) : 0,
 });
 
+
 // ─── Step ring ────────────────────────────────────────────────────────────────
 interface RingProps {
   steps: number;
@@ -146,6 +158,7 @@ interface RingProps {
   size: number;
   numberFmt: Intl.NumberFormat;
 }
+
 
 const StepRing = React.memo(({ steps, goal, size, numberFmt }: RingProps) => {
   const { t: tx } = useTranslation();
@@ -159,6 +172,8 @@ const StepRing = React.memo(({ steps, goal, size, numberFmt }: RingProps) => {
   const percent = hasGoal ? Math.round((steps / goal) * 100) : 0;
   // Visible fill is clamped; the step count itself is never capped.
   const fill = hasGoal ? Math.max(0, Math.min(steps / goal, 1)) : 0;
+
+
 
 
   return (
@@ -195,6 +210,7 @@ const StepRing = React.memo(({ steps, goal, size, numberFmt }: RingProps) => {
         )}
       </Svg>
 
+
       <View style={[styles.ringInner, { width: size - stroke * 2 - 8, height: size - stroke * 2 - 8, top: 8 + stroke + 4, left: 8 + stroke + 4 }]}>
         <Text
           style={[styles.ringSteps, { fontSize: Math.round(size * 0.23) }]}
@@ -228,6 +244,7 @@ const StepRing = React.memo(({ steps, goal, size, numberFmt }: RingProps) => {
   );
 });
 
+
 // ─── Hero art ─────────────────────────────────────────────────────────────────
 const HeroArt = React.memo(({ gender, width }: { gender: UserGender; width: number }) => {
   const art = HERO_ART[gender];
@@ -241,6 +258,7 @@ const HeroArt = React.memo(({ gender, width }: { gender: UserGender; width: numb
     />
   );
 });
+
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 const StatCard = React.memo(
@@ -263,6 +281,7 @@ const StatCard = React.memo(
     );
   },
 );
+
 
 // ─── Streak card ──────────────────────────────────────────────────────────────
 // Weekday circles come from the dated weekly-progress data (steps ≥ goal for
@@ -316,6 +335,7 @@ const StreakCard = React.memo(
   },
 );
 
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
   const { t: tx } = useTranslation();
@@ -325,17 +345,21 @@ const Dashboard: React.FC = () => {
   const lang = i18n.language;
   const { palette: C, styles, isDark } = useDashStyles();
 
+
   // Kept in state and refreshed on focus so the header/week roll over at midnight.
   const [today, setToday] = useState(() => new Date());
+
 
   const pad = RESPONSIVE.horizontalPadding;
   const contentWidth = Math.min(width - pad * 2, 560);
   const ringSize = Math.round(Math.max(160, Math.min(contentWidth * 0.5, 220)));
   const heroArtWidth = Math.min(width * 0.56, 300);
 
+
   const handleGoHome = useCallback(() => {
     navigation.getParent()?.navigate("Dashboard");
   }, [navigation]);
+
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const userInfoQuery = useQuery({
@@ -349,6 +373,7 @@ const Dashboard: React.FC = () => {
     retry: 1,
   });
 
+
   const {
     steps: liveSteps,
     stepDataState,
@@ -360,11 +385,16 @@ const Dashboard: React.FC = () => {
 
 
 
+
+
+
+
   // Goal completion shows two overlays in sequence: GoalReachedScreen (quick
   // "Target Reached!" recap) first, then Continue advances to the fuller
   // TodayGoalCompletedScreen (Plan Overview + full summary).
   const [goalReachedData, setGoalReachedData] = useState<GoalSyncData | null>(null);
   const [summaryData, setSummaryData] = useState<GoalSyncData | null>(null);
+
 
   const handleDismissCelebration = useCallback(() => {
     if (celebrationData?.planOverview && celebrationData?.overallSummary) {
@@ -373,20 +403,25 @@ const Dashboard: React.FC = () => {
     dismissCelebration();
   }, [celebrationData, dismissCelebration]);
 
+
   const handleContinueFromGoalReached = useCallback(() => {
     setSummaryData(goalReachedData);
     setGoalReachedData(null);
   }, [goalReachedData]);
 
+
   const handleDismissSummary = useCallback(() => setSummaryData(null), []);
+
 
   // The celebrations are full-screen; keep the RP Move tab bar out of the way.
   useHideFitnessTabBar(!!celebrationData || !!goalReachedData || !!summaryData);
+
 
   const dashboardQuery = useDashboardQuery();
   const summaryQuery = useTodaySummaryQuery();
   const weeklyQuery = useWeeklyProgressQuery();
   const streakQuery = useFitnessStreakQuery();
+
 
   const { refetch: refetchDashboard } = dashboardQuery;
   const { refetch: refetchSummary } = summaryQuery;
@@ -401,16 +436,19 @@ const Dashboard: React.FC = () => {
     ]);
   }, [refreshSteps, refetchDashboard, refetchSummary, refetchWeekly, refetchStreak]);
 
+
   useFocusEffect(useCallback(() => {
     void refreshDashboard();
     const interval = setInterval(() => { void refreshDashboard(); }, 60_000);
     return () => clearInterval(interval);
   }, [refreshDashboard]));
 
+
   const handlePullRefresh = useCallback(async () => {
     setRefreshing(true);
     try { await refreshDashboard(); } finally { setRefreshing(false); }
   }, [refreshDashboard]);
+
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const numberFmt = useMemo(() => new Intl.NumberFormat(lang), [lang]);
@@ -423,22 +461,27 @@ const Dashboard: React.FC = () => {
     [lang, today],
   );
 
+
   const firstName = useMemo(() => {
     const u = userInfoQuery.data;
     const name = u?.user?.first_name || u?.user?.name || u?.name;
     return name ? String(name).trim().split(/\s+/)[0] : null;
   }, [userInfoQuery.data]);
 
+
   // Render the hero only once user-info has settled so the wrong runner never flashes.
   const heroGender = userInfoQuery.isPending ? null : genderFromUserInfo(userInfoQuery.data);
+
 
   const server = summaryQuery.data?.data ?? null;
   const dashboardData = dashboardQuery.data?.data ?? null;
   // Preserve synced activity when HealthKit returns no data or read access is restricted.
   const liveReadOk = stepDataState === "ok" || stepDataState === "no_steps_today";
 
+
   const currentSteps = dashboardStepCount(liveReadOk ? liveSteps : null, server?.steps, dashboardData?.today_steps);
   const goalSteps = server?.goal_steps || dashboardData?.goal_steps || 0;
+
 
   const metrics = useMemo(() => {
     // Prefer the server's stored metrics; only when live steps are ahead of
@@ -448,6 +491,7 @@ const Dashboard: React.FC = () => {
     }
     return estimateFromSteps(currentSteps);
   }, [server, currentSteps]);
+
 
   const weekDays = useMemo<DailyData[]>(() => {
     const items = weeklyQuery.data?.data ?? [];
@@ -473,15 +517,19 @@ const Dashboard: React.FC = () => {
       });
   }, [weeklyQuery.data, today, lang, currentSteps, goalSteps]);
 
+
   const streakCount = Number(streakQuery.data?.data?.current_streak) || 0;
+
 
   const hasAnyData = liveReadOk || Boolean(server) || Boolean(dashboardData);
   const isLoading = !hasAnyData && (summaryQuery.isPending || dashboardQuery.isPending);
+
 
   const errorMsg =
     dashboardQuery.data?.message ||
     summaryQuery.data?.message ||
     (dashboardQuery.error || summaryQuery.error ? i18n.t("stepCounter:r2.failedToLoadDashboard") : "");
+
 
   const handleRetry = useCallback(() => {
     refreshSteps();
@@ -491,7 +539,9 @@ const Dashboard: React.FC = () => {
     streakQuery.refetch();
   }, [dashboardQuery, refreshSteps, summaryQuery, weeklyQuery, streakQuery]);
 
+
   const handleViewMore = useCallback(() => navigation.navigate("PlanProcess"), [navigation]);
+
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -499,11 +549,13 @@ const Dashboard: React.FC = () => {
       {/* The hero is always a light sky panel, so status-bar icons stay dark over it. */}
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
+
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handlePullRefresh} tintColor={C.blue} />} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
         {/* ── Hero ── */}
         <View style={[styles.hero, isDark && styles.heroDark, { paddingTop: insets.top + 12, paddingHorizontal: pad, minHeight: insets.top + 12 + heroArtWidth / HERO_ART.male.aspect }]}>
           <LinearGradient colors={H.sky} style={StyleSheet.absoluteFill} />
           {heroGender && <HeroArt gender={heroGender} width={heroArtWidth} />}
+
 
           <View style={styles.heroHeader}>
             <View style={styles.flexShrink}>
@@ -523,12 +575,14 @@ const Dashboard: React.FC = () => {
             </TouchableOpacity> */}
           </View>
 
+
           {!isLoading && !(errorMsg && !hasAnyData) && (
             <View style={styles.ringWrap}>
               <StepRing steps={currentSteps} goal={goalSteps} size={ringSize} numberFmt={numberFmt} />
             </View>
           )}
         </View>
+
 
         <View style={[styles.body, { paddingHorizontal: pad }]}>
           <View style={[styles.content, { maxWidth: contentWidth }]}>
@@ -573,9 +627,12 @@ const Dashboard: React.FC = () => {
                   />
                 </View>
 
+
                 {weekDays.length > 0 && <WeeklyGraph weeklyData={weekDays} onViewMore={handleViewMore} />}
 
+
                 <StreakCard streak={streakCount} days={weekDays} stacked={contentWidth < 400} />
+
 
               </>
             )}
@@ -584,6 +641,7 @@ const Dashboard: React.FC = () => {
       </ScrollView>
       <StatusBarShield color={H.sky[0]} />
 
+
       {/* ── Celebration overlay ── */}
       {celebrationData && (
         <GoalCelebrationScreen
@@ -591,6 +649,7 @@ const Dashboard: React.FC = () => {
           onDismiss={handleDismissCelebration}
         />
       )}
+
 
       {goalReachedData?.overallSummary && (
         <View style={styles.summaryOverlay}>
@@ -603,6 +662,7 @@ const Dashboard: React.FC = () => {
           />
         </View>
       )}
+
 
       {summaryData?.planOverview && summaryData?.overallSummary && (
         <View style={styles.summaryOverlay}>
@@ -620,12 +680,15 @@ const Dashboard: React.FC = () => {
   );
 };
 
+
 export default React.memo(Dashboard);
+
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const createStyles = (C: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   flexShrink: { flexShrink: 1 },
+
 
   // ── Hero ──
   // Grows with its text; the artwork is positioned inside it.
@@ -645,6 +708,7 @@ const createStyles = (C: Palette) => StyleSheet.create({
     justifyContent: "center",
     ...shadow(H.shadow),
   },
+
 
   // ── Ring ──
   ringWrap: { marginTop: 18, marginLeft: -8, alignSelf: "flex-start" },
@@ -670,6 +734,7 @@ const createStyles = (C: Palette) => StyleSheet.create({
   },
   ringPillText: { fontSize: 11, fontWeight: "700", color: H.blue, includeFontPadding: false },
 
+
   // ── Body ──
   body: { marginTop: -22, alignItems: "center" },
   content: { width: "100%" },
@@ -682,6 +747,7 @@ const createStyles = (C: Palette) => StyleSheet.create({
     overflow: "hidden",
     ...shadow(C.shadow),
   },
+
 
   statRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   statCard: {
@@ -702,6 +768,7 @@ const createStyles = (C: Palette) => StyleSheet.create({
   statText: { alignSelf: "stretch", minWidth: 0 },
   statValue: { fontSize: 20, fontWeight: "800", color: C.ink },
   statUnit: { fontSize: 13, color: C.muted, fontWeight: "600" },
+
 
   // ── Streak ──
   streakCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, gap: 12 },
@@ -725,11 +792,13 @@ const createStyles = (C: Palette) => StyleSheet.create({
   streakDotText: { fontSize: 12, fontWeight: "700", color: C.muted },
   streakDotTextToday: { color: C.purple },
 
+
   // ── States ──
   stateBox: { minHeight: 200, alignItems: "center", justifyContent: "center", padding: 24 },
   stateText: { fontSize: 14, color: C.muted, textAlign: "center", marginTop: 10, fontWeight: "500" },
   retryBtn: { marginTop: 14, minHeight: 44, justifyContent: "center", paddingHorizontal: 20, borderRadius: 14, backgroundColor: C.chip },
   retryText: { fontSize: 14, fontWeight: "700", color: C.blue },
+
 
   summaryOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Animated, Image, Modal, Text } from 'react-native';
+import { Animated, Image, Modal, Platform, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from '../../../../../navigation/RootNavigator';
@@ -13,6 +13,7 @@ import { LAUNCH_PROMO_BUDGET_MS, __resetLaunchForTests } from '../launchPresenta
 import { __resetSplashApiForTests } from '../splashApi';
 import { __resetFrequencyForTests } from '../splashFrequency';
 import { FADE_MS } from '../PromotionalSplashScreen';
+import { savePendingFitnessSetup } from '../../../../step_counter/utils/pendingFitnessSetup';
 
 function mockScreen(label: string) {
   return () => {
@@ -55,6 +56,10 @@ jest.mock('../../../notifications/pushPermission', () => ({ shouldOfferPermissio
 jest.mock('../../../notifications/NotificationPermissionPrompt', () => ({ NotificationPermissionPrompt: () => null }));
 jest.mock('../../../../step_counter/context/StepTrackerContext', () => ({ StepTrackerProvider: ({ children }: any) => children }));
 jest.mock('../../../../../navigation/MainLayout', () => mockScreen('HOME'));
+jest.mock('../../../../step_counter/navigation/RewardHomeStack', () => ({
+  __esModule: true,
+  default: mockScreen('RP_MOVE'),
+}));
 jest.mock('../../../../../i18n/LanguageScreens', () => ({
   FirstLanguageScreen: () => {
     const { Text: Label } = require('react-native');
@@ -201,6 +206,19 @@ afterEach(async () => {
 });
 
 describe('launch presentation in RootNavigator', () => {
+  it('restores pending Android fitness setup as the active app route on a fresh root', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    await savePendingFitnessSetup(signedIn.user.user_id);
+    apiGet.mockResolvedValue(response());
+    await coldLaunchSignedIn();
+    expect(navigationRef.getCurrentRoute()).toMatchObject({
+      name: 'RewardStack',
+      params: { resumeSetup: true },
+    });
+    expect(has('RP_MOVE')).toBe(true);
+    expect(promo()).toHaveLength(0);
+  });
+
   it('opens the first-login language gate and waits for a choice before the dashboard', async () => {
     setAuth({ ...restoring, isInitializing: false });
     await mount();

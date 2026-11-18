@@ -394,7 +394,7 @@ const StepForm = () => {
               onPress={handleBack}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={tx("common:actions.back")}
+              accessibilityLabel={tx("common:back")}
             >
               <MaterialCommunityIcons name="chevron-left" size={26} color={VD.white} />
             </TouchableOpacity>

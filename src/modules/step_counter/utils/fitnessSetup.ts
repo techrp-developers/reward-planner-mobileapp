@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import { SdkAvailabilityStatus } from "react-native-health-connect";
@@ -13,6 +13,7 @@ import type { FitnessStackParamList } from "../navigation/RewardHomeStack";
 import { useAuth } from "../../common/auth/context/AuthContext";
 import { clearSelectedGender } from "./userGender";
 import i18n from "../../../i18n";
+import { logFitnessAndroid, savePendingFitnessSetup } from "./pendingFitnessSetup";
 
 /**
  * RP Move setup is three independent conditions:
@@ -44,29 +45,29 @@ export const routeForStage = (stage: SetupStage): Route => {
 };
 
 /**
- * Same rule StepsTrackerScreen uses to skip onboarding: the device flag set by
- * a successful permission request, plus a live check that Health Connect /
- * Apple Health is available and Steps access is granted.
+ * Android uses the live Steps grant. Apple Health also requires the saved
+ * device setup flag.
  */
 export function useHealthReadiness() {
   const { healthConnectStatus, grantedPermissions, isSetupComplete, loading } = useStepTracker();
   const resolved = healthConnectStatus !== null || !loading;
-  const ready = isSetupComplete
+  const ready = (Platform.OS === 'android' || isSetupComplete)
     && Number(healthConnectStatus) === SdkAvailabilityStatus.SDK_AVAILABLE
     && hasStepsPerm(grantedPermissions);
   return { resolved, ready, flag: isSetupComplete };
 }
 
-export function useFitnessSetup() {
+export function useFitnessSetup(restoring = false) {
   const health = useHealthReadiness();
-  const planQuery = useProfilePlanQuery();
+  const planQuery = useProfilePlanQuery(restoring);
   const plan = planQuery.data ?? null;
-  const resolved = health.resolved && planQuery.isSuccess;
+  const resolved = health.resolved && planQuery.isSuccess && (!restoring || !planQuery.isFetching);
   return {
     resolved,
     // Safe to redirect on: not mid-refetch, so the cache is not stale.
     settled: resolved && !planQuery.isFetching,
     stage: stageOf(plan, health.ready),
+    healthReady: health.ready,
     plan,
     // Device setup flag only (no live permission read), for in-module guards:
     // the live check can dip briefly while steps refresh.
@@ -80,24 +81,44 @@ export function useFitnessSetup() {
 export const entryRouteFor = (stage: SetupStage, plan: ProfilePlanResponse | null): Route =>
   !plan ? { name: "StepWelcome" } : routeForStage(stage);
 
+export const resumeRouteFor = (stage: SetupStage): Route =>
+  stage === 'health' ? { name: 'StepsTrackerScreen', params: { resumePermission: true } } : routeForStage(stage);
+
 /**
  * Moves to the first incomplete setup stage, re-reading the plan from the
  * server first. Finishing setup resets the stack so Back cannot reopen it.
  */
 export function useContinueSetup() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const userId = user?.user_id;
   const health = useHealthReadiness();
+  const latestHealth = useRef(health.ready);
+  latestHealth.current = health.ready;
   const { fetchFresh } = useProfilePlanCache();
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
 
-  const continueSetup = useCallback(async (options?: { healthReady?: boolean; fromWelcome?: boolean }) => {
-    if (busyRef.current) return;
+  const continueSetup = useCallback(async (options?: { healthReady?: boolean; fromWelcome?: boolean; fromHealth?: boolean }) => {
+    if (busyRef.current) {
+      logFitnessAndroid('DUPLICATE_TRANSITION_IGNORED');
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     try {
+      if (Platform.OS === 'android' && (options?.fromWelcome || options?.fromHealth) && userId !== undefined) {
+        await savePendingFitnessSetup(userId);
+      }
       const plan = await fetchFresh();
-      const stage = stageOf(plan, options?.healthReady ?? health.ready);
+      if (!navigation.isFocused()) {
+        logFitnessAndroid('NAVIGATION_TARGET_UNAVAILABLE');
+        return;
+      }
+      const stage = stageOf(plan, options?.healthReady ?? latestHealth.current);
+      logFitnessAndroid('RESOLVE_NEXT_STAGE');
+      if (plan) logFitnessAndroid('EXISTING_PROFILE_DETECTED');
+      if (plan?.current_goal) logFitnessAndroid('EXISTING_GOAL_DETECTED');
       if (stage === "ready") {
         navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
       } else {
@@ -106,15 +127,17 @@ export function useContinueSetup() {
         const next: Route = options?.fromWelcome
           ? { name: "StepsTrackerScreen" }
           : routeForStage(stage);
+        if (next.name === 'StepForm') logFitnessAndroid('NAVIGATE_STEP_FORM');
         navigation.navigate(next.name, next.params);
       }
     } catch (e: any) {
-      Alert.alert(i18n.t("stepCounter:r2.planUnavailable"), e?.message || i18n.t("stepCounter:r2.failedToFetchProfilePlan"));
+      logFitnessAndroid('PLAN_FETCH_FAILED');
+      if (navigation.isFocused()) Alert.alert(i18n.t("stepCounter:r2.planUnavailable"), e?.message || i18n.t("stepCounter:r2.failedToFetchProfilePlan"));
     } finally {
       busyRef.current = false;
       setBusy(false);
     }
-  }, [fetchFresh, health.ready, navigation]);
+  }, [fetchFresh, navigation, userId]);
 
   return { continueSetup, busy };
 }
@@ -127,7 +150,7 @@ let scopedUserId: number | null | undefined;
 export function useFitnessAccountScope() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const userId = user?.userId ?? user?.user_id ?? null;
+  const userId = user?.user_id ?? null;
   // Runs during the first render, before any child query reads the cache.
   const lastAccount = useRef<number | null | undefined>(undefined);
   if (lastAccount.current !== userId) {

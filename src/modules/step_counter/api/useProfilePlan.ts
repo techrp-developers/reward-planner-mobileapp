@@ -23,13 +23,14 @@ export const loadProfilePlan = async (): Promise<ProfilePlanResponse | null> => 
   throw new Error(res.message || i18n.t("stepCounter:r2.failedToFetchProfilePlan"));
 };
 
-export function useProfilePlanQuery() {
+export function useProfilePlanQuery(restoring = false) {
   return useQuery<ProfilePlanResponse | null>({
     queryKey: PROFILE_PLAN_QUERY_KEY,
     queryFn: loadProfilePlan,
     staleTime: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchOnMount: restoring ? 'always' : true,
     retry: 1,
   });
 }

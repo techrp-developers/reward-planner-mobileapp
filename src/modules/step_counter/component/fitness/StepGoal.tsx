@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LinearGradient from "./FitnessGradient";
 import Svg, { Path } from "react-native-svg";
 import type { SvgProps } from "react-native-svg";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
@@ -175,12 +177,17 @@ const StepGoal: React.FC = () => {
   const { palette: VD, styles: ss, isDark } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   const { t: tx } = useTranslation();
   const navigation              = useNavigation<Nav>();
-  const { width, height }       = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
   const insets                  = useSafeAreaInsets();
   const invalidateFitnessQueries = useInvalidateFitnessQueries();
   const [selected,    setSelected]    = useState<number | null>(null);
   const [submitting,  setSubmitting]  = useState(false);
   const submittingRef = useRef(false);
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== "android") return;
+    const listener = BackHandler.addEventListener("hardwareBackPress", () => submittingRef.current);
+    return () => listener.remove();
+  }, []));
   const {
     data: profilePlan = null,
     isLoading: loading,
@@ -250,7 +257,10 @@ const StepGoal: React.FC = () => {
   const { width: artWidth, height: artHeight } = heroKind
     ? goalHeroSize(heroKind, width, Math.min(210, Math.max(160, height * 0.25)))
     : { width: 0, height: 0 };
-  const textWidth = width - pad - Math.max(artWidth, width * 0.42) * 0.78;
+  const stackArt = Platform.OS === "android" && (width < 360 || fontScale > 1.15);
+  const textWidth = Platform.OS === "ios"
+    ? width - pad - Math.max(artWidth, width * 0.42) * 0.78
+    : width - pad - (stackArt ? pad : artWidth);
   const titleSize = width < 360 ? 27 : 30;
   // The fixed CTA's real height (it grows with larger text); the list is
   // padded by it so the last goal card is never hidden behind the button.
@@ -272,7 +282,7 @@ const StepGoal: React.FC = () => {
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           style={[
             hs.hero,
-            { paddingTop: insets.top + 8, paddingHorizontal: pad, minHeight: insets.top + 8 + artHeight + 18 },
+            { paddingTop: insets.top + 8, paddingHorizontal: pad, minHeight: stackArt ? undefined : insets.top + 8 + artHeight + 18 },
             isDark && hs.heroDark,
           ]}
         >
@@ -281,15 +291,16 @@ const StepGoal: React.FC = () => {
               <Path d={`M0 46 C ${width * 0.3} 6, ${width * 0.62} 70, ${width} 20 L ${width} 70 L 0 70 Z`} fill={H.wave} />
             </Svg>
           </View>
-          {heroKind && <GoalHeroArt kind={heroKind} width={artWidth} />}
+          {heroKind && !stackArt && <GoalHeroArt kind={heroKind} width={artWidth} />}
 
           <View style={hs.header}>
             <TouchableOpacity
               style={hs.backBtn}
               onPress={() => goBackInFitness(navigation, "StepWelcome")}
+              disabled={Platform.OS === "android" && submitting}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={tx("common:actions.back")}
+              accessibilityLabel={tx("common:back")}
             >
               <MaterialCommunityIcons name="chevron-left" size={26} color={H.ink} />
             </TouchableOpacity>
@@ -309,6 +320,11 @@ const StepGoal: React.FC = () => {
             </Text>
             <Text style={hs.subtitle} maxFontSizeMultiplier={1.3}>{tx("stepCounter:stepGoal.pickTheGoalThatFeels")}</Text>
           </View>
+          {stackArt && heroKind && (
+            <View style={{ height: artHeight }}>
+              <GoalHeroArt kind={heroKind} width={artWidth} />
+            </View>
+          )}
         </LinearGradient>
 
         <View style={[ss.body, { paddingHorizontal: pad }]}>

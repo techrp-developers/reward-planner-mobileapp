@@ -375,6 +375,7 @@
     "syncFailed": "सिंक विफल",
     "healthConnectNotInstalled": "Health Connect इंस्टॉल नहीं है",
     "healthConnectNeedsSetup": "Health Connect को सेट करना होगा",
+    "healthConnectUnsupported": "इस डिवाइस पर Health Connect उपलब्ध नहीं है। Android का सिस्टम अपडेट जाँचें और फिर कोशिश करें।",
     "setUpPlan": "चलिए आपका प्लान सेट करें",
     "planUnavailable": "प्लान उपलब्ध नहीं है",
     "addBodyDetails": "अपने शरीर की जानकारी जोड़ें ताकि हम आपके लिए खास कदम प्लान बना सकें।",

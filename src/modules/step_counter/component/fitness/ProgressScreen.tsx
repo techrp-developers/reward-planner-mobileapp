@@ -224,7 +224,7 @@ const ProgressScreen: React.FC = () => {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={VD.bg[0]} />
       <LinearGradient colors={VD.bg} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={tx("common:actions.back")} style={styles.iconButton} onPress={() => goBackInFitness(navigation)} activeOpacity={0.82}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={tx("common:back")} style={styles.iconButton} onPress={() => goBackInFitness(navigation)} activeOpacity={0.82}>
             <MaterialCommunityIcons name="chevron-left" size={25} color={VD.accentDark} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{tx("stepCounter:progressScreen.yourProgress")}</Text>

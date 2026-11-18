@@ -9,10 +9,18 @@ const namespaces = language =>
   fs.readdirSync(path.join(root, language))
     .filter(name => !name.startsWith('.') && name.endsWith('.json'));
 const read = (language, file) => JSON.parse(fs.readFileSync(path.join(root, language, file), 'utf8'));
+function flatten(entries, prefix = '') {
+  return Object.fromEntries(Object.entries(entries).flatMap(([name, value]) => {
+    const key = prefix ? `${prefix}.${name}` : name;
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.entries(flatten(value, key))
+      : [[key, value]];
+  }));
+}
 const placeholders = value => [...new Set(value.match(/\{\{[^{}]+\}\}/g))].sort().join(',');
 const englishFiles = namespaces('en');
 const resources = fs.readFileSync(path.join(root, '..', 'resources.ts'), 'utf8');
-const english = new Map(englishFiles.map(file => [file.slice(0, -5), read('en', file)]));
+const english = new Map(englishFiles.map(file => [file.slice(0, -5), flatten(read('en', file))]));
 const errors = [];
 let keyCount = 0;
 
@@ -30,7 +38,7 @@ for (const language of languages) {
       errors.push(`${language}/${file}: namespace missing from resources.ts`);
     }
     const source = english.get(file.slice(0, -5));
-    const translated = read(language, file);
+    const translated = flatten(read(language, file));
     if (language === 'en') keyCount += Object.keys(source).length;
     for (const key of Object.keys(source)) {
       const a = source[key];
@@ -54,7 +62,7 @@ for (const filename of files(path.join(__dirname, '..', 'src'))) {
   const source = ts.createSourceFile(filename, content, ts.ScriptTarget.Latest, true);
   function check(node) {
     if (!node || !ts.isStringLiteralLike(node)) return;
-    const match = /^([A-Za-z]+):([A-Za-z][A-Za-z\d_]*)$/.exec(node.text);
+    const match = /^([A-Za-z]+):([A-Za-z][A-Za-z\d_.]*)$/.exec(node.text);
     if (!match) return;
     const [, ns, key] = match;
     const entries = english.get(ns);
@@ -63,7 +71,7 @@ for (const filename of files(path.join(__dirname, '..', 'src'))) {
     errors.push(`${path.relative(process.cwd(), filename)}:${line + 1}: missing English translation ${node.text}`);
   }
   function visit(node) {
-    if (ts.isCallExpression(node) && /^(t|translateUi|authText|\w+\.t)$/.test(node.expression.getText(source))) {
+    if (ts.isCallExpression(node) && /^(t|tx|translateUi|authText|\w+\.t)$/.test(node.expression.getText(source))) {
       const key = node.arguments[0];
       if (key && ts.isConditionalExpression(key)) {
         check(key.whenTrue);

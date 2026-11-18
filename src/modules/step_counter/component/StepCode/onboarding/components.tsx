@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -135,27 +136,29 @@ type PlatformSelectionCardProps = {
   iconBg: string;
   selected: boolean;
   onPress: () => void;
+  disabled?: boolean;
 };
 
 export const PlatformSelectionCard = ({
-  label, hint, icon, iconBg, selected, onPress,
+  label, hint, icon, iconBg, selected, onPress, disabled,
 }: PlatformSelectionCardProps) => {
   const { palette: OB, styles } = useObStyles();
   return (
   <TouchableOpacity
     activeOpacity={0.85}
     onPress={onPress}
+    disabled={disabled}
     accessibilityRole="radio"
-    accessibilityState={{ selected }}
+    accessibilityState={{ checked: selected, disabled }}
     accessibilityLabel={hint ? `${label}, ${hint}` : label}
     style={[styles.platformCard, selected ? styles.platformCardSelected : softShadow(1, 0.04)]}
   >
     <View style={[styles.platformIcon, { backgroundColor: iconBg }]}>{icon}</View>
-    <View style={styles.flex}>
+    <View style={styles.platformCopy}>
       <Text style={styles.platformLabel}>{label}</Text>
       {!!hint && <Text style={styles.platformHint}>{hint}</Text>}
     </View>
-    <MaterialCommunityIcons name="chevron-right" size={24} color={OB.text} />
+    <MaterialCommunityIcons name={disabled ? 'lock-outline' : 'chevron-right'} size={24} color={disabled ? OB.muted : OB.text} />
   </TouchableOpacity>
   );
 };
@@ -323,7 +326,7 @@ export const GradientPrimaryButton = ({
       ) : (
         <>
           {leftIcon}
-          <Text style={styles.primaryText} numberOfLines={1}>{label}</Text>
+          <Text style={styles.primaryText} numberOfLines={Platform.OS === 'ios' ? 1 : undefined}>{label}</Text>
           {!!rightIcon && <MaterialCommunityIcons name={rightIcon} size={20} color={OB.white} />}
         </>
       )}
@@ -488,6 +491,7 @@ const createStyles = (OB: ObPalette) => StyleSheet.create({
     ...softShadow(4, 0.12),
   },
   platformIcon: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center' },
+  platformCopy: { flex: 1, minWidth: 0 },
   platformLabel: { fontSize: 18, fontWeight: '700', color: OB.text },
   platformHint: { fontSize: 12, color: OB.muted, marginTop: 3 },
 
@@ -529,7 +533,10 @@ const createStyles = (OB: ObPalette) => StyleSheet.create({
 
   primaryWrap: { borderRadius: OB_LAYOUT.buttonRadius },
   primary: {
-    height: OB_LAYOUT.buttonHeight,
+    ...Platform.select({
+      android: { minHeight: OB_LAYOUT.buttonHeight, paddingVertical: 12 },
+      default: { height: OB_LAYOUT.buttonHeight },
+    }),
     borderRadius: OB_LAYOUT.buttonRadius,
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,7 +544,7 @@ const createStyles = (OB: ObPalette) => StyleSheet.create({
     gap: 10,
     paddingHorizontal: 20,
   },
-  primaryText: { fontSize: 17, fontWeight: '700', color: OB.white, flexShrink: 1 },
+  primaryText: { fontSize: 17, fontWeight: '700', color: OB.white, flexShrink: 1, textAlign: 'center' },
   disabled: { opacity: 0.45 },
   secondary: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12 },
   secondaryText: { fontSize: 14, fontWeight: '600', color: OB.lavenderText },

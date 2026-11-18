@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Animated, Image, View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIsFocused } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -20,9 +20,13 @@ const FLOATING_BAR_HEIGHT = 64;
 const CENTER_BUTTON_SIZE = 58;
 export const TAB_BAR_HEIGHT = FLOATING_BAR_HEIGHT + FLOATING_BOTTOM_GAP + 24;
 
-type AppMode = "Product" | "Services" | "Payments" | "DineOut";
+const fitnessLabelRoom = (fontScale: number) => Math.ceil(24 * Math.max(0, fontScale - 1));
+export const fitnessTabBarHeight = (fontScale: number) => TAB_BAR_HEIGHT + fitnessLabelRoom(fontScale);
 
-export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search" | "Chat";
+type AppMode = "Product" | "Services" | "Payments" | "DineOut" | "Fitness";
+
+export type TabKey = "Home" | "Notes" | "Cart" | "History" | "Profile" | "Search" | "Chat"
+  | "RPMove" | "Achievements" | "CoinHistory" | "MyPlan";
 
 type Props = {
   activeMode?: AppMode;
@@ -40,7 +44,7 @@ type Props = {
 
 type TabConfig = {
   key: TabKey;
-  label: keyof (typeof resources)['en']['common'];
+  label: `common:${keyof (typeof resources)['en']['common']}` | `stepCounter:${string}`;
   Icon: React.ComponentType<{ width: number; height: number; color?: string }>;
 };
 
@@ -64,27 +68,34 @@ const NOOP = () => {};
 // (MainLayout / Dashbord) decides where each generic tab key actually
 // navigates based on activeMode, so BottomTabs itself stays mode-agnostic.
 const TABS: TabConfig[] = [
-  { key: "Home", label: "home", Icon: HomeIcon },
-  { key: "Search", label: "search", Icon: SearchIcon },
-  { key: "Cart", label: "cart", Icon: CartIcon },
-  { key: "Profile", label: "profile", Icon: ProfileIcon },
+  { key: "Home", label: "common:home", Icon: HomeIcon },
+  { key: "Search", label: "common:search", Icon: SearchIcon },
+  { key: "Cart", label: "common:cart", Icon: CartIcon },
+  { key: "Profile", label: "common:profile", Icon: ProfileIcon },
 ];
 
 const PAYMENT_TABS: TabConfig[] = [
-  { key: "Home", label: "home", Icon: HomeIcon },
-  { key: "Search", label: "search", Icon: SearchIcon },
-  { key: "History", label: "history", Icon: HistoryIcon },
-  { key: "Profile", label: "profile", Icon: ProfileIcon },
+  { key: "Home", label: "common:home", Icon: HomeIcon },
+  { key: "Search", label: "common:search", Icon: SearchIcon },
+  { key: "History", label: "common:history", Icon: HistoryIcon },
+  { key: "Profile", label: "common:profile", Icon: ProfileIcon },
+];
+
+const FITNESS_TABS: TabConfig[] = [
+  { key: "RPMove", label: "stepCounter:tabs.rpMove", Icon: HomeIcon },
+  { key: "Achievements", label: "stepCounter:tabs.achievements", Icon: ExploreIcon },
+  { key: "CoinHistory", label: "stepCounter:tabs.coinHistory", Icon: HistoryIcon },
+  { key: "MyPlan", label: "stepCounter:tabs.myPlan", Icon: ProfileIcon },
 ];
 
 // On the Dashboard, the Cart slot is replaced with Explore — cart access
 // already lives elsewhere on that screen, and Explore gives quick access
 // to the to-do list from the bottom bar.
 const DASHBOARD_TABS: TabConfig[] = [
-  { key: "Home", label: "home", Icon: HomeIcon },
-  { key: "Search", label: "search", Icon: SearchIcon },
-  { key: "Notes", label: "notes", Icon: ExploreIcon },
-  { key: "Profile", label: "profile", Icon: ProfileIcon },
+  { key: "Home", label: "common:home", Icon: HomeIcon },
+  { key: "Search", label: "common:search", Icon: SearchIcon },
+  { key: "Notes", label: "common:notes", Icon: ExploreIcon },
+  { key: "Profile", label: "common:profile", Icon: ProfileIcon },
 ];
 
 const INACTIVE_COLOR = "#9CA3AF";
@@ -105,6 +116,7 @@ const TAB_ICON_THEME: Record<AppMode, { activeIcon: string; activeLabel: string 
     activeIcon: "#E91E63",
     activeLabel: "#1F0A13",
   },
+  Fitness: { activeIcon: "#8052FF", activeLabel: "#311B75" },
 };
 const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string; shadow: string }> = {
   Product: {
@@ -127,6 +139,7 @@ const CENTER_BUTTON_THEME: Record<AppMode, { background: string; border: string;
     border: "#FFE4F0",
     shadow: "#E91E63",
   },
+  Fitness: { background: "#8052FF", border: "#EEE6FF", shadow: "#8052FF" },
 };
 
 // Icon "pop" when a tab becomes active — spring overshoots past ACTIVE_ICON_SCALE
@@ -242,7 +255,10 @@ function BottomTabs({
   onCenterPress,
   layoutMode = "overlay",
 }: Props) {
-  const { t: translateUi } = useTranslation(['common', 'chat']);
+  const { t: translateUi } = useTranslation(['common', 'chat', 'stepCounter']);
+  const { fontScale } = useWindowDimensions();
+  const fitness = activeMode === "Fitness";
+  const extraLabelRoom = fitness ? fitnessLabelRoom(fontScale) : 0;
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { isDark, theme } = useAppTheme();
@@ -264,7 +280,7 @@ function BottomTabs({
 
   const tabs = isDashboard
     ? DASHBOARD_TABS
-    : activeMode === "Payments"
+    : fitness ? FITNESS_TABS : activeMode === "Payments"
       ? PAYMENT_TABS
       : TABS;
   const tabTheme = TAB_ICON_THEME[activeMode] ?? TAB_ICON_THEME.Product;
@@ -299,6 +315,10 @@ function BottomTabs({
       Cart: () => handlePress("Cart"),
       History: () => handlePress("History"),
       Profile: () => handlePress("Profile"),
+      RPMove: () => handlePress("RPMove"),
+      Achievements: () => handlePress("Achievements"),
+      CoinHistory: () => handlePress("CoinHistory"),
+      MyPlan: () => handlePress("MyPlan"),
     }),
     [handlePress],
   );
@@ -363,7 +383,7 @@ function BottomTabs({
       style={[
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
         {
-          height: TAB_BAR_HEIGHT + bottomInset,
+          height: TAB_BAR_HEIGHT + extraLabelRoom + bottomInset,
           backgroundColor: "transparent",
         },
       ]}
@@ -372,7 +392,7 @@ function BottomTabs({
         style={[
           styles.bar,
           {
-            height: FLOATING_BAR_HEIGHT,
+            height: FLOATING_BAR_HEIGHT + extraLabelRoom,
             bottom: bottomInset + FLOATING_BOTTOM_GAP,
             backgroundColor: barBackgroundColor,
             borderColor: barBorderColor,
@@ -384,7 +404,7 @@ function BottomTabs({
         {tabs.slice(0, 2).map((tab) => (
           <TabItem
             key={tab.key}
-            label={translateUi(`common:${tab.label}`)}
+            label={translateUi(tab.label)}
             active={activeTab === tab.key}
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}
@@ -401,7 +421,7 @@ function BottomTabs({
         {tabs.slice(2).map((tab) => (
           <TabItem
             key={tab.key}
-            label={translateUi(`common:${tab.label}`)}
+            label={translateUi(tab.label)}
             active={activeTab === tab.key}
             onPress={pressHandlers[tab.key]}
             Icon={tab.Icon}

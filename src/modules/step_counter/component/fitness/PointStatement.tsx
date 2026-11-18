@@ -2,6 +2,7 @@ import { goBackInFitness } from "../../utils/fitnessNavigation";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -132,7 +133,8 @@ const PointsStatementScreen: React.FC = () => {
   const navigation = useNavigation<PointsNavProp>();
   // Includes the RP Move tab bar floating over this screen.
   const { bottom: bottomInset } = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
+  const stackedRows = Platform.OS === 'android' && (width < 360 || fontScale > 1.2);
   const contentMaxWidth = Math.min(width - RESPONSIVE.horizontalPadding * 2, 560);
   const [history, setHistory] = useState<StepHistoryItem[]>([]);
   const [summary, setSummary] = useState<StepSummary | null>(null);
@@ -259,11 +261,11 @@ const PointsStatementScreen: React.FC = () => {
               </View>
             </View>
 
-            <View style={styles.tableHeader}>
+            {!stackedRows && <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, styles.dateColumn]}>{tx("stepCounter:pointStatement.date")}</Text>
               <Text style={[styles.tableHeaderText, styles.activityColumn]}>{tx("stepCounter:pointStatement.activity")}</Text>
               <Text style={[styles.tableHeaderText, styles.amountColumn]}>{tx("stepCounter:pointStatement.amount")}</Text>
-            </View>
+            </View>}
 
             {loading ? (
               <StateBox loading message={tx("stepCounter:pointStatement.loadingYourCoinHistory")} />
@@ -274,7 +276,7 @@ const PointsStatementScreen: React.FC = () => {
             ) : (
               <View style={styles.transactionsContainer}>
                 {history.map((item) => (
-                  <TransactionRow key={item.id} item={item} />
+                  <TransactionRow key={item.id} item={item} stacked={stackedRows} />
                 ))}
               </View>
             )}
@@ -285,20 +287,20 @@ const PointsStatementScreen: React.FC = () => {
   );
 };
 
-const TransactionRow = React.memo(({ item }: { item: StepHistoryItem }) => {
+const TransactionRow = React.memo(({ item, stacked }: { item: StepHistoryItem; stacked: boolean }) => {
   const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   useTranslation(); // re-render memoized content on language change
   const isDebit = item.type === 'debit';
   const dateParts = formatDateParts(item.date);
 
   return (
-    <View style={styles.transactionCard}>
-      <View style={styles.dateContainer}>
+    <View style={[styles.transactionCard, stacked && styles.stackedTransaction]}>
+      <View style={[styles.dateContainer, stacked && styles.stackedDate]}>
         <Text style={styles.dateMain}>{dateParts.date}</Text>
         <Text style={styles.dateYear}>{dateParts.year}</Text>
       </View>
 
-      <View style={styles.activityContainer}>
+      <View style={[styles.activityContainer, stacked && styles.stackedActivity]}>
         <Text style={styles.activityTitle}>
           {item.title || (isDebit ? i18n.t("stepCounter:r2.coinsUsed") : i18n.t("stepCounter:r2.coinsCredited"))}
         </Text>
@@ -528,6 +530,9 @@ const createStyles = (VD: Palette) => StyleSheet.create({
   dateContainer: {
     width: 60,
   },
+  stackedTransaction: { flexDirection: 'column', alignItems: 'stretch', gap: SPACING.sm },
+  stackedDate: { width: 'auto', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: SPACING.xs },
+  stackedActivity: { flex: 0, paddingHorizontal: 0 },
   dateMain: {
     ...TYPOGRAPHY.bodyMedium,
     paddingVertical: 2,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
@@ -23,6 +24,7 @@ import type { AuthStackParamList } from "../modules/common/auth/navigation/types
 import Dashbord from "../modules/dashboard/dashboard/dashbord";
 import { useLanguagePreference } from "../i18n/LanguageContext";
 import { AppLanguageScreen, FirstLanguageScreen } from "../i18n/LanguageScreens";
+import { logFitnessAndroid, readPendingFitnessSetup } from "../modules/step_counter/utils/pendingFitnessSetup";
 export type { AuthStackParamList };
 
 export type AppStackParamList = {
@@ -42,7 +44,7 @@ export type AppStackParamList = {
   AppLanguage: undefined;
   InssuranceStack: undefined;
   ServiceStack: undefined;
-  RewardStack: undefined;
+  RewardStack: { moduleName?: string; resumeSetup?: boolean } | undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
   GlobalSearchScreen: undefined;
@@ -354,6 +356,30 @@ export default function RootNavigator() {
   const { preferenceReady, needsLanguageChoice } = useLanguagePreference();
   const [versionModal, setVersionModal] = useState<VersionModalState>(MODAL_HIDDEN);
   const [biometricCleared, setBiometricCleared] = useState(false);
+  const restoreAccount = Platform.OS === "android" && isAuthenticated && preferenceReady && !needsLanguageChoice && termsAccepted === true
+    ? user?.user_id ?? null : null;
+  const [fitnessRestore, setFitnessRestore] = useState<{ account: number; pending: boolean }>();
+  const checkingFitnessRestore = restoreAccount !== null && fitnessRestore?.account !== restoreAccount;
+  const resumeFitness = restoreAccount !== null && fitnessRestore?.account === restoreAccount && fitnessRestore.pending;
+
+  useEffect(() => {
+    if (restoreAccount === null) {
+      setFitnessRestore(undefined);
+      return;
+    }
+    let active = true;
+    readPendingFitnessSetup(restoreAccount)
+      .catch(() => {
+        logFitnessAndroid('PENDING_SETUP_READ_FAILED');
+        return false;
+      })
+      .then(pending => {
+        if (!active) return;
+        if (pending) logFitnessAndroid('PENDING_SETUP_RESTORED');
+        setFitnessRestore({ account: restoreAccount, pending });
+      });
+    return () => { active = false; };
+  }, [restoreAccount]);
 
   useEffect(() => {
     let mounted = true;
@@ -385,7 +411,7 @@ export default function RootNavigator() {
   const isCheckingTerms = isAuthenticated && termsAccepted === null;
   // const isCheckingTerms =
   //   !BYPASS_LOGIN_SCREEN && isAuthenticated && termsAccepted === null;
-  const showSplash = isInitializing || isCheckingTerms || !preferenceReady;
+  const showSplash = isInitializing || isCheckingTerms || !preferenceReady || checkingFitnessRestore;
   const canEnterApp = isAuthenticated && termsAccepted === true && !needsLanguageChoice;
   // const showMainApp = isAuthenticated || BYPASS_LOGIN_SCREEN;
 
@@ -399,7 +425,7 @@ export default function RootNavigator() {
       ? "pending"
       : canEnterApp ? "app" : "other",
     userId: user?.user_id ?? null,
-    interrupted: versionModal.visible,
+    interrupted: versionModal.visible || resumeFitness,
   });
   const showLaunch = showSplash || launch.holding;
 
@@ -449,6 +475,7 @@ export default function RootNavigator() {
           <RootStack.Screen
             name="App"
             component={AppNavigator}
+            initialParams={resumeFitness ? { screen: 'RewardStack', params: { resumeSetup: true }, initial: false } : undefined}
           />
         ) : (
           // ── Terms gate — must accept before entering app ─────────

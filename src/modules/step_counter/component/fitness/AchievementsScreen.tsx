@@ -360,6 +360,7 @@ const createStyles = (VD: Palette) => StyleSheet.create({
   },
   headerTitle: {
     ...TYPOGRAPHY.bodyMedium,
+    flexShrink: 1,
     color: VD.ink,
     textAlign: "center",
   },

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +28,7 @@ import { CURRENT_PLATFORM, useOnboardingFlow } from './onboarding/useOnboardingF
 import { OB_DARK, OB_LIGHT, type ObPalette } from './onboarding/theme';
 import { useStepStyles } from '../../utils/useStepTheme';
 import { stageOf, useContinueSetup, useFitnessSetup } from '../../utils/fitnessSetup';
+import type { FitnessStackParamList } from '../../navigation/RewardHomeStack';
 
 const A = ONBOARDING_ASSETS;
 
@@ -36,17 +37,11 @@ export default function StepsTrackerScreen() {
   const { t: tx } = useTranslation();
   const t = useCallback((key: string) => tx(`stepCounter:onboarding.${key}`), [tx]);
   const navigation = useNavigation<any>();
-  const flow = useOnboardingFlow();
-  const { step, tracker } = flow;
-  const navigatingRef = useRef(false);
-
+  const route = useRoute<RouteProp<FitnessStackParamList, 'StepsTrackerScreen'>>();
+  const focused = useIsFocused();
+  const flow = useOnboardingFlow(route.params?.resumePermission);
+  const { step, tracker, ready, go } = flow;
   useEffect(() => { warnMissingOnboardingAssets(); }, []);
-
-  const leave = useCallback((action: () => void) => {
-    if (navigatingRef.current) return;
-    navigatingRef.current = true;
-    action();
-  }, []);
 
   // Health access already works on this device: skip the permission steps
   // and continue at the first incomplete stage (details, plan or Dashboard).
@@ -54,14 +49,26 @@ export default function StepsTrackerScreen() {
   // success screen instead.
   const { continueSetup, busy: continuing } = useContinueSetup();
   const setup = useFitnessSetup();
+  const automaticTransition = useRef(false);
   useEffect(() => {
-    if (step === 'select' && flow.isSetupComplete && flow.ready) {
-      leave(() => { void continueSetup({ healthReady: true }); });
+    if (CURRENT_PLATFORM === 'ios' && step === 'select' && flow.isSetupComplete && flow.ready) {
+      continueSetup({ healthReady: true });
     }
-  }, [step, flow.isSetupComplete, flow.ready, leave, continueSetup]);
+  }, [step, flow.isSetupComplete, flow.ready, continueSetup]);
+
+  useEffect(() => {
+    if (CURRENT_PLATFORM !== 'android') return;
+    if (step !== 'success') {
+      automaticTransition.current = false;
+      return;
+    }
+    if (!focused || !ready || flow.busy || automaticTransition.current) return;
+    automaticTransition.current = true;
+    continueSetup({ fromHealth: true });
+  }, [continueSetup, flow.busy, ready, focused, step]);
 
   const backRef = useRef(flow.back);
-  backRef.current = flow.back;
+  backRef.current = () => (CURRENT_PLATFORM === 'android' && continuing) || flow.back();
 
   const handleBack = useCallback(() => {
     if (!backRef.current()) navigation.goBack();
@@ -82,7 +89,11 @@ export default function StepsTrackerScreen() {
 
   // Continue at the first incomplete stage; users whose profile and goal are
   // already saved (e.g. a new phone) go straight to the Dashboard.
-  const finish = useCallback(() => { void continueSetup({ healthReady: true }); }, [continueSetup]);
+  const finish = useCallback(() => {
+    if (CURRENT_PLATFORM === 'ios') continueSetup({ healthReady: true });
+    else if (ready) continueSetup({ fromHealth: true });
+    else go('permission');
+  }, [continueSetup, go, ready]);
   const nextIsDashboard = setup.resolved && stageOf(setup.plan, true) === 'ready';
 
   const common = { progress: flow.progress, onBack: handleBack, backLabel: t('back') };
@@ -128,6 +139,7 @@ export default function StepsTrackerScreen() {
                   : <MaterialCommunityIcons name="apple" size={38} color="#111111" />
               }
               selected={flow.selected === 'ios'}
+              disabled={CURRENT_PLATFORM === 'android'}
               onPress={() => flow.setSelected('ios')}
             />
           </View>
@@ -142,6 +154,17 @@ export default function StepsTrackerScreen() {
     }
 
     // ── Android ──────────────────────────────────────────────────────────────
+    case 'unavailable':
+      return (
+        <StepOnboardingScreen
+          {...common}
+          title={tx('stepCounter:r2.healthConnectNeedsSetup')}
+          footer={<GradientPrimaryButton label={tx('common:retry')} onPress={flow.recheckInstall} loading={flow.busy} />}
+        >
+          <AppIconTile source={A.healthConnectIcon} fallback={<HealthConnectGlyph size={72} />} accessibilityLabel={t('install.appName')} />
+          <InstructionInfoCard tone="warning" body={tracker.healthConnectError || t('genericError')} />
+        </StepOnboardingScreen>
+      );
     case 'install': {
       const update = flow.hcNeedsUpdate;
       return (
@@ -185,7 +208,7 @@ export default function StepsTrackerScreen() {
             ].map(([value, label], i) => (
               <View key={label} style={[s.fact, i > 0 && s.factDivider]}>
                 <Text style={s.factValue}>{value}</Text>
-                <Text style={s.factLabel} numberOfLines={1}>{label}</Text>
+                <Text style={s.factLabel}>{label}</Text>
               </View>
             ))}
           </View>
@@ -244,7 +267,7 @@ export default function StepsTrackerScreen() {
           footer={<GradientPrimaryButton label={t('permission.cta')} onPress={flow.requestAccess} loading={flow.busy} />}
         >
           <OnboardingIllustration
-            source={A.androidPermission}
+            source={null}
             fallback={<AndroidPermissionMock stepsLabel={t('permission.steps')} />}
             accessibilityLabel={t('permission.illustration')}
           />
@@ -375,7 +398,7 @@ export default function StepsTrackerScreen() {
             <GradientPrimaryButton
               label={t(nextIsDashboard ? 'success.dashboard' : 'continue')}
               onPress={finish}
-              loading={!setup.resolved || continuing}
+              loading={continuing || (CURRENT_PLATFORM === 'ios' && !setup.resolved)}
             />
           }
         >
