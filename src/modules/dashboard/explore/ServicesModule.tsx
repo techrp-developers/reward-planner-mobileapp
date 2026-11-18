@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   type TextStyle,
   type ViewStyle,
+  type ImageSourcePropType,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { rs, fs } from '../../../utils/responsive';
@@ -22,6 +23,22 @@ import ProductIcon from '../../../assets/sampleImages/Product.svg';
 import ServiceIcon from '../../../assets/sampleImages/Service.svg';
 import PaymentIcon from '../../../assets/sampleImages/Payment.svg';
 import BusIcon from '../../../assets/sampleImages/Bus_Booking.svg';
+
+const PERSONAL_LOAN_ICON = require('../../loan/assets/personal-loan-icon-transparent.png');
+const PERSONAL_LOAN_MODULE: CmsModule = {
+  module_key: 'personal_loan',
+  label: 'Personal Loan',
+  route_key: 'LoanStack',
+  icon_url: null,
+  active_icon_url: null,
+  dashboard_icon_url: null,
+  normal_color: null,
+  active_color: null,
+  gradient_start_color: null,
+  gradient_end_color: null,
+  sort_order: 0,
+  is_active: 1,
+};
 
 export type ExploreServiceTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 type TopTab = ExploreServiceTab;
@@ -62,6 +79,7 @@ type ServiceCardProps = {
   tab: TopTab | null;
   label: string;
   iconUrl: string | null;
+  localIcon?: ImageSourcePropType;
   cardWidth: number;
   iconContainerSize: number;
   iconRadius: number;
@@ -70,7 +88,7 @@ type ServiceCardProps = {
 };
 
 const ServiceCard = React.memo(
-  ({ tab, label, iconUrl, cardWidth, iconContainerSize, iconRadius, iconSize, onPress }: ServiceCardProps) => {
+  ({ tab, label, iconUrl, localIcon, cardWidth, iconContainerSize, iconRadius, iconSize, onPress }: ServiceCardProps) => {
     const { isDark } = useAppTheme();
     const [iconFailed, setIconFailed] = useState(false);
     useEffect(() => setIconFailed(false), [iconUrl]);
@@ -97,6 +115,7 @@ const ServiceCard = React.memo(
       <AnimatedTouchableOpacity
         activeOpacity={0.9}
         accessibilityRole="button"
+        accessibilityLabel={label}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -108,7 +127,9 @@ const ServiceCard = React.memo(
             { width: iconContainerSize, height: iconContainerSize, borderRadius: iconRadius },
           ]}
         >
-          {iconUrl && !iconFailed ? (
+          {localIcon ? (
+            <Image source={localIcon} style={{ width: iconSize, height: iconSize }} resizeMode="contain" />
+          ) : iconUrl && !iconFailed ? (
             <Image onError={() => setIconFailed(true)} source={{ uri: iconUrl }} style={{ width: iconSize, height: iconSize }} resizeMode="contain" />
           ) : FallbackIcon ? (
             <FallbackIcon width={iconSize} height={iconSize} />
@@ -131,7 +152,17 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const { modules } = useModuleIcons();
-  const dashboardModules = modules;
+  const dashboardModules = useMemo(() => {
+    const items = modules.filter(module =>
+      module.route_key !== 'LoanStack' &&
+      module.module_key !== 'personal_loan' && module.module_key !== 'loan',
+    );
+    const busIndex = items.findIndex(module =>
+      module.module_key === 'dineout' || module.route_key === 'DineOutModule',
+    );
+    items.splice(busIndex < 0 ? items.length : busIndex + 1, 0, PERSONAL_LOAN_MODULE);
+    return items;
+  }, [modules]);
   const isNavigatingRef = useRef(false);
   const navigationUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -163,7 +194,9 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      if (tab) {
+      if (module.route_key === 'LoanStack') {
+        navigation.navigate('LoanStack');
+      } else if (tab) {
         const target = TAB_TO_MODULE[tab];
         if (onModulePress) {
           onModulePress(tab);
@@ -241,6 +274,7 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
               iconSize={iconSize}
               label={module.label}
               iconUrl={iconUrl}
+              localIcon={module.route_key === 'LoanStack' ? PERSONAL_LOAN_ICON : undefined}
               onPress={() => navigateToModule(tab, module)}
             />
           );

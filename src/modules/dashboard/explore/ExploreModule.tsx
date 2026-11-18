@@ -15,6 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { rs, fs } from '../../../utils/responsive';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type TopTab = 'Product' | 'Services' | 'Payments' | 'DineOut';
 
@@ -25,6 +27,7 @@ const Explore4 = require('../../../assets/sampleImages/ExploreSevice(4).png');
 const Explore5 = require('../../../assets/sampleImages/ExploreSevice(5).png');
 const Explore6 = require('../../../assets/sampleImages/ExploreSevice(6).png');
 const Explore8 = require('../../../assets/sampleImages/ExploreSevice(8).png');
+const PersonalLoanIcon = require('../../loan/assets/personal-loan-icon-transparent.png');
 
 type CategoryItem = {
   image?: ReturnType<typeof require>;
@@ -32,7 +35,7 @@ type CategoryItem = {
     width?: number | string;
     height?: number | string;
   }>;
-  tab: TopTab;
+  tab: TopTab | 'Loan';
   title?: string;
 };
 
@@ -41,6 +44,7 @@ const activeServices: CategoryItem[] = [
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
   { image: Explore4, tab: 'DineOut' },
+  { tab: 'Loan', title: 'Personal Loan' },
 ];
 
 const upcomingServices: CategoryItem[] = [
@@ -88,16 +92,20 @@ function ExploreModule() {
   );
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
+    (tab: TopTab | 'Loan') => {
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      const target = TAB_TO_MODULE[tab];
-      navigation.navigate('Home', {
-        screen: target.screen,
-        params: { moduleName: target.moduleName },
-        moduleName: target.moduleName,
-      });
+      if (tab === 'Loan') {
+        navigation.navigate('LoanStack');
+      } else {
+        const target = TAB_TO_MODULE[tab];
+        navigation.navigate('Home', {
+          screen: target.screen,
+          params: { moduleName: target.moduleName },
+          moduleName: target.moduleName,
+        });
+      }
 
       navigationUnlockTimerRef.current = setTimeout(() => {
         isNavigatingRef.current = false;
@@ -147,6 +155,7 @@ function ExploreModule() {
             key={`active-${i}`}
             activeOpacity={0.9}
             accessibilityRole="button"
+            accessibilityLabel={item.title}
             style={[
               styles.exploreItem,
               t.exploreItem,
@@ -154,7 +163,16 @@ function ExploreModule() {
             ]}
             onPress={() => handleCategoryPress(item.tab)}
           >
-            {item.SvgCard ? (
+            {item.tab === 'Loan' ? (
+              <LinearGradient colors={['#D3B8E5', '#F7F0FB']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.loanCard}>
+                <Image source={PersonalLoanIcon} resizeMode="contain" style={[styles.loanImage, { width: CARD_WIDTH * 0.36, height: CARD_HEIGHT * 0.94 }]} />
+                <View style={styles.loanContent}>
+                  <View style={styles.loanHeading}><MaterialCommunityIcons name="cash-multiple" size={rs(18)} color="#4C2D56" /><Text style={styles.loanTitle}>Personal Loan</Text></View>
+                  <Text style={styles.loanDescription}>Funding for your{ '\n' }next chapter.</Text>
+                  <View style={styles.loanCta}><Text style={styles.loanCtaText}>Explore Loan</Text><MaterialCommunityIcons name="arrow-right" size={rs(12)} color="#FFFFFF" /></View>
+                </View>
+              </LinearGradient>
+            ) : item.SvgCard ? (
               <item.SvgCard width={CARD_WIDTH} height={CARD_HEIGHT} />
             ) : (
               <Image
@@ -223,6 +241,14 @@ function ExploreModule() {
 export default React.memo(ExploreModule);
 
 const styles = StyleSheet.create({
+  loanCard: { flex: 1, padding: rs(15) },
+  loanContent: { flex: 1, width: '66%', alignItems: 'flex-start', justifyContent: 'space-between' },
+  loanHeading: { flexDirection: 'row', alignItems: 'center', gap: rs(5) },
+  loanTitle: { fontSize: fs(16), fontWeight: '600', color: '#4C2D56' },
+  loanDescription: { fontSize: fs(15), fontWeight: '700', lineHeight: rs(19), color: '#4C2D56' },
+  loanCta: { flexDirection: 'row', alignItems: 'center', gap: rs(5), borderRadius: rs(14), backgroundColor: '#4C2D56', paddingVertical: rs(4), paddingHorizontal: rs(12) },
+  loanCtaText: { fontSize: fs(10), fontWeight: '600', color: '#FFFFFF' },
+  loanImage: { position: 'absolute', right: rs(5), bottom: rs(2) },
   safeArea: {
     flex: 1,
     // backgroundColor via t.safeArea

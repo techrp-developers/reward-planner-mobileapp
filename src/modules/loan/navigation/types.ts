@@ -1,0 +1,22 @@
+export type LoanStackParamList = {
+  LoanWelcome: undefined;
+  LoanMobile: undefined;
+  LoanOTP: { purpose: 'login' | 'sign' | 'mandate'; phone?: string };
+  LoanDocuments: undefined;
+  LoanVerification: undefined;
+  LoanFetched: undefined;
+  LoanPersonal: undefined;
+  LoanEmployment: undefined;
+  LoanAmount: undefined;
+  LoanEligibility: undefined;
+  LoanSummary: undefined;
+  LoanSchedule: { active?: boolean } | undefined;
+  LoanAgreement: undefined;
+  LoanMandate: undefined;
+  LoanMandateSuccess: undefined;
+  LoanDisbursement: { status: 'processing' | 'success' | 'pending' | 'failed' };
+  LoanDashboard: undefined;
+  LoanPayment: undefined;
+  LoanPaymentResult: { success: boolean };
+  LoanClosure: undefined;
+};

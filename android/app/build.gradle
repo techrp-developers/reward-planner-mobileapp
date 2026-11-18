@@ -101,6 +101,16 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    // CMake 3.22.1 bundles Ninja 1.10.2, which rejects Windows paths over
+    // 260 characters (including Firebase's generated TurboModule sources).
+    if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+        externalNativeBuild {
+            cmake {
+                version "3.31.6"
+            }
+        }
+    }
+
     configurations.all {
         resolutionStrategy {
             force "androidx.health.connect:connect-client:1.1.0"

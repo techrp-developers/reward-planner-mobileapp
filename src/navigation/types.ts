@@ -25,6 +25,7 @@ export type RootStackParamList = {
   SearchScreen: undefined;
   BBPSHomeStack: undefined;
   ExploreModule: undefined;
+  LoanStack: undefined;
   HelpForm: undefined;
   StepCount: undefined;
   TermsAndConditions: undefined;

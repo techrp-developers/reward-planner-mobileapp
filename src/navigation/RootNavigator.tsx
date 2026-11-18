@@ -34,6 +34,7 @@ export type AppStackParamList = {
   AddressDetails: undefined | { mode?: 'add' | 'edit'; addressId?: number; manageOnly?: boolean; initialData?: any };
   Profile: { context?: 'dashboard' } | undefined;
   InssuranceStack: undefined;
+  LoanStack: undefined;
   ServiceStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
@@ -147,6 +148,10 @@ function AppNavigator() {
         getComponent={() =>
           require("../modules/inssurance/navigation/InssuranceStack").default
         }
+      />
+      <AppStack.Screen
+        name="LoanStack"
+        getComponent={() => require("../modules/loan/navigation/LoanStack").default}
       />
       <AppStack.Screen
         name="Search"
