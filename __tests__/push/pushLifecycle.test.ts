@@ -31,6 +31,7 @@ jest.mock('../../src/modules/dashboard/notification/NotificationAPI', () => ({
 jest.mock('../../src/modules/common/auth/api/axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
 
 import notifee from '@notifee/react-native';
+import { Image, Platform } from 'react-native';
 import { chatSocket } from '../../src/modules/chat/services/chatSocket';
 import { queryClient } from '../../src/query/queryClient';
 import { isAppStackMounted, navigationRef } from '../../src/navigation/navigationRef';
@@ -57,6 +58,7 @@ import { pushRegistrar } from '../../src/modules/common/notifications/pushRegist
 const display = notifee.displayNotification as jest.Mock;
 const settings = notifee.getNotificationSettings as jest.Mock;
 let seq = 0;
+const originalPlatform = Platform.OS;
 const remote = (patch: Record<string, any> = {}) => ({
   messageId: `msg-${(seq += 1)}`,
   notification: { title: 'Order shipped', body: 'Your order #42 is on the way' },
@@ -66,6 +68,8 @@ const remote = (patch: Record<string, any> = {}) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  Platform.OS = 'android';
+  jest.spyOn(Image, 'getSize').mockImplementation(() => Promise.resolve({ width: 1200, height: 600 }));
   settings.mockResolvedValue({ authorizationStatus: 1 });
   display.mockResolvedValue('id');
   (notifee.cancelDisplayedNotifications as jest.Mock).mockResolvedValue(undefined);
@@ -74,6 +78,11 @@ beforeEach(() => {
   (isAppStackMounted as jest.Mock).mockReturnValue(true);
   clearPendingOpen();
   setActivePushUser(null);
+});
+
+afterEach(() => {
+  Platform.OS = originalPlatform;
+  jest.restoreAllMocks();
 });
 
 describe('foreground messages', () => {
@@ -123,8 +132,18 @@ describe('foreground messages', () => {
     }) as any);
 
     expect(display).toHaveBeenCalledTimes(2);
-    expect(display.mock.calls[0][0].android.style).toEqual({ type: 0, picture: 'https://cdn.rewardplanners.com/sale.png' });
+    expect(display.mock.calls[0][0].android.style).toEqual({ type: 0, picture: 'https://cdn.rewardplanners.com/sale.png', summary: 'Big sale' });
     expect(display.mock.calls[1][0].android.style).toEqual({ type: 1, text: 'Big sale' });
+  });
+
+  it('posts text directly when Android cannot decode the image', async () => {
+    (Image.getSize as jest.Mock).mockRejectedValueOnce(new Error('404'));
+    await handleForegroundMessage(remote({
+      notification: { title: 'Sale', body: 'Big sale' },
+      data: { image_url: 'https://cdn.rewardplanners.com/unavailable.png' },
+    }) as any);
+    expect(display).toHaveBeenCalledTimes(1);
+    expect(display.mock.calls[0][0].android.style).toEqual({ type: 1, text: 'Big sale' });
   });
 
   it('drops untrusted image hosts instead of fetching them', async () => {

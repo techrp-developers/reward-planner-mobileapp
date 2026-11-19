@@ -23,8 +23,8 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 type CampaignRoute = RouteProp<HomeStackParamList, 'CampaignProducts'>;
 type Navigation = NativeStackNavigationProp<HomeStackParamList>;
 
-const offerProductsQueryKey = (campaignId?: number | string, contentId?: number | string) =>
-  ['ecommerce', 'offer-products', String(campaignId ?? ''), String(contentId ?? '')] as const;
+const offerProductsQueryKey = (campaignId?: number | string, contentId?: number | string, imageId?: number) =>
+  ['ecommerce', 'offer-products', String(campaignId ?? ''), String(contentId ?? ''), imageId ?? null] as const;
 
 const normalizeCampaignProducts = (response: any) => {
   const products = Array.isArray(response?.data)
@@ -35,8 +35,8 @@ const normalizeCampaignProducts = (response: any) => {
     ...product,
     id: product.product_id ?? product.id,
     campaign_item_id: product.id,
-    title: product.product_name,
-    brand: product.brand_name,
+    title: product.title ?? product.product_name,
+    brand: product.brand ?? product.brand_name,
     price: product.price ?? product.sale_price ?? product.final_price,
     originalPrice: product.originalPrice ?? product.original_sale_price ?? product.original_price ?? product.mrp,
     image: product.image,
@@ -50,23 +50,23 @@ export default function CampaignProductsScreen() {
   const { width } = useWindowDimensions();
   const pulse = useRef(new Animated.Value(0)).current;
   const cardWidth = (width - 44) / 2;
-  const campaignId = route.params.campaignId;
-  const contentId = route.params.contentId;
-  const title = route.params.title || 'Campaign Products';
+  const { campaignId, contentId, imageId } = route.params;
+  const sourceId = Number(contentId ?? campaignId);
 
   const { data: products = [], isLoading, error } = useQuery({
-    queryKey: offerProductsQueryKey(campaignId, contentId),
-    queryFn: () => contentId != null ? getContentOfferProducts(Number(contentId)) : getCampaignProducts(Number(campaignId)),
+    queryKey: offerProductsQueryKey(campaignId, contentId, imageId),
+    queryFn: () => contentId != null ? getContentOfferProducts(sourceId, imageId) : getCampaignProducts(sourceId),
     select: normalizeCampaignProducts,
-    enabled: (Number.isFinite(Number(campaignId)) && Number(campaignId) > 0) || (Number.isFinite(Number(contentId)) && Number(contentId) > 0),
-    staleTime: 5 * 60 * 1000,
+    enabled: Number.isInteger(sourceId) && sourceId > 0,
+    staleTime: contentId == null ? 5 * 60 * 1000 : 0,
+    refetchOnMount: contentId != null,
   });
 
   const skeletonItems = useMemo(() => Array.from({ length: 6 }), []);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}> 
-      <ProductHeadColor title={title} onBackPress={() => navigation.goBack()} />
+      <ProductHeadColor title={route.params.title || 'Campaign Products'} onBackPress={() => navigation.goBack()} />
 
       {isLoading ? (
         <View style={styles.skeletonGrid}>
@@ -80,7 +80,7 @@ export default function CampaignProductsScreen() {
         </View>
       ) : error ? (
         <View style={styles.emptyWrap}>
-          <Text style={[styles.emptyText, { color: theme.secondaryText }]}>Unable to load this campaign.</Text>
+          <Text style={[styles.emptyText, { color: theme.secondaryText }]}>Unable to load products.</Text>
         </View>
       ) : (
         <FlatList
@@ -105,7 +105,7 @@ export default function CampaignProductsScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No products found in this campaign.</Text>
+              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No products are currently available.</Text>
             </View>
           }
           ListFooterComponent={

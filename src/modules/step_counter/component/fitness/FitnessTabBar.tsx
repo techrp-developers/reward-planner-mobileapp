@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from "react";
 
-import BottomTabs, { TAB_BAR_HEIGHT, type TabKey } from "../../../../bottombar/BottomTabs";
+import BottomTabs, { type TabKey } from "../../../../bottombar/BottomTabs";
 
 // The four RP Move tabs and the stack routes that count as each tab.
 export type FitnessTab = "Dashboard" | "AchievementCard" | "CoinHistory" | "MyPlan";
@@ -12,14 +12,6 @@ export const TAB_OF_ROUTE: Record<string, FitnessTab | undefined> = {
   CoinHistory: "CoinHistory",
   MyPlan: "MyPlan",
 };
-
-// Height of the region reserved below the screens for the bar (plus the
-// device's bottom inset). Screens end above it — the bar never covers content.
-export const FITNESS_TAB_BAR_HEIGHT = TAB_BAR_HEIGHT;
-
-// The raised center logo sticks this far above the reserved region; tab
-// screens receive it as their bottom inset so their last item clears it.
-export const FITNESS_TAB_LOGO_OVERHANG = 26;
 
 const KEY_OF_TAB: Record<FitnessTab, TabKey> = {
   Dashboard: "RPMove",
@@ -69,7 +61,6 @@ function FitnessTabBar({ active, onTabPress, onCenterPress }: Props) {
   return (
     <BottomTabs
       activeMode="Fitness"
-      layoutMode="navigator"
       activeTabKey={KEY_OF_TAB[active]}
       onTabPress={handlePress}
       onCenterPress={onCenterPress}

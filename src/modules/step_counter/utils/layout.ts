@@ -22,10 +22,8 @@ export function tileGrid(innerWidth: number, count: number, fontScale = 1) {
 type Insets = { top: number; right: number; bottom: number; left: number };
 
 /**
- * Safe-area insets handed to RP Move screens. While the tab bar shows, it sits
- * in its own region that already contains the device's bottom inset, so the
- * screens only clear the raised center logo — the inset is never applied twice.
+ * Reserve the floating bar and device inset in the tab screens' scroll content.
  */
-export function screenInsets(device: Insets, tabBarShown: boolean, logoOverhang: number): Insets {
-  return tabBarShown ? { ...device, bottom: logoOverhang } : device;
+export function screenInsets(device: Insets, tabBarShown: boolean, tabBarHeight: number): Insets {
+  return tabBarShown ? { ...device, bottom: Math.max(device.bottom, 0) + tabBarHeight } : device;
 }

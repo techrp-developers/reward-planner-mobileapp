@@ -83,13 +83,10 @@ const publicContentEntry = async (entry) => {
   };
 
   if (IMAGE_GALLERY_ZONES.includes(entry.zone) && entry.content_type === 'image') {
-    const allBrandImages = entry.zone === 'brand_promotional_banner'
-      ? await ContentZoneModel.getAllImagesByContentId(entry.content_id)
-      : null;
-    const images = allBrandImages
-      ? allBrandImages.filter(image => Number(image.is_active) === 1).sort((a, b) => a.sort_order - b.sort_order)
-      : await ContentZoneModel.getImagesByContentId(entry.content_id);
-    if (allBrandImages?.length && !images.length) response.imageUrl = null;
+    const gallery = await ContentZoneModel.getAllImagesByContentId(entry.content_id);
+    const images = gallery.filter(image => Number(image.is_active) === 1)
+      .sort((a, b) => a.sort_order - b.sort_order || a.image_id - b.image_id);
+    if (gallery.length && !images.length) response.imageUrl = null;
     response.images = images.length ? images.map(image => publicImage(image, entry)) : response.imageUrl ? [{
       imageId: null,
       imageUrl: response.imageUrl,
@@ -104,11 +101,10 @@ const MOBILE_CONTENT_ZONES = ['navbar_background', 'promotional_banner', 'offers
 
 const resolveModuleContent = async (moduleKey) => {
   const zones = await ContentZoneModel.resolveAllZones(moduleKey);
-  const content = {};
-  for (const zone of MOBILE_CONTENT_ZONES) {
-    content[zone] = await publicContentEntry(zones[zone]);
-  }
-  return content;
+  return Object.fromEntries(await Promise.all(MOBILE_CONTENT_ZONES.map(async zone => [
+    zone,
+    await publicContentEntry(zones[zone]),
+  ])));
 };
 
 const getRequestedModules = (queryValue) => {

@@ -14,9 +14,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { queryClient } from '../../../../query/queryClient';
-import { fetchResolvedZones } from '../../../common/cms/cmsContentApi';
+import CmsBannerCopy from '../../../common/cms/CmsBannerCopy';
 import type { CmsModuleKey, CmsResolvedZones } from '../../../common/cms/cmsContentApi';
-import { useModuleContent, moduleContentQueryKey } from '../../../common/cms/useModuleContent';
+import { useModuleContent, moduleContentQueryOptions } from '../../../common/cms/useModuleContent';
 
 const AUTOPLAY_MS = 3500;
 const OFFER_ASPECT_RATIO = 4 / 5;
@@ -139,10 +139,11 @@ function OffersBanner({
             {
               width: itemWidth,
               aspectRatio,
-              backgroundColor: banner.color_value as string,
             },
           ]}
-        />
+        >
+          <CmsBannerCopy banner={banner} clickable={Boolean(banner.redirect_link)} />
+        </TouchableOpacity>
       </View>
     );
   }
@@ -183,6 +184,7 @@ function OffersBanner({
                 }));
               }}
             />
+            <CmsBannerCopy banner={banner} clickable={Boolean(banner.redirect_link)} />
           </TouchableOpacity>
         )}
       />
@@ -204,11 +206,7 @@ function OffersBanner({
 export default React.memo(OffersBanner);
 
 export const prefetchOffersBanner = (module: CmsModuleKey = 'product') =>
-  queryClient.prefetchQuery({
-    queryKey: moduleContentQueryKey(module),
-    queryFn: () => fetchResolvedZones(module),
-    staleTime: 5 * 60 * 1000,
-  });
+  queryClient.prefetchQuery(moduleContentQueryOptions(module));
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -223,6 +221,7 @@ const styles = StyleSheet.create({
   },
   colorFallback: {
     borderRadius: 12,
+    overflow: 'hidden',
   },
   dots: {
     flexDirection: 'row',

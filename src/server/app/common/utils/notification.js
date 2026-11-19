@@ -78,7 +78,7 @@ async function sendPushNotification(data) {
       return { token, success: true, response };
     } catch (err) {
       const errorCode = err?.code || err?.errorInfo?.code || "";
-      if (["registration-token-not-registered", "invalid-registration-token", "invalid-argument"]
+      if (["registration-token-not-registered", "invalid-registration-token"]
         .some((code) => errorCode.includes(code))) {
         await clearInvalidFcmToken(userId, token, errorCode || err.message);
       }
@@ -105,7 +105,7 @@ function notifyUser(data, label = "notification") {
     const persisted = await createInAppNotification(payload);
     // A duplicate terminal event should not produce another push either.
     if (persisted?.created === false) return;
-    await sendPushNotification(payload);
+    await sendPushNotification({ ...payload, notification_id: persisted?.notificationId ?? payload.notification_id });
   }, label);
 }
 
@@ -124,7 +124,7 @@ async function notifyUserAndWait(data) {
     return { success: false, skipped: true, reason: "duplicate" };
   }
 
-  return sendPushNotification(payload);
+  return sendPushNotification({ ...payload, notification_id: persisted?.notificationId ?? payload.notification_id });
 }
 
 module.exports = {

@@ -1,5 +1,5 @@
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
-import type { PushData } from "./pushPayload";
+import { parseNotificationMetadata, type PushData } from "./pushPayload";
 
 export type NotificationTarget = {
   route: keyof AppStackParamList;
@@ -14,9 +14,10 @@ export type NotificationTarget = {
 
 type RoutableNotification = Pick<
   PushData,
-  "module" | "type" | "referenceType" | "referenceId" | "actionUrl" | "screen"
+  "module" | "type" | "referenceType" | "referenceId" | "actionUrl" | "screen" |
+  "destinationType" | "destinationId" | "campaignId" | "contentId"
 > & {
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | string | null;
 };
 
 const FALLBACK_ROUTE: keyof AppStackParamList = "Notification";
@@ -50,6 +51,9 @@ const NESTED_TARGET_PATHS = new Set([
   "RewardStack/Dashboard",
   "Chat/ChatInbox",
   "Home/ProductModule/Home",
+  "Home/ProductModule/ProductDescription",
+  "Home/ProductModule/Category",
+  "Home/ProductModule/CampaignProducts",
   "Home/ServicesModule/Home",
   "Home/ServicesModule/ServiceDescription",
   "Home/PaymentsModule/Home",
@@ -91,9 +95,9 @@ const target = (
 const isPrimitive = (value: unknown) =>
   value === null || ["string", "number", "boolean"].includes(typeof value);
 
-const fromTargetRoute = (metadata: RoutableNotification["metadata"]) => {
+const fromTargetRoute = (metadata: ReturnType<typeof parseNotificationMetadata>) => {
   const raw = metadata?.target_route;
-  const parsed = typeof raw === "string" ? safeJson(raw) : raw;
+  const parsed = parseNotificationMetadata(raw);
   const path = Array.isArray(parsed?.path) ? parsed.path : null;
 
   if (!path || path.length < 2 || path[0] !== "App" || !path.every((part: unknown) => typeof part === "string")) return null;
@@ -117,13 +121,13 @@ const fromTargetRoute = (metadata: RoutableNotification["metadata"]) => {
   return target(route, "target_route", nested);
 };
 
-function safeJson(value: string) {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
+const positiveId = (value: unknown) => {
+  const id = typeof value === "string" || typeof value === "number" ? Number(value) : 0;
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+};
+
+const productTarget = (screen: string, destination: string, params: Record<string, unknown>) =>
+  target("Home", destination, { screen: "ProductModule", params: { screen, params } });
 
 export function resolveNotificationTarget(item: RoutableNotification): NotificationTarget {
   const actionUrl = item.actionUrl.trim();
@@ -143,8 +147,54 @@ export function resolveNotificationTarget(item: RoutableNotification): Notificat
     };
   }
 
-  const explicit = fromTargetRoute(item.metadata);
+  const metadata = parseNotificationMetadata(item.metadata);
+  const explicit = fromTargetRoute(metadata);
   if (explicit) return explicit;
+
+  const configuredDestination = item.destinationType || metadata?.destination_type;
+  // CRM uses reference_type "campaign" to identify the sender campaign even
+  // when the notification has no link to an ecommerce campaign.
+  const referenceDestination = item.referenceType === "campaign" ? "" : item.referenceType;
+  const destination = String(configuredDestination || referenceDestination).toLowerCase();
+  const id = positiveId(item.destinationId || metadata?.destination_id || referenceId);
+  switch (destination) {
+    case "product":
+    case "product_details":
+      if (id) return productTarget("ProductDescription", "product", { productId: id });
+      break;
+    case "category":
+    case "product_category":
+      if (id) return productTarget("Category", "category", { categoryId: id });
+      break;
+    case "collection":
+    case "product_collection":
+    case "campaign":
+    case "campaign_products": {
+      const campaignId = id ?? positiveId(item.campaignId || metadata?.campaign_id);
+      if (campaignId) return productTarget("CampaignProducts", "collection", { campaignId });
+      break;
+    }
+    case "catalog":
+    case "catalogue":
+    case "promotion":
+    case "promotional_catalog":
+    case "promotional_catalogue":
+    case "product_offer": {
+      const contentId = id ?? positiveId(item.contentId || metadata?.content_id);
+      if (contentId) return productTarget("CampaignProducts", "promotion", { contentId });
+      break;
+    }
+    case "service":
+    case "service_details":
+      if (id) {
+        return target("Home", "service", { screen: "ServicesModule", params: { screen: "ServiceDescription", params: { serviceId: id } } });
+      }
+      break;
+    case "wallet":
+    case "rewards":
+      if (configuredDestination) return target("WalletHistory", destination);
+      break;
+  }
 
   const ecommerceOrderMatch = actionUrl.match(/^\/orders\/order-details\/(\d+)$/);
   if (ecommerceOrderMatch?.[1]) {

@@ -35,8 +35,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalance } from '../../ecommerce/api/WalleteAPI';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { MainDashboardSectionKey } from '../../common/cms/dashboardLayout';
-import { fetchResolvedZones } from '../../common/cms/cmsContentApi';
-import { moduleContentQueryKey } from '../../common/cms/useModuleContent';
+import { useCmsAppShell } from '../../common/cms/CmsAppShellContext';
+import { parseCmsBackground } from '../../common/cms/cmsColors';
 import { API_V1_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import OffersBanner from '../../ecommerce/components/home/OffersBanner';
 import InvestmentInsuranceOverview from './InvestmentInsuranceOverview';
@@ -151,15 +151,9 @@ function Dashbord() {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  const { data: mobileDashboardContent } = useQuery({
-    queryKey: moduleContentQueryKey('mobile_dashboard'),
-    queryFn: () => fetchResolvedZones('mobile_dashboard'),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { navbar } = useCmsAppShell();
   const rewardPoints = Number(walletBalanceResponse?.data?.balance ?? 0);
-  const mobileDashboardBackground = mobileDashboardContent?.navbar_background ?? null;
+  const mobileDashboardBackground = navbar.mobile_dashboard;
   const mobileDashboardImageUrl =
     mobileDashboardBackground?.content_type === 'image'
       ? mobileDashboardBackground.image_url
@@ -457,9 +451,11 @@ function Dashbord() {
       return (
         <LinearGradient
           key={key}
-          colors={[mobileDashboardColor, darkenHexColor(mobileDashboardColor, 0.28)]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          {...(parseCmsBackground(mobileDashboardColor)?.gradient ?? {
+            colors: [mobileDashboardColor, darkenHexColor(mobileDashboardColor, 0.28)],
+            start: { x: 0, y: 0 },
+            end: { x: 1, y: 1 },
+          })}
           style={styles.topSection}
         >
           {headerContent}
@@ -530,10 +526,7 @@ function Dashbord() {
               return (
                 <View key={key}>
                 <ModuleBanner />
-                <MemoOffersBanner
-                  module="mobile_dashboard"
-                  moduleContent={mobileDashboardContent}
-                />
+                <MemoOffersBanner module="mobile_dashboard" />
                 </View>
               );
             case 'rewardsOverview':

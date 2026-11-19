@@ -366,29 +366,20 @@ class ContentZoneModel {
    * app treats null as "nothing to show", so their Default rows are never surfaced here.
    */
   async resolveAllZones(contentModule) {
-    const results = {};
-
-    for (const zone of ZONES) {
-      results[zone] = await this.resolveActiveEntry(contentModule, zone, {
+    return Object.fromEntries(await Promise.all(ZONES.map(async (zone) => [
+      zone,
+      await this.resolveActiveEntry(contentModule, zone, {
         allowDefaultFallback: zone === "navbar_background",
-      });
-    }
-
-    return results;
+      }),
+    ])));
   }
 
   /** navbar_background for every mobile-app module, in one call - see resolveActiveEntry for the resolution rules. */
   async resolveNavbarModules() {
-    const result = {};
-
-    for (const moduleName of MODULES) {
-      result[moduleName] = await this.resolveActiveEntry(
-        moduleName,
-        "navbar_background",
-      );
-    }
-
-    return result;
+    return Object.fromEntries(await Promise.all(MODULES.map(async (moduleName) => [
+      moduleName,
+      await this.resolveActiveEntry(moduleName, "navbar_background"),
+    ])));
   }
 
   async getTargetOptions(type, search = "", selectedId = null) {
@@ -926,6 +917,9 @@ class ContentZoneModel {
     this.validateEntry({
       ...data,
       module: data.module ?? existing.module,
+      color_value: data.content_type === "color" && data.color_value === undefined
+        ? existing.color_value
+        : data.color_value,
       target_type: data.target_type === undefined ? existing.target_type : data.target_type,
       target_id: data.target_id === undefined ? existing.target_id : data.target_id,
     }, { isUpdate: true });
@@ -1166,6 +1160,18 @@ class ContentZoneModel {
       sort_order: sortOrder,
       is_active: 1,
     };
+  }
+
+  async replaceEntryImage(contentId, imageId, imageUrl) {
+    const [result] = await db.query(
+      "UPDATE content_zone_entry_images SET image_url = ? WHERE content_id = ? AND image_id = ? AND is_active = 1",
+      [imageUrl, contentId, imageId],
+    );
+    if (!result.affectedRows) {
+      const error = new Error("Banner image is no longer active");
+      error.statusCode = 409;
+      throw error;
+    }
   }
 
   /** images: [{ image_url, sort_order }] - inserted in order so sort_order matches upload order. */

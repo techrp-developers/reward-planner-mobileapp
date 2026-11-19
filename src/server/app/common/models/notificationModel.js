@@ -1,16 +1,8 @@
 const db = require("../../../config/database");
+const { parseMetadata } = require("../utils/notificationPayload");
 
 function toDbValue(value) {
   return value === undefined ? null : value;
-}
-
-function parseMetadata(value) {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }
 
 function normalizeLimit(value) {
@@ -54,9 +46,8 @@ class NotificationModel {
       return null;
     }
 
-    const storedMetadata = screen
-      ? { ...(metadata && typeof metadata === "object" ? metadata : {}), screen }
-      : metadata;
+    const parsedMetadata = parseMetadata(metadata);
+    const storedMetadata = screen ? { ...parsedMetadata, screen } : parsedMetadata;
 
     const values = [
       notificationUserId,

@@ -1,10 +1,14 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Animated, AppState, ScrollView, StyleSheet } from 'react-native';
+import { Animated, AppState, Linking, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import HomeBanner from '../HomeBanner';
 import PromotionalBanner from '../PromotionalBanner';
 
 let mockBanner: any;
+let mockBrandBanner: any;
 const mockScrollTo = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('react-native', () => {
   const native = jest.requireActual('react-native');
   const react = require('react');
@@ -20,9 +24,12 @@ jest.mock('react-native', () => {
     AppState: { currentState: 'active', addEventListener: () => ({ remove: jest.fn() }) },
   }, descriptors);
 });
-jest.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
+jest.mock('@react-navigation/native', () => ({
+  useIsFocused: () => true,
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
 jest.mock('../../../../common/cms/useModuleContent', () => ({
-  useModuleContent: () => ({ moduleContent: { promotional_banner: mockBanner } }),
+  useModuleContent: () => ({ moduleContent: { promotional_banner: mockBanner, brand_promotional_banner: mockBrandBanner } }),
   moduleContentQueryKey: jest.fn(),
 }));
 jest.mock('../../../../common/cms/cmsContentApi', () => ({ fetchResolvedZones: jest.fn() }));
@@ -39,19 +46,93 @@ describe('promotional carousel', () => {
     intervalSpy = jest.spyOn(global, 'setInterval');
     AppState.currentState = 'active';
     mockBanner = { content_id: 15, content_type: 'image', image_url: 'https://example.com/single.jpg' };
+    mockBrandBanner = null;
   });
   afterEach(() => {
     if (renderer) act(() => renderer.unmount());
     intervalSpy.mockRestore();
     jest.useRealTimers();
   });
-  const render = () => {
+  const render = (element = <PromotionalBanner module="service" />) => {
     act(() => {
-      renderer = TestRenderer.create(<PromotionalBanner module="service" />, {
+      renderer = TestRenderer.create(element, {
         createNodeMock: () => ({ scrollTo }),
       });
     });
   };
+
+  it('opens the product grid scoped to the image pressed, including inherited selections', () => {
+    mockBanner.title = 'Summer offers';
+    mockBanner.target_type = 'product';
+    mockBanner.target_ids = [12];
+    mockBanner.images = [
+      { image_id: 1, image_url: 'one.jpg', is_active: 1, sort_order: 0, target_type: 'product', target_ids: [21, 22] },
+      { image_id: 2, image_url: 'two.jpg', is_active: 1, sort_order: 1 },
+    ];
+    render(<HomeBanner />);
+    const [firstSlide, secondSlide] = renderer.root.findAllByType(TouchableOpacity);
+    firstSlide.props.onPress();
+    secondSlide.props.onPress();
+    expect(mockNavigate).toHaveBeenNthCalledWith(1, 'CampaignProducts', {
+      contentId: 15, imageId: 1, title: 'Summer offers',
+    });
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, 'CampaignProducts', {
+      contentId: 15, imageId: 2, title: 'Summer offers',
+    });
+  });
+
+  it('supports a legacy standalone banner with a banner-level selection', () => {
+    mockBanner.target_type = 'product';
+    mockBanner.target_id = 21;
+    mockBanner.images = [{ image_id: null, image_url: mockBanner.image_url, is_active: 1, sort_order: 0 }];
+    render(<HomeBanner />);
+    renderer.root.findByType(TouchableOpacity).props.onPress();
+    expect(mockNavigate).toHaveBeenCalledWith('CampaignProducts', {
+      contentId: 15, imageId: undefined, title: 'Promotional Products',
+    });
+  });
+
+  it('keeps an external link clickable when there is no product selection', () => {
+    mockBanner.redirect_link = 'https://example.com/promotion';
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    try {
+      render(<HomeBanner />);
+      renderer.root.findByType(TouchableOpacity).props.onPress();
+      expect(openURL).toHaveBeenCalledWith(mockBanner.redirect_link);
+      expect(mockNavigate).not.toHaveBeenCalled();
+    } finally {
+      openURL.mockRestore();
+    }
+  });
+
+  it('renders a published brand banner and opens its configured category products', () => {
+    mockBanner = null;
+    mockBrandBanner = {
+      content_id: 32, title: 'New brands', content_type: 'image', display_mode: 'grid_2',
+      images: [
+        { image_id: 7, image_url: 'one.jpg', is_active: 1, sort_order: 0, target_type: 'category', target_id: 12 },
+        { image_id: 8, image_url: 'two.jpg', is_active: 1, sort_order: 1 },
+      ],
+    };
+    render(<HomeBanner />);
+    expect(renderer.root.findAllByType(ScrollView)).toHaveLength(0);
+    expect(renderer.root.findAllByType(Animated.Image)).toHaveLength(2);
+    renderer.root.findByType(TouchableOpacity).props.onPress();
+    expect(mockNavigate).toHaveBeenCalledWith('CampaignProducts', { contentId: 32, imageId: 7, title: 'New brands' });
+  });
+
+  it('renders the CMS gradient, title, CTA and text color for a color promotion', () => {
+    const colors = ['#852BAF', '#FC3F78'];
+    mockBanner = {
+      ...mockBanner, content_type: 'color', color_value: JSON.stringify({ type: 'gradient', colors, direction: 'left-right' }),
+      title: 'Weekend deals', cta_text: 'Shop now', text_color: '#FAFAFA', target_type: 'product',
+    };
+    render(<HomeBanner />);
+    expect(renderer.root.findByType(LinearGradient).props.colors).toEqual(colors);
+    const texts = renderer.root.findAllByType(Text);
+    expect(texts.map(node => node.props.children)).toEqual(['Weekend deals', 'Shop now']);
+    expect(texts.every(node => StyleSheet.flatten(node.props.style).color === '#FAFAFA')).toBe(true);
+  });
 
   it('keeps one image static and sizes it from its natural dimensions', () => {
     render();

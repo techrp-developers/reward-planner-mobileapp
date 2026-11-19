@@ -84,17 +84,11 @@ export default function Navbar_Background({
     const showImage = Boolean(imageUrl && !failedImages[imageUrl]);
     const bgColor = banner?.bgColor ?? defaultBgColor;
 
-    console.log('[CMS] renderLayer:', {
-      tab,
-      imageUrl,
-      hasFailedBefore: imageUrl ? Boolean(failedImages[imageUrl]) : undefined,
-      showImage,
-      bgColor,
-    });
-
     return (
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
-        {bgColor !== "transparent" ? (
+        {banner?.gradient ? (
+          <LinearGradient {...banner.gradient} style={StyleSheet.absoluteFill} />
+        ) : bgColor !== "transparent" ? (
           <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
         ) : null}
         {showImage ? (

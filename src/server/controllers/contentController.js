@@ -22,6 +22,7 @@ const IMAGE_GALLERY_ZONES = [
 
 const supportsImageGallery = (zone) => IMAGE_GALLERY_ZONES.includes(zone);
 const getEntryImageUrl = getContentImageUrl;
+const isPublished = (value) => [true, 1, "true", "1"].includes(value);
 
 const cleanupTempFile = (file) => {
   // Kept for compatibility with requests already processed by the former disk
@@ -111,7 +112,7 @@ const validateTargets = async (body) => {
 const appendBannerImages = async (entry, files) => {
   const rows = await ContentZoneModel.getAllImagesByContentId(entry.content_id);
   const preserveSingleImage =
-    entry.zone === "promotional_banner" && !rows.length && entry.image_url;
+    entry.content_type === "image" && !rows.length && entry.image_url;
 
   assertWithinOfferImageLimit(
     rows.length + (preserveSingleImage ? 1 : 0),
@@ -131,7 +132,11 @@ const appendBannerImages = async (entry, files) => {
     );
   }
 
-  return saveOfferImages(entry.content_id, files, nextOrder);
+  const created = await saveOfferImages(entry.content_id, files, nextOrder);
+  if (entry.content_type !== "image") {
+    await ContentZoneModel.updateEntryImage(entry.content_id, null);
+  }
+  return created;
 };
 
 // Removes a locally stored content image given its stored relative path (e.g. /uploads/content-zone-entries/4/old.jpg).
@@ -211,15 +216,10 @@ const withOffersImages = async (entry, { includeInactive = false } = {}) => {
   )
     return entry;
 
-  const allImages =
-    includeInactive || entry.zone === "brand_promotional_banner"
-      ? await ContentZoneModel.getAllImagesByContentId(entry.content_id)
-      : null;
+  const allImages = await ContentZoneModel.getAllImagesByContentId(entry.content_id);
   const rows = allImages
-    ? allImages
-        .filter((row) => includeInactive || Number(row.is_active) === 1)
-        .sort((a, b) => a.sort_order - b.sort_order || a.image_id - b.image_id)
-    : await ContentZoneModel.getImagesByContentId(entry.content_id);
+    .filter((row) => includeInactive || Number(row.is_active) === 1)
+    .sort((a, b) => a.sort_order - b.sort_order || a.image_id - b.image_id);
 
   const images = rows.length
     ? rows.map((row) => ({
@@ -232,7 +232,7 @@ const withOffersImages = async (entry, { includeInactive = false } = {}) => {
         target_id: row.target_id ?? null,
         target_ids: parseTargetIds(row.target_ids),
       }))
-    : entry.image_url && !allImages?.length
+    : entry.image_url && !allImages.length
       ? [
           {
             image_id: null,
@@ -247,7 +247,7 @@ const withOffersImages = async (entry, { includeInactive = false } = {}) => {
   return {
     ...entry,
     image_url:
-      allImages?.length && !rows.length && !includeInactive
+      allImages.length && !rows.length && !includeInactive
         ? null
         : entry.image_url,
     images,
@@ -361,8 +361,8 @@ class ContentController {
     try {
       const body = { ...req.body };
       validateMotion(body, body.zone);
-      body.is_published =
-        body.is_published === "true" || body.is_published === true;
+      body.is_published = isPublished(body.is_published);
+      if (imageFile || offerFiles.length) body.content_type = "image";
       body.target_type = body.target_type || null;
       await validateTargets(body);
 
@@ -389,7 +389,7 @@ class ContentController {
           body.end_at,
         );
 
-        if (conflicts.length && body.force_publish !== "true") {
+        if (conflicts.length && !isPublished(body.force_publish)) {
           cleanupTempFile(imageFile);
           cleanupTempFiles(offerFiles);
           return res.status(409).json({
@@ -474,8 +474,7 @@ class ContentController {
       }
 
       if (body.is_published !== undefined) {
-        body.is_published =
-          body.is_published === "true" || body.is_published === true;
+        body.is_published = isPublished(body.is_published);
       }
 
       if (body.is_published) {
@@ -489,7 +488,7 @@ class ContentController {
           id,
         );
 
-        if (conflicts.length && body.force_publish !== "true") {
+        if (conflicts.length && !isPublished(body.force_publish)) {
           cleanupTempFile(imageFile);
           cleanupTempFiles(offerFiles);
           return res.status(409).json({
@@ -502,16 +501,36 @@ class ContentController {
       }
 
       let imageUrl = null;
-      const previousImageKey =
+      let previousImageKey =
         existing.content_type === "image" ? existing.image_url : null;
+      const gallery = imageFile && supportsImageGallery(existing.zone)
+        ? await ContentZoneModel.getAllImagesByContentId(id)
+        : [];
+      const primarySlide = gallery
+        .filter((slide) => Number(slide.is_active) === 1)
+        .sort((a, b) => a.sort_order - b.sort_order || a.image_id - b.image_id)[0];
 
       if (imageFile) {
         imageUrl = await uploadEntryImage(id, imageFile);
         body.content_type = "image";
-        body.image_url = imageUrl;
+        if (!gallery.length) body.image_url = imageUrl;
       }
 
-      const entry = await ContentZoneModel.updateEntry(id, body);
+      if ((imageFile || offerFiles.length) && !body.color_value) delete body.color_value;
+      let entry = await ContentZoneModel.updateEntry(id, body);
+      if (gallery.length && imageUrl) {
+        previousImageKey = null;
+        if (primarySlide) {
+          await ContentZoneModel.replaceEntryImage(id, primarySlide.image_id, imageUrl);
+          if (primarySlide.image_url !== entry.image_url &&
+              !gallery.some((slide) => slide.image_id !== primarySlide.image_id && slide.image_url === primarySlide.image_url)) {
+            previousImageKey = primarySlide.image_url;
+          }
+        } else {
+          const nextOrder = Math.max(...gallery.map((slide) => Number(slide.sort_order))) + 1;
+          await ContentZoneModel.createEntryImage(id, imageUrl, nextOrder);
+        }
+      }
 
       if (imageUrl && previousImageKey) {
         try {
@@ -524,6 +543,7 @@ class ContentController {
       // Additive - existing offer images are left untouched, new ones are appended after them.
       if (offerFiles.length) {
         await appendBannerImages(entry, offerFiles);
+        if (entry.content_type !== "image") entry = await ContentZoneModel.getEntryById(id);
       }
 
       return res.json({
@@ -899,10 +919,9 @@ class ContentController {
     try {
       const data = await ContentZoneModel.resolveAllZones(req.params.module);
 
-      const resolved = {};
-      for (const zone of Object.keys(data)) {
-        resolved[zone] = await hydrateEntry(data[zone]);
-      }
+      const resolved = Object.fromEntries(await Promise.all(
+        Object.entries(data).map(async ([zone, entry]) => [zone, await hydrateEntry(entry)]),
+      ));
 
       return res.json({
         success: true,

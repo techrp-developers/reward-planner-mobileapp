@@ -7,7 +7,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useTranslation } from 'react-i18next';
 import type { GoalSyncData, PlanOverview, OverallSummary } from '../api/Stepsapi';
 import FitnessTabBar, {
-  FITNESS_TAB_LOGO_OVERHANG,
   FitnessChromeContext,
   TAB_OF_ROUTE,
   type FitnessTab,
@@ -59,8 +58,8 @@ const Stack = createNativeStackNavigator<FitnessStackParamList>();
 const SETUP_REQUIRED = new Set<string>(['Dashboard', 'AfterGoal', 'AchievementCard', 'CoinHistory', 'PlanProcess', 'MyPlan']);
 
 const GATE = {
-  light: { bg: '#F5F9FF', text: '#4A5275', accent: '#426BFF', button: 'rgba(66,107,255,0.10)', tabRegion: '#F1EDFF' },
-  dark: { bg: '#070A16', text: '#CDD2EA', accent: '#8EA2FF', button: 'rgba(142,162,255,0.12)', tabRegion: '#14122B' },
+  light: { bg: '#F5F9FF', text: '#4A5275', accent: '#426BFF', button: 'rgba(66,107,255,0.10)' },
+  dark: { bg: '#070A16', text: '#CDD2EA', accent: '#8EA2FF', button: 'rgba(142,162,255,0.12)' },
 };
 
 /** Shown while the setup state is resolved before RP Move opens. */
@@ -203,12 +202,11 @@ function FitnessLayout({
   // Existing app-wide action of the center logo: the main app home.
   const handleCenterPress = useCallback(() => appNavigation.navigate('Dashboard'), [appNavigation]);
 
-  // The bar has its own region below the screens (not over them). Screens
-  // only need to clear the raised logo, so that is their bottom inset; the
-  // device inset is inside the bar region and is not applied twice.
+  // Reserve scroll space for the floating bar while the screen paints behind it.
+  const barHeight = fitnessTabBarHeight(fontScale);
   const innerInsets = useMemo(
-    () => screenInsets(insets, showBar, FITNESS_TAB_LOGO_OVERHANG),
-    [insets, showBar],
+    () => screenInsets(insets, showBar, barHeight),
+    [insets, showBar, barHeight],
   );
 
   return (
@@ -302,9 +300,7 @@ function FitnessLayout({
           </View>
         </SafeAreaInsetsContext.Provider>
         {showBar && activeTab && (
-          <View style={[layoutStyles.tabRegion, { height: fitnessTabBarHeight(fontScale) + insets.bottom, backgroundColor: C.tabRegion }]}>
-            <FitnessTabBar active={activeTab} onTabPress={handleTabPress} onCenterPress={handleCenterPress} />
-          </View>
+          <FitnessTabBar active={activeTab} onTabPress={handleTabPress} onCenterPress={handleCenterPress} />
         )}
       </View>
     </FitnessChromeContext.Provider>
@@ -314,8 +310,6 @@ function FitnessLayout({
 const layoutStyles = StyleSheet.create({
   root: { flex: 1 },
   content: { flex: 1 },
-  // In-flow, so the screens above end where the bar starts.
-  tabRegion: { width: '100%', zIndex: 1 },
 });
 
 const gateStyles = StyleSheet.create({

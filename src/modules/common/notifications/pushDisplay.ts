@@ -4,6 +4,7 @@ import notifee, {
   AuthorizationStatus,
   type Notification,
 } from "@notifee/react-native";
+import { Image, Platform } from "react-native";
 import type { RemoteMessage } from "@react-native-firebase/messaging";
 import {
   GENERAL_CHANNEL_ID,
@@ -14,7 +15,7 @@ import {
   OFFERS_CHANNEL_ID,
   UPDATES_CHANNEL_ID,
 } from "./pushConfig";
-import { getDedupeKey, sanitizeImageUrl } from "./pushPayload";
+import { getDedupeKey, getNotificationImage } from "./pushPayload";
 
 // Importance only applies when a channel is first created: Android keeps the
 // user's (or the original) importance afterwards, so these are defaults, never
@@ -89,9 +90,7 @@ export const buildLocalNotification = (message: RemoteMessage): Notification | n
   const body = String(message.notification?.body || message.data?.message || message.data?.body || "").trim();
   if (!title && !body) return null;
 
-  const imageUrl = sanitizeImageUrl(
-    message.notification?.android?.imageUrl ?? message.data?.image_url ?? message.data?.image,
-  );
+  const imageUrl = getNotificationImage(message.data, message.notification?.android?.imageUrl);
   const key = getDedupeKey(message);
 
   return {
@@ -108,27 +107,54 @@ export const buildLocalNotification = (message: RemoteMessage): Notification | n
       largeIcon: NOTIFICATION_LARGE_ICON,
       color: NOTIFICATION_ACCENT_COLOR,
       pressAction: { id: "default" },
+      ...(Platform.OS === "android" ? {
+        showTimestamp: true,
+        timestamp: message.sentTime || Date.now(),
+      } : {}),
       style: imageUrl
-        ? { type: AndroidStyle.BIGPICTURE, picture: imageUrl }
+        ? { type: AndroidStyle.BIGPICTURE, picture: imageUrl, summary: body }
         : { type: AndroidStyle.BIGTEXT, text: body },
     },
   };
 };
 
-// Displays with media first; a broken image must not swallow the notification.
-export const displayLocalNotification = async (notification: Notification) => {
+const canLoadPicture = async (uri: string) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    await notifee.displayNotification(notification);
-  } catch (error) {
-    if (notification.android?.style?.type !== AndroidStyle.BIGPICTURE) throw error;
-    await notifee.displayNotification({
-      ...notification,
-      android: {
-        ...notification.android,
-        style: { type: AndroidStyle.BIGTEXT, text: notification.body || "" },
-      },
-    });
+    return await Promise.race([
+      Image.getSize(uri).then(({ width, height }) => width > 0 && height > 0, () => false),
+      new Promise<boolean>(resolve => { timeout = setTimeout(() => resolve(false), 4000); }),
+    ]);
+  } catch {
+    return false;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
+};
+
+// Notifee can resolve successfully with an empty picture if its loader fails.
+// Check that a remote Android image decodes before choosing the expanded style.
+export const displayLocalNotification = async (notification: Notification) => {
+  const style = notification.android?.style;
+  if (style?.type !== AndroidStyle.BIGPICTURE) {
+    await notifee.displayNotification(notification);
+    return;
+  }
+  if (Platform.OS !== "android" || typeof style.picture !== "string" || await canLoadPicture(style.picture)) {
+    try {
+      await notifee.displayNotification(notification);
+      return;
+    } catch {
+      // Keep the same ID and channel if Notifee cannot build the picture.
+    }
+  }
+  await notifee.displayNotification({
+    ...notification,
+    android: {
+      ...notification.android,
+      style: { type: AndroidStyle.BIGTEXT, text: notification.body || "" },
+    },
+  });
 };
 
 // Android already renders `notification` payloads when the app is not in the

@@ -135,8 +135,8 @@ test('provider update is separate from an unsupported device', async () => {
 test('narrow plan grids wrap and bar layout allocates the device inset once', () => {
   expect(tileGrid(250, 4, 1.3)).toEqual({ cols: 2, tileWidth: 121 });
   const insets = { top: 32, bottom: 24, left: 0, right: 0 };
-  expect(screenInsets(insets, true, 26)).toEqual({ ...insets, bottom: 26 });
-  expect(screenInsets(insets, false, 26)).toEqual(insets);
+  expect(screenInsets(insets, true, 98)).toEqual({ ...insets, bottom: 122 });
+  expect(screenInsets(insets, false, 98)).toEqual(insets);
 });
 
 test('backend data resumes setup at the first incomplete stage and keeps completed profiles during permission recovery', () => {

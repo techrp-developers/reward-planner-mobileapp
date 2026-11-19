@@ -558,15 +558,13 @@ export default function Navbar({ activeModule, onModuleChange }: NavbarProps) {
       ? "rgba(255,255,255,0.14)"
       : "rgba(0,0,0,0.08)";
   const activeBanner = banners[activeTab];
-  const navbarIconColor = isDark
-    ? "#FFFFFF"
-    : isScrolledWhite
-      ? "#111827"
-      : activeBanner?.imageUrl
-        ? "#FFFFFF"
-        : activeBanner?.bgColor
-          ? getReadableTextColor(activeBanner.bgColor)
-          : "#111827";
+  const navbarIconColor = isScrolledWhite
+    ? (isDark ? "#FFFFFF" : "#111827")
+    : activeBanner?.textColor || (isDark || activeBanner?.imageUrl
+      ? "#FFFFFF"
+      : activeBanner?.bgColor
+        ? getReadableTextColor(activeBanner.bgColor)
+        : "#111827");
   const navbarMutedColor = isScrolledWhite
     ? "#6B7280"
     : isDark

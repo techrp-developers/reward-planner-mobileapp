@@ -2,20 +2,23 @@ import { useQuery } from '@tanstack/react-query';
 import { useIsFocused } from '@react-navigation/native';
 import { fetchResolvedZones, CmsModuleKey } from './cmsContentApi';
 
+export const resolvedContentQueryKey = ['cms', 'resolved'] as const;
+export const CMS_CONTENT_STALE_TIME = 30_000;
 export const moduleContentQueryKey = (module: CmsModuleKey) =>
-  ['cms', 'resolved', module] as const;
+  [...resolvedContentQueryKey, module] as const;
 
-// Generalizes the old product-only content hook: promotional_banner +
-// offers_banner for whichever module the screen is showing. Cached per
-// module in the query client (staleTime keeps a revisited tab from
-// refetching), gated on screen focus rather than fetching on every mount.
+export const moduleContentQueryOptions = (module: CmsModuleKey) => ({
+  queryKey: moduleContentQueryKey(module),
+  queryFn: () => fetchResolvedZones(module),
+  staleTime: CMS_CONTENT_STALE_TIME,
+  refetchOnMount: true,
+});
+
 export const useModuleContent = (module: CmsModuleKey) => {
   const isFocused = useIsFocused();
 
   const query = useQuery({
-    queryKey: moduleContentQueryKey(module),
-    queryFn: () => fetchResolvedZones(module),
-    staleTime: 5 * 60 * 1000,
+    ...moduleContentQueryOptions(module),
     enabled: isFocused,
   });
 

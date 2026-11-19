@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   InteractionManager,
+  RefreshControl,
   StyleSheet,
   View,
   ViewToken,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import CategoriesSection from '../components/home/categories_section';
 import HomeSectionSkeleton from '../components/home/HomeSectionSkeleton';
 import { TAB_BAR_HEIGHT } from '../../../bottombar/BottomTabs';
@@ -14,6 +16,7 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import { useDashboardLayout } from '../../common/cms/useDashboardLayout';
 import type { EcommerceDashboardSectionKey } from '../../common/cms/dashboardLayout';
 import { useNavbarScroll } from '../../../navbar/NavbarScrollContext';
+import { resolvedContentQueryKey } from '../../common/cms/useModuleContent';
 
 // Keep only the immediately visible categories in the cold-open
 // bundle. Every lower section is evaluated only when FlatList reaches it.
@@ -245,6 +248,16 @@ const ThemedHomeSurface = React.memo(function ThemedHomeSurface({
 function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
   const { onScroll } = useNavbarScroll();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshContent = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: resolvedContentQueryKey }, { cancelRefetch: false });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
   const layout = useDashboardLayout('ecommerce', ECOMMERCE_SECTION_KEYS);
   const homeSections = useMemo<HomeSection[]>(
     () =>
@@ -387,6 +400,7 @@ function HomeScreen() {
         removeClippedSubviews={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshContent} />}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         ListFooterComponent={ListFooterSpacer}

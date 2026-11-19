@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../../theme/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
 import { useGlobalSearch } from './useGlobalSearch';
@@ -82,6 +83,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onSearchDropdownChange,
   onSearchOverlayChange,
 }) => {
+  const { t } = useTranslation('common');
   const { isDark }   = useAppTheme();
   const { isAuthenticated } = useAuth();
   // Same query key/options as the ecommerce Navbar, so both bells share one
@@ -245,6 +247,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               </View>
             ) : (
               <View style={styles.logoPill}><MaterialCommunityIcons name="domain" size={rs(23)} color="#6A00FF" /></View>
+            )}
+            {onProfilePress && (
+              <TouchableOpacity
+                onPress={onProfilePress}
+                style={[styles.actionButton, { backgroundColor: tk.searchBg }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('profile')}
+                activeOpacity={0.75}
+                hitSlop={6}
+              >
+                <MaterialCommunityIcons name="account-outline" size={rs(21)} color={tk.searchTextColor} />
+              </TouchableOpacity>
             )}
             <TouchableOpacity onPress={onNotificationPress} style={[styles.actionButton, { backgroundColor: tk.searchBg }]} accessibilityRole="button" accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'} activeOpacity={0.75}>
               <MaterialCommunityIcons name="bell-outline" size={rs(21)} color={tk.searchTextColor} />

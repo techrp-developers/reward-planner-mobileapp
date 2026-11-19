@@ -12,6 +12,10 @@ export type PushData = {
   screen: string;
   // Raw JSON navigator path from the backend; validated by notificationRouting.
   targetRoute: string;
+  destinationType?: string;
+  destinationId?: string;
+  campaignId?: string;
+  contentId?: string;
   imageUrl: string | null;
 };
 
@@ -32,35 +36,61 @@ const ALLOWED_IMAGE_HOSTS = ["rewardplanners.com"];
 // Only fetch notification media from our own HTTPS hosts (plus the local dev
 // server), so a crafted payload cannot make devices hit arbitrary URLs.
 export const sanitizeImageUrl = (value: unknown): string | null => {
-  const raw = text(value, 2048);
-  if (!raw) return null;
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw || raw.length > 2048 || /[\s\\]/u.test(raw)) return null;
 
   const match = raw.match(/^(https?):\/\/([^/:?#]+)(:\d+)?([/?#].*)?$/i);
   if (!match) return null;
 
-  const [, protocol, host] = match;
+  const [, protocol, host, port] = match;
   const hostname = host.toLowerCase();
-  const isLocalServer = __DEV__ && raw.toLowerCase().startsWith(SERVER_URL.toLowerCase());
+  const origin = `${protocol}://${host}${port ?? ""}`.toLowerCase();
+  const isLocalServer = __DEV__ && origin === SERVER_URL.toLowerCase();
   const isAllowedHost = ALLOWED_IMAGE_HOSTS.some(
     allowed => hostname === allowed || hostname.endsWith(`.${allowed}`),
   );
 
   if (isLocalServer) return raw;
-  if (protocol.toLowerCase() !== "https" || !isAllowedHost) return null;
+  if (protocol.toLowerCase() !== "https" || !isAllowedHost || (port && port !== ":443")) return null;
   return raw;
 };
 
-export const parsePushData = (data: RawData, imageHint?: unknown): PushData => ({
-  notificationId: parseNotificationId(data?.notification_id),
-  module: text(data?.module, 64),
-  type: text(data?.type, 64),
-  referenceType: text(data?.reference_type, 64),
-  referenceId: text(data?.reference_id, 128),
-  actionUrl: text(data?.action_url, 512),
-  screen: text(data?.screen, 64),
-  targetRoute: text(data?.target_route, 1024),
-  imageUrl: sanitizeImageUrl(imageHint ?? data?.image_url ?? data?.image),
-});
+export const parseNotificationMetadata = (value: unknown): RawData => {
+  if (typeof value === "string") {
+    try { value = JSON.parse(value); } catch { return null; }
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+};
+
+export const getNotificationImage = (data: RawData, imageHint?: unknown): string | null => {
+  const metadata = parseNotificationMetadata(data?.metadata);
+  for (const candidate of [imageHint, data?.image_url, data?.imageUrl, data?.image, metadata?.image_url, metadata?.imageUrl, metadata?.image]) {
+    const imageUrl = sanitizeImageUrl(candidate);
+    if (imageUrl) return imageUrl;
+  }
+  return null;
+};
+
+export const parsePushData = (data: RawData, imageHint?: unknown): PushData => {
+  const metadata = parseNotificationMetadata(data?.metadata);
+  return {
+    notificationId: parseNotificationId(data?.notification_id),
+    module: text(data?.module, 64),
+    type: text(data?.type, 64),
+    referenceType: text(data?.reference_type, 64),
+    referenceId: text(data?.reference_id, 128),
+    actionUrl: text(data?.action_url, 512),
+    screen: text(data?.screen, 64),
+    targetRoute: text(data?.target_route ?? metadata?.target_route, 1024),
+    destinationType: text(data?.destination_type ?? metadata?.destination_type, 64),
+    destinationId: text(data?.destination_id ?? metadata?.destination_id, 128),
+    campaignId: text(data?.campaign_id ?? metadata?.campaign_id, 20),
+    contentId: text(data?.content_id ?? metadata?.content_id, 20),
+    imageUrl: getNotificationImage(data, imageHint),
+  };
+};
 
 type MessageLike = {
   messageId?: string;

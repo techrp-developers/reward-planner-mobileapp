@@ -14,7 +14,13 @@ export type NotificationItem = {
   reference_type: string | null;
   reference_id: string | null;
   action_url: string | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | string | null;
+  image_url?: string | null;
+  imageUrl?: string | null;
+  destination_type?: string;
+  destination_id?: number | string;
+  campaign_id?: number | string;
+  content_id?: number | string;
   priority: "low" | "normal" | "high" | string;
   is_read: number | boolean;
   created_at: string;

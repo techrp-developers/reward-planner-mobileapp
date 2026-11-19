@@ -3,6 +3,7 @@ import path from 'path';
 import { resolveNotificationTarget } from '../../src/modules/common/notifications/notificationRouting';
 import {
   getDedupeKey,
+  getNotificationImage,
   parsePushData,
   RecentKeys,
   sanitizeImageUrl,
@@ -76,6 +77,26 @@ describe('resolveNotificationTarget', () => {
     });
     expect(result.isFallback).toBe(true);
   });
+
+  it.each([
+    ['product', 'ProductDescription', { productId: 7 }],
+    ['category', 'Category', { categoryId: 7 }],
+    ['collection', 'CampaignProducts', { campaignId: 7 }],
+    ['promotion', 'CampaignProducts', { contentId: 7 }],
+  ])('routes %s destinations to the existing ecommerce screen', (destination_type, screen, params) => {
+    const result = resolveNotificationTarget({ ...base, metadata: JSON.stringify({ destination_type, destination_id: 7 }) });
+    expect(result).toMatchObject({ route: 'Home', params: { screen: 'ProductModule', params: { screen, params } } });
+  });
+
+  it('keeps a CRM test campaign with no destination in the inbox', () => {
+    const result = resolveNotificationTarget({
+      ...base, module: 'common', type: 'campaign_marketing', referenceType: 'campaign',
+      referenceId: 'campaign-test-9-1793439247455',
+      metadata: { campaign_id: 9, category: 'marketing' },
+    });
+    expect(result.route).toBe('Notification');
+    expect(result.isFallback).toBe(true);
+  });
 });
 
 describe('push payload parsing', () => {
@@ -91,6 +112,14 @@ describe('push payload parsing', () => {
     expect(sanitizeImageUrl('https://rewardplanners.com.evil.io/a.png')).toBeNull();
     // eslint-disable-next-line no-script-url -- deliberately hostile input
     expect(sanitizeImageUrl('javascript:alert(1)')).toBeNull();
+  });
+
+  it('reads persisted Android artwork from metadata and skips unsafe candidates', () => {
+    const image = 'https://cdn.rewardplanners.com/sale.jpg';
+    expect(getNotificationImage({ metadata: { image_url: image } })).toBe(image);
+    expect(getNotificationImage({ metadata: JSON.stringify({ imageUrl: image }) }, 'https://other.example/sale.jpg')).toBe(image);
+    expect(getNotificationImage({ metadata: '{bad json' })).toBeNull();
+    expect(sanitizeImageUrl('http://192.168.1.160:50001/a.png')).toBeNull();
   });
 
   it('dedupes on notification_id, then messageId, never on text', () => {

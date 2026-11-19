@@ -1,10 +1,13 @@
 import React from 'react';
+import { AppState } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchResolvedModules,
   fetchResolvedNavbar,
   type CmsModule,
   type CmsNavbarBackgroundMap,
 } from './cmsContentApi';
+import { CMS_CONTENT_STALE_TIME, resolvedContentQueryKey } from './useModuleContent';
 
 type CmsAppShellState = {
   modules: CmsModule[];
@@ -23,53 +26,46 @@ const defaultState: CmsAppShellState = {
 const CmsAppShellContext = React.createContext<CmsAppShellState>(defaultState);
 
 export const CmsAppShellProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = React.useState<CmsAppShellState>({
-    ...defaultState,
-    isLoading: true,
+  const queryClient = useQueryClient();
+  const modules = useQuery({
+    queryKey: [...resolvedContentQueryKey, 'shell-modules'],
+    queryFn: fetchResolvedModules,
+    staleTime: CMS_CONTENT_STALE_TIME,
+    retry: 2,
+  });
+  const navbar = useQuery({
+    queryKey: [...resolvedContentQueryKey, 'shell-navbar'],
+    queryFn: fetchResolvedNavbar,
+    staleTime: CMS_CONTENT_STALE_TIME,
+    retry: 2,
   });
 
   React.useEffect(() => {
-    let cancelled = false;
-
-    // A one-shot fetch with no retry would permanently blank the app shell
-    // if it happens to land during a transient network blip (e.g. the adb
-    // reverse tunnel dropping on a USB reconnect) — retry a few times
-    // before giving up, since nothing else re-triggers this effect.
-    const MAX_ATTEMPTS = 3;
-    const RETRY_DELAY_MS = 1500;
-    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const load = async () => {
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-        try {
-          const [modules, navbar] = await Promise.all([fetchResolvedModules(), fetchResolvedNavbar()]);
-
-          if (cancelled) {
-            return;
-          }
-          const nextState = { modules, navbar, isLoading: false, error: null };
-          setState(nextState);
-          return;
-        } catch (error: any) {
-          if (cancelled) {
-            return;
-          }
-          if (attempt === MAX_ATTEMPTS) {
-            console.warn("[CMS] Unable to load app shell:", error?.message ?? error);
-            setState({ ...defaultState, isLoading: false, error });
-            return;
-          }
-          await delay(RETRY_DELAY_MS * attempt);
-        }
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        void queryClient.invalidateQueries({ queryKey: resolvedContentQueryKey }, { cancelRefetch: false });
       }
-    };
-
-    load();
-
+    });
+    const refresh = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        void queryClient.refetchQueries(
+          { queryKey: resolvedContentQueryKey, type: 'active', stale: true },
+          { cancelRefetch: false },
+        );
+      }
+    }, CMS_CONTENT_STALE_TIME);
     return () => {
-      cancelled = true;
+      subscription.remove();
+      clearInterval(refresh);
     };
-  }, []);
+  }, [queryClient]);
+
+  const state = React.useMemo<CmsAppShellState>(() => ({
+    modules: modules.data ?? defaultState.modules,
+    navbar: navbar.data ?? defaultState.navbar,
+    isLoading: modules.isLoading || navbar.isLoading,
+    error: modules.error ?? navbar.error,
+  }), [modules.data, modules.error, modules.isLoading, navbar.data, navbar.error, navbar.isLoading]);
 
   return (
     <CmsAppShellContext.Provider value={state}>

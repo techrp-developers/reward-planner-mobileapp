@@ -380,6 +380,7 @@ function BottomTabs({
 
   return (
     <View
+      pointerEvents="box-none"
       style={[
         layoutMode === "navigator" ? styles.navigatorWrap : styles.wrap,
         {

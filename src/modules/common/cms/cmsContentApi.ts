@@ -1,5 +1,5 @@
 import { cmsApi } from '../../../config/cmsApiClient';
-import { API_BASE_URL, normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
+import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import { CMS_MODULE_KEYS, type CmsModuleKey } from './moduleMapping';
 
 export type { CmsModuleKey } from './moduleMapping';
@@ -19,7 +19,13 @@ export interface CmsModule {
   is_active: 0 | 1;
 }
 
-export interface CmsZoneEntry {
+export interface CmsContentTarget {
+  target_type?: string | null;
+  target_id?: number | string | null;
+  target_ids?: Array<number | string> | string | null;
+}
+
+export interface CmsZoneEntry extends CmsContentTarget {
   content_id: number;
   content_type: 'color' | 'image';
   color_value: string | null;
@@ -30,11 +36,12 @@ export interface CmsZoneEntry {
   redirect_link: string | null;
   is_default: 0 | 1;
   status: 'default' | 'draft' | 'scheduled' | 'active' | 'expired';
+  display_mode?: 'single' | 'carousel' | 'grid_2' | 'grid_3';
   images?: CmsOfferImage[];
 }
 
-export interface CmsOfferImage {
-  image_id: number;
+export interface CmsOfferImage extends CmsContentTarget {
+  image_id: number | null;
   image_url: string;
   sort_order: number;
   is_active: 0 | 1;
@@ -48,6 +55,7 @@ export interface CmsResolvedZones {
   navbar_background?: CmsZoneEntry | null;
   promotional_banner?: CmsZoneEntry | null;
   offers_banner?: CmsOffersBannerEntry | null;
+  brand_promotional_banner?: CmsZoneEntry | null;
 }
 
 interface CmsModulesResponse {
@@ -82,24 +90,18 @@ const normalizeOfferImage = (image: CmsOfferImage): CmsOfferImage => ({
   image_url: normalizeLocalCmsImageUrl(image.image_url) || '',
 });
 
-const normalizeZoneEntry = <T extends CmsZoneEntry | CmsOffersBannerEntry>(
+const normalizeZoneEntry = <T extends CmsZoneEntry>(
   entry: T | null | undefined,
 ): T | null => {
   if (!entry) {
     return null;
   }
 
-  const normalizedImageUrl = normalizeLocalCmsImageUrl(entry.image_url);
-  console.log('[CMS] Image URL before normalize:', entry.image_url);
-  console.log('[CMS] Image URL after normalize:', normalizedImageUrl);
-
   return {
     ...entry,
-    image_url: normalizedImageUrl,
-    images: Array.isArray((entry as CmsOffersBannerEntry).images)
-      ? (entry as CmsOffersBannerEntry).images?.map(normalizeOfferImage)
-      : (entry as CmsOffersBannerEntry).images,
-  } as T;
+    image_url: normalizeLocalCmsImageUrl(entry.image_url),
+    images: Array.isArray(entry.images) ? entry.images.map(normalizeOfferImage) : undefined,
+  };
 };
 
 const normalizeResolvedZones = (
@@ -107,56 +109,22 @@ const normalizeResolvedZones = (
 ): CmsResolvedZones => ({
   navbar_background: normalizeZoneEntry(zones?.navbar_background),
   promotional_banner: normalizeZoneEntry(zones?.promotional_banner),
-  offers_banner: normalizeZoneEntry(zones?.offers_banner) as CmsOffersBannerEntry | null,
+  offers_banner: normalizeZoneEntry(zones?.offers_banner),
+  brand_promotional_banner: normalizeZoneEntry(zones?.brand_promotional_banner),
 });
 
 export const fetchResolvedModules = async (): Promise<CmsModule[]> => {
-  const path = '/content/resolved/modules';
-  console.log('[CMS] Fetching modules from:', `${API_BASE_URL}${path}`);
-  try {
-    const response = await cmsApi.get<CmsModulesResponse>(path);
-    console.log('[CMS] Raw modules response:', JSON.stringify(response.data));
-    const mapped = Array.isArray(response.data.data) ? response.data.data.map(normalizeModule) : [];
-    console.log('[CMS] Mapped modules result:', JSON.stringify(mapped));
-    return mapped;
-  } catch (error: any) {
-    console.log('[CMS] Fetch failed:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status,
-      url: error?.config?.url,
-    });
-    throw error;
-  }
+  const { data } = await cmsApi.get<CmsModulesResponse>('/content/resolved/modules');
+  return Array.isArray(data.data) ? data.data.map(normalizeModule) : [];
 };
 
 export const fetchResolvedNavbar = async (): Promise<CmsNavbarBackgroundMap> => {
-  const path = '/content/resolved/navbar';
-  console.log('[CMS] Fetching navbar from:', `${API_BASE_URL}${path}`);
-  try {
-    const response = await cmsApi.get<CmsResolvedNavbarResponse>(path);
-    console.log('[CMS] Raw navbar response:', JSON.stringify(response.data));
-    const raw = response.data.data ?? {};
-
-    const map: CmsNavbarBackgroundMap = {};
-    CMS_MODULE_KEYS.forEach((key) => {
-      const entry = raw[key] ?? null;
-      console.log(`[CMS] ${key} raw entry:`, JSON.stringify(entry));
-      map[key] = normalizeZoneEntry(entry);
-      console.log(`[CMS] ${key} normalized entry:`, JSON.stringify(map[key]));
-    });
-
-    console.log('[CMS] Mapped navbar result:', JSON.stringify(map));
-    return map;
-  } catch (error: any) {
-    console.log('[CMS] Fetch failed:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status,
-      url: error?.config?.url,
-    });
-    throw error;
-  }
+  const { data } = await cmsApi.get<CmsResolvedNavbarResponse>('/content/resolved/navbar');
+  const map: CmsNavbarBackgroundMap = {};
+  CMS_MODULE_KEYS.forEach((key) => {
+    map[key] = normalizeZoneEntry(data.data?.[key]);
+  });
+  return map;
 };
 
 export const fetchResolvedZones = async (

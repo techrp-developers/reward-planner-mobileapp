@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Platform,
 } from "react-native";
+import FastImage from "@d11/react-native-fast-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -30,6 +32,7 @@ import {
 } from "./NotificationAPI";
 import { queryClient } from "../../../query/queryClient";
 import { resolveNotificationTarget } from "../../common/notifications/notificationRouting";
+import { getNotificationImage, parsePushData } from "../../common/notifications/pushPayload";
 import { subscribeNotificationsChanged } from "../../common/notifications/notificationEvents";
 import { openConversationIfOwned } from "../../common/notifications/chatNotificationTarget";
 
@@ -130,6 +133,8 @@ function Notification() {
   const [badgeCount, setBadgeCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [failedArtwork, setFailedArtwork] = useState<Record<string, true>>({});
+  const navigatedFromInbox = useRef(false);
   // Only the latest list request may write state, so a slow older response
   // cannot overwrite newer data (e.g. focus reload racing a push refresh).
   const requestIdRef = useRef(0);
@@ -212,6 +217,7 @@ function Notification() {
 
   useFocusEffect(
     useCallback(() => {
+      navigatedFromInbox.current = false;
       loadNotifications();
       // A push received while this screen is open should appear without a manual refresh.
       return subscribeNotificationsChanged(() => loadNotifications(true));
@@ -219,15 +225,9 @@ function Notification() {
   );
 
   const handleNotificationPress = (item: NotificationItem) => {
-    const target = resolveNotificationTarget({
-      module: item.module || "",
-      type: item.type || "",
-      referenceType: String(item.reference_type || ""),
-      referenceId: String(item.reference_id || ""),
-      actionUrl: String(item.action_url || ""),
-      screen: "",
-      metadata: item.metadata,
-    });
+    if (navigatedFromInbox.current) return;
+    const target = resolveNotificationTarget({ ...parsePushData(item), metadata: item.metadata });
+    if (target.route !== "Notification") navigatedFromInbox.current = true;
 
     reportNotificationOpened(item.notification_id, {
       app_state: "inbox",
@@ -315,6 +315,35 @@ function Notification() {
 
   const renderNotification = ({ item }: { item: NotificationItem }) => {
     const unread = isUnread(item);
+    const artwork = Platform.OS === "android" ? getNotificationImage(item) : null;
+    if (artwork && !failedArtwork[artwork]) {
+      return (
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          style={[styles.card, themed.card, unread && themed.unreadCard, styles.artworkCard]}
+          onPress={() => handleNotificationPress(item)}
+          onLongPress={() => handleDeleteNotification(item)}
+        >
+          <FastImage
+            testID="notification-artwork"
+            source={{ uri: artwork, cache: FastImage.cacheControl.web }}
+            resizeMode={FastImage.resizeMode.contain}
+            style={[styles.artwork, { backgroundColor: theme.card }]}
+            onError={() => setFailedArtwork(current => ({ ...current, [artwork]: true }))}
+          />
+          <View style={styles.artworkContent}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, themed.text]}>{item.title}</Text>
+              {unread ? <View style={styles.unreadDot} testID="notification-unread" /> : null}
+            </View>
+            <Text style={[styles.message, themed.mutedText]}>{item.message}</Text>
+            <Text style={[styles.time, themed.mutedText, styles.artworkTime]}>{formatNotificationTime(item.created_at)}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     const highPriority = item.priority === "high";
     const meta = getModuleMeta(item.module, highPriority);
     const metaBackground = isDark ? `${meta.color}20` : meta.bg;
@@ -603,6 +632,22 @@ const styles = StyleSheet.create({
   cardUnread: {
     borderColor: "#CFC5FF",
     backgroundColor: "#FFFEFF",
+  },
+  artworkCard: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    padding: 0,
+    overflow: "hidden",
+  },
+  artwork: {
+    width: "100%",
+    aspectRatio: 2,
+  },
+  artworkContent: {
+    padding: 15,
+  },
+  artworkTime: {
+    marginTop: 8,
   },
   iconWrap: {
     width: 44,
