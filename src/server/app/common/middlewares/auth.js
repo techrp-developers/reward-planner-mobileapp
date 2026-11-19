@@ -1,0 +1,72 @@
+const jwt = require("jsonwebtoken");
+const AuthModel = require("../models/authModel");
+
+function unverifiedDevTokensAllowed(env = process.env) {
+  return env.NODE_ENV === "development" && env.ALLOW_UNVERIFIED_DEV_TOKENS === "true";
+}
+
+const auth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Access token required",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch (err) {
+      // Local development only, explicitly opted in: accept a token signed by
+      // another server (e.g. production) without checking its signature.
+      // Never active unless both conditions hold, so a forged or expired token
+      // can never authenticate in any deployed environment.
+      if (!unverifiedDevTokensAllowed()) throw err;
+      decoded = jwt.decode(token);
+      if (!decoded || !decoded.user_id) {
+        throw err;
+      }
+      console.warn("[Local Auth Debug] UNVERIFIED token accepted (ALLOW_UNVERIFIED_DEV_TOKENS): user_id =", decoded.user_id);
+    }
+
+    const user = await AuthModel.findById(decoded.user_id);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!AuthModel.isCustomerActive(user)) {
+      return res.status(403).json({
+        success: false,
+        code: "USER_INACTIVE",
+        message: "User inactive. Please contact your HR.",
+      });
+    }
+
+    // if (Number(user.token_version || 0) !== Number(decoded.token_version || 0)) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Invalid token",
+    //   });
+    // }
+
+    req.user = user;
+    next();
+  } catch {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
+  }
+};
+
+module.exports = auth;
+module.exports.unverifiedDevTokensAllowed = unverifiedDevTokensAllowed;
