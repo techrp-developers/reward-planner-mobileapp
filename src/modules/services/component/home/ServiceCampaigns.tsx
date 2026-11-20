@@ -1,22 +1,34 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { getCampaignHome } from '../../../ecommerce/api/CampaignAPI';
 import { openCampaignPoster } from '../../../ecommerce/utils/campaignNavigation';
 import { getCampaignServices, getContentOfferServices } from '../../api/ServiceCampaignAPI';
-import type { HomeStackParamList } from '../../navigation/type';
+import type { HomeStackParamList, ServiceItem } from '../../navigation/type';
 import ServiceGridCard from '../constant/ServiceGridCard';
 import { useAppTheme } from '../../../../theme/ThemeContext';
+import CampaignListingControls, { useCampaignListing } from '../../../common/cms/CampaignListingControls';
+import { campaignPrice, defaultCampaignFilters } from '../../../common/cms/campaignListing';
+
+const noServices: ServiceItem[] = [];
+const getServiceMetrics = (service: ServiceItem) => ({
+  price: campaignPrice(service.price),
+  rating: Number(service.rating) || 0,
+  discount: Number(service.discount_percent) || 0,
+});
 
 export function ServiceCampaignItems({
-  campaignId, contentId, imageId, horizontal = false,
-}: HomeStackParamList['ServiceCampaign'] & { horizontal?: boolean }) {
+  campaignId, contentId, imageId, horizontal = false, renderHeader,
+}: HomeStackParamList['ServiceCampaign'] & {
+  horizontal?: boolean;
+  renderHeader?: (controls?: React.ReactNode) => React.ReactNode;
+}) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const { theme } = useAppTheme();
   const focused = useIsFocused();
-  const { data = [], isLoading, error, refetch } = useQuery({
+  const { data = noServices, isLoading, error, refetch } = useQuery({
     queryKey: contentId === undefined
       ? ['services', 'campaign', campaignId]
       : ['services', 'content-offer', contentId, imageId],
@@ -26,24 +38,44 @@ export function ServiceCampaignItems({
     staleTime: 30000,
     refetchInterval: focused ? 30000 : false,
   });
-  if (isLoading) return <ActivityIndicator style={styles.loading} />;
-  if (error) return <Text onPress={() => refetch()} style={[styles.message, { color: theme.text }]}>Unable to load offers. Tap to retry.</Text>;
-  if (!data.length) return horizontal ? null : <Text style={[styles.message, { color: theme.text }]}>No active services in this campaign.</Text>;
-  return <FlatList
-    data={data}
-    horizontal={horizontal}
-    numColumns={horizontal ? 1 : 2}
-    contentContainerStyle={styles.list}
-    columnWrapperStyle={horizontal ? undefined : styles.columns}
-    keyExtractor={item => `${item.service_id}:${item.variant_id}`}
-    showsHorizontalScrollIndicator={false}
-    renderItem={({ item }) => <ServiceGridCard
-      item={item} cardWidth={horizontal ? 150 : (width - 44) / 2} image={item.image ? { uri: item.image } : null}
-      onPress={() => navigation.navigate('ServiceDescription', {
-        serviceId: item.service_id, variantId: item.variant_id || undefined, title: item.name,
-      })}
-    />}
-  />;
+  const { results, ...listingControls } = useCampaignListing(horizontal ? noServices : data, getServiceMetrics);
+  const hasOffers = !isLoading && !error && data.length > 0;
+  const header = renderHeader?.(hasOffers && (
+    <CampaignListingControls count={results.length} label="service" variant="header" {...listingControls} />
+  ));
+  return (
+    <>
+      {header}
+      {isLoading ? <ActivityIndicator style={styles.loading} /> : error ? (
+        <Text onPress={() => refetch()} style={[styles.message, { color: theme.text }]}>Unable to load offers. Tap to retry.</Text>
+      ) : !data.length ? (
+        horizontal ? null : <Text style={[styles.message, { color: theme.text }]}>No active services in this campaign.</Text>
+      ) : <FlatList
+        data={horizontal ? data : results}
+        horizontal={horizontal}
+        numColumns={horizontal ? 1 : 2}
+        contentContainerStyle={[styles.list, !horizontal && styles.grid]}
+        columnWrapperStyle={horizontal ? undefined : styles.columns}
+        keyExtractor={item => `${item.service_id}:${item.variant_id}`}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => <ServiceGridCard
+          item={item} cardWidth={horizontal ? 150 : (width - 44) / 2} image={item.image ? { uri: item.image } : null}
+          onPress={() => navigation.navigate('ServiceDescription', {
+            serviceId: item.service_id, variantId: item.variant_id || undefined, title: item.name,
+          })}
+        />}
+        ListEmptyComponent={horizontal ? null : (
+          <View style={styles.empty}>
+            <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No services match your filters.</Text>
+            <Pressable accessibilityRole="button" onPress={() => listingControls.setFilters(defaultCampaignFilters)}>
+              <Text style={[styles.emptyAction, { color: theme.text }]}>Clear filters</Text>
+            </Pressable>
+          </View>
+        )}
+      />}
+    </>
+  );
 }
 
 export default function ServiceCampaigns() {
@@ -76,6 +108,10 @@ export default function ServiceCampaigns() {
 
 const styles = StyleSheet.create({
   list: { padding: 16, gap: 12 },
+  grid: { flexGrow: 1, paddingBottom: 24 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  emptyText: { fontSize: 14, textAlign: 'center' },
+  emptyAction: { padding: 12, textDecorationLine: 'underline', fontWeight: '700' },
   columns: { gap: 12 },
   poster: { width: 260, height: 160, borderRadius: 12 },
   title: { fontSize: 18, fontWeight: '700', marginHorizontal: 16, marginTop: 16 },

@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  AppState, Animated, ImageLoadEvent, Linking, ScrollView, StyleSheet,
+  AppState, Animated, ImageLoadEvent, ScrollView, StyleSheet,
   TouchableOpacity, View, useWindowDimensions, type StyleProp, type ViewStyle,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import CmsBannerCopy from '../../../common/cms/CmsBannerCopy';
 import { CMS_IMAGE_ASPECT_RATIOS } from '../../../common/cms/cmsImageLayout';
-import type { CmsModuleKey, CmsOfferImage, CmsZoneEntry } from '../../../common/cms/cmsContentApi';
+import type { CmsModuleKey, CmsOfferImage } from '../../../common/cms/cmsContentApi';
 import { useModuleContent, moduleContentQueryOptions } from '../../../common/cms/useModuleContent';
 import { queryClient } from '../../../../query/queryClient';
 import { getCmsPromotionPress, type CmsPromotionNavigation } from '../../utils/cmsBannerNavigation';
@@ -17,10 +17,9 @@ type Slide = { id: string; url: string; image?: CmsOfferImage };
 type Props = {
   module?: CmsModuleKey;
   zone?: 'promotional_banner' | 'brand_promotional_banner';
-  getPressAction?: (banner: CmsZoneEntry, image?: CmsOfferImage) => (() => void) | undefined;
 };
 
-function PromotionalBanner({ module = 'product', zone = 'promotional_banner', getPressAction }: Props) {
+function PromotionalBanner({ module = 'product', zone = 'promotional_banner' }: Props) {
   const { moduleContent } = useModuleContent(module);
   const banner = moduleContent?.[zone] ?? null;
   const isFocused = useIsFocused();
@@ -100,10 +99,6 @@ function PromotionalBanner({ module = 'product', zone = 'promotional_banner', ge
     : CMS_IMAGE_ASPECT_RATIOS.promotionalBanner;
   const aspectRatio = slides[0] ? ratios[slides[0].url] ?? fallbackRatio : fallbackRatio;
   const label = banner.title || 'Promotional banner';
-  const redirectLink = banner.redirect_link;
-  const openLink = redirectLink ? () => {
-    Linking.openURL(redirectLink).catch(() => undefined);
-  } : undefined;
 
   const renderSlide = (
     key: string,
@@ -111,7 +106,7 @@ function PromotionalBanner({ module = 'product', zone = 'promotional_banner', ge
     children?: React.ReactNode,
     image?: CmsOfferImage,
   ) => {
-    const action = getPressAction?.(banner, image) ?? getCmsPromotionPress(navigation, module, banner, image) ?? openLink;
+    const action = getCmsPromotionPress(navigation, module, banner, image);
     const copy = <CmsBannerCopy banner={banner} clickable={Boolean(action)} />;
     return action ? (
       <TouchableOpacity key={key} style={style} activeOpacity={0.9} onPress={action}

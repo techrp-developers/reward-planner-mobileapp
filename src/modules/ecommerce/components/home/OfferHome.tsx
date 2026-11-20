@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   Image as RNImage,
   Alert,
-  Linking,
 } from "react-native";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import HomeSectionSkeleton from "./HomeSectionSkeleton";
@@ -37,7 +36,7 @@ import { useAppTheme } from "../../../../theme/ThemeContext";
 import CmsBannerCopy from "../../../common/cms/CmsBannerCopy";
 import type { CmsModuleKey } from "../../../common/cms/cmsContentApi";
 import { useModuleContent, moduleContentQueryOptions } from "../../../common/cms/useModuleContent";
-import { getCmsProductBannerPress } from "../../utils/cmsBannerNavigation";
+import { getCmsPromotionPress, type CmsPromotionNavigation } from "../../utils/cmsBannerNavigation";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Responsive constants
@@ -385,7 +384,7 @@ type Props = {
 // campaign / wishlist section is ecommerce (Product) specific business
 // logic and is intentionally NOT parameterized by module.
 export default function OfferHome({ module = "product" }: Props) {
-  const navigation = useNavigation<Nav>();
+  const navigation = useNavigation<Nav & CmsPromotionNavigation>();
   const focused = useIsFocused();
   const { theme } = useAppTheme();
   const { moduleContent } = useModuleContent(module);
@@ -467,9 +466,7 @@ export default function OfferHome({ module = "product" }: Props) {
           contentContainerStyle={styles.offersScroll}
         >
           {cmsOffers.map((offer) => {
-            const link = cmsOffersBanner.redirect_link;
-            const openLink = link ? () => { Linking.openURL(link).catch(() => undefined); } : undefined;
-            const onPress = (module === 'product' ? getCmsProductBannerPress(navigation, cmsOffersBanner, offer.image) : undefined) ?? openLink;
+            const onPress = getCmsPromotionPress(navigation, module, cmsOffersBanner, offer.image);
             return (
               <TouchableOpacity
                 key={offer.id}

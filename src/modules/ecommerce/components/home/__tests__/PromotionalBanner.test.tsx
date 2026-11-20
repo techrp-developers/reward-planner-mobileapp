@@ -28,7 +28,7 @@ jest.mock('react-native', () => {
 jest.mock('@react-navigation/native', () => ({
   CommonActions: { navigate: (name: string, params: unknown) => ({ type: 'NAVIGATE', payload: { name, params } }) },
   useIsFocused: () => true,
-  useNavigation: () => ({ navigate: mockNavigate, dispatch: mockDispatch }),
+  useNavigation: () => ({ navigate: mockNavigate, dispatch: mockDispatch, getParent: () => undefined }),
 }));
 jest.mock('../../../../common/cms/useModuleContent', () => ({
   useModuleContent: () => ({ moduleContent: { promotional_banner: mockBanner, brand_promotional_banner: mockBrandBanner } }),
@@ -114,7 +114,7 @@ describe('promotional carousel', () => {
     });
   });
 
-  it('opens a single service or an offer collection based on the slide selection', () => {
+  it('opens the filterable campaign for a single service or service selection', () => {
     mockBanner.title = 'Service deals';
     mockBanner.target_type = 'service';
     mockBanner.target_id = '12';
@@ -128,11 +128,23 @@ describe('promotional carousel', () => {
     collection.props.onPress();
     expect(mockDispatch).toHaveBeenNthCalledWith(1, {
       type: 'NAVIGATE',
-      payload: { name: 'ServiceDescription', params: { serviceId: 12 } },
+      payload: { name: 'ServiceCampaign', params: { contentId: 15, imageId: 5, title: 'Service deals' } },
     });
     expect(mockDispatch).toHaveBeenNthCalledWith(2, {
       type: 'NAVIGATE',
       payload: { name: 'ServiceCampaign', params: { contentId: 15, imageId: 6, title: 'Service deals' } },
+    });
+  });
+
+  it('opens a dashboard brand promotion that targets a service category', () => {
+    mockBrandBanner = {
+      ...mockBanner, title: 'Brand offers', target_type: 'service_category', target_id: 12,
+    };
+    render(<PromotionalBanner module="mobile_dashboard" zone="brand_promotional_banner" />);
+    renderer.root.findByType(TouchableOpacity).props.onPress();
+    expect(mockNavigate).toHaveBeenCalledWith('Home', {
+      screen: 'ServicesModule',
+      params: { screen: 'ServiceCampaign', params: { contentId: 15, imageId: undefined, title: 'Brand offers' } },
     });
   });
 

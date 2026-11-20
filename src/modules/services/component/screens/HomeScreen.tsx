@@ -74,7 +74,12 @@ const ServiceSection = React.memo(({
 
 ServiceSection.displayName = 'ServiceHomeSection';
 
-const ServicePromotionalBanner = React.memo(() => <PromotionalBanner module="service" />);
+const ServicePromotionalBanner = React.memo(() => (
+  <>
+    <PromotionalBanner module="service" />
+    <PromotionalBanner module="service" zone="brand_promotional_banner" />
+  </>
+));
 ServicePromotionalBanner.displayName = 'ServicePromotionalBanner';
 
 function HomeScreen() {

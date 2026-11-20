@@ -3,7 +3,6 @@ import {
   FlatList,
   Image,
   ImageResizeMode,
-  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
@@ -13,10 +12,12 @@ import {
   ViewStyle,
   useWindowDimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { queryClient } from '../../../../query/queryClient';
 import CmsBannerCopy from '../../../common/cms/CmsBannerCopy';
-import type { CmsModuleKey, CmsResolvedZones } from '../../../common/cms/cmsContentApi';
+import type { CmsModuleKey, CmsOfferImage, CmsResolvedZones } from '../../../common/cms/cmsContentApi';
 import { useModuleContent, moduleContentQueryOptions } from '../../../common/cms/useModuleContent';
+import { getCmsPromotionPress, type CmsPromotionNavigation } from '../../utils/cmsBannerNavigation';
 
 const AUTOPLAY_MS = 3500;
 const OFFER_ASPECT_RATIO = 4 / 5;
@@ -24,6 +25,7 @@ const OFFER_ASPECT_RATIO = 4 / 5;
 type OfferSlide = {
   id: string;
   imageUrl: string;
+  image?: CmsOfferImage;
 };
 
 type Props = {
@@ -42,6 +44,7 @@ function OffersBanner({
   wrapperStyle,
 }: Props) {
   const { width } = useWindowDimensions();
+  const navigation = useNavigation<CmsPromotionNavigation>();
   const { moduleContent: fetchedModuleContent } = useModuleContent(module);
   const moduleContent = controlledModuleContent ?? fetchedModuleContent;
   const banner = moduleContent?.offers_banner ?? null;
@@ -56,19 +59,19 @@ function OffersBanner({
       return [];
     }
 
-    const images = Array.isArray(banner.images) && banner.images.length > 0
-      ? banner.images
-      : banner.image_url
-        ? [{ image_id: banner.content_id, image_url: banner.image_url, sort_order: 0, is_active: 1 }]
-        : [];
+    if (!banner.images?.length) {
+      const id = String(banner.content_id);
+      return banner.image_url && !failedImages[id] ? [{ id, imageUrl: banner.image_url }] : [];
+    }
 
-    return images
+    return banner.images
       .filter((image) => Number(image.is_active) === 1)
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((image) => ({
         id: String(image.image_id ?? `${banner.content_id}_${image.sort_order}`),
         imageUrl: image.image_url,
+        image,
       }))
       .filter((slide) => slide.imageUrl && !failedImages[slide.id]);
   }, [banner, failedImages]);
@@ -116,24 +119,21 @@ function OffersBanner({
     return null;
   }
 
-  const handlePress = () => {
-    if (banner.redirect_link) {
-      Linking.openURL(banner.redirect_link).catch(() => undefined);
-    }
-  };
-
   const handleMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / itemWidth);
     setActiveIndex(Math.min(Math.max(nextIndex, 0), slides.length - 1));
   };
 
   if (showColorFallback) {
+    const onPress = getCmsPromotionPress(navigation, module, banner);
     return (
       <View style={[styles.wrapper, wrapperStyle]}>
         <TouchableOpacity
-          activeOpacity={banner.redirect_link ? 0.9 : 1}
-          disabled={!banner.redirect_link}
-          onPress={handlePress}
+          activeOpacity={0.9}
+          disabled={!onPress}
+          onPress={onPress}
+          accessibilityRole={onPress ? 'button' : undefined}
+          accessibilityLabel={banner.title || 'Offer banner'}
           style={[
             styles.colorFallback,
             {
@@ -142,7 +142,7 @@ function OffersBanner({
             },
           ]}
         >
-          <CmsBannerCopy banner={banner} clickable={Boolean(banner.redirect_link)} />
+          <CmsBannerCopy banner={banner} clickable={Boolean(onPress)} />
         </TouchableOpacity>
       </View>
     );
@@ -166,27 +166,32 @@ function OffersBanner({
           offset: itemWidth * index,
           index,
         })}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            activeOpacity={banner.redirect_link ? 0.9 : 1}
-            disabled={!banner.redirect_link}
-            onPress={handlePress}
-            style={[styles.slide, { width: itemWidth, aspectRatio }]}
-          >
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={StyleSheet.absoluteFill}
-              resizeMode={resizeMode}
-              onError={() => {
-                setFailedImages((current) => ({
-                  ...current,
-                  [item.id]: true,
-                }));
-              }}
-            />
-            <CmsBannerCopy banner={banner} clickable={Boolean(banner.redirect_link)} />
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const onPress = getCmsPromotionPress(navigation, module, banner, item.image);
+          return (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              disabled={!onPress}
+              onPress={onPress}
+              accessibilityRole={onPress ? 'button' : undefined}
+              accessibilityLabel={banner.title || 'Offer banner'}
+              style={[styles.slide, { width: itemWidth, aspectRatio }]}
+            >
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode={resizeMode}
+                onError={() => {
+                  setFailedImages((current) => ({
+                    ...current,
+                    [item.id]: true,
+                  }));
+                }}
+              />
+              <CmsBannerCopy banner={banner} clickable={Boolean(onPress)} />
+            </TouchableOpacity>
+          );
+        }}
       />
 
       {slides.length > 1 ? (

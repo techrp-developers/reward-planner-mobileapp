@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -513,7 +513,12 @@ function Dashbord() {
               // Rendered fixed above the ScrollView instead — skip here.
               return null;
             case 'promotionalBanner':
-              return <PromotionalBanner key={key} module="mobile_dashboard" />;
+              return (
+                <Fragment key={key}>
+                  <PromotionalBanner module="mobile_dashboard" />
+                  <PromotionalBanner module="mobile_dashboard" zone="brand_promotional_banner" />
+                </Fragment>
+              );
             case 'birthdays':
               return hasBirthdays ? <Pressable key={key} onPress={dismissSearch}><MemoBirthdayCarousel birthdays={birthdays} wishesReceived={birthdayWishes.count} onWishSent={handleWishSent} /></Pressable> : null;
             case 'stepProgress':

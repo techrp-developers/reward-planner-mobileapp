@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import {
   Animated,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -19,6 +20,8 @@ import { getContentOfferProducts } from '../api/ContentOfferAPI';
 import { normalizeProduct } from '../utils/normalizeProduct';
 import type { HomeStackParamList } from '../navigation/types';
 import { useAppTheme } from '../../../theme/ThemeContext';
+import CampaignListingControls, { useCampaignListing } from '../../common/cms/CampaignListingControls';
+import { campaignPrice, defaultCampaignFilters } from '../../common/cms/campaignListing';
 
 type CampaignRoute = RouteProp<HomeStackParamList, 'CampaignProducts'>;
 type Navigation = NativeStackNavigationProp<HomeStackParamList>;
@@ -43,6 +46,25 @@ const normalizeCampaignProducts = (response: any) => {
   }));
 };
 
+const noProducts: ReturnType<typeof normalizeCampaignProducts> = [];
+
+function getProductMetrics(product: ReturnType<typeof normalizeProduct>) {
+  const rpPrice = campaignPrice(product.rp_price);
+  const price = rpPrice > 0 ? rpPrice : campaignPrice(product.price);
+  const originalPrice = campaignPrice(product.originalPrice);
+  const discount = Number.parseFloat(product.discount);
+  return {
+    price,
+    rating: Number(product.rating) || 0,
+    discount: Number.isFinite(discount)
+      ? discount
+      : originalPrice > 0 && price < originalPrice
+        ? Math.round(100 * (originalPrice - price) / originalPrice)
+        : 0,
+    brand: typeof product.brand === 'string' ? product.brand.trim() : undefined,
+  };
+}
+
 export default function CampaignProductsScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<CampaignRoute>();
@@ -53,7 +75,7 @@ export default function CampaignProductsScreen() {
   const { campaignId, contentId, imageId } = route.params;
   const sourceId = Number(contentId ?? campaignId);
 
-  const { data: products = [], isLoading, error } = useQuery({
+  const { data: products = noProducts, isLoading, error, refetch } = useQuery({
     queryKey: offerProductsQueryKey(campaignId, contentId, imageId),
     queryFn: () => contentId != null ? getContentOfferProducts(sourceId, imageId) : getCampaignProducts(sourceId),
     select: normalizeCampaignProducts,
@@ -62,11 +84,15 @@ export default function CampaignProductsScreen() {
     refetchOnMount: contentId != null,
   });
 
+  const { results, ...listingControls } = useCampaignListing(products, getProductMetrics);
   const skeletonItems = useMemo(() => Array.from({ length: 6 }), []);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}> 
       <ProductHeadColor title={route.params.title || 'Campaign Products'} onBackPress={() => navigation.goBack()} />
+      {!isLoading && !error && products.length > 0 && (
+        <CampaignListingControls count={results.length} label="product" {...listingControls} />
+      )}
 
       {isLoading ? (
         <View style={styles.skeletonGrid}>
@@ -81,10 +107,13 @@ export default function CampaignProductsScreen() {
       ) : error ? (
         <View style={styles.emptyWrap}>
           <Text style={[styles.emptyText, { color: theme.secondaryText }]}>Unable to load products.</Text>
+          <Pressable accessibilityRole="button" onPress={() => refetch()}>
+            <Text style={[styles.emptyAction, { color: theme.text }]}>Try again</Text>
+          </Pressable>
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={results}
           numColumns={2}
           keyExtractor={(item: any) => `${item.id}:${item.variant_id}`}
           columnWrapperStyle={styles.row}
@@ -105,11 +134,18 @@ export default function CampaignProductsScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>No products are currently available.</Text>
+              <Text style={[styles.emptyText, { color: theme.secondaryText }]}>
+                {products.length ? 'No products match your filters.' : 'No products are currently available.'}
+              </Text>
+              {products.length > 0 && (
+                <Pressable accessibilityRole="button" onPress={() => listingControls.setFilters(defaultCampaignFilters)}>
+                  <Text style={[styles.emptyAction, { color: theme.text }]}>Clear filters</Text>
+                </Pressable>
+              )}
             </View>
           }
           ListFooterComponent={
-            products.length > 0 ? <View style={styles.footerSpace} /> : null
+            results.length > 0 ? <View style={styles.footerSpace} /> : null
           }
         />
       )}
@@ -127,5 +163,6 @@ const styles = StyleSheet.create({
   skeletonTextSmall: { marginTop: 6 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyText: { fontSize: 14, textAlign: 'center' },
+  emptyAction: { padding: 12, textDecorationLine: 'underline', fontWeight: '700' },
   footerSpace: { height: 24 },
 });

@@ -105,6 +105,7 @@ function AppNavigator() {
   return (
     <StepTrackerProvider>
     <AppStack.Navigator
+      id="AppStack"
       screenOptions={{
         ...defaultScreenOptions,
         contentStyle: { backgroundColor: "transparent" },
