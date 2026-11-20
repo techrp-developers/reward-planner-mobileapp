@@ -19,6 +19,7 @@
   "achievementsScreen": {
     "achievements": "उपलब्धियाँ",
     "loadingAchievements": "उपलब्धियाँ लोड हो रही हैं...",
+    "empty": "अभी कोई उपलब्धि उपलब्ध नहीं है।",
     "retry": "फिर से कोशिश करें"
   },
   "bMICard": {

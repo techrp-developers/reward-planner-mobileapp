@@ -56,6 +56,7 @@ type TabItemProps = {
   activeIconColor: string;
   activeLabelColor: string;
   inactiveColor: string;
+  compactLabel?: boolean;
   badgeCount?: number;
   badgeBorderColor: string;
 };
@@ -155,6 +156,7 @@ const TabItem = React.memo(({
   activeIconColor,
   activeLabelColor,
   inactiveColor,
+  compactLabel,
   badgeCount,
   badgeBorderColor,
 }: TabItemProps) => {
@@ -175,6 +177,7 @@ const TabItem = React.memo(({
       style={styles.item}
       hitSlop={HIT_SLOP}
       accessibilityRole="tab"
+      accessibilityLabel={compactLabel ? label : undefined}
       accessibilityState={{ selected: active }}
     >
       <View>
@@ -187,7 +190,16 @@ const TabItem = React.memo(({
           </View>
         )}
       </View>
-      <Text style={[styles.label, { color: inactiveColor }, active && styles.labelActive, active && { color: activeLabelColor }]}>
+      <Text
+        numberOfLines={compactLabel ? 1 : undefined}
+        adjustsFontSizeToFit={compactLabel}
+        style={[
+          styles.label,
+          compactLabel && styles.compactLabel,
+          { color: active ? activeLabelColor : inactiveColor },
+          active && styles.labelActive,
+        ]}
+      >
         {label}
       </Text>
     </TouchableOpacity>
@@ -392,6 +404,7 @@ function BottomTabs({
       <View
         style={[
           styles.bar,
+          fitness && styles.fitnessBar,
           {
             height: FLOATING_BAR_HEIGHT + extraLabelRoom,
             bottom: bottomInset + FLOATING_BOTTOM_GAP,
@@ -412,6 +425,7 @@ function BottomTabs({
             activeIconColor={tabTheme.activeIcon}
             activeLabelColor={activeLabelColor}
             inactiveColor={inactiveColor}
+            compactLabel={fitness}
             badgeBorderColor={barBackgroundColor}
           />
         ))}
@@ -429,6 +443,7 @@ function BottomTabs({
             activeIconColor={tabTheme.activeIcon}
             activeLabelColor={activeLabelColor}
             inactiveColor={inactiveColor}
+            compactLabel={fitness}
             badgeCount={tab.key === "Cart" ? cartCount : undefined}
             badgeBorderColor={barBackgroundColor}
           />
@@ -490,6 +505,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 18,
   },
+  fitnessBar: {
+    left: 16,
+    right: 16,
+    paddingHorizontal: 8,
+  },
   item: {
     alignItems: "center",
     justifyContent: "center",
@@ -505,6 +525,10 @@ const styles = StyleSheet.create({
   },
   labelActive: {
     fontWeight: "700",
+  },
+  compactLabel: {
+    alignSelf: "stretch",
+    fontSize: 9.5,
   },
   centerSpacer: {
     width: 64,

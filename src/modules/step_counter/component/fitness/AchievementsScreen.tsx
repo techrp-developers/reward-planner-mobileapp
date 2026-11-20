@@ -1,8 +1,7 @@
 import { goBackInFitness } from "../../utils/fitnessNavigation";
-import React, { useMemo } from "react";
+import React from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,28 +14,16 @@ import LinearGradient from "./FitnessGradient";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 
-import {
-  type AchievementGroup,
-  type AchievementMilestone,
-} from "../../api/DashboardAPI";
+import type { AchievementMilestone } from "../../api/DashboardAPI";
 import { useAchievementsQuery } from "../../api/useFitnessQueries";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "../../utils/theme";
 
-// UNACHIEVED GRAY SHIELD
 import UnAchievedShield from "../../assets/StepCount/UnAchievedShield.svg";
-
-// COLORED SHIELDS
-import Walking_Enthusiast from "../../assets/StepCount/Walking_Enthusiast.svg";
-
-// SMALL ICONS INSIDE SHIELD
-import icon_Walking_Enthusiast from "../../assets/StepCount/Achivement_icon(2).svg";
+import { achievementArtwork } from "./achievementArtwork";
 import { useTranslation } from "react-i18next";
 import { translateSourceText } from "../../../../i18n/sourceText";
-import i18n from "../../../../i18n";
 
 import { useStepStyles } from "../../utils/useStepTheme";
-
-const { width } = Dimensions.get("window");
 
 const VD_DARK = {
   bg: ["#070A16", "#111735", "#201A3F"],
@@ -68,45 +55,6 @@ const VD_LIGHT: Palette = {
   shadow: "#4664A5",
 };
 
-// Streak Keeper / Trailblazer / Sunrise Strider were removed from the
-// backend (fitness_achievements.sql) — the unlock logic never tracked
-// outdoor walks or pre-7AM steps, and streak milestones are now handled by
-// fitness_streak_bonus_config instead. Only the lifetime-steps group remains.
-type AchievementCategory = "walking";
-
-type BadgeData = {
-  achievement_id: number;
-  label: string;
-  achieved: boolean;
-  stepsLeft?: string;
-  reward_coins: number;
-  progress?: number;
-  progress_percent?: number;
-  milestone: AchievementMilestone;
-};
-
-type SectionData = {
-  groupKey: string;
-  category: AchievementCategory;
-  title: string;
-  description: string;
-  badges: BadgeData[];
-};
-
-const SECTION_ORDER: Array<{
-  groupKey: string;
-  category: AchievementCategory;
-  title: string;
-  description: string;
-}> = [
-  {
-    groupKey: "walking",
-    category: "walking",
-    title: "Walking Enthusiast",
-    description: "You've taken your first step toward a healthier lifestyle!",
-  },
-];
-
 const formatStepLabel = (value: number) => {
   if (value >= 1000000 && value % 1000000 === 0) {
     return `${value / 1000000}M`;
@@ -119,62 +67,27 @@ const formatStepLabel = (value: number) => {
   return String(value);
 };
 
-const mapMilestoneToBadge = (milestone: AchievementMilestone): BadgeData => {
-  const targetValue = Number(milestone.target_value || 0);
-  const baseBadge = {
-    achievement_id: milestone.achievement_id,
-    achieved: Boolean(milestone.achieved),
-    reward_coins: Number(milestone.reward_coins || 0),
-    progress: milestone.progress,
-    progress_percent: milestone.progress_percent,
-    milestone,
-  };
-
-  if (milestone.type === "steps") {
-    return {
-      ...baseBadge,
-      label: formatStepLabel(targetValue),
-    };
-  }
-
-  return {
-    ...baseBadge,
-    label: String(targetValue),
-  };
-};
-
-/* ---------------- SMALL ICON PICKER ---------------- */
-const getSmallIcon = (category: AchievementCategory) => {
-  switch (category) {
-    case "walking":
-      return icon_Walking_Enthusiast;
-    default:
-      return icon_Walking_Enthusiast;
-  }
-};
-
-/* ---------------- COLORED SHIELD PICKER ---------------- */
-const getColoredShield = (category: AchievementCategory) => {
-  switch (category) {
-    case "walking":
-      return Walking_Enthusiast;
-    default:
-      return Walking_Enthusiast;
-  }
-};
+const groupArtwork = new Map([
+  ["walking", achievementArtwork.walking],
+  ["streak_keeper", achievementArtwork.streak],
+  ["trailblazer", achievementArtwork.trail],
+  ["sunrise_strider", achievementArtwork.sunrise],
+]);
 
 /* ---------------- BADGE SHIELD ---------------- */
 type BadgeShieldProps = {
-  data: BadgeData;
-  category: AchievementCategory;
+  milestone: AchievementMilestone;
+  groupKey: string | null;
 };
 
-const BadgeShield = ({ data, category }: BadgeShieldProps) => {
+const BadgeShield = ({ milestone, groupKey }: BadgeShieldProps) => {
   const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
-  const { achieved, label, stepsLeft } = data;
-
-  const SmallIcon = getSmallIcon(category);
-  const ShieldIcon = achieved ? getColoredShield(category) : UnAchievedShield;
+  const { achieved, target_value: target, type } = milestone;
+  const { BadgeSvg, IconSvg } =
+    groupArtwork.get(groupKey ?? "") ??
+    (type === "streak" ? achievementArtwork.streak : achievementArtwork.walking);
+  const ShieldIcon = achieved ? BadgeSvg : UnAchievedShield;
+  const label = type === "steps" ? formatStepLabel(Number(target)) : String(target);
 
   return (
     <View style={styles.badgeWrapper}>
@@ -185,6 +98,8 @@ const BadgeShield = ({ data, category }: BadgeShieldProps) => {
         {/* LABEL + SMALL ICON */}
         <View style={styles.insideContent}>
           <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
             style={[
               styles.insideLabel,
               achieved ? styles.textAchieved : styles.textUnachieved,
@@ -194,7 +109,7 @@ const BadgeShield = ({ data, category }: BadgeShieldProps) => {
           </Text>
 
           {/* ICON BELOW LABEL */}
-          <SmallIcon
+          <IconSvg
             width={18}
             height={18}
             style={styles.smallIcon}
@@ -202,13 +117,6 @@ const BadgeShield = ({ data, category }: BadgeShieldProps) => {
           />
         </View>
       </View>
-
-      {/* STEPS LEFT TAG */}
-      {Boolean(stepsLeft) && (
-        <View style={styles.stepsLeftBubble}>
-          <Text style={styles.stepsLeftText}>{stepsLeft}</Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -216,18 +124,20 @@ const BadgeShield = ({ data, category }: BadgeShieldProps) => {
 /* ---------------- ACHIEVEMENT CARD ---------------- */
 type AchievementCardProps = {
   title: string;
-  description: string;
+  description: string | null;
   children: React.ReactNode;
 };
 
 const AchievementCard = ({ title, description, children }: AchievementCardProps) => {
   const { styles } = useStepStyles(VD_LIGHT, VD_DARK, createStyles);
   return (
-  <View style={styles.card}>
-    <Text style={styles.sectionTitle}>{translateSourceText("stepCounter", title)}</Text>
-    <Text style={styles.sectionDesc}>{translateSourceText("stepCounter", description)}</Text>
-    <View style={styles.badgeGrid}>{children}</View>
-  </View>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>{translateSourceText("stepCounter", title)}</Text>
+      {description ? (
+        <Text style={styles.sectionDesc}>{translateSourceText("stepCounter", description)}</Text>
+      ) : null}
+      <View style={styles.badgeGrid}>{children}</View>
+    </View>
   );
 };
 
@@ -239,34 +149,11 @@ export default function AchievementsScreen() {
   // Includes the RP Move tab bar floating over this screen.
   const { bottom: bottomInset } = useSafeAreaInsets();
   const achievementsQuery = useAchievementsQuery();
+  const achievementGroups = achievementsQuery.data?.data ?? [];
   const loading = achievementsQuery.isLoading;
   const errorMessage =
     achievementsQuery.data?.message ||
-    (achievementsQuery.error ? i18n.t("stepCounter:r2.failedToFetchAchievements") : "");
-
-  const achievementSections = useMemo<SectionData[]>(() => {
-    const achievementGroups = achievementsQuery.data?.data || [];
-
-    const groupsByKey = achievementGroups.reduce<Record<string, AchievementGroup>>(
-      (acc, group) => {
-        acc[group.group_key] = group;
-        return acc;
-      },
-      {}
-    );
-
-    return SECTION_ORDER.map((section) => {
-      const group = groupsByKey[section.groupKey];
-
-      return {
-        groupKey: section.groupKey,
-        category: section.category,
-        title: group?.title || section.title,
-        description: group?.description || section.description,
-        badges: (group?.milestones || []).map(mapMilestoneToBadge),
-      };
-    });
-  }, [achievementsQuery.data]);
+    (achievementsQuery.error ? tx("stepCounter:r2.failedToFetchAchievements") : "");
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -307,18 +194,22 @@ export default function AchievementsScreen() {
                 <Text style={styles.retryText}>{tx("stepCounter:achievementsScreen.retry")}</Text>
               </TouchableOpacity>
             </View>
+          ) : achievementGroups.length === 0 ? (
+            <View style={[styles.card, styles.stateCard]}>
+              <Text style={styles.stateText}>{tx("stepCounter:achievementsScreen.empty")}</Text>
+            </View>
           ) : (
-            achievementSections.map((section) => (
+            achievementGroups.map((group) => (
               <AchievementCard
-                key={section.groupKey}
-                title={section.title}
-                description={section.description}
+                key={group.group_id ?? "ungrouped"}
+                title={group.title || tx("stepCounter:achievementsScreen.achievements")}
+                description={group.description}
               >
-                {section.badges.map((badge) => (
+                {group.milestones.map((milestone) => (
                   <BadgeShield
-                    key={badge.achievement_id}
-                    data={badge}
-                    category={section.category}
+                    key={milestone.achievement_id}
+                    milestone={milestone}
+                    groupKey={group.group_key}
                   />
                 ))}
               </AchievementCard>
@@ -391,19 +282,18 @@ const createStyles = (VD: Palette) => StyleSheet.create({
   sectionDesc: {
     marginTop: 4,
     color: VD.muted,
-    marginBottom: 14,
   },
 
   badgeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
   },
 
   badgeWrapper: {
-    width: width / 5 - 8,
+    width: 74,
     alignItems: "center",
-    margin: 4,
-    position: "relative",
   },
 
   shieldContainer: {
@@ -433,21 +323,6 @@ const createStyles = (VD: Palette) => StyleSheet.create({
     color: "#aaa",
   },
 
-  stepsLeftBubble: {
-    position: "absolute",
-    bottom: -10,
-    right: -5,
-    backgroundColor: VD.cardSoft,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    elevation: 2,
-  },
-  stepsLeftText: {
-    fontSize: 10,
-    color: VD.ink,
-    fontWeight: "600",
-  },
   stateCard: {
     minHeight: 140,
     alignItems: "center",

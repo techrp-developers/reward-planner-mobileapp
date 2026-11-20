@@ -69,6 +69,7 @@ export const useAchievementsQuery = () =>
     queryKey: fitnessQueryKeys.achievements(),
     queryFn: fetchAchievements,
     ...queryConfig,
+    refetchOnMount: true,
   });
 
 export const useInvalidateFitnessQueries = () => {

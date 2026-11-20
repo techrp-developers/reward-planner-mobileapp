@@ -16,15 +16,7 @@ import type { FitnessStackParamList } from "../../navigation/RewardHomeStack";
 import type { GoalSyncData, UnlockedAchievement } from "../../api/Stepsapi";
 
 // ─── SVG Imports ─────────────────────────────────────────────────────────────
-import Walking_Enthusiast from "../../assets/StepCount/Walking_Enthusiast.svg";
-import Streak_Keeper from "../../assets/StepCount/Streak_Keeper.svg";
-import Trailblazer from "../../assets/StepCount/Trailblazer.svg";
-import Sunrise_Strider from "../../assets/StepCount/Sunrise_Strider.svg";
-
-import icon_Walking_Enthusiast from "../../assets/StepCount/Achivement_icon(2).svg";
-import icon_Streak_Keeper from "../../assets/StepCount/Achivement_icon(3).svg";
-import icon_Trailblazer from "../../assets/StepCount/Achivement_icon(4).svg";
-import icon_Sunrise_Strider from "../../assets/StepCount/Achivement_icon(1).svg";
+import { achievementArtwork } from "./achievementArtwork";
 import i18n from "../../../../i18n";
 import { translateSourceText } from "../../../../i18n/sourceText";
 import { Trans } from "react-i18next";
@@ -32,7 +24,7 @@ import { formatNumber } from "../../../../i18n/format";
 import { useStepStyles } from "../../utils/useStepTheme";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export type AchievementCategory = "walking" | "streak" | "trail" | "sunrise";
+export type AchievementCategory = keyof typeof achievementArtwork;
 
 // Dashboard renders this as a bare overlay (response + onDismiss) instead of
 // navigating to it as a registered screen, so route/navigation are never
@@ -60,32 +52,28 @@ const ACHIEVEMENT_CONFIG: Record<
   }
 > = {
   walking: {
-    BadgeSvg: Walking_Enthusiast,
-    IconSvg: icon_Walking_Enthusiast,
+    ...achievementArtwork.walking,
     label: "WALKING ENTHUSIAST",
     gradient: ["#C4A8F8", "#9B6FF5"],
     headline: "Great pace! You logged amazing steps today",
     subtext: (steps) => `You've walked ${steps.toLocaleString()} steps.`,
   },
   streak: {
-    BadgeSvg: Streak_Keeper,
-    IconSvg: icon_Streak_Keeper,
+    ...achievementArtwork.streak,
     label: "STREAK KEEPER",
     gradient: ["#FFD57A", "#FFA73B"],
     headline: "Your {streak}-day streak has been successfully completed",
     subtext: () => "",
   },
   trail: {
-    BadgeSvg: Trailblazer,
-    IconSvg: icon_Trailblazer,
+    ...achievementArtwork.trail,
     label: "TRAILBLAZER",
     gradient: ["#FF8ED4", "#FF4FB8"],
     headline: "Awesome walk! You explored new ground today",
     subtext: (steps) => `You've walked ${steps.toLocaleString()} steps.`,
   },
   sunrise: {
-    BadgeSvg: Sunrise_Strider,
-    IconSvg: icon_Sunrise_Strider,
+    ...achievementArtwork.sunrise,
     label: "SUNRISE STRIDER",
     gradient: ["#BFEF5E", "#7BC720"],
     headline: "Early mover! You kicked off the day with strong steps",

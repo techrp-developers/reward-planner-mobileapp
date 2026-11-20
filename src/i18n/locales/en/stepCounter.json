@@ -19,6 +19,7 @@
   "achievementsScreen": {
     "achievements": "Achievements",
     "loadingAchievements": "Loading achievements...",
+    "empty": "No achievements available yet.",
     "retry": "Retry"
   },
   "bMICard": {

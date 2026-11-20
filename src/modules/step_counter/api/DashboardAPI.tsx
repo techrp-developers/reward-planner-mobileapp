@@ -107,10 +107,10 @@ export type AchievementMilestone = {
 };
 
 export type AchievementGroup = {
-  group_id: number;
-  group_key: string;
-  title: string;
-  description: string;
+  group_id: number | null;
+  group_key: string | null;
+  title: string | null;
+  description: string | null;
   icon: string | null;
   milestones: AchievementMilestone[];
 };
