@@ -1,5 +1,0 @@
-const FIRST_LOGIN_REWARD_COINS = 750;
-
-module.exports = {
-  FIRST_LOGIN_REWARD_COINS,
-};

@@ -3,12 +3,13 @@ import {
   AppState, Animated, ImageLoadEvent, Linking, ScrollView, StyleSheet,
   TouchableOpacity, View, useWindowDimensions, type StyleProp, type ViewStyle,
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import CmsBannerCopy from '../../../common/cms/CmsBannerCopy';
 import { CMS_IMAGE_ASPECT_RATIOS } from '../../../common/cms/cmsImageLayout';
 import type { CmsModuleKey, CmsOfferImage, CmsZoneEntry } from '../../../common/cms/cmsContentApi';
 import { useModuleContent, moduleContentQueryOptions } from '../../../common/cms/useModuleContent';
 import { queryClient } from '../../../../query/queryClient';
+import { getCmsPromotionPress, type CmsPromotionNavigation } from '../../utils/cmsBannerNavigation';
 
 const AUTOPLAY_MS = 3500;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -23,6 +24,7 @@ function PromotionalBanner({ module = 'product', zone = 'promotional_banner', ge
   const { moduleContent } = useModuleContent(module);
   const banner = moduleContent?.[zone] ?? null;
   const isFocused = useIsFocused();
+  const navigation = useNavigation<CmsPromotionNavigation>();
   const { width: windowWidth } = useWindowDimensions();
   const [width, setWidth] = React.useState(windowWidth);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -109,7 +111,7 @@ function PromotionalBanner({ module = 'product', zone = 'promotional_banner', ge
     children?: React.ReactNode,
     image?: CmsOfferImage,
   ) => {
-    const action = getPressAction?.(banner, image) ?? openLink;
+    const action = getPressAction?.(banner, image) ?? getCmsPromotionPress(navigation, module, banner, image) ?? openLink;
     const copy = <CmsBannerCopy banner={banner} clickable={Boolean(action)} />;
     return action ? (
       <TouchableOpacity key={key} style={style} activeOpacity={0.9} onPress={action}

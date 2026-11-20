@@ -649,9 +649,18 @@ function StatusTray({ textColor }: { textColor?: string }) {
   const mineQuery = useQuery({ queryKey: ['statuses', 'mine', user?.user_id], queryFn: fetchMyStatuses, enabled, staleTime: 15000 });
   const feedQuery = useQuery({ queryKey: ['statuses', 'feed', user?.user_id], queryFn: () => fetchStatusFeed(), enabled, staleTime: 15000 });
   const profileQuery = useQuery({ queryKey: ['statuses', 'profile', user?.user_id], queryFn: fetchStatusProfile, enabled, staleTime: 15000 });
+  const statusUserId = user?.user_id;
   useFocusEffect(useCallback(() => {
-    if (enabled) queryClient.invalidateQueries({ queryKey: ['statuses'] });
-  }, [enabled, user?.user_id]));
+    if (enabled) {
+      queryClient.refetchQueries({
+        queryKey: ['statuses'],
+        type: 'active',
+        stale: true,
+        predicate: ({ queryKey: [, kind, owner] }) =>
+          owner === statusUserId && (kind === 'mine' || kind === 'feed' || kind === 'profile'),
+      }, { cancelRefetch: false });
+    }
+  }, [enabled, statusUserId]));
   const visibleFeed = useMemo(
     () => (feedQuery.data ?? []).filter(group => Number(group.user.id) !== Number(user?.user_id)),
     [feedQuery.data, user?.user_id],

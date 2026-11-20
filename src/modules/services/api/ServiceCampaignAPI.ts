@@ -2,6 +2,39 @@ import api from '../../common/auth/api/axios';
 import { normalizeLocalCmsImageUrl } from '../../../config/apiConfig';
 import type { ServiceItem } from '../navigation/type';
 
+type ContentOfferService = {
+  id: number | string;
+  name: string;
+  service_image: string | null;
+  original_price: number | string;
+  offer_price?: number | string | null;
+  regular_price?: number | string | null;
+  rating?: number | string | null;
+  review_count?: number | string | null;
+};
+
+export async function getContentOfferServices(contentId: number, imageId?: number): Promise<ServiceItem[]> {
+  const { data: response } = await api.get<{ data: { services: ContentOfferService[] } }>(
+    `/v1/cms/content/${contentId}/services`,
+    { params: imageId == null ? undefined : { imageId } },
+  );
+  return (response.data?.services ?? []).map(row => {
+    const price = Number(row.offer_price ?? row.original_price);
+    const mrp = Number(row.regular_price ?? row.original_price);
+    return {
+      service_id: Number(row.id),
+      variant_id: 0,
+      name: row.name,
+      price,
+      mrp,
+      discount_percent: mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0,
+      rating: Number(row.rating) || 0,
+      review_count: Number(row.review_count) || 0,
+      image: normalizeLocalCmsImageUrl(row.service_image),
+    };
+  });
+}
+
 export async function getCampaignServices(campaignId: number): Promise<ServiceItem[]> {
   const { data: response } = await api.get(`/v1/service-campaign/${campaignId}/services`);
   if (response.show_section === false) return [];

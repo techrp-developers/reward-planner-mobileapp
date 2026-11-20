@@ -73,7 +73,7 @@ export default function ChatInboxScreen() {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return items;
     return items.filter(conversation => {
-      const title = conversationTitle(conversation, user?.user_id);
+      const title = conversationTitle(conversation, user?.user_id, language);
       const memberNames = conversation.members.map(member => member.name).join(' ');
       return `${title} ${memberNames} ${conversation.description || ''}`.toLowerCase().includes(normalized);
     });

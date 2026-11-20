@@ -398,9 +398,7 @@ const ProductCardComponent = ({
             style={[
               styles.price,
               {
-                fontSize: rpPriceText
-                  ? calculations.fontSizeOriginal
-                  : calculations.fontSizePrice,
+                fontSize: calculations.fontSizeOriginal,
                 color: rpPriceText ? RP_PRICE_COLOR : theme.text,
               },
             ]}

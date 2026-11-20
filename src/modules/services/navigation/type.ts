@@ -4,7 +4,10 @@ import type { BundleEnquiryField } from '../api/BundleAPI';
 
 export type HomeStackParamList = {
   Home: undefined;
-  ServiceCampaign: { campaignId: number; title?: string };
+  ServiceCampaign: (
+    { campaignId: number; contentId?: never; imageId?: never } |
+    { campaignId?: never; contentId: number; imageId?: number }
+  ) & { title?: string };
   ServiceSearch: undefined;
   MutualFundCalculators: undefined;
   CommonQuestions: undefined;

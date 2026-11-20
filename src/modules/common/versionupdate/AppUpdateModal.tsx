@@ -60,7 +60,7 @@ function GlowOrb({
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [pulse, pulseDelay]);
 
   return (
     <Animated.View
@@ -121,7 +121,7 @@ function FloatingRing({
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [translateY, floatDelay]);
 
   return (
     <Animated.View
@@ -165,7 +165,7 @@ export function AppUpdateModal({
 
   useEffect(() => {
     if (visible) {
-      Animated.sequence([
+      const entrance = Animated.sequence([
         // Logo entrance
         Animated.parallel([
           Animated.timing(logoOpacity, {
@@ -223,7 +223,9 @@ export function AppUpdateModal({
             useNativeDriver: true,
           }),
         ]),
-      ]).start();
+      ]);
+      entrance.start();
+      return () => entrance.stop();
     } else {
       // Reset
       contentY.setValue(40);
@@ -235,7 +237,7 @@ export function AppUpdateModal({
       btnScale.setValue(0.94);
       btnOpacity.setValue(0);
     }
-  }, [visible]);
+  }, [visible, logoOpacity, logoScale, contentOpacity, contentY, badgeScale, badgeOpacity, btnScale, btnOpacity]);
 
   const handlePressIn = () => {
     Animated.spring(pressScale, {

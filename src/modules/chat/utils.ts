@@ -9,10 +9,10 @@ export function otherMember(conversation: ChatConversation, currentUserId?: numb
   return conversation.members.find(member => Number(member.user_id) !== Number(currentUserId));
 }
 
-export function conversationTitle(conversation: ChatConversation, currentUserId?: number) {
+export function conversationTitle(conversation: ChatConversation, currentUserId?: number, language?: string) {
   return conversation.type === 'group'
-    ? conversation.name || i18n.t('chat:groupChat')
-    : otherMember(conversation, currentUserId)?.name || i18n.t('common:chat');
+    ? conversation.name || i18n.t('chat:groupChat', { lng: language })
+    : otherMember(conversation, currentUserId)?.name || i18n.t('common:chat', { lng: language });
 }
 
 export function initials(name?: string | null) {

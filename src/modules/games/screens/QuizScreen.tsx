@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { answerQuiz, getQuiz, getQuizLeaderboard, nextQuizQuestion, startQuiz, type QuizLeader, type QuizRules, type QuizSession } from '../api/quizApi';
+import { startQuizCountdown } from '../utils/quizCountdown';
 
 type Page = 'leaderboard' | 'question' | 'result';
 const defaultRules: QuizRules = { questionCount: 5, secondsPerQuestion: 15, correctPoints: 2, wrongPenalty: 1, timeoutPenalty: 1 };
@@ -80,11 +81,14 @@ export default function QuizScreen() {
 
   useEffect(() => {
     if (page !== 'question' || !session || session.feedback) return;
-    const update = () => setSeconds(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
-    update();
-    const interval = setInterval(update, 200);
-    const listener = AppState.addEventListener('change', state => { if (state === 'active') update(); });
-    return () => { clearInterval(interval); listener.remove(); };
+    let stop: (() => void) | undefined;
+    const onAppStateChange = (state: string) => {
+      stop?.();
+      stop = state === 'active' ? startQuizCountdown(deadline.current, setSeconds) : undefined;
+    };
+    onAppStateChange(AppState.currentState ?? 'active');
+    const listener = AppState.addEventListener('change', onAppStateChange);
+    return () => { stop?.(); listener.remove(); };
   }, [page, session]);
 
   useEffect(() => {

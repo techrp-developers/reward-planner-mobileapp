@@ -12,6 +12,6 @@ export default function ServiceCampaignScreen() {
   const { theme } = useAppTheme();
   return <View style={{ flex: 1, backgroundColor: theme.background }}>
     <ScreenHeader title={params.title || 'Service offers'} onBackPress={() => navigation.goBack()} />
-    <ServiceCampaignItems campaignId={params.campaignId} />
+    <ServiceCampaignItems {...params} />
   </View>;
 }

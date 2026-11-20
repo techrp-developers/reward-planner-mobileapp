@@ -572,6 +572,7 @@ export default function PassengerDetailsScreen() {
     passengers,
     resultIndex,
     selectedSeats,
+    showPopup,
     traceId,
     validatePassengers,
   ]);

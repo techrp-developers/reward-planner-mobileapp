@@ -9,6 +9,7 @@ let mockBanner: any;
 let mockBrandBanner: any;
 const mockScrollTo = jest.fn();
 const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
 jest.mock('react-native', () => {
   const native = jest.requireActual('react-native');
   const react = require('react');
@@ -25,8 +26,9 @@ jest.mock('react-native', () => {
   }, descriptors);
 });
 jest.mock('@react-navigation/native', () => ({
+  CommonActions: { navigate: (name: string, params: unknown) => ({ type: 'NAVIGATE', payload: { name, params } }) },
   useIsFocused: () => true,
-  useNavigation: () => ({ navigate: mockNavigate }),
+  useNavigation: () => ({ navigate: mockNavigate, dispatch: mockDispatch }),
 }));
 jest.mock('../../../../common/cms/useModuleContent', () => ({
   useModuleContent: () => ({ moduleContent: { promotional_banner: mockBanner, brand_promotional_banner: mockBrandBanner } }),
@@ -89,6 +91,48 @@ describe('promotional carousel', () => {
     renderer.root.findByType(TouchableOpacity).props.onPress();
     expect(mockNavigate).toHaveBeenCalledWith('CampaignProducts', {
       contentId: 15, imageId: undefined, title: 'Promotional Products',
+    });
+  });
+
+  it('opens each dashboard slide in its configured module', () => {
+    mockBanner.title = 'Weekend deals';
+    mockBanner.images = [
+      { image_id: 5, image_url: 'one.jpg', is_active: 1, sort_order: 0, target_type: 'product', target_id: 12 },
+      { image_id: 6, image_url: 'two.jpg', is_active: 1, sort_order: 1, target_type: 'service_bundle', target_id: 24 },
+    ];
+    render(<PromotionalBanner module="mobile_dashboard" />);
+    const [product, service] = renderer.root.findAllByType(TouchableOpacity);
+    product.props.onPress();
+    service.props.onPress();
+    expect(mockNavigate).toHaveBeenNthCalledWith(1, 'Home', {
+      screen: 'ProductModule',
+      params: { screen: 'CampaignProducts', params: { contentId: 15, imageId: 5, title: 'Weekend deals' } },
+    });
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, 'Home', {
+      screen: 'ServicesModule',
+      params: { screen: 'PackScreen', params: { bundleId: 24, title: 'Weekend deals' } },
+    });
+  });
+
+  it('opens a single service or an offer collection based on the slide selection', () => {
+    mockBanner.title = 'Service deals';
+    mockBanner.target_type = 'service';
+    mockBanner.target_id = '12';
+    mockBanner.images = [
+      { image_id: 5, image_url: 'one.jpg', is_active: 1, sort_order: 0 },
+      { image_id: 6, image_url: 'two.jpg', is_active: 1, sort_order: 1, target_type: 'service', target_ids: '[21,22]' },
+    ];
+    render();
+    const [service, collection] = renderer.root.findAllByType(TouchableOpacity);
+    service.props.onPress();
+    collection.props.onPress();
+    expect(mockDispatch).toHaveBeenNthCalledWith(1, {
+      type: 'NAVIGATE',
+      payload: { name: 'ServiceDescription', params: { serviceId: 12 } },
+    });
+    expect(mockDispatch).toHaveBeenNthCalledWith(2, {
+      type: 'NAVIGATE',
+      payload: { name: 'ServiceCampaign', params: { contentId: 15, imageId: 6, title: 'Service deals' } },
     });
   });
 

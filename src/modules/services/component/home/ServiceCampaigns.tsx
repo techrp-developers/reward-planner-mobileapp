@@ -4,18 +4,25 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { getCampaignHome } from '../../../ecommerce/api/CampaignAPI';
 import { openCampaignPoster } from '../../../ecommerce/utils/campaignNavigation';
-import { getCampaignServices } from '../../api/ServiceCampaignAPI';
+import { getCampaignServices, getContentOfferServices } from '../../api/ServiceCampaignAPI';
+import type { HomeStackParamList } from '../../navigation/type';
 import ServiceGridCard from '../constant/ServiceGridCard';
 import { useAppTheme } from '../../../../theme/ThemeContext';
 
-export function ServiceCampaignItems({ campaignId, horizontal = false }: { campaignId: number; horizontal?: boolean }) {
+export function ServiceCampaignItems({
+  campaignId, contentId, imageId, horizontal = false,
+}: HomeStackParamList['ServiceCampaign'] & { horizontal?: boolean }) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const { theme } = useAppTheme();
   const focused = useIsFocused();
   const { data = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['services', 'campaign', campaignId],
-    queryFn: () => getCampaignServices(campaignId),
+    queryKey: contentId === undefined
+      ? ['services', 'campaign', campaignId]
+      : ['services', 'content-offer', contentId, imageId],
+    queryFn: () => contentId === undefined
+      ? getCampaignServices(campaignId)
+      : getContentOfferServices(contentId, imageId),
     staleTime: 30000,
     refetchInterval: focused ? 30000 : false,
   });

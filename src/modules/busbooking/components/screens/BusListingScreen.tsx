@@ -672,7 +672,9 @@ const handleOpenSeatSelection =
     },
 
     [
+      isWomenBooking,
       navigation,
+      showPopup,
       traceId,
     ]
   );
