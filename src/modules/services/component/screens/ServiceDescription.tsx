@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
     import { fetchUserInfo } from '../../../common/auth/api/AuthAPI';
     import { HomeStackParamList } from '../../navigation/type';
     import { SERVICE_CART_QUERY_KEY, SERVICE_CHECKOUT_QUERY_KEY } from '../../constant/queryKeys';
+    import { useStickyBottomCTA } from '../../../../bottombar/hooks/useStickyBottomCTA';
     import {
         parseTrustStats,
         extractMiddleBlock,
@@ -85,6 +86,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
         const route = useRoute<CartRouteProps>();
         const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
         const servicesTheme = useServicesTheme();
+        const stickyCTA = useStickyBottomCTA();
         const queryClient = useQueryClient();
         const serviceId = Number(route?.params?.serviceId ?? 0);
         const seededServiceData = route?.params?.serviceData;
@@ -438,7 +440,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
                     ref={scrollRef}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[
+                        styles.scrollContent,
+                        { paddingBottom: stickyCTA.scrollContentPaddingBottom },
+                    ]}
                 >
                     {/* 1. Hero image + variant selector */}
                     <ServiceCart

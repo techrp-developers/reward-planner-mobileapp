@@ -8,6 +8,15 @@ const fallbackImage = require('../../assete/gov_documet/aadhar card.png');
 
 const DEFAULT_CARD_WIDTH = 172;
 
+const formatCardPrice = (value: string) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue || trimmedValue.toLowerCase() === 'get quote') {
+    return trimmedValue;
+  }
+
+  return `₹${trimmedValue.replace(/^(?:₹\s*)+/, '')}`;
+};
+
 type Props = {
   title: string;
   image: any;
@@ -40,6 +49,9 @@ function Card({
   const [imgError, setImgError] = useState(false);
   const parsedRating = Number(rating);
   const hasRating = rating !== undefined && rating !== null && Number.isFinite(parsedRating);
+  const displayPrice = formatCardPrice(offerPrice || price);
+  const displayOldPrice = oldPrice ? formatCardPrice(oldPrice) : '';
+  const isQuote = displayPrice.toLowerCase() === 'get quote';
 
   // Same proportional formulas as ServiceGridCard so both card designs stay
   // visually consistent across the app instead of drifting on fixed pixels.
@@ -49,7 +61,8 @@ function Card({
     imageWrapHeight: Math.round(Math.min(Math.max(cardWidth * 1.02, 104), 132)),
     fontSizeLabel: Math.max(11, Math.round(cardWidth * 0.07)),
     fontSizeReview: Math.max(9, Math.round(cardWidth * 0.066)),
-    fontSizePrice: Math.max(12, Math.round(cardWidth * 0.096)),
+    fontSizePrice: Math.max(10, Math.round(cardWidth * 0.075)),
+    fontSizeOriginal: Math.max(9, Math.round(cardWidth * 0.065)),
     fontSizeDiscount: Math.max(9, Math.round(cardWidth * 0.07)),
   }), [cardWidth]);
 
@@ -152,19 +165,27 @@ function Card({
               { fontSize: calculations.fontSizePrice, color: servicesTheme.appTheme.text },
             ]}
             numberOfLines={1}
+            adjustsFontSizeToFit
           >
-            <Text style={styles.rpPrefix}>RP </Text>
-            {`\u20B9${offerPrice || price}`}
+            {isQuote ? (
+              displayPrice
+            ) : (
+              <>
+                <Text style={styles.rpPrefix}>RP </Text>
+                {displayPrice}
+              </>
+            )}
           </Text>
-          {!!oldPrice && (
+          {displayOldPrice.length > 0 && !isQuote && (
             <Text
               style={[
                 styles.oldPrice,
-                { fontSize: calculations.fontSizePrice, color: servicesTheme.appTheme.secondaryText },
+                { fontSize: calculations.fontSizeOriginal, color: servicesTheme.appTheme.secondaryText },
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
             >
-              {`\u20B9${oldPrice}`}
+              {displayOldPrice}
             </Text>
           )}
         </View>
@@ -253,12 +274,14 @@ const styles = StyleSheet.create({
     rowGap: 3,
   },
   price: {
+    flexShrink: 1,
     fontWeight: '800',
   },
   rpPrefix: {
     fontWeight: '800',
   },
   oldPrice: {
+    flexShrink: 1,
     fontWeight: '700',
     textDecorationLine: 'line-through',
   },
