@@ -32,7 +32,8 @@ type CategoryItem = {
     width?: number | string;
     height?: number | string;
   }>;
-  tab: TopTab;
+  tab?: TopTab;
+  stack?: 'HealthStack';
   title?: string;
 };
 
@@ -41,10 +42,10 @@ const activeServices: CategoryItem[] = [
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
   { image: Explore4, tab: 'DineOut' },
+  { image: Explore5, stack: 'HealthStack' },
 ];
 
 const upcomingServices: CategoryItem[] = [
-  { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];
 
@@ -88,16 +89,20 @@ function ExploreModule() {
   );
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab) => {
+    (item: CategoryItem) => {
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      const target = TAB_TO_MODULE[tab];
-      navigation.navigate('Home', {
-        screen: target.screen,
-        params: { moduleName: target.moduleName },
-        moduleName: target.moduleName,
-      });
+      if (item.stack) {
+        navigation.navigate(item.stack);
+      } else if (item.tab) {
+        const target = TAB_TO_MODULE[item.tab];
+        navigation.navigate('Home', {
+          screen: target.screen,
+          params: { moduleName: target.moduleName },
+          moduleName: target.moduleName,
+        });
+      }
 
       navigationUnlockTimerRef.current = setTimeout(() => {
         isNavigatingRef.current = false;
@@ -152,7 +157,7 @@ function ExploreModule() {
               t.exploreItem,
               { width: CARD_WIDTH, height: CARD_HEIGHT },
             ]}
-            onPress={() => handleCategoryPress(item.tab)}
+            onPress={() => handleCategoryPress(item)}
           >
             {item.SvgCard ? (
               <item.SvgCard width={CARD_WIDTH} height={CARD_HEIGHT} />
