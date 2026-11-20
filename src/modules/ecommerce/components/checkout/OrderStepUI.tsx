@@ -26,7 +26,6 @@ import ProductHeadColor from '../../constants/heading/Poduct_Head_Color';
 import BillDetailsCard from '../../constants/itemcart/BillDetailsCard';
 import ProductGrid from '../home/productgrid';
 
-// import PaymentOptionsUI from "./PaymentOptionsUI";
 import OrderProcedbutton from './OrderProcedbutton';
 import CheckoutItemCart from './CheckoutItemCart';
 import {
@@ -1536,7 +1535,6 @@ export default function OrderStepUI() {
             onUseRewardsChange={setUseRewards}
           />
 
-          {/* <PaymentOptionsUI /> */}
         </View>
 
         {showRecommendations && (

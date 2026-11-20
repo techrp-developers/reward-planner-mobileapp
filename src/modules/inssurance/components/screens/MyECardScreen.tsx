@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image,
   ActivityIndicator,
   Share,
   Alert,

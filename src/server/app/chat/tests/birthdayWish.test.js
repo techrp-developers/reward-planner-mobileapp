@@ -16,7 +16,10 @@ function load(relative, dependencies) {
 function setup() {
   const calls = [];
   const chat = {
-    birthdayRecipient: async (...args) => { calls.push(["recipient", ...args]); return { user_id: 91 }; },
+    birthdayRecipient: async (...args) => {
+      calls.push(["recipient", ...args]);
+      return { user_id: 91, today: "2026-01-15" };
+    },
     createConversation: async (sender, data) => { calls.push(["create", sender, data]); return 7; },
     sendMessage: async (sender, conversation, data) => {
       calls.push(["send", sender, conversation, data]);
@@ -25,6 +28,9 @@ function setup() {
   };
   const controller = load("../controller/chatController.js", {
     "../models/chatModel": chat, crypto: require("node:crypto"),
+    "../services/messageNotification": {
+      notifyMessageRecipients: async (message) => { calls.push(["notify", message.message_id]); },
+    },
   });
   const req = { user: { user_id: 3 }, body: { employee_id: 42 }, app: { locals: {
     chatSocket: {
@@ -41,10 +47,11 @@ test("resolves birthday employee ID, persists a direct wish and joins sockets be
   await controller.sendBirthdayWish(req, res);
   assert.equal(res.statusCode, 201);
   assert.equal(res.body.data.conversation_id, 7);
-  assert.deepEqual(calls.map((call) => call[0]), ["recipient", "create", "send", "join", "broadcast"]);
+  assert.deepEqual(calls.map((call) => call[0]), ["recipient", "create", "send", "join", "broadcast", "notify"]);
   assert.equal(calls[0][2], 42);
   assert.equal(calls[1][2].memberIds[0], 91);
   assert.match(calls[2][3].body, /Happy birthday/);
+  assert.equal(calls[2][3].clientMessageId, "birthday-wish:91:2026-01-15");
 });
 
 test("validates input before creating a conversation", async () => {
@@ -87,7 +94,9 @@ test("recipient lookup scopes employee to sender company and rejects unavailable
   await assert.rejects(chat.birthdayRecipient(3, 42), { status: 404 });
   recipient = { user_id: 3 };
   await assert.rejects(chat.birthdayRecipient(3, 42), { status: 422 });
-  recipient = { user_id: 91 };
+  recipient = { user_id: 91, is_birthday_today: 0 };
+  await assert.rejects(chat.birthdayRecipient(3, 42), { status: 422 });
+  recipient = { user_id: 91, is_birthday_today: 1 };
   assert.equal((await chat.birthdayRecipient(3, 42)).user_id, 91);
   chat.identity = async () => null;
   await assert.rejects(chat.birthdayRecipient(3, 42), { status: 403 });

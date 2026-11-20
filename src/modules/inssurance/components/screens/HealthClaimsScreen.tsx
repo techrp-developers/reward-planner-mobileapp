@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Dimensions,
-  Image,
   ActivityIndicator,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
 import { fetchClaimHistory } from '../../services/inssuranceApi';
-
-const { width } = Dimensions.get('window');
 
 // ── Types & Helpers ───────────────────────────────────────────────────────────
 interface StepData {
@@ -31,7 +26,7 @@ interface StepData {
 const HealthClaimsScreen: React.FC = () => {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
 
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

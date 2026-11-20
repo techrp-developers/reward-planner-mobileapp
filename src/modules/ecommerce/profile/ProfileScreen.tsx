@@ -186,7 +186,6 @@ const ProfileScreen: React.FC = () => {
     gracePeriodDays: number;
   } | null>(null);
   const [deletionExitLoading, setDeletionExitLoading] = useState(false);
-  const [profileCardPage, setProfileCardPage] = useState(0);
   const [visitCardQr, setVisitCardQr] = useState<string | null>(null);
   const [visitCardHeaders, setVisitCardHeaders] = useState<Record<string, string>>({});
   const [, setVisitCardLoading] = useState(false);
@@ -477,12 +476,6 @@ const ProfileScreen: React.FC = () => {
                 gap: rs(12),
               }}
               style={{ marginHorizontal: -rs(20) }}
-              onScroll={(event) => {
-                const scrollOffset = event.nativeEvent.contentOffset.x;
-                const page = Math.round(scrollOffset / (cardWidth + rs(12)));
-                setProfileCardPage(page);
-              }}
-              scrollEventThrottle={16}
             >
               {/* Card 1: Main Profile Info Card */}
               <LinearGradient
@@ -556,97 +549,8 @@ const ProfileScreen: React.FC = () => {
                   </View>
                 </View>
               </LinearGradient>
-              {/* The mediclaim card now opens from the My Cards directory below. */}
-              {false && gmcDetails && (
-                <View style={[styles.pbCardShadowWrapper, { width: cardWidth }]}>
-                  <LinearGradient
-                    colors={['#009ac7', '#007ca5', '#005b7f']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.policybazaarCard, { width: cardWidth }]}
-                  >
-                    <CardPattern />
-                    
-                    {/* Upper Card Content wrapper with padding */}
-                    <View style={styles.pbCardUpperContent}>
-                      <View style={styles.pbCardHeader}>
-                        <View style={styles.pbLogoRow}>
-                          <Text style={styles.pbLogoText}>policybazaar</Text>
-                          <View style={styles.pbDotComBox}>
-                            <Text style={styles.pbDotComText}>.com</Text>
-                          </View>
-                        </View>
-
-                        <View style={styles.pbActiveBadge}>
-                          <View style={styles.pbActiveIconCircle}>
-                            <MaterialCommunityIcons name="check" size={8} color="#10B981" />
-                          </View>
-                          <Text style={styles.pbActiveText}>{translateUi('insurance:activePolicy')}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.pbCardMiddle}>
-                        <View style={styles.pbMiddleLeft}>
-                          <Text style={styles.pbNameText}>{gmcDetails.name || displayName}</Text>
-                          <Text style={styles.pbInsurerText}>{gmcDetails.policy_company_name || 'Care Health Insurance'}</Text>
-                          <Text style={styles.pbPolicyLabel}>{translateUi('insurance:policyNo')}</Text>
-                          <Text style={styles.pbPolicyNoText}>{gmcDetails.policy_number || 'N/A'}</Text>
-                        </View>
-
-                        <View style={styles.pbMiddleRight}>
-                          <View style={styles.pbOrbOuterRing}>
-                            <View style={styles.pbOrbInnerRing}>
-                              <View style={styles.pbShieldIconBox}>
-                                <MaterialCommunityIcons name="shield" size={26} color="#FFFFFF" />
-                              </View>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Bottom Panel spans complete width */}
-                    <View style={[styles.pbBottomPanel, { width: '100%', left: 0 }]}>
-                      <View style={styles.pbBottomCol}>
-                        <MaterialCommunityIcons name="card-account-details-outline" size={14} color="#005b7f" />
-                        <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>{translateUi('common:memberId')}</Text>
-                          <Text style={styles.pbBottomVal}>{gmcDetails.member_id || '—'}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.pbVerticalLine} />
-
-                      <View style={styles.pbBottomCol}>
-                        <MaterialCommunityIcons name="calendar-clock" size={14} color="#005b7f" />
-                        <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>{translateUi('common:validTill')}</Text>
-                          <Text style={styles.pbBottomVal}>{gmcDetails.valid_till || '—'}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.pbVerticalLine} />
-
-                      <View style={styles.pbBottomCol}>
-                        <MaterialCommunityIcons name="shield-check-outline" size={14} color="#EA580C" />
-                        <View style={{ marginLeft: rs(4) }}>
-                          <Text style={styles.pbBottomLabel}>{translateUi('common:policyType')}</Text>
-                          <Text style={styles.pbBottomVal} numberOfLines={1}>{gmcDetails.policy_type || 'Group Card'}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </LinearGradient>
-                </View>
-              )}
             </ScrollView>
 
-            {/* Pagination indicator dots */}
-            {false && gmcDetails && (
-              <View style={styles.paginationRow}>
-                <View style={[styles.pagDot, profileCardPage === 0 ? styles.pagDotActive : styles.pagDotInactive]} />
-                <View style={[styles.pagDot, profileCardPage === 1 ? styles.pagDotActive : styles.pagDotInactive]} />
-              </View>
-            )}
           </View>
         </LinearGradient>
 
@@ -1678,27 +1582,6 @@ const styles = StyleSheet.create({
     fontSize: fs(11),
     fontWeight: '800',
   },
-  pbCardShadowWrapper: {
-    borderTopLeftRadius: rs(24),
-    borderTopRightRadius: rs(24),
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  policybazaarCard: {
-    borderTopLeftRadius: rs(24),
-    borderTopRightRadius: rs(24),
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    zIndex: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-    minHeight: rs(200),
-  },
   pbCardUpperContent: {
     paddingHorizontal: rs(14),
     paddingTop: rs(14),
@@ -1862,26 +1745,6 @@ const styles = StyleSheet.create({
     height: rs(20),
     backgroundColor: '#CBD5E1',
     marginHorizontal: rs(4),
-  },
-  paginationRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: rs(10),
-    gap: rs(6),
-  },
-  pagDot: {
-    width: rs(6),
-    height: rs(6),
-    borderRadius: rs(3),
-    backgroundColor: '#CBD5E1',
-  },
-  pagDotActive: {
-    backgroundColor: '#6366F1',
-    width: rs(12),
-  },
-  pagDotInactive: {
-    backgroundColor: '#CBD5E1',
   },
   horizontalClaimCard: {
     borderRadius: rs(14),

@@ -37,8 +37,7 @@ type Props = {
   activeTabKey?: TabKey;
   layoutMode?: "overlay" | "navigator";
   // Navigation for the center button is delegated to the parent so BottomTabs
-  // works correctly in both the MainLayout context (Dashboard) and the
-  // MainTabs/HomeStack context, which have different navigation scopes.
+  // works with the navigation scope of the parent that renders it.
   onCenterPress?: () => void;
 };
 
@@ -450,8 +449,7 @@ function BottomTabs({
         ))}
 
         {/* CENTER BUTTON — onCenterPress is supplied by the parent so this
-            component stays navigation-agnostic and works in both MainLayout
-            and MainTabs (HomeStack) contexts without needing useNavigation. */}
+            component works within the parent's navigation scope. */}
         <CenterButton
           activeMode={activeMode}
           onPress={onCenterPress ?? NOOP}

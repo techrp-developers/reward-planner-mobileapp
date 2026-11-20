@@ -31,9 +31,7 @@ type ServicesModuleProps = {
   onModulePress?: (tab: ExploreServiceTab) => void;
 };
 
-// Purpose-built transparent icon glyphs — unlike the bundled Categories(N).png
-// tile photos these replaced, these have no baked-in white canvas, so a
-// module without a published dashboard/nav icon yet still renders cleanly.
+// Use transparent fallback icons until a module has a published dashboard icon.
 const FALLBACK_ICON_BY_TAB: Record<TopTab, React.ComponentType<{ width: number; height: number }>> = {
   Product: ProductIcon,
   Services: ServiceIcon,

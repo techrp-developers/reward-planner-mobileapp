@@ -356,11 +356,6 @@ const Dashboard: React.FC = () => {
   const heroArtWidth = Math.min(width * 0.56, 300);
 
 
-  const handleGoHome = useCallback(() => {
-    navigation.getParent()?.navigate("Dashboard");
-  }, [navigation]);
-
-
   // ── Queries ──────────────────────────────────────────────────────────────
   const userInfoQuery = useQuery({
     queryKey: ["user-info"],

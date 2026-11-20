@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import Share from 'react-native-share';
 import RazorpayCheckout from 'react-native-razorpay';
 
@@ -392,55 +391,6 @@ export default function ServiceOrderDetail() {
             Track each service below for its individual document and completion timeline.
           </Text>
         </View>
-        {/* ── Order summary card ─────────────────────────────────────── */}
-        {false && (
-        <LinearGradient
-          colors={['#30205F', '#6344BD', '#7C3AED']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.summaryCard}
-        >
-          <View style={styles.summaryRow}>
-            <View>
-              <Text style={styles.orderEyebrow}>SERVICE ORDER</Text>
-              <Text style={styles.orderId}>
-                #{parent_order_id.slice(0, 8).toUpperCase()}
-              </Text>
-              <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
-            </View>
-            <View style={styles.summaryIcon}>
-              <MaterialCommunityIcons name="clipboard-text-outline" size={25} color="#FFF" />
-            </View>
-          </View>
-
-          <View style={styles.statusChip}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={styles.statusLabel}>{statusLabel}</Text>
-          </View>
-
-          {/* ── Quick stats ───────────────────────────────────────────── */}
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                {order.items.length + order.bundles.reduce((s, b) => s + b.items.length, 0)}
-              </Text>
-              <Text style={styles.statLabel}>{translateUi('common:services')}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                ₹{order.total_amount.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.statLabel}>{documentsUnlocked ? 'Total Paid' : 'Order Total'}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{order.bundles.length || '—'}</Text>
-              <Text style={styles.statLabel}>Bundles</Text>
-            </View>
-          </View>
-        </LinearGradient>
-        )}
 
         {/* ── Standalone service items ───────────────────────────────── */}
         {hasStandaloneItems && (
@@ -752,50 +702,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 
-  summaryCard: {
-    borderRadius: 22,
-    padding: 18,
-    elevation: 5,
-    shadowColor: '#33205E',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  orderEyebrow: { color: 'rgba(255,255,255,0.62)', fontSize: 10, fontWeight: '800', letterSpacing: 1.1, marginBottom: 4 },
-  orderId: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: 0.2 },
-  orderDate: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 3, fontWeight: '600' },
-  summaryIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.16)' },
 
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    marginBottom: 16,
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusLabel: { fontSize: 12, fontWeight: '800', color: '#FFF' },
 
-  statsRow: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.18)',
-    paddingTop: 14,
-  },
-  statBox: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '800', color: '#FFF' },
-  statLabel: { fontSize: 11, color: 'rgba(255,255,255,0.68)', marginTop: 3, fontWeight: '600' },
-  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 8 },
 
   section: {
     backgroundColor: '#FFF',

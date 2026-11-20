@@ -60,9 +60,7 @@ function RechargeSection({ navigation, route }: any) {
   const alert = useAlert();
   const alertRef = useRef(alert);
 
-  // route.params is undefined when this screen is navigated to without any
-  // params (e.g. the bare BillsCard "Recharge" entry) — fall back to {} so
-  // every read below is safe.
+  // The recharge route can open without params.
   const params = route?.params ?? {};
   const operatorId = params.operatorId;
   useEffect(() => {
@@ -190,9 +188,7 @@ function RechargeSection({ navigation, route }: any) {
         if (matchedByCircleId) {
           setSelectedLocation(matchedByCircleId);
         } else if (!hasPreselectedCircle) {
-          // No circle was passed in via params (the bare BillsCard entry) —
-          // default to Maharashtra so plans load immediately; the dropdown
-          // still lets the user switch to any other circle.
+          // Load Maharashtra plans first when no circle is preselected.
           const defaultMaharashtra = list.find(
             (item) => String(item.operator_location_id) === '27'
           );

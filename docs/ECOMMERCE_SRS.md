@@ -117,7 +117,7 @@ Ecommerce screens gate their functionality on `useAuth()` (`isAuthenticated`, `u
 - **FR-1.3** An account with `status !== 1` (inactive) is rejected with HTTP 403 even with a valid token.
 
 ### 3.2 Product Discovery & Browsing
-**Screens:** `homescreen.tsx`, `CategoriesScreen.tsx`, `ProductCategoriesScreen.tsx`, `categoryScreen.tsx`, `ProductScreen.tsx`, `SearchScreen.tsx`.
+**Screens:** `homescreen.tsx`, `CategoriesScreen.tsx`, `ProductCategoriesScreen.tsx`, `Categories_Product.tsx`, `ProductScreen.tsx`, `SearchScreen.tsx`.
 **APIs:** `ProductApi.tsx`, `PromotionalApi.tsx`, `CampaignAPI.tsx` → backend `productController.js`, `campaignController.js` (`/v1/product/*`, `/v1/campaign/*`).
 
 - **FR-2.1** The home screen shall display, as independently-loading sections: Categories, Best Sellers, Top Rated, Offer banners/campaigns, New Arrivals, Most Viewed, Recommended (auth required), Recently Viewed, and a full category product grid.
@@ -239,7 +239,7 @@ Ecommerce screens gate their functionality on `useAuth()` (`isAuthenticated`, `u
 - **FR-13.3** There is no generic coupon/promo-code redemption mechanism anywhere in the module; the only price-reduction mechanisms are campaign offer-price overrides and reward-coin redemption (see §7 for the inactive coupon UI).
 
 ### 3.14 Reward Wallet
-**Screens:** `home/TransactionHistory.tsx` / `Wallet_History.tsx`.
+**Screen:** `home/Wallet_History.tsx`.
 **API:** `WalleteAPI.tsx`.
 
 - **FR-14.1** The user shall be able to view their current wallet balance and any coins nearing expiry.
@@ -254,7 +254,7 @@ Ecommerce screens gate their functionality on `useAuth()` (`isAuthenticated`, `u
 - **FR-15.2** A user shall be able to view their own ticket history with normalized status values: `open`, `in_progress`, `closed`, `resolved`.
 
 ### 3.16 Profile, Terms & Privacy
-**Screens:** `profile/ProfileScreen.tsx`/`Profile.tsx`, `TermsandCondition.tsx`, `PrivacyPolicy.tsx`, `TodoList.tsx`.
+**Screens:** `profile/ProfileScreen.tsx`, `TermsandCondition.tsx`, `PrivacyPolicy.tsx`, `TodoList.tsx`.
 **API:** `ProfileApi.tsx`, `TermsConditionAPI.tsx`.
 
 - **FR-16.1** The ecommerce-context profile screen shall show the user's name/avatar (editable), an entry point into order history, address management, a dark-mode toggle, logout, and account deletion.
@@ -272,7 +272,7 @@ Ecommerce screens gate their functionality on `useAuth()` (`isAuthenticated`, `u
 | `Explore.tsx` | — | Cross-module launcher |
 | `CategoriesScreen.tsx` | `CategoriesScreen` | Category/subcategory browser |
 | `ProductCategoriesScreen.tsx` | embedded in Home | Category tabs + infinite product grid |
-| `categoryScreen.tsx` | `Category` (via `Categories_Product.tsx`) | Sidebar category browser |
+| `Categories_Product.tsx` | `Category` | Sidebar category browser |
 | `ProductScreen.tsx` | "See all" targets | Generic paginated product collection viewer |
 | `product_description_screen.tsx` | `ProductDescription` | Product details |
 | `SearchScreen.tsx` | `SearchScreen` | Search + suggestions + history |
@@ -396,17 +396,12 @@ initiated -> completed | failed
 These are observations from the current codebase relevant to future requirements/cleanup decisions — not proposed requirements:
 
 1. **Coupon/promo-code UI is non-functional.** `constants/coupan/CouponsPage.tsx` renders hardcoded coupon data with a non-wired "Apply" button; there is no backend coupon-redemption endpoint. The real cart/checkout screens only reference it in commented-out code. Discounting is exclusively via reward-coin redemption and campaign offer-price overrides.
-2. **Duplicate/orphaned Payment screens.** `screens/PaymentScreen.tsx` and `PaymentScreen copy.tsx` are byte-identical, unrouted demo screens with a hardcoded order ID; the real payment flow lives entirely in `components/checkout/OrderStepUI.tsx`.
-3. **Duplicate Payment API file.** `api/Payment.tsx` and `api/Payment copy.tsx` are identical duplicates.
-4. **Orphaned invoice mock screen.** `components/invoice/DownloadInvoice.tsx` renders fully hardcoded invoice data and is not wired to real order data; the functioning invoice download path is `OrderApi.fetchOrderInvoice`.
-5. **Orphaned product adapter.** `adapters/productAdapter.tsx` appears superseded by `utils/normalizeProduct.ts`, which is the actually-used normalizer across the app.
-6. **NDR resolution is not customer-facing.** A validator (`validateResolveNDR`) exists for actions (`retry`, `address_update`, `cancel`, `rto`) but no route/controller wires it up — a failed-delivery-attempt cannot currently be resolved by the customer through the app.
-7. **No customer-initiated return for delivered items.** Only pre-delivery RTO (courier-driven) is automated; there is no "return a delivered order" endpoint.
-8. **Cancellation approval is external to this module.** `POST /orders/cancel/:orderId` only records a request (`cancellation_status='requested'`); no code path in this module advances it to `confirmed`/`refund_initiated`/`refund_completed`/`rejected` — this is presumably completed by an admin/back-office system not included in this module.
-9. **Refund endpoint disabled.** `/v1/payment/refund` is commented out in the route file; refunds are only triggered internally (webhook mismatch, duplicate capture, RTO) via `EcommerceRefundService`, not directly user-invocable.
-10. **Two overlapping Profile screens.** `profile/ProfileScreen.tsx` and `profile/Profile.tsx` appear to be alternate/overlapping implementations rather than a single canonical screen.
-11. **Stray backend copy inside the mobile repo.** `src/modules/ecommerce/v1/**` duplicates backend-style logic but is not the code actually mounted/executed (`src/server/app/ecommerce/v1` is authoritative per `src/server/app.js`). Worth removing or clearly marking to avoid confusion during future development.
-12. **Legacy dead code path in refund controller.** `paymentController.processRefund`'s old inline logic is retained but unreachable after an early `return` to the new refund service.
+2. **NDR resolution is not customer-facing.** A validator (`validateResolveNDR`) exists for actions (`retry`, `address_update`, `cancel`, `rto`) but no route/controller wires it up — a failed-delivery-attempt cannot currently be resolved by the customer through the app.
+3. **No customer-initiated return for delivered items.** Only pre-delivery RTO (courier-driven) is automated; there is no "return a delivered order" endpoint.
+4. **Cancellation approval is external to this module.** `POST /orders/cancel/:orderId` only records a request (`cancellation_status='requested'`); no code path in this module advances it to `confirmed`/`refund_initiated`/`refund_completed`/`rejected` — this is presumably completed by an admin/back-office system not included in this module.
+5. **Refund endpoint disabled.** `/v1/payment/refund` is commented out in the route file; refunds are only triggered internally (webhook mismatch, duplicate capture, RTO) via `EcommerceRefundService`, not directly user-invocable.
+6. **Stray backend copy inside the mobile repo.** `src/modules/ecommerce/v1/**` duplicates backend-style logic but is not the code actually mounted/executed (`src/server/app/ecommerce/v1` is authoritative per `src/server/app.js`). Worth removing or clearly marking to avoid confusion during future development.
+7. **Legacy dead code path in refund controller.** `paymentController.processRefund`'s old inline logic is retained but unreachable after an early `return` to the new refund service.
 
 ---
 

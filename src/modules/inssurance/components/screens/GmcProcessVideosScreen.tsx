@@ -121,7 +121,7 @@ const GmcProcessVideosScreen: React.FC = () => {
         title: video.title,
         message: `Watch "${video.title}" by ${video.author} on YouTube:\n${video.url}`,
       });
-    } catch (error) {
+    } catch {
       // user cancelled
     }
   };

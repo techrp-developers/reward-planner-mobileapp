@@ -6,9 +6,7 @@ import AndroidLogo from '../../../assets/StepCount/android_logo.svg';
 import AppleLogo from '../../../assets/StepCount/apple_logo.svg';
 import HealthConnectIcon from '../../../assets/StepCount/health_connect_icon.svg';
 import GooglePlayIcon from '../../../assets/StepCount/google_play_icon.svg';
-import GoogleFitIcon from '../../../assets/StepCount/google_fit_icon.svg';
 import LauncherHealthConnect from '../../../assets/StepCount/launcher_health_connect.svg';
-import PermissionSteps from '../../../assets/StepCount/permission_steps.svg';
 import AppleHealthIcon from '../../../assets/StepCount/apple_health_icon.svg';
 import IosApps from '../../../assets/StepCount/iosApps.svg';
 import HealthAccess from '../../../assets/StepCount/health_access.svg';
@@ -35,7 +33,6 @@ export const ONBOARDING_ASSETS: Record<OnboardingAssetKey, OnboardingSvg | null>
   healthConnectIcon: svg(HealthConnectIcon, 199, 192),
   googlePlayIcon: svg(GooglePlayIcon, 620, 676),
   androidLauncher: svg(LauncherHealthConnect, 197, 192),
-  androidPermission: svg(PermissionSteps, 144, 192),
 
   // iPhone / Apple Health
   appleHealthIcon: svg(AppleHealthIcon, 736, 640),
@@ -44,7 +41,6 @@ export const ONBOARDING_ASSETS: Record<OnboardingAssetKey, OnboardingSvg | null>
   iosHealthAccess: svg(HealthAccess, 188, 192),
 
   // Additional
-  googleFitIcon: svg(GoogleFitIcon, 716, 604),
   successCheck: svg(SuccessCheck, 260, 174),
 };
 
@@ -54,12 +50,10 @@ export type OnboardingAssetKey =
   | 'healthConnectIcon'
   | 'googlePlayIcon'
   | 'androidLauncher'
-  | 'androidPermission'
   | 'appleHealthIcon'
   | 'iosSettings'
   | 'iosApps'
   | 'iosHealthAccess'
-  | 'googleFitIcon'
   | 'successCheck';
 
 export const REWARD_PLANNERS_ICON: ImageSourcePropType = require('../../../../../assets/menu/logo.png');

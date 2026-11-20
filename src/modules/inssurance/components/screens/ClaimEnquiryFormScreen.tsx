@@ -181,7 +181,7 @@ const ClaimEnquiryFormScreen: React.FC = () => {
       } else {
         alert(result.message || 'Submission failed. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setIsSubmitting(false);
       alert('An unexpected error occurred. Please try again.');
     }

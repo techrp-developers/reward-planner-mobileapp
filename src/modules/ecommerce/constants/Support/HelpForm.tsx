@@ -290,8 +290,6 @@ export default function HelpForm({ navigation, route }: HelpFormProps) {
   const handlePickDocument = useCallback(async () => {
     try {
       const {
-        errorCodes,
-        isErrorWithCode,
         pick,
         types,
       } = require('@react-native-documents/picker');

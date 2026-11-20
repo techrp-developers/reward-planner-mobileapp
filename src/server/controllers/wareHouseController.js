@@ -92,8 +92,8 @@ class wareHouseController {
         rows,
       });
     } catch (error) {
-      console.error("Fetching warehouse error:", err);
-      return res.status(500).json({ success: false, message: err.message });
+      console.error("Fetching warehouse error:", error);
+      return res.status(500).json({ success: false, message: "Unable to fetch warehouses" });
     }
   }
 

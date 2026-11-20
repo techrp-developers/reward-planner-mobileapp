@@ -11,15 +11,6 @@ class CategoryModel {
     return result.insertId;
   }
 
-  async updateCategoryImage(categoryId, imagePath) {
-    await db.execute(
-      `UPDATE categories
-     SET cover_image = ?, updated_at = NOW()
-     WHERE category_id = ?`,
-      [imagePath, categoryId],
-    );
-  }
-
   // GET ALL CATEGORIES
   // async getAllCategories() {
   //   try {

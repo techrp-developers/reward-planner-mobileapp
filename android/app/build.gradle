@@ -126,9 +126,9 @@ android {
         }
         release {
             storeFile file("$projectDir/release-key.keystore")
-            storePassword '123456'
-            keyAlias 'my-key-alias' 
-            keyPassword '123456'
+            storePassword = providers.environmentVariable("REWARDSPLANNERS_ANDROID_STORE_PASSWORD").orNull
+            keyAlias = providers.environmentVariable("REWARDSPLANNERS_ANDROID_KEY_ALIAS").orNull
+            keyPassword = providers.environmentVariable("REWARDSPLANNERS_ANDROID_KEY_PASSWORD").orNull
         }
     }
     buildTypes {

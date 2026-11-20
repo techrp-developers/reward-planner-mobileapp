@@ -175,6 +175,53 @@ class PaymentController {
         });
       }
 
+      // A lost create-order response can be retried by the client. Reuse the
+      // recent untouched recharge order instead of creating a second payable
+      // transaction. Fetched-bill orders already have single-use protection.
+      if (fetchBillFlag === 0) {
+        const [[existingOrder]] = await conn.execute(
+          `SELECT t.id AS transaction_id, ro.razorpay_order_id, ro.amount
+           FROM bbps_transactions t
+           JOIN razorpay_orders ro
+             ON ro.ref_id = t.id AND ro.module = 'bbps'
+           WHERE t.user_id = ?
+             AND t.operator_id = ?
+             AND t.utility_acc_no = ?
+             AND t.recharge_plan_id = ?
+             AND COALESCE(t.recharge_circle_id, '') = COALESCE(?, '')
+             AND t.amount = ?
+             AND t.bbps_status = 'INIT'
+             AND ro.status = 'created'
+             AND t.created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+           ORDER BY t.id DESC
+           LIMIT 1
+           FOR UPDATE`,
+          [
+            userId,
+            operator_id,
+            utilityAccountNo,
+            rechargePlanId,
+            rechargeCircleId,
+            amount,
+          ],
+        );
+
+        if (existingOrder) {
+          await conn.commit();
+          return res.json({
+            success: true,
+            data: {
+              key: process.env.RAZOR_API_KEY,
+              orderId: existingOrder.razorpay_order_id,
+              amount: Math.round(Number(existingOrder.amount) * 100),
+              currency: "INR",
+              transaction_id: existingOrder.transaction_id,
+              reused: true,
+            },
+          });
+        }
+      }
+
       const providerClientRefId = `${Date.now()}${crypto.randomInt(100, 1000)}`;
 
       // 1. create transaction
@@ -263,58 +310,11 @@ class PaymentController {
         });
       }
 
-      // A lost create-order response can be retried by the client. Reuse the
-      // recent untouched recharge order instead of creating a second payable
-      // transaction. Fetched-bill orders already have single-use protection.
-      if (fetchBillFlag === 0) {
-        const [[existingOrder]] = await conn.execute(
-          `SELECT t.id AS transaction_id, ro.razorpay_order_id, ro.amount
-           FROM bbps_transactions t
-           JOIN razorpay_orders ro
-             ON ro.ref_id = t.id AND ro.module = 'bbps'
-           WHERE t.user_id = ?
-             AND t.operator_id = ?
-             AND t.utility_acc_no = ?
-             AND t.recharge_plan_id = ?
-             AND COALESCE(t.recharge_circle_id, '') = COALESCE(?, '')
-             AND t.amount = ?
-             AND t.bbps_status = 'INIT'
-             AND ro.status = 'created'
-             AND t.created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-           ORDER BY t.id DESC
-           LIMIT 1
-           FOR UPDATE`,
-          [
-            userId,
-            operator_id,
-            utilityAccountNo,
-            rechargePlanId,
-            rechargeCircleId,
-            amount,
-          ],
-        );
-
-        if (existingOrder) {
-          await conn.commit();
-          return res.json({
-            success: true,
-            data: {
-              key: process.env.RAZOR_API_KEY,
-              orderId: existingOrder.razorpay_order_id,
-              amount: Math.round(Number(existingOrder.amount) * 100),
-              currency: "INR",
-              transaction_id: existingOrder.transaction_id,
-              reused: true,
-            },
-          });
-        }
-      }
-
       console.error("createOrder error:", err);
 
       return res.status(500).json({
         success: false,
-        message: err.message,
+        message: "Unable to start the payment. Please try again.",
       });
     } finally {
       conn.release();

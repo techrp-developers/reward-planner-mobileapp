@@ -9,8 +9,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Dimensions,
-  Platform,
   Image,
   ActivityIndicator,
 } from 'react-native';
@@ -19,8 +17,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../../theme/ThemeContext';
 import { rs, fs } from '../../../../utils/responsive';
-
-const { width } = Dimensions.get('window');
 
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchGmcDetails, fetchClaimHistory } from '../../services/inssuranceApi';
@@ -84,7 +80,7 @@ const CardPattern: React.FC = () => {
 const HealthDashboard: React.FC = () => {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<any>();
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
 
   const [gmcDetails, setGmcDetails] = useState<any | null>(null);
   const [claims, setClaims] = useState<any[]>([]);

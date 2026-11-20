@@ -1,4 +1,4 @@
-import { Dimensions, PixelRatio, Platform } from 'react-native';
+import { Dimensions, PixelRatio } from 'react-native';
 
 const BASE_WIDTH = 375;
 const { width } = Dimensions.get('window');

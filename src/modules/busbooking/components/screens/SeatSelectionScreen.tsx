@@ -664,12 +664,6 @@ const layoutKind =
     [apiSeats, rawBus]
   );
 
-const isSeaterBus =
-  layoutKind === "seater";
-
-const isSleeperBus =
-  layoutKind === "sleeper";
-
 const isSeaterLayout =
   layoutKind === "seater";
 
@@ -1342,7 +1336,7 @@ switch (seat.status) {
                             : null,
                         ]}
                       >
-                        {row.map((seat, seatIndex) => {
+                        {row.map((seat) => {
                           const isSeatSeater =
                             !seat.spacer &&
                             isSeatRenderedAsSeater(seat);

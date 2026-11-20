@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -307,7 +306,7 @@ export default function PassengerDetailsScreen() {
           message: "Passenger removed from quick select.",
           variant: "success",
         });
-      } catch (error) {
+      } catch {
         setDeletedQuickSelectIds((current) => current.filter((id) => id !== profile.id));
         showPopup({
           title: "Quick Select",

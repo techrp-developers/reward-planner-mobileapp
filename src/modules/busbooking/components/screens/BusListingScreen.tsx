@@ -4,7 +4,6 @@ import { getVerifiedAvailableSeats, formatAvailableSeats as toSeatLabel } from "
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,

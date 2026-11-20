@@ -9,6 +9,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   StatusBar,
+  type ImageSourcePropType,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -25,16 +26,10 @@ const Explore3 = require('../../../assets/sampleImages/ExploreSevice(3).png');
 const Explore4 = require('../../../assets/sampleImages/ExploreSevice(4).png');
 const Explore5 = require('../../../assets/sampleImages/ExploreSevice(5).png');
 const Explore6 = require('../../../assets/sampleImages/ExploreSevice(6).png');
-const Explore8 = require('../../../assets/sampleImages/ExploreSevice(8).png');
 
 type CategoryItem = {
-  image?: ReturnType<typeof require>;
-  SvgCard?: React.ComponentType<{
-    width?: number | string;
-    height?: number | string;
-  }>;
+  image: ImageSourcePropType;
   tab: TopTab;
-  title?: string;
 };
 
 const activeServices: CategoryItem[] = [
@@ -48,12 +43,6 @@ const upcomingServices: CategoryItem[] = [
   { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];
-
-const hiddenUpcomingServices: CategoryItem[] = [
-  { image: Explore8, tab: 'Product', title: 'Expense Tracker' },
-];
-
-const SHOW_HIDDEN_UPCOMING_SERVICES = false;
 
 const TAB_TO_MODULE: Record<TopTab, { screen: string; moduleName: TopTab }> = {
   Product: { screen: 'ProductModule', moduleName: 'Product' },
@@ -156,15 +145,11 @@ function ExploreModule() {
             ]}
             onPress={() => handleCategoryPress(item.tab)}
           >
-            {item.SvgCard ? (
-              <item.SvgCard width={CARD_WIDTH} height={CARD_HEIGHT} />
-            ) : (
-              <Image
-                source={item.image}
-                style={styles.exploreImage}
-                resizeMode="cover"
-              />
-            )}
+            <Image
+              source={item.image}
+              style={styles.exploreImage}
+              resizeMode="cover"
+            />
           </TouchableOpacity>
         ))}
 
@@ -193,30 +178,6 @@ function ExploreModule() {
           </TouchableOpacity>
         ))}
 
-        {SHOW_HIDDEN_UPCOMING_SERVICES
-          ? hiddenUpcomingServices.map((item, i) => (
-              <TouchableOpacity
-                key={`hidden-upcoming-${i}`}
-                activeOpacity={1}
-                disabled
-                style={[
-                  styles.exploreItem,
-                  styles.disabledItem,
-                  t.exploreItem,
-                  { width: CARD_WIDTH, height: CARD_HEIGHT },
-                ]}
-              >
-                <View style={styles.hiddenDisabledCardContent}>
-                  <Text style={styles.hiddenDisabledCardTitle}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.hiddenDisabledCardSubtitle}>
-                    {translateUi('common:comingSoon')}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -286,25 +247,6 @@ const styles = StyleSheet.create({
   disabledOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(229, 231, 235, 0.22)',
-  },
-  hiddenDisabledCardContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: rs(20),
-  },
-  hiddenDisabledCardTitle: {
-    fontSize: fs(20),
-    fontWeight: '700',
-    color: '#4B5563',
-    textAlign: 'center',
-  },
-  hiddenDisabledCardSubtitle: {
-    marginTop: rs(8),
-    fontSize: fs(13),
-    fontWeight: '600',
-    color: '#9CA3AF',
-    textAlign: 'center',
   },
 
   exploreImage: {

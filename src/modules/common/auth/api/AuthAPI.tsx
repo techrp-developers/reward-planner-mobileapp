@@ -179,8 +179,6 @@
   };
   export const fetchUserInfo = async () => {
     // Fast-path: check in-memory token synchronously before any async work.
-    // This prevents the 5-second polling in home_chart.tsx from hammering
-    // AsyncStorage and filling the log with "no auth token" messages on every tick.
     if (!isAuthenticated()) {
       return null;
     }

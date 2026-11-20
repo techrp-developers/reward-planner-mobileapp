@@ -1297,56 +1297,55 @@ class ProductController {
   }
 
   async approvalRequest(req, res) {
-    const vendorId = req.user.vendor_id;
-    const productId = req.params.productId;
+    try {
+      const vendorId = req.user.vendor_id;
+      const productId = req.params.productId;
 
-    if (!vendorId || !productId) {
-      return res.status(400).json({
-        success: false,
-        message: "Vendor and Product Id is required",
-      });
-    }
+      if (!vendorId || !productId) {
+        return res.status(400).json({
+          success: false,
+          message: "Vendor and Product Id is required",
+        });
+      }
 
-    const [productRows] = await db.query(
-      `SELECT * FROM eproducts WHERE product_id = ? AND vendor_id = ? `,
-      [productId, vendorId],
-    );
-
-    if (productRows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    const product = productRows[0];
-
-    if (
-      productRows.length > 0 &&
-      (product.status == "pending" || product.status == "resubmission")
-    ) {
-      await db.query(
-        `UPDATE eproducts
-         SET status = 'sent_for_approval'
-         WHERE product_id = ?`,
-        [product.product_id],
+      const [productRows] = await db.query(
+        `SELECT * FROM eproducts WHERE product_id = ? AND vendor_id = ? `,
+        [productId, vendorId],
       );
-      runNonBlocking(
-        () => notifyProductSubmitted(product.product_id),
-        "product submission emails",
-      );
-    }
 
-    return res.json({
-      success: true,
-      message: "Product sent for approval successfully",
-    });
-  }
-  catch(err) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching approved product List",
-    });
+      if (productRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      const product = productRows[0];
+
+      if (
+        productRows.length > 0 &&
+        (product.status == "pending" || product.status == "resubmission")
+      ) {
+        await db.query(
+          `UPDATE eproducts
+           SET status = 'sent_for_approval'
+           WHERE product_id = ?`,
+          [product.product_id],
+        );
+        runNonBlocking(
+          () => notifyProductSubmitted(product.product_id),
+          "product submission emails",
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: "Product sent for approval successfully",
+      });
+    } catch (error) {
+      console.error("Error requesting product approval:", error);
+      return res.status(500).json({ success: false, message: "Unable to request product approval" });
+    }
   }
 
   // Product Visibility
