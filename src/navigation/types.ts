@@ -8,6 +8,7 @@ export type RootStackParamList = {
   AppStack: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   ServiceStack: undefined;
+  HealthStack: undefined;
   RewardStack: { moduleName?: string } | undefined;
   ComingSoon: { moduleName?: string } | undefined;
   BottomTabs: undefined;

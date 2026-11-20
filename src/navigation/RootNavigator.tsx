@@ -35,6 +35,7 @@ export type AppStackParamList = {
   Profile: { context?: 'dashboard' } | undefined;
   InssuranceStack: undefined;
   ServiceStack: undefined;
+  HealthStack: undefined;
   RewardStack: undefined;
   BBPSHomeStack: undefined;
   Search: undefined;
@@ -174,6 +175,10 @@ function AppNavigator() {
       <AppStack.Screen
         name="ServiceStack"
         getComponent={() => require("../modules/services/navigation/ServiceHomeStack").default}
+      />
+      <AppStack.Screen
+        name="HealthStack"
+        getComponent={() => require("../modules/health/navigation/HealthHomeStack").default}
       />
       <AppStack.Screen
         name="RewardStack"

@@ -175,6 +175,15 @@ function ServicesModule({ onModulePress }: ServicesModuleProps) {
           });
         }
       } else if (module.route_key) {
+        if (module.route_key === 'HealthStack') {
+          navigation.navigate('HealthStack');
+          navigationUnlockTimerRef.current = setTimeout(() => {
+            isNavigatingRef.current = false;
+            navigationUnlockTimerRef.current = null;
+          }, 1000);
+          return;
+        }
+
         // A module the 4 known bottom tabs don't cover — navigate generically
         // by its CMS route_key, same fallback Navbar.tsx uses.
         navigation.navigate('Home', {
