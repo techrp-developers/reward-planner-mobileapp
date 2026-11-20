@@ -60,7 +60,11 @@ const getRpPriceText = (rpPrice: unknown): string | undefined => {
     return undefined;
   }
 
-  const numericRpPrice = Number(rpPrice);
+  const normalizedRpPrice =
+    typeof rpPrice === "string"
+      ? rpPrice.replace(/[^0-9.-]/g, "")
+      : rpPrice;
+  const numericRpPrice = Number(normalizedRpPrice);
 
   if (!Number.isFinite(numericRpPrice) || numericRpPrice <= 0) {
     return undefined;
@@ -394,7 +398,9 @@ const ProductCardComponent = ({
             style={[
               styles.price,
               {
-                fontSize: calculations.fontSizePrice,
+                fontSize: rpPriceText
+                  ? calculations.fontSizeOriginal
+                  : calculations.fontSizePrice,
                 color: rpPriceText ? RP_PRICE_COLOR : theme.text,
               },
             ]}
@@ -431,12 +437,20 @@ const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
     prevItem?.discount_percent === nextItem?.discount_percent &&
     prevItem?.rp_price === nextItem?.rp_price &&
     prevItem?.rpPrice === nextItem?.rpPrice &&
+    prevItem?.rp_amount === nextItem?.rp_amount &&
+    prevItem?.rpAmount === nextItem?.rpAmount &&
+    prevItem?.reward_price === nextItem?.reward_price &&
+    prevItem?.rewardPrice === nextItem?.rewardPrice &&
+    prevItem?.member_price === nextItem?.member_price &&
+    prevItem?.memberPrice === nextItem?.memberPrice &&
     prevItem?.price === nextItem?.price &&
     prevItem?.selling_price === nextItem?.selling_price &&
     prevItem?.final_price === nextItem?.final_price &&
     prevItem?.originalPrice === nextItem?.originalPrice &&
     prevItem?.original_price === nextItem?.original_price &&
     prevItem?.mrp === nextItem?.mrp &&
+    prevItem?.compare_at_price === nextItem?.compare_at_price &&
+    prevItem?.regular_price === nextItem?.regular_price &&
     getProductImage(prevItem) === getProductImage(nextItem) &&
     prevItem?.product_name === nextItem?.product_name &&
     prevItem?.title === nextItem?.title &&

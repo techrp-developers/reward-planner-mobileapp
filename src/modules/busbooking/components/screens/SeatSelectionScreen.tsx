@@ -592,7 +592,10 @@ const {
 */
 
 const rawBus =
-  bus.raw || {};
+  React.useMemo(
+    () => bus.raw || {},
+    [bus.raw]
+  );
 
 
 /*

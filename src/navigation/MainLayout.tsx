@@ -126,8 +126,20 @@ const getActiveMode = (routeChain: string[]): AppMode => {
   return "Product";
 };
 
-const shouldShowBottomTabs = (activeMode: AppMode): boolean => {
-  return activeMode !== "DineOut";
+const shouldShowBottomTabs = (activeMode: AppMode, routeChain: string[]): boolean => {
+  if (activeMode === "DineOut") return false;
+
+  const leafRoute = routeChain[routeChain.length - 1];
+  if (
+    (activeMode === "Product" &&
+      (leafRoute === "Cart" || leafRoute === "OrderStepUI")) ||
+    (activeMode === "Services" &&
+      (leafRoute === "CartScreen" || leafRoute === "ServiceCheckoutScreen"))
+  ) {
+    return false;
+  }
+
+  return true;
 };
 
 function MainLayout() {
@@ -211,8 +223,8 @@ function MainLayoutContent() {
   }, [navigation]);
   const showNavbar = React.useMemo(() => shouldShowNavbar(routeChain), [routeChain]);
   const showBottomTabs = React.useMemo(
-    () => shouldShowBottomTabs(activeMode),
-    [activeMode]
+    () => shouldShowBottomTabs(activeMode, routeChain),
+    [activeMode, routeChain]
   );
   // Matches the overlay height BottomTabs renders, so module screens can keep
   // their content clear of it.

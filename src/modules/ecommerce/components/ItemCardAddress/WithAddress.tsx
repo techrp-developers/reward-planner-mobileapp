@@ -119,7 +119,7 @@ const CartRow = React.memo(function CartRow({
 export default function WithAddress() {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>()
-  const stickyCTA = useStickyBottomCTA({ tabBarAware: false, extraSpacing: 0 })
+  const stickyCTA = useStickyBottomCTA()
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const pulse = useRef(new Animated.Value(0)).current

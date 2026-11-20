@@ -177,10 +177,7 @@ function CartScreen() {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
-  // MainLayout already reserves space for the services-module bottom bar via
-  // paddingBottom on the content wrapper, so the CTA must not also offset by
-  // the tab bar height itself (tabBarAware:false) — otherwise it floats above
-  // the bottom bar with a visible gap instead of sitting right on top of it.
+  // The sticky CTA uses the safe area after MainLayout hides tabs on cart.
   const stickyCTA = useStickyBottomCTA();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -514,7 +511,7 @@ function CartScreen() {
         count={items.length}
         onProceedToBuy={onProceedToCheckout}
         wrapperPaddingBottom={16}
-        // Sits above the bottom tab bar, or above the keyboard when it's open.
+        // Sits above the safe area, or above the keyboard when it's open.
         bottomOffset={stickyCTA.bottomOffset}
         onLayout={stickyCTA.onCtaLayout}
       />
