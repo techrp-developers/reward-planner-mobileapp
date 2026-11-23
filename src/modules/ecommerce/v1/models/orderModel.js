@@ -803,13 +803,6 @@ class orderModel {
         reward_coins_used: activeCoinsUsed,
         reward_coins_earned: earnedCoins,
         reward_coins_potential: potentialCoins,
-        bag_discount: Math.max(
-          0,
-          Number(order.product_total) +
-            Number(order.shipping_total) -
-            Number(order.reward_discount) -
-            Number(order.total_amount),
-        ),
         order_total: Number(order.total_amount),
       },
     };

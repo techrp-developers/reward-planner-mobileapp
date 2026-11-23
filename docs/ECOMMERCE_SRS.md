@@ -153,7 +153,7 @@ Ecommerce screens gate their functionality on `useAuth()` (`isAuthenticated`, `u
 - **FR-5.1** The system shall allow adding a `(product, variant, quantity)` to the cart, validating stock under a row lock; errors `INVALID_VARIANT`/`INSUFFICIENT_STOCK` are surfaced to the user.
 - **FR-5.2** The system shall allow updating a cart line's quantity (`quantity=0` removes the line), removing a single line, and clearing the entire cart.
 - **FR-5.3** The system shall provide a cart summary (`GET /v1/cart/cart-summary?use_rewards=`) including totals and reward-coin impact, and the client shall keep this in sync with cart mutations via cache invalidation (`CartContext`).
-- **FR-5.4** The cart screen shall branch its layout based on whether the user has a saved address: prompting address entry if none exists, otherwise showing line items, quantity controls, and a bill summary (`BillDetailsCard`: cart total, payable total, coins earned, coins redeemed, bag discount, shipping, handling fees) with a proceed-to-checkout action.
+- **FR-5.4** The cart screen shall branch its layout based on whether the user has a saved address: prompting address entry if none exists, otherwise showing line items, quantity controls, and a bill summary (`BillDetailsCard`: cart total, payable total, coins earned, coins redeemed, shipping, handling fees) with a proceed-to-checkout action.
 - **FR-5.5** Discount-coupon-code entry is present in the UI as inactive/hardcoded mock data only (`constants/coupan`) and is not wired to any backend endpoint; it shall not be represented as a functioning requirement (see §7). The only functioning discount mechanism is reward-coin redemption.
 
 ### 3.6 Address Management

@@ -987,7 +987,6 @@ export default function ServiceCheckoutScreen() {
         {/* Bill details */}
         <BillDetailsCard
           subtotal={summary.subtotal}
-          bagDiscount={summary.discount}
           finalTotal={summary.grandTotal}
           totalRewardEarn={summary.earnCoins}
           totalRedeemed={summary.redeemCoins}

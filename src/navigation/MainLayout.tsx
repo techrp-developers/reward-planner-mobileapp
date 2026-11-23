@@ -134,7 +134,9 @@ const shouldShowBottomTabs = (activeMode: AppMode, routeChain: string[]): boolea
     (activeMode === "Product" &&
       (leafRoute === "Cart" || leafRoute === "OrderStepUI")) ||
     (activeMode === "Services" &&
-      (leafRoute === "CartScreen" || leafRoute === "ServiceCheckoutScreen"))
+      (leafRoute === "CartScreen" ||
+        leafRoute === "ServiceCheckoutScreen" ||
+        leafRoute === "DocumentUpload"))
   ) {
     return false;
   }

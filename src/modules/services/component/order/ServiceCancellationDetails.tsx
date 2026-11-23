@@ -369,7 +369,6 @@ export default function ServiceCancellationDetails() {
         <PriceDetailsCard
           itemTotal={details.summary.service_total}
           deliveryFee={0}
-          bagDiscount={0}
           rewardDiscount={details.rewards.used}
           orderTotal={details.summary.order_total}
           rewardEarned={0}

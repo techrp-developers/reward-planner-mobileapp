@@ -126,7 +126,6 @@ type OrderDetailsResponse = {
         reward_coins_used?: number;
         reward_coins_earned?: number;
         reward_coins_potential?: number;
-        bag_discount?: number;
         order_total?: string | number;
     };
 };
@@ -394,7 +393,6 @@ export default function OrderConfirmedScreen() {
     const rewardCoinsEarned = Number(orderData?.summary?.reward_coins_earned ?? 0);
     const rewardCoinsPotential = Number(orderData?.summary?.reward_coins_potential ?? 0);
     const isRewardCredited = Boolean(orderData?.order?.is_reward_credited);
-    const bagDiscount = Number(orderData?.summary?.bag_discount ?? 0);
     const orderTotal = Number(orderData?.summary?.order_total ?? orderData?.order?.total_amount ?? 0);
 
     const cancellationGrace = orderData?.order?.cancellation_grace;
@@ -674,7 +672,6 @@ export default function OrderConfirmedScreen() {
                     offerSavings={(orderData.items ?? []).reduce((sum, item) => sum + Number(item.offer?.savings || 0), 0)}
                     itemTotal={itemTotal}
                     deliveryFee={shippingTotal}
-                    bagDiscount={bagDiscount}
                     rewardDiscount={rewardDiscount}
                     orderTotal={orderTotal}
                     rewardEarned={rewardCoinsEarned}

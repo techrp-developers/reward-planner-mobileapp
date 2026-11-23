@@ -15,7 +15,6 @@ type Props = {
   subtotal?: number
   totalDiscount?: number
   finalTotal?: number
-  bagDiscount?: number
   shippingCharges?: number
   shippingLabel?: string
   showShippingCharges?: boolean
@@ -37,7 +36,6 @@ export default function BillDetailsCard({
   onUseRewardsChange,
   subtotal,
   finalTotal,
-  bagDiscount = 0,
   shippingCharges = 0,
   shippingLabel = 'Shipping Charges',
   showShippingCharges = true,
@@ -53,7 +51,6 @@ export default function BillDetailsCard({
   const safeFinalPayable = useMemo(() => Math.max(0, Number(finalPayable ?? finalTotal ?? 0)), [finalPayable, finalTotal])
   const safeRewardEarn = useMemo(() => Math.max(0, Number(totalRewardEarn || 0)), [totalRewardEarn])
   const safeRedeemed = useMemo(() => Math.max(0, Number(totalRedeemed || 0)), [totalRedeemed])
-  const safeBagDiscount = useMemo(() => Math.max(0, Number(bagDiscount || 0)), [bagDiscount])
   const safeShipping = useMemo(() => Math.max(0, Number(shippingCharges || 0)), [shippingCharges])
   const safeHandlingFees = useMemo(() => Math.max(0, Number(handlingFees || 0)), [handlingFees])
   const safeAvailableRewards = useMemo(
@@ -101,11 +98,6 @@ export default function BillDetailsCard({
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
       <MemoRow label={translateUi('common:itemTotal')} value={formatAmount(safeCartTotal)} />
-      <MemoRow
-        label={translateUi('common:bagDiscount')}
-        value={formatAmount(safeBagDiscount)}
-        valueStyle={safeBagDiscount > 0 ? styles.negative : undefined}
-      />
 
       {rewardDiscount > 0 && (
         <MemoRow

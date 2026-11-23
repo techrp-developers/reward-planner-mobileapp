@@ -204,7 +204,6 @@ export type OrderDetailsResponse = {
     reward_coins_used: number;
     reward_coins_earned: number;
     reward_coins_potential: number;
-    bag_discount: number;
     order_total: number;
   };
 };

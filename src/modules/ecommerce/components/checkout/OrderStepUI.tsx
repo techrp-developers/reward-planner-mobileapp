@@ -1527,7 +1527,6 @@ export default function OrderStepUI() {
             totalRewardEarn={cartSummary.reward.earnCoins}
             shippingCharges={cartSummary.shippingTotal}
             shippingLabel="Shipping Fee"
-            bagDiscount={0}
             handlingFees={0}
             showHandlingFees
             rewardCoinsAvailable={rewardCoinsAvailable}

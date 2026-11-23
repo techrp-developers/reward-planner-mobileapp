@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenHeader from '../constant/navbar/ScreenHeaderColor';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -291,6 +292,7 @@ const DocumentUpload = () => {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<NavProps>();
   const servicesTheme = useServicesTheme();
+  const insets = useSafeAreaInsets();
   const route = useRoute<RouteT>();
   const parentOrderId = String(route.params?.parent_order_id ?? '');
 
@@ -665,7 +667,7 @@ const DocumentUpload = () => {
           </ScrollView>
 
           {/* Sticky footer */}
-          <View style={[styles.footer, { backgroundColor: servicesTheme.colors.background, borderTopColor: servicesTheme.colors.divider }]}>
+          <View style={[styles.footer, { backgroundColor: servicesTheme.colors.background, borderTopColor: servicesTheme.colors.divider, paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
             {pendingMandatory > 0 && (
               <Text style={styles.footerHint}>
                 {pendingMandatory} required document{pendingMandatory > 1 ? 's' : ''} still needed
@@ -905,7 +907,6 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     paddingHorizontal: 16,
-    paddingBottom: 28,
     paddingTop: 12,
     backgroundColor: '#F9FAFB',
     borderTopWidth: 1,

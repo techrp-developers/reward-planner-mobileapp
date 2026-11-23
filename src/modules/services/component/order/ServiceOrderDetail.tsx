@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Share from 'react-native-share';
 import RazorpayCheckout from 'react-native-razorpay';
+import { useBottomTabsInset } from '../../../../bottombar/BottomTabsInsetContext';
 
 // ── Reused ecommerce common components ──────────────────────────────────────
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
@@ -105,6 +106,7 @@ export default function ServiceOrderDetail() {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const servicesTheme = useServicesTheme();
+  const bottomTabsInset = useBottomTabsInset();
   const route = useRoute<RouteT>();
   const { parent_order_id } = route.params;
 
@@ -356,7 +358,7 @@ export default function ServiceOrderDetail() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomTabsInset + 16 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -464,7 +466,6 @@ export default function ServiceOrderDetail() {
             offerSavings={allServiceItems.reduce((sum, item) => sum + Number(item.offer?.savings || 0), 0)}
             itemTotal={itemSubtotal}
             deliveryFee={0}
-            bagDiscount={0}
             rewardDiscount={rewardDiscount}
             orderTotal={orderTotal}
             rewardEarned={rewardCoinsEarned}

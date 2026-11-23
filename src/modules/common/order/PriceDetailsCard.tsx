@@ -8,7 +8,6 @@ type Props = {
   offerSavings?: number;
   itemTotal: number;
   deliveryFee: number;
-  bagDiscount: number;
   rewardDiscount: number;
   orderTotal: number;
   rewardEarned: number;
@@ -22,7 +21,6 @@ export default function PriceDetailsCard({
   offerSavings = 0,
   itemTotal,
   deliveryFee,
-  bagDiscount,
   rewardDiscount,
   orderTotal,
   rewardEarned,
@@ -61,11 +59,6 @@ export default function PriceDetailsCard({
       {/* Price rows */}
       <Row label={translateUi('common:itemTotal')} value={`₹${itemTotal}`} />
       <Row label={translateUi('common:deliveryFee')} value={`₹${deliveryFee}`} />
-      <Row
-        label={translateUi('common:bagDiscount')}
-        value={`-₹${bagDiscount}`}
-        valueStyle={styles.negative}
-      />
       <Row
         label={translateUi('common:rewardDiscount')}
         value={`-₹${rewardDiscount}`}

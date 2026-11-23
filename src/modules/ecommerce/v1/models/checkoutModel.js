@@ -1570,13 +1570,6 @@ class CheckoutModel {
       bill: {
         item_total: Number(order.product_total),
         delivery_fee: Number(order.shipping_total),
-        bag_discount: Math.max(
-          0,
-          Number(order.product_total) +
-            Number(order.shipping_total) -
-            Number(order.reward_discount) -
-            Number(order.total_amount),
-        ),
         reward_discount: Number(order.reward_discount),
         order_total: Number(order.total_amount),
       },

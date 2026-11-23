@@ -154,9 +154,6 @@ export default function OrderReceipt({ orderId, receiptData }: OrderReceiptProps
 
                 <Row label={translateUi('common:itemTotal')} value={`₹${Number(bill.item_total || 0)}`} />
                 <Row label={translateUi('common:deliveryFee')} value={`₹${Number(bill.delivery_fee || 0)}`} />
-                {Number(bill.bag_discount || 0) > 0 && (
-                  <Row label={translateUi('common:bagDiscount')} value={`-₹${Number(bill.bag_discount)}`} color="#22C55E" />
-                )}
                 {Number(bill.offer_savings) > 0 && <Row label={translateUi('common:includedSavings')} value={`₹${Number(bill.offer_savings)}`} color="#22C55E" />}
                 <Row label={translateUi('common:rewardDiscount')} value={`-₹${Number(bill.reward_discount || 0)}`} color="#22C55E" />
                 {rewardsUsed > 0 && (
