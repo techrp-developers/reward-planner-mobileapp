@@ -49,7 +49,9 @@ const resolveLocalHost = (): string => {
 };
 
 export const LOCAL_SERVER_HOST = IS_LOCAL_ENVIRONMENT ? resolveLocalHost() : '';
-const LOCAL_SERVER_URL = `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`;
+const LOCAL_SERVER_URL = IS_LOCAL_ENVIRONMENT
+  ? `http://${LOCAL_SERVER_HOST}:${LOCAL_API_PORT}`
+  : '';
 
 const LIVE_SERVER_URL = 'https://rewardplanners.com';
 const LIVE_IMAGE_CDN_URL = 'https://cdn.rewardplanners.com';
@@ -80,7 +82,7 @@ if (__DEV__) {
   console.log(`[API] Environment: ${API_ENVIRONMENT}`);
   console.log(`[API] Platform: ${Platform.OS} (${DeviceInfo.isEmulatorSync() ? 'emulator/simulator' : 'physical device'})`);
   console.log(`[API] Local host: ${LOCAL_SERVER_HOST || '(not used)'}`);
-  console.log(`[API] Local port: ${LOCAL_API_PORT}`);
+  console.log(`[API] Local port: ${IS_LOCAL_ENVIRONMENT ? LOCAL_API_PORT : '(not used)'}`);
   console.log(`[API] Base URL: ${API_BASE_URL}`);
 }
 

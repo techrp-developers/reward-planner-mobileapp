@@ -86,6 +86,11 @@ export default function HomeStack() {
         getComponent={() => require("../screens/CampaignProductsScreen").default}
         options={{ animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="FeaturedCampaignProducts"
+        getComponent={() => require("../screens/FeaturedCampaignProductsScreen").default}
+        options={{ animation: "slide_from_right" }}
+      />
       <Stack.Screen name="TermsAndConditions" getComponent={() => require("../profile/TermsandCondition").default} />
       <Stack.Screen name="PrivacyPolicy" getComponent={() => require("../profile/PrivacyPolicy").default} />
       <Stack.Screen

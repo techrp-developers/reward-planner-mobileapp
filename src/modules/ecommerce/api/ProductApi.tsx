@@ -40,6 +40,86 @@ export type FetchAllProductsParams = {
   search?: string;
 };
 
+export type FeaturedCampaign = {
+  campaign_id: number | string;
+  title: string;
+  cta_text?: string | null;
+  total_products: number;
+  background?: {
+    type?: 'solid' | 'gradient' | 'image' | null;
+    colors?: string[] | null;
+    image_url?: string | null;
+    text_color?: string | null;
+  } | null;
+  products: FeaturedCampaignProduct[];
+};
+
+export type FeaturedCampaignProduct = {
+  product_id: number | string;
+  id?: number | string;
+  product_name: string;
+  variant_id: number | string;
+  image?: string | null;
+  image_url?: string | null;
+  price?: string | number | null;
+  selling_price?: string | number | null;
+  final_price?: string | number | null;
+  originalPrice?: string | number | null;
+  original_price?: string | number | null;
+  mrp?: string | number | null;
+  rp_price?: string | number | null;
+  is_wishlist?: boolean | number | string;
+  is_wishlisted?: boolean | number | string;
+  [key: string]: unknown;
+};
+
+export type FeaturedCampaignProductsPage = {
+  campaign_id: number | string;
+  title: string;
+  products: FeaturedCampaignProduct[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export const fetchActiveFeaturedCampaign = async (): Promise<FeaturedCampaign | null> => {
+  const res = await api.get('/v1/campaigns/home/featured');
+  const payload = res.data as {
+    success: boolean;
+    data: FeaturedCampaign | null;
+  };
+
+  if (!payload?.success) {
+    throw new Error('Failed to load featured campaign');
+  }
+
+  return payload.data;
+};
+
+export const fetchFeaturedCampaignProducts = async (
+  campaignId: number | string,
+  page = 1,
+  limit = 20,
+): Promise<FeaturedCampaignProductsPage> => {
+  const res = await api.get(
+    `/v1/campaigns/${encodeURIComponent(String(campaignId))}/featured-products/public`,
+    { params: { page, limit } },
+  );
+  const payload = res.data as {
+    success: boolean;
+    data: FeaturedCampaignProductsPage;
+  };
+
+  if (!payload?.success || !payload.data?.pagination) {
+    throw new Error('Failed to load featured campaign products');
+  }
+
+  return payload.data;
+};
+
 export const fetchProductsByBrand = async (brand: string, page = 1, search = '') => {
   const res = await api.get('/v1/product/by-brand', {
     params: { brand, page, limit: 20, search },

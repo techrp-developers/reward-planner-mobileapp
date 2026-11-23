@@ -56,6 +56,16 @@ export const normalizeProduct = (item: any) => {
       item?.reward?.redeem,
     0
   );
+  const hasExplicitRpPrice = item?.rp_price !== undefined;
+  const rpPrice = hasExplicitRpPrice
+    ? item.rp_price
+    : item?.rpPrice ??
+      item?.rp_amount ??
+      item?.rpAmount ??
+      item?.reward_price ??
+      item?.rewardPrice ??
+      item?.member_price ??
+      item?.memberPrice;
 
   return {
     ...item,
@@ -91,17 +101,9 @@ export const normalizeProduct = (item: any) => {
         item?.discountPercentage,
       ""
     ),
-    rp_price: toStringValue(
-      item?.rp_price ??
-        item?.rpPrice ??
-        item?.rp_amount ??
-        item?.rpAmount ??
-        item?.reward_price ??
-        item?.rewardPrice ??
-        item?.member_price ??
-        item?.memberPrice,
-      ""
-    ),
+    rp_price: hasExplicitRpPrice && rpPrice === null
+      ? null
+      : toStringValue(rpPrice, ""),
     rewardLabel:
       item?.reward?.label ??
       item?.rewardLabel ??
