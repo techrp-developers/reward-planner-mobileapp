@@ -1156,7 +1156,9 @@ class ProductModel {
         params,
       );
 
-      const stats = statsRows[0];
+      const stats = Object.fromEntries(
+        Object.entries(statsRows[0]).map(([key, value]) => [key, Number(value) || 0]),
+      );
 
       const [[{ total }]] = await db.execute(
         `SELECT COUNT(DISTINCT p.product_id) AS total FROM eproducts p ${whereClause}`,
@@ -1480,7 +1482,8 @@ class ProductModel {
         SUM(status = 'rejected') AS rejected,
         SUM(status = 'resubmission') AS resubmission
       FROM eproducts
-      WHERE vendor_id = ?
+      WHERE vendor_id = ? AND is_deleted = 0
+        AND COALESCE(created_via, '') <> 'flea_market_quick_create'
     `;
 
       const [[stats]] = await db.execute(query, [vendorId]);

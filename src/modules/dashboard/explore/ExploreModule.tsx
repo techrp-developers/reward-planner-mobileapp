@@ -35,7 +35,7 @@ type CategoryItem = {
     width?: number | string;
     height?: number | string;
   }>;
-  tab: TopTab | 'Loan';
+  tab: TopTab;
   title?: string;
 };
 
@@ -44,11 +44,9 @@ const activeServices: CategoryItem[] = [
   { image: Explore2, tab: 'Services' },
   { image: Explore3, tab: 'Payments' },
   { image: Explore4, tab: 'DineOut' },
-  { tab: 'Loan', title: 'Personal Loan' },
 ];
 
 const upcomingServices: CategoryItem[] = [
-  { image: Explore5, tab: 'Product' },
   { image: Explore6, tab: 'Product' },
 ];
 
@@ -92,20 +90,16 @@ function ExploreModule() {
   );
 
   const handleCategoryPress = useCallback(
-    (tab: TopTab | 'Loan') => {
+    (tab: TopTab) => {
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
 
-      if (tab === 'Loan') {
-        navigation.navigate('LoanStack');
-      } else {
-        const target = TAB_TO_MODULE[tab];
-        navigation.navigate('Home', {
-          screen: target.screen,
-          params: { moduleName: target.moduleName },
-          moduleName: target.moduleName,
-        });
-      }
+      const target = TAB_TO_MODULE[tab];
+      navigation.navigate('Home', {
+        screen: target.screen,
+        params: { moduleName: target.moduleName },
+        moduleName: target.moduleName,
+      });
 
       navigationUnlockTimerRef.current = setTimeout(() => {
         isNavigatingRef.current = false;
@@ -161,7 +155,7 @@ function ExploreModule() {
               t.exploreItem,
               { width: CARD_WIDTH, height: CARD_HEIGHT },
             ]}
-            onPress={() => handleCategoryPress(item.tab)}
+            onPress={() => handleCategoryPress(item)}
           >
             {item.tab === 'Loan' ? (
               <LinearGradient colors={['#D3B8E5', '#F7F0FB']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.loanCard}>

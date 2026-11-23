@@ -1,4 +1,5 @@
 const db = require("../config/database");
+const { vendorOrderReport, vendorOrderSummary } = require("../utils/vendorReportData");
 const Razorpay = require("razorpay");
 const xpressService = require("../services/ExpressBees/xpressbees_service");
 const {
@@ -420,84 +421,13 @@ class OrderModel {
 
   // Get vendor order summary
   async getOrderSummary({ vendorId, limit, offset }) {
-    const [rows] = await db.execute(
-      `
-    SELECT
-      vo.vendor_order_id,
-      vo.order_id,
-      vo.vendor_total,
-      vo.shipping_status,
-      vo.created_at,
-
-      o.order_ref,
-      o.status AS order_status,
-      o.cancellation_status,
-
-      COUNT(oi.order_item_id) AS item_count,
-
-      s.awb_number,
-      s.courier_name
-
-    FROM vendor_orders vo
-
-    JOIN eorders o
-      ON vo.order_id = o.order_id
-
-    LEFT JOIN eorder_items oi
-      ON oi.vendor_order_id = vo.vendor_order_id
-
-    LEFT JOIN order_shipments s
-      ON s.vendor_order_id = vo.vendor_order_id
-
-    WHERE vo.vendor_id = ?
-
-    GROUP BY vo.vendor_order_id
-
-    ORDER BY vo.created_at DESC
-
-    LIMIT ? OFFSET ?
-    `,
-      [vendorId, limit, offset],
-    );
-
-    const [[{ total }]] = await db.execute(
-      `
-    SELECT COUNT(*) AS total
-    FROM vendor_orders
-    WHERE vendor_id = ?
-    `,
-      [vendorId],
-    );
-
-    return {
-      orders: rows,
-      total,
-    };
+    return vendorOrderSummary(db, vendorId, limit, offset);
   }
 
-  // Get vendor order stats (excludes cancelled orders from count/revenue)
+  // Use the same order scope and revenue calculation as the vendor report.
   async getVendorOrderStats(vendorId) {
-    const [[stats]] = await db.execute(
-      `
-    SELECT
-      COUNT(*) AS total_orders,
-      COALESCE(SUM(vo.vendor_total), 0) AS total_revenue
-
-    FROM vendor_orders vo
-
-    JOIN eorders o
-      ON vo.order_id = o.order_id
-
-    WHERE vo.vendor_id = ?
-      AND o.status != 'cancelled'
-    `,
-      [vendorId],
-    );
-
-    return {
-      total_orders: Number(stats.total_orders) || 0,
-      total_revenue: Number(stats.total_revenue) || 0,
-    };
+    const { summary } = await vendorOrderReport(db, vendorId);
+    return { total_orders: summary.totalOrders, total_revenue: summary.revenue };
   }
 
   // view vendor details

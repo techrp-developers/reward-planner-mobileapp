@@ -52,6 +52,7 @@ export type { TopTab } from "./navbarConstants";
 type NavbarProps = {
   activeModule?: TopTab;
   onModuleChange?: (tab: TopTab) => void;
+  topTabsVariant?: "default" | "health";
 };
 
 type NavStateLike = {
