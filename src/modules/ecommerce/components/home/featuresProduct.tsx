@@ -69,7 +69,7 @@ export default function FeaturesProduct() {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
   const { theme } = useAppTheme();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
 
   const { data: campaign, isLoading } = useQuery({
     queryKey: FEATURED_CAMPAIGN_QUERY_KEY,
@@ -175,13 +175,27 @@ export default function FeaturesProduct() {
   const ctaLabel = campaign.cta_text?.trim() || translateUi('common:exploreMore');
   const title = typeof campaign.title === "string" ? campaign.title.trim() : "";
   const ctaBackground = lightText ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.82)";
+  const availableHeaderWidth = Math.max(width - 32, 0);
+  const estimatedTitleWidth = title.length * 9.2 * fontScale;
+  const estimatedCtaWidth = Math.min(
+    availableHeaderWidth * 0.46,
+    ctaLabel.length * 6.8 * fontScale + 46,
+  );
+  const stackHeader =
+    availableHeaderWidth < estimatedTitleWidth + estimatedCtaWidth + 12;
 
   const sectionContent = (
     <View style={styles.contentWrap}>
-        <View style={[styles.headerRow, I18nManager.isRTL && styles.headerRowRtl]}>
+        <View
+          style={[
+            styles.headerRow,
+            stackHeader && styles.headerStacked,
+            !stackHeader && I18nManager.isRTL && styles.headerRowRtl,
+          ]}
+        >
           <View style={styles.headingWrap}>
             <Text
-              numberOfLines={1}
+              numberOfLines={stackHeader ? 2 : 1}
               ellipsizeMode="tail"
               style={[styles.heading, { color: textColor }, I18nManager.isRTL && styles.rtlText]}
             >
@@ -189,15 +203,22 @@ export default function FeaturesProduct() {
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.exploreBtn, { backgroundColor: ctaBackground }, I18nManager.isRTL && styles.ctaRtl]}
-            activeOpacity={0.85}
+            style={[
+              styles.exploreBtn,
+              stackHeader && styles.exploreBtnStacked,
+              stackHeader
+                ? (I18nManager.isRTL ? styles.stackedCtaRtl : styles.stackedCtaLtr)
+                : I18nManager.isRTL && styles.ctaRtl,
+              { backgroundColor: ctaBackground },
+            ]}
+            activeOpacity={0.76}
             onPress={handleExplore}
             accessibilityRole="button"
             accessibilityLabel={ctaLabel}
           >
             <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
+              numberOfLines={stackHeader ? 2 : 1}
+              adjustsFontSizeToFit={!stackHeader}
               style={[styles.exploreText, { color: textColor }, I18nManager.isRTL && styles.rtlText]}
             >
               {ctaLabel}
@@ -274,10 +295,15 @@ const styles = StyleSheet.create({
   contentWrap: { paddingBottom: 8 },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 20,
+    marginBottom: 14,
+    gap: 12,
+  },
+  headerStacked: {
+    flexDirection: "column",
+    alignItems: "stretch",
     gap: 8,
   },
   headerRowRtl: {
@@ -294,18 +320,27 @@ const styles = StyleSheet.create({
   headingWrap: {
     flex: 1,
     minWidth: 0,
-    marginRight: 8,
   },
   exploreBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 14,
+    minHeight: 24,
+    paddingVertical: 2,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     maxWidth: "46%",
-    flexShrink: 1,
+    flexShrink: 0,
     gap: 4,
+  },
+  exploreBtnStacked: {
+    maxWidth: "100%",
+  },
+  stackedCtaLtr: {
+    alignSelf: "flex-end",
+  },
+  stackedCtaRtl: {
+    alignSelf: "flex-start",
   },
   ctaRtl: {
     flexDirection: "row-reverse",
