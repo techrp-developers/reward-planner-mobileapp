@@ -45,13 +45,18 @@ function SubmittedSuccessful({ navigation }: any) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: servicesTheme.colors.background }}>
-      {/* BACK BUTTON */}
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => navigation?.goBack()}
-      >
-        <MaterialIcons name="chevron-left" size={32} color={servicesTheme.colors.text} />
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation?.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <MaterialIcons name="chevron-left" size={32} color={servicesTheme.colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
+        <ReturnHomeButton />
+      </View>
 
       <View style={{ flex: 1 }}>
         <Successfully
@@ -66,8 +71,6 @@ function SubmittedSuccessful({ navigation }: any) {
             Redirecting to home in {secondsLeft}s…
           </Text>
         )}
-        <ReturnHomeButton />
-
         {/* APP RATING CARD */}
         <View style={[styles.wrapper, { backgroundColor: servicesTheme.isDark ? '#181811' : '#FFFADF' }]}>
           <View style={styles.iconWrap}>
@@ -95,13 +98,14 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 8,
   },
-  backButton: {
-    position: 'absolute',
-    top: 20, 
-    left: 16,
-    zIndex: 10, 
-    padding: 8,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
+  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerSpacer: { flex: 1 },
   wrapper: {
     marginHorizontal: 16,
     marginBottom: 40, 

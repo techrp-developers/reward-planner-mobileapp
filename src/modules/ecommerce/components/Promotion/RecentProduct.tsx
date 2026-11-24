@@ -98,6 +98,8 @@ const RecentProduct = () => {
                     <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={handlePressAll}
+                        accessibilityRole="button"
+                        accessibilityLabel={translateUi('common:viewAll')}
                         style={[
                             styles.viewAllBtn,
                             { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.45)" },
@@ -114,7 +116,6 @@ const RecentProduct = () => {
                     estimatedItemSize={PROMO_ESTIMATED_ITEM_SIZE}
                     keyExtractor={(item) => String(item.id)}
                     renderCard={renderCard}
-                    contentContainerStyle={styles.listPadding}
                 />
             </LinearGradient>
         </View>
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
     sectionWrapper: {
         backgroundColor: '#FFFFFF',
         width: '100%',
+        marginBottom: 16,
     },
     gradientSection: {
         width: '100%',
@@ -156,17 +158,17 @@ const styles = StyleSheet.create({
     viewAllBtn: {
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingVertical: 8,
+        minHeight: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 16,
     },
     viewAllText: {
         fontSize: 12,
         fontWeight: "800",
         color: "#5B47A3",
     },
-    listPadding: {
-        paddingHorizontal: 16,
-    }
 });
 
 export default React.memo(RecentProduct);

@@ -8,10 +8,11 @@ interface Props {
   title: string;
   onBackPress: () => void;
   children?: React.ReactNode;
+  rightAction?: React.ReactNode;
   compact?: boolean;
 }
 
-const ScreenHeader: React.FC<Props> = ({ title, onBackPress, children, compact = false }) => {
+const ScreenHeader: React.FC<Props> = ({ title, onBackPress, children, rightAction, compact = false }) => {
   const servicesTheme = useServicesTheme();
   const { top } = useSafeAreaInsets();
 
@@ -32,6 +33,7 @@ const ScreenHeader: React.FC<Props> = ({ title, onBackPress, children, compact =
         <Text style={[styles.headerTitleText, { color: servicesTheme.colors.textStrong }]} numberOfLines={1}>
           {title}
         </Text>
+        {rightAction}
       </View>
 
       {children}

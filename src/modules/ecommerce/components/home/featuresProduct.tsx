@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 20,
-    marginBottom: 14,
+    marginBottom: 16,
     gap: 12,
   },
   headerStacked: {
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 24,
-    paddingVertical: 2,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 16,
     maxWidth: "46%",
@@ -349,8 +349,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: "180deg" }],
   },
   exploreText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "800",
     flexShrink: 1,
   },
 });

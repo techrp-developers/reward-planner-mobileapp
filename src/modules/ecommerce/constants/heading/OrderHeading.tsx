@@ -13,12 +13,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import { handleNavigateWithPrefetch } from "../../navigation/navigationPerformance";
 import { useAppTheme } from "../../../../theme/ThemeContext";
+import ReturnHomeButton from "../../../common/order/ReturnHomeButton";
 
 type Props = {
   title?: string;
   onBackPress?: () => void;
   onHelpPress?: () => void;
   showHelp?: boolean;
+  showHomeButton?: boolean;
   isDark?: boolean;
 };
 
@@ -29,6 +31,7 @@ export default function OrderHeading({
   onBackPress,
   onHelpPress,
   showHelp = true,
+  showHomeButton = false,
   isDark = false,
 }: Props) {
   const { t: translateUi } = useTranslation('common');
@@ -100,6 +103,7 @@ export default function OrderHeading({
             <Text style={styles.helpText}>{translateUi('common:help')}</Text>
           </TouchableOpacity>
         ) : null}
+        {showHomeButton ? <ReturnHomeButton /> : null}
       </View>
     </SafeAreaView>
   );

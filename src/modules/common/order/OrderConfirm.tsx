@@ -69,8 +69,13 @@ export default function OrderConfirmScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color="#8665FF" />
-        <ReturnHomeButton />
+        <View style={styles.header}>
+          <View style={styles.headerSpacer} />
+          <ReturnHomeButton />
+        </View>
+        <View style={styles.loaderContent}>
+          <ActivityIndicator size="large" color="#8665FF" />
+        </View>
       </SafeAreaView>
     );
   }
@@ -79,9 +84,14 @@ export default function OrderConfirmScreen() {
   if (!receipt) {
     return (
       <SafeAreaView style={styles.loaderWrap}>
-        <Text style={styles.errorText}>Unable to load your order. Check order history before paying again.</Text>
-        <Pressable onPress={loadReceipt}><Text style={styles.subtitle}>Try loading the order again</Text></Pressable>
-        <ReturnHomeButton />
+        <View style={styles.header}>
+          <View style={styles.headerSpacer} />
+          <ReturnHomeButton />
+        </View>
+        <View style={styles.loaderContent}>
+          <Text style={styles.errorText}>Unable to load your order. Check order history before paying again.</Text>
+          <Pressable onPress={loadReceipt}><Text style={styles.subtitle}>Try loading the order again</Text></Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -93,6 +103,10 @@ export default function OrderConfirmScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
+        <ReturnHomeButton />
+      </View>
 
       <LinearGradient
         colors={["rgba(62, 182, 85, 0.2)", "rgba(255, 255, 255, 0.2)"]}
@@ -190,7 +204,6 @@ export default function OrderConfirmScreen() {
           </Animated.View>
         )}
       </LinearGradient>
-      <ReturnHomeButton />
     </SafeAreaView>
   );
 }
@@ -201,12 +214,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#E8F5E9" },
   bg: { flex: 1 },
   container: { flex: 1, justifyContent: "space-between" },
-  loaderWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#E8F5E9",
-  },
+  loaderWrap: { flex: 1, backgroundColor: "#E8F5E9" },
+  loaderContent: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24 },
+  header: { height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 16 },
+  headerSpacer: { flex: 1 },
   errorText: {
     fontSize: 16,
     color: "#666",

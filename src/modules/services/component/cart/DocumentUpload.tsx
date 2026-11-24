@@ -590,8 +590,11 @@ const DocumentUpload = () => {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: servicesTheme.colors.background }]}>
-      <ScreenHeader title="Documents Required" onBackPress={() => navigation.goBack()} />
-      <ReturnHomeButton />
+      <ScreenHeader
+        title="Documents Required"
+        onBackPress={() => navigation.goBack()}
+        rightAction={<ReturnHomeButton />}
+      />
 
       {loading ? (
         <View style={styles.centeredWrap}>

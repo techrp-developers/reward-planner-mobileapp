@@ -14,6 +14,9 @@ function OrderSuccessfulComponent() {
 
   return (
     <BBPSSafeAreaView style={{ backgroundColor: bbpsTheme.colors.background }}>
+    <View style={styles.header}>
+      <ReturnHomeButton />
+    </View>
     <ScrollView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
       <View style={styles.sectionMargin}>
@@ -21,7 +24,6 @@ function OrderSuccessfulComponent() {
       </View>
 
       {/* 24/7 Help & Support Section */}
-      <ReturnHomeButton />
       <TouchableOpacity
         style={[
           styles.helpContainer,
@@ -56,6 +58,11 @@ const styles = StyleSheet.create({
   },
   sectionMargin: {
     marginVertical: 10,
+  },
+  header: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   helpContainer: {
     backgroundColor: '#FFFFFF',

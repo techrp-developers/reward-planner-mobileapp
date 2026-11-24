@@ -368,7 +368,6 @@ export default function ServiceOrderDetail() {
           />
         }
       >
-        <ReturnHomeButton />
         <OrderItemCard
           image={
             primaryImage ? (
@@ -514,6 +513,7 @@ function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) 
         />
         <Text style={styles.helpText}>{translateUi('common:help')}</Text>
       </TouchableOpacity>
+      <ReturnHomeButton />
     </View>
   );
 }

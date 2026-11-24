@@ -14,7 +14,6 @@ import OrderStatusJourney, { OrderStatusItem } from "../../common/order/OrderSta
 import DeliveryDetailsCard from "../../common/order/DeliveryDetailsCard";
 import PriceDetailsCard from "../../common/order/PriceDetailsCard";
 import OfferDetails from '../../common/order/OfferDetails';
-import ReturnHomeButton from '../../common/order/ReturnHomeButton';
 import type { AppliedOffer } from '../../common/order/appliedOffer';
 import InvoiceAndServiceBanner from "../../common/order/InvoiceAndServiceBanner";
 import ProductCarousel from "../components/order/ProductCarousel";
@@ -454,6 +453,7 @@ export default function OrderConfirmedScreen() {
                     title={translateUi('common:orderConfirmed')}
                     onBackPress={() => navigation.goBack()}
                     isDark={isDark}
+                    showHomeButton
                 />
                 <View style={styles.centeredState}>
                     <ActivityIndicator size="large" color={theme.primary} />
@@ -470,6 +470,7 @@ export default function OrderConfirmedScreen() {
                     title={translateUi('common:orderConfirmed')}
                     onBackPress={() => navigation.goBack()}
                     isDark={isDark}
+                    showHomeButton
                 />
                 <View style={styles.centeredState}>
                     <Text style={styles.errorText}>{error || "Unable to load order details."}</Text>
@@ -484,6 +485,7 @@ export default function OrderConfirmedScreen() {
                 title={translateUi('common:orderConfirmed')}
                 onBackPress={() => navigation.goBack()}
                 isDark={isDark}
+                showHomeButton
             />
 
             <ScrollView
@@ -491,7 +493,6 @@ export default function OrderConfirmedScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Product Card */}
-                <ReturnHomeButton />
                 <OrderItemCard
                     image={
                         firstItem?.image ? (
