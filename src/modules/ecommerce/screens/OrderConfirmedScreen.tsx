@@ -20,6 +20,7 @@ import ProductCarousel from "../components/order/ProductCarousel";
 import { fetchOrderDetails, OrderItemReturnRequest } from "../api/OrderApi";
 import { fetchAllProducts, getProductImageUrl } from "../api/ProductApi";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import { ORDER_PAYMENT_FLOW_ROUTES } from "../../common/order/returnToModuleHome";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type OrderConfirmedRoute = RouteProp<HomeStackParamList, "OrderConfirmedScreen">;
@@ -169,6 +170,13 @@ export default function OrderConfirmedScreen() {
     const navigation = useNavigation<Nav>();
     const route = useRoute<OrderConfirmedRoute>();
     const { isDark, theme } = useAppTheme();
+    const helpContext = navigation.getState().routeNames.map(String).includes('ServiceOrderDetail')
+        ? 'services'
+        : 'ecommerce';
+    const handleHelpPress = useCallback(
+        () => navigation.navigate('HelpForm', { context: helpContext }),
+        [helpContext, navigation],
+    );
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -448,12 +456,15 @@ export default function OrderConfirmedScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+            <SafeAreaView edges={["left", "right", "bottom"]} style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
                     title={translateUi('common:orderConfirmed')}
-                    onBackPress={() => navigation.goBack()}
                     isDark={isDark}
                     showHomeButton
+                    interceptSystemBack
+                    fallbackRouteNames={["MyOrder", "Home"]}
+                    blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+                    onHelpPress={handleHelpPress}
                 />
                 <View style={styles.centeredState}>
                     <ActivityIndicator size="large" color={theme.primary} />
@@ -465,12 +476,15 @@ export default function OrderConfirmedScreen() {
 
     if (error || !orderData?.order) {
         return (
-            <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+            <SafeAreaView edges={["left", "right", "bottom"]} style={[styles.safe, { backgroundColor: theme.background }]}>
                 <OrderHeading
                     title={translateUi('common:orderConfirmed')}
-                    onBackPress={() => navigation.goBack()}
                     isDark={isDark}
                     showHomeButton
+                    interceptSystemBack
+                    fallbackRouteNames={["MyOrder", "Home"]}
+                    blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+                    onHelpPress={handleHelpPress}
                 />
                 <View style={styles.centeredState}>
                     <Text style={styles.errorText}>{error || "Unable to load order details."}</Text>
@@ -480,12 +494,15 @@ export default function OrderConfirmedScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <SafeAreaView edges={["left", "right", "bottom"]} style={[styles.safe, { backgroundColor: theme.background }]}>
             <OrderHeading
                 title={translateUi('common:orderConfirmed')}
-                onBackPress={() => navigation.goBack()}
                 isDark={isDark}
                 showHomeButton
+                interceptSystemBack
+                fallbackRouteNames={["MyOrder", "Home"]}
+                blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+                onHelpPress={handleHelpPress}
             />
 
             <ScrollView

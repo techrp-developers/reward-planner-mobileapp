@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import RecommendedServices from '../component/order/RecommendedServices';
-import ReturnHomeButton from '../../common/order/ReturnHomeButton';
 import RechargeSuccessCard from '../component/order/RechargeSuccessCard';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useBbpsTheme } from '../utils/useBbpsTheme';
 import BBPSSafeAreaView from '../constatnt/BBPSSafeAreaView';
+import OrderHeading from '../../ecommerce/constants/heading/OrderHeading';
+import { ORDER_PAYMENT_FLOW_ROUTES, returnToModuleHome } from '../../common/order/returnToModuleHome';
+
+const BBPS_PAYMENT_ROUTES = [...ORDER_PAYMENT_FLOW_ROUTES, 'TransactionStatusScreen'];
 
 function OrderSuccessfulComponent() {
   const navigation = useNavigation<any>();
@@ -14,13 +17,18 @@ function OrderSuccessfulComponent() {
 
   return (
     <BBPSSafeAreaView style={{ backgroundColor: bbpsTheme.colors.background }}>
-    <View style={styles.header}>
-      <ReturnHomeButton />
-    </View>
+    <OrderHeading
+      title="Payment Successful"
+      showHelp={false}
+      showHomeButton
+      interceptSystemBack
+      fallbackRouteNames={['OrderHistory', 'Home']}
+      blockedPreviousRouteNames={BBPS_PAYMENT_ROUTES}
+    />
     <ScrollView style={[styles.container, { backgroundColor: bbpsTheme.colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Success Card Component */}
       <View style={styles.sectionMargin}>
-        <RechargeSuccessCard onPayAnother={() => navigation.navigate('Home')} />
+        <RechargeSuccessCard onPayAnother={() => returnToModuleHome(navigation)} />
       </View>
 
       {/* 24/7 Help & Support Section */}
@@ -58,11 +66,6 @@ const styles = StyleSheet.create({
   },
   sectionMargin: {
     marginVertical: 10,
-  },
-  header: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   helpContainer: {
     backgroundColor: '#FFFFFF',

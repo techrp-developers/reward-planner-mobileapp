@@ -24,10 +24,11 @@ import { useBottomTabsInset } from '../../../../bottombar/BottomTabsInsetContext
 import DeliveryDetailsCard from '../../../../modules/common/order/DeliveryDetailsCard';
 import PriceDetailsCard from '../../../../modules/common/order/PriceDetailsCard';
 import OrderItemCard from '../../../../modules/common/order/OrderItemCard';
+import OrderHeading from '../../../../modules/ecommerce/constants/heading/OrderHeading';
+import { ORDER_PAYMENT_FLOW_ROUTES } from '../../../../modules/common/order/returnToModuleHome';
 
 // ── Service-specific components ──────────────────────────────────────────────
 import ServiceOrderItemCard from './ServiceOrderItemCard';
-import ReturnHomeButton from '../../../common/order/ReturnHomeButton';
 import ServiceBundleCard from './ServiceBundleCard';
 import YouMayNeedServicesCarousel from '../constant/YouMayNeedServicesCarousel';
 import RecommendedServicesCarousel from '../constant/RecommendedServicesCarousel';
@@ -264,10 +265,15 @@ export default function ServiceOrderDetail() {
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
-        <Header
-          onBack={() => navigation.goBack()}
-          onHelp={() => navigation.navigate('HelpForm')}
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+        <OrderHeading
+          title={translateUi('common:orderDetails')}
+          showHomeButton
+          interceptSystemBack
+          isDark={servicesTheme.isDark}
+          fallbackRouteNames={['MyOrder', 'Home']}
+          blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+          onHelpPress={() => navigation.navigate('HelpForm', { context: 'services' })}
         />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={servicesTheme.colors.primary} />
@@ -279,10 +285,15 @@ export default function ServiceOrderDetail() {
 
   if (error || !order) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
-        <Header
-          onBack={() => navigation.goBack()}
-          onHelp={() => navigation.navigate('HelpForm')}
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+        <OrderHeading
+          title={translateUi('common:orderDetails')}
+          showHomeButton
+          interceptSystemBack
+          isDark={servicesTheme.isDark}
+          fallbackRouteNames={['MyOrder', 'Home']}
+          blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+          onHelpPress={() => navigation.navigate('HelpForm', { context: 'services' })}
         />
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle-outline" size={52} color="#DC2626" />
@@ -350,10 +361,15 @@ export default function ServiceOrderDetail() {
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
-      <Header
-        onBack={() => navigation.goBack()}
-        onHelp={() => navigation.navigate('HelpForm')}
+    <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: servicesTheme.colors.background }]}>
+      <OrderHeading
+        title={translateUi('common:orderDetails')}
+        showHomeButton
+        interceptSystemBack
+        isDark={servicesTheme.isDark}
+        fallbackRouteNames={['MyOrder', 'Home']}
+        blockedPreviousRouteNames={ORDER_PAYMENT_FLOW_ROUTES}
+        onHelpPress={() => navigation.navigate('HelpForm', { context: 'services' })}
       />
 
       <ScrollView
@@ -489,35 +505,6 @@ export default function ServiceOrderDetail() {
   );
 }
 
-// ── Local layout helpers (not exported — presentational only) ─────────────────
-function Header({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
-  const { t: translateUi } = useTranslation('common');
-  const servicesTheme = useServicesTheme();
-
-  return (
-    <View style={[styles.header, { backgroundColor: servicesTheme.colors.surface, borderBottomColor: servicesTheme.colors.divider }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={onBack}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <MaterialCommunityIcons name="chevron-left" size={28} color={servicesTheme.colors.text} />
-      </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: servicesTheme.colors.textStrong }]}>{translateUi('common:orderDetails')}</Text>
-      <TouchableOpacity activeOpacity={0.85} onPress={onHelp} style={[styles.helpBtn, { backgroundColor: servicesTheme.colors.surface, borderColor: servicesTheme.colors.border }]}>
-        <MaterialCommunityIcons
-          name="chat-outline"
-          size={16}
-          color="#EC4899"
-          style={styles.helpIcon}
-        />
-        <Text style={styles.helpText}>{translateUi('common:help')}</Text>
-      </TouchableOpacity>
-      <ReturnHomeButton />
-    </View>
-  );
-}
-
 function SectionCard({
   title,
   children,
@@ -641,32 +628,6 @@ function InvoiceDownloadRow({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
-  },
-  backButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { flex: 1, marginLeft: 12 },
-  headerEyebrow: { color: 'rgba(255,255,255,0.64)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
-  headerTitle: { flex: 1, marginLeft: 8, fontSize: 16, fontWeight: '600', color: '#374151' },
-  helpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  helpIcon: { marginRight: 4 },
-  helpText: { fontSize: 14, fontWeight: '600', color: '#EC4899' },
 
   scroll: { padding: 16, paddingBottom: 8 },
   productImage: {

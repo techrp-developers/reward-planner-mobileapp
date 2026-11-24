@@ -1,19 +1,25 @@
 import { useTranslation } from 'react-i18next';
-import React from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
+  BackHandler,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  I18nManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../../navigation/types";
 import { handleNavigateWithPrefetch } from "../../navigation/navigationPerformance";
 import { useAppTheme } from "../../../../theme/ThemeContext";
 import ReturnHomeButton from "../../../common/order/ReturnHomeButton";
+import {
+  navigateBackSafely,
+  navigateToRegisteredRoute,
+} from "../../../common/order/returnToModuleHome";
 
 type Props = {
   title?: string;
@@ -22,6 +28,9 @@ type Props = {
   showHelp?: boolean;
   showHomeButton?: boolean;
   isDark?: boolean;
+  fallbackRouteNames?: string[];
+  blockedPreviousRouteNames?: string[];
+  interceptSystemBack?: boolean;
 };
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
@@ -32,78 +41,113 @@ export default function OrderHeading({
   onHelpPress,
   showHelp = true,
   showHomeButton = false,
-  isDark = false,
+  fallbackRouteNames = ["MyOrder", "Home", "Dashboard"],
+  blockedPreviousRouteNames = [],
+  interceptSystemBack = false,
 }: Props) {
   const { t: translateUi } = useTranslation('common');
   const navigation = useNavigation<Nav>();
-  const appTheme = useAppTheme();
-  const darkMode = isDark || appTheme.isDark;
-  const { theme } = appTheme;
+  const { theme } = useAppTheme();
+  const isNavigatingBack = useRef(false);
+  const state = navigation.getState();
+  const previousRoute = state.index > 0 ? state.routes[state.index - 1]?.name : undefined;
+  const previousRouteIsBlocked = Boolean(
+    previousRoute && blockedPreviousRouteNames.includes(previousRoute),
+  );
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
+    if (isNavigatingBack.current) return;
+    isNavigatingBack.current = true;
     handleNavigateWithPrefetch({
-      navigate: onBackPress ?? (() => navigation.goBack()),
+      navigate: () => {
+        const currentState = navigation.getState();
+        const currentRouteIndex = currentState.index;
+        const previousRouteName = currentRouteIndex > 0 ? currentState.routes[currentRouteIndex - 1]?.name : undefined;
+
+        if (onBackPress && previousRouteName && !blockedPreviousRouteNames.includes(previousRouteName)) {
+          onBackPress();
+          return;
+        }
+
+        if (!navigateBackSafely(navigation, { fallbackRouteNames, blockedPreviousRouteNames })) {
+          isNavigatingBack.current = false;
+        }
+      },
     });
-  };
+  }, [blockedPreviousRouteNames, fallbackRouteNames, navigation, onBackPress]);
+
+  useEffect(() => {
+    if (interceptSystemBack) {
+      navigation.setOptions({ gestureEnabled: !previousRouteIsBlocked });
+    }
+  }, [interceptSystemBack, navigation, previousRouteIsBlocked]);
+
+  useFocusEffect(useCallback(() => {
+    if (!interceptSystemBack) return undefined;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [handleBack, interceptSystemBack]));
 
   const handleHelp = () => {
     handleNavigateWithPrefetch({
-      navigate: onHelpPress ?? (() => {
-        try {
-          (navigation as any).navigate("HelpForm");
-        } catch {
-          const parentNav = (navigation as any).getParent?.();
-          const rootNav = parentNav?.getParent?.()?.getParent?.();
-
-          rootNav?.navigate?.("HelpForm");
+      navigate: () => {
+        if (onHelpPress) {
+          onHelpPress();
+          return;
         }
-      }),
+
+        if (!navigateToRegisteredRoute(navigation, "HelpForm")) {
+          console.error("HelpForm is not registered in the active navigation tree.");
+        }
+      },
     });
   };
 
   return (
     <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor: theme.card }]}>
       <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        {/* Back Button */}
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.7}
-          style={styles.iconBtn}
-        >
-          <MaterialCommunityIcons
-            name="chevron-left"
-            size={28}
-            color={theme.text}
-          />
-        </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-          {title}
-        </Text>
-
-        {showHelp ? (
+        <View style={styles.leftSection}>
           <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleHelp}
-            style={[
-              styles.helpBtn,
-              {
-                backgroundColor: darkMode ? "#18181B" : "#FFFFFF",
-                borderColor: theme.border,
-              },
-            ]}
+            onPress={handleBack}
+            activeOpacity={0.65}
+            accessibilityRole="button"
+            accessibilityLabel={translateUi('common:back')}
+            style={[styles.iconButton, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <MaterialCommunityIcons
-              name="chat-outline"
-              size={16}
-              color="#EC4899"
-              style={styles.helpIcon}
+              name={I18nManager.isRTL ? "arrow-right" : "arrow-left"}
+              size={23}
+              color={theme.text}
             />
-            <Text style={styles.helpText}>{translateUi('common:help')}</Text>
           </TouchableOpacity>
-        ) : null}
-        {showHomeButton ? <ReturnHomeButton /> : null}
+          <Text
+            style={[styles.title, { color: theme.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </Text>
+        </View>
+
+        <View style={styles.rightSection}>
+          {showHelp ? (
+            <TouchableOpacity
+              activeOpacity={0.65}
+              onPress={handleHelp}
+              accessibilityRole="button"
+              accessibilityLabel={translateUi('common:help')}
+              style={[styles.iconButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <MaterialCommunityIcons name="help-circle-outline" size={23} color={theme.text} />
+            </TouchableOpacity>
+          ) : null}
+          {showHomeButton ? <ReturnHomeButton /> : null}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -112,56 +156,41 @@ const styles = StyleSheet.create({
   safe: {
     backgroundColor: "#FFFFFF",
   },
-  safeDark: { backgroundColor: "#111113" },
-
   header: {
-    height: 56,
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
+    gap: 8,
   },
-  headerDark: {
-    backgroundColor: "#111113",
-    borderBottomColor: "#27272A",
+  leftSection: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-
-  iconBtn: {
-    width: 36,
-    height: 36,
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    gap: 8,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-
   title: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  titleDark: { color: "#FFFFFF" },
-
-  helpBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
-  },
-
-  helpIcon: {
-    marginRight: 4,
-  },
-
-  helpText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#EC4899", // pink like design
+    minWidth: 0,
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "auto",
   },
 });

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../../navigation/type';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Successfully from '../constant/Successfully';
-import ReturnHomeButton from '../../../common/order/ReturnHomeButton';
+import OrderHeading from '../../../ecommerce/constants/heading/OrderHeading';
+import { returnToModuleHome } from '../../../common/order/returnToModuleHome';
 import { useServicesTheme } from '../../utils/useServicesTheme';
 
 type SubmittedSuccessfulRoute = RouteProp<HomeStackParamList, 'SubmittedSuccessful'>;
@@ -34,7 +35,7 @@ function SubmittedSuccessful({ navigation }: any) {
     }, 1000);
 
     const redirect = setTimeout(() => {
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      returnToModuleHome(navigation);
     }, redirectDelayMs);
 
     return () => {
@@ -44,19 +45,14 @@ function SubmittedSuccessful({ navigation }: any) {
   }, [redirectToHome, redirectDelayMs, navigation]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: servicesTheme.colors.background }}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <MaterialIcons name="chevron-left" size={32} color={servicesTheme.colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerSpacer} />
-        <ReturnHomeButton />
-      </View>
+    <View style={{ flex: 1, backgroundColor: servicesTheme.colors.background }}>
+      <OrderHeading
+        title={title}
+        showHelp={false}
+        showHomeButton
+        interceptSystemBack
+        fallbackRouteNames={['Home']}
+      />
 
       <View style={{ flex: 1 }}>
         <Successfully
@@ -85,7 +81,7 @@ function SubmittedSuccessful({ navigation }: any) {
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -98,14 +94,6 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 8,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerSpacer: { flex: 1 },
   wrapper: {
     marginHorizontal: 16,
     marginBottom: 40, 
